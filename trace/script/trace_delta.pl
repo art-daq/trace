@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.14 $';
-#   $Date: 2000/01/11 19:13:47 $
+$version = '$Revision: 1.15 $';
+#   $Date: 2000/01/12 18:14:50 $
 
 
 $USAGE = "\
@@ -22,7 +22,7 @@ options:
 -post <re>           post processing filter (of output lines)
 -b                   output delta before associated column
 
-cols_spec examples:
+cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
    3..5,0,11,Rest
 
@@ -69,7 +69,7 @@ sub col_spec_to_re
 {   $spec = shift @_;
     eval "\$col_spec = \$${spec}_col_spec";
 
-    if ($col_spec =~ /\d+/)
+    if ($col_spec =~ /^\d+$/)
     {   if ($col_spec == 0)
 	{   $re = '(\s+\S+)';
 	    $line =~ /$re/; $data = $1;

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.9 $';
-#   $Date: 2000/01/11 16:06:45 $
+$version = '$Revision: 1.10 $';
+#   $Date: 2000/01/11 16:08:03 $
 
 
 $USAGE = "\
@@ -141,20 +141,6 @@ if (!"$opt_d" && !"$opt_dc")  # need to try default
     &col_spec_to_re( tmp );
     $delta_cntl[$delta_idx]{re}   = $tmp_re;
     $default_col[$delta_idx] = $tmp_re;
-    if ("$cpu_re") { $delta_cntl[$delta_idx]{cpu} = 1; }
-    else
-    {   # cpu_re is not manditory but see if we can get it
-	if ("$opt_cpu")
-	{   $cpu_col_spec = $opt_cpu;
-	    &get_cpu_re;
-	    $delta_cntl[$delta_idx]{cpu} = 1;
-	}
-	elsif ($line =~ /\s+CPU/)
-	{   $cpu_col_spec = CPU;
-	    &get_cpu_re;
-	    $delta_cntl[$delta_idx]{cpu} = 1;
-	}
-    }
 }
 
 sub find_delta

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.10 $';
-#   $Date: 2000/01/11 16:08:03 $
+$version = '$Revision: 1.11 $';
+#   $Date: 2000/01/11 16:12:25 $
 
 
 $USAGE = "\
@@ -30,7 +30,7 @@ Note: if -c is used, columns specified in the -d/-dc options must be
       a subset of the options specified.
 
 defaults:
--d  timeStamp
+-d  timeStamp        Note: not -dc. Use -dc timeStamp if desired
 -dw 10
 ";
 #

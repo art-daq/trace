@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.29 $';
-#   $Date: 2002/11/15 20:35:49 $
+$version = '$Revision: 1.30 $';
+#   $Date: 2003/07/25 18:51:33 $
 
 $USAGE = "\
 $version
@@ -84,12 +84,12 @@ sub col_spec_to_re
     #print STDERR "col_spec=$col_spec\n";
     if ($col_spec =~ /^\d+$/)
     {   if ($col_spec == 0)
-	{   $re = '(\s+\S+)';
+	{   $re = '(\s*\S+)';
 	    $line =~ /$re/; $data = $1;
 	    $re = '(' . '.' x length($data) . ')';
 	}
 	else
-	{   $re = '(' . '\s+\S+' x $col_spec . ')(\s+\S+)';
+	{   $re = '(' . '\s*\S+' . '\s+\S+' x ( $col_spec - 1 ) . ')(\s+\S+)';
 	    $line =~ /$re/; $leader = $1; $data = $2;
 	    $re = '.' x length($leader) . '(' . '.' x length($data) . ')';
 	}

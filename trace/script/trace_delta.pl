@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.17 $';
-#   $Date: 2000/01/12 20:16:48 $
+$version = '$Revision: 1.18 $';
+#   $Date: 2000/01/12 23:17:49 $
 
 
 $USAGE = "\
@@ -223,16 +223,20 @@ if ("$opt_pre")
 }
 $sub .= "
         \$out_line = \"\";";
-if ("$opt_stats")
-{   $sub .= "
-        \$stat_line_cnt += 1;";
-}
 for $idx (0..$#col_cntl)
 {   $sub .= "
 
         # processing for col_cnt[$idx]
         if (!(\$line=~/$col_cntl[$idx]{re}/o))
-        {   chop(\$line); \$out_line = \$line;
+        {   chop(\$line); \$out_line = \$line;";
+    if ("$opt_post")
+    {   $sub .= "
+            \$_ = \$out_line;
+            return unless ($opt_post); # re operates on \$_";
+    }
+    $sub .= "
+            print STDOUT \"\$out_line\\n\";
+            return;
         }
         else
         {   \$data = \$1;";
@@ -257,11 +261,9 @@ for $idx (0..$#col_cntl)
                 if (!\$col_cntl[$idx]{\"prev\$cpu\"})
                 {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
                     \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );";
-	if ("$opt_stats" && !$col_cntl[$idx]{delta_cpu})
+	if ("$opt_stats")
 	{    $sub .= "
-                    \$col_cntl[$idx]{min} = 999999999; # arbitrarily large number as 1st 0 does not count
-                    \$col_cntl[$idx]{max} = 0;
-                    \$col_cntl[$idx]{ave} = 0;         # just init";
+                    \$col_cntl[$idx]{stat}  = init;";
 	}
 	$sub .= "
                 }
@@ -269,20 +271,28 @@ for $idx (0..$#col_cntl)
                 {
                     \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
                     \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;";
-	if ("$opt_stats" && !$col_cntl[$idx]{delta_cpu})
+	if ("$opt_stats")
 	{    $sub .= "
-                    if (\$delta < \$col_cntl[$idx]{min}) { \$col_cntl[$idx]{min} = \$delta; }
-                    if (\$delta > \$col_cntl[$idx]{max}) { \$col_cntl[$idx]{max} = \$delta; }
-                    \$col_cntl[$idx]{ave} += \$delta;";
+                    \$col_cntl[$idx]{stat}  = \$delta;";
 	}
 	$sub .= "
                 }
             }
             elsif (\$data =~ /^-+\$/o)
-            {   \$delta = sprintf( \"%s\", '-' x $delta_width );
+            {   \$delta = sprintf( \"%s\", '-' x $delta_width );";
+	if ("$opt_stats")
+	{    $sub .= "
+                \$col_cntl[$idx]{stat}  = skip;";
+	}
+	$sub .= "
             }
             else
-            {   \$delta = sprintf( \"%*s\", $delta_width, 'delta' );
+            {   \$delta = sprintf( \"%*s\", $delta_width, 'delta' );";
+	if ("$opt_stats")
+	{    $sub .= "
+                \$col_cntl[$idx]{stat}  = skip;";
+	}
+	$sub .= "
             }
             \$out_line .= \$delta;";
     };
@@ -297,6 +307,38 @@ if ("$opt_post")
 {   $sub .= "
         \$_ = \$out_line;
         return unless ($opt_post); # re operates on \$_";
+}
+if ("$opt_stats")
+{   # whiz thru and calc stats
+    for $idx (0..$#col_cntl)
+    {   next if (!$col_cntl[$idx]{delta});
+	if ($col_cntl[$idx]{delta_cpu})
+	{   $sub .= "
+        \$line =~ /$cpu_re/o;
+        \$cpu = \$1;";
+	}
+	else
+	{   $sub .= "
+        \$cpu = 0;  # something consistant for non-cpu specific delta";
+	}
+	$sub .= "
+        if (!grep(/^\$cpu\$/,\@stat_cpus)) { push( \@stat_cpus,\$cpu ); }
+        if (\$col_cntl[$idx]{stat} eq init)
+        {   \$col_cntl[$idx]{\"min\$cpu\"} = 999999999; # arbitrarily large number as 1st 0 does not count
+            \$col_cntl[$idx]{\"max\$cpu\"} = 0;
+            \$col_cntl[$idx]{\"ave\$cpu\"} = 0;         # just init
+        }
+        elsif (\$col_cntl[$idx]{stat} ne skip)
+        {   if    (\$col_cntl[$idx]{\"min\$cpu\"} > \$col_cntl[$idx]{stat})
+            {      \$col_cntl[$idx]{\"min\$cpu\"} = \$col_cntl[$idx]{stat};
+            }
+            elsif (\$col_cntl[$idx]{\"max\$cpu\"} < \$col_cntl[$idx]{stat})
+            {      \$col_cntl[$idx]{\"max\$cpu\"} = \$col_cntl[$idx]{stat};
+            }
+            \$col_cntl[$idx]{\"ave\$cpu\"} += \$col_cntl[$idx]{stat};
+            \$col_cntl[$idx]{\"cnt\$cpu\"}++;
+        }";
+    }
 }
 $sub .= "
         print STDOUT \"\$out_line\\n\";
@@ -320,55 +362,53 @@ if ("$opt_stats")
 {
     # use last line as a template
     $_ = $line;
-    foreach $ss (min,max,ave)
-    {   $out_line = "";
-	for $idx (0..$#col_cntl)
-	{
-	    if (!($line=~/$col_cntl[$idx]{re}/))
-	    {   $out_line = "problem with stats";
-		last;
-	    }
-	    else
-	    {   $data = $1;
-		if (!$opt_b)
-		{
-		    if ($col_cntl[$idx]{delta})
-		    {   $ssdata =sprintf( "%*s", length($data), $ss );
-		    }
-		    else { $ssdata =~ s/./ /g; }
-		    $out_line .= $ssdata; # delta will come after
+    for $cpu (@stat_cpus)
+    {   print STDOUT "cpu=\"$cpu\"\n";
+	foreach $ss (min,max,ave,cnt)
+	{   $out_line = "";
+	    for $idx (0..$#col_cntl)
+	    {
+		if (!($line=~/$col_cntl[$idx]{re}/))
+		{   $out_line = "problem with stats";
+		    last;
 		}
-		if ($col_cntl[$idx]{delta})
-		{   if ($data =~ /^\s*\d+/o)
+		else
+		{   $data = $1;
+		    if (!$opt_b)
 		    {
-			if ($col_cntl[$idx]{delta_cpu})
-			{
-			    $delta = sprintf( "%*s", $delta_width, cpu );
+			if ($col_cntl[$idx]{delta})
+			{   $ssdata =sprintf( "%*s", length($data), $ss );
+			}
+			else { $ssdata =~ s/./ /g; }
+			$out_line .= $ssdata; # delta will come after
+		    }
+		    if ($col_cntl[$idx]{delta})
+		    {   if ($data =~ /^\s*\d+/o)
+			{   if ($col_cntl[$idx]{"cnt$cpu"})
+			    {   if ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} /= $col_cntl[$idx]{"cnt$cpu"}; }
+				$delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{"${ss}$cpu"} );
+			    }
+			    else { $delta = sprintf( "%*s", $delta_width, "nocpu" ); }
+			}
+			elsif ($data =~ /^-+$/o)
+			{   $delta = sprintf( "%s", '-' x $delta_width );
 			}
 			else
-			{   if ($ss eq ave) { $col_cntl[$idx]{$ss} /= $stat_line_cnt; }
-			    $delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{$ss} );
+			{   $delta = sprintf( "%*s", $delta_width, 'delta' );
 			}
+			$out_line .= $delta;
+		    };
+		    if ($opt_b)
+		    {
+			if ($col_cntl[$idx]{delta})
+			{   $data =sprintf( "%-*s", length($data), $ss );
+			}
+			else { $data =~ s/./ /g; }
+			$out_line .= $data; # delta was before
 		    }
-		    elsif ($data =~ /^-+$/o)
-		    {   $delta = sprintf( "%s", '-' x $delta_width );
-		    }
-		    else
-		    {   $delta = sprintf( "%*s", $delta_width, 'delta' );
-		    }
-		    $out_line .= $delta;
-		};
-		if ($opt_b)
-		{
-		    if ($col_cntl[$idx]{delta})
-		    {   $data =sprintf( "%-*s", length($data), $ss );
-		    }
-		    else { $data =~ s/./ /g; }
-		    $out_line .= $data; # delta was before
 		}
 	    }
+	    print STDOUT "$out_line\n";
 	}
-        print STDOUT "$out_line\n";
     }
-    print STDOUT "stat_line_count: $stat_line_cnt\n";
 }

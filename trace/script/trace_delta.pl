@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.13 $';
-#   $Date: 2000/01/11 18:58:28 $
+$version = '$Revision: 1.14 $';
+#   $Date: 2000/01/11 19:13:47 $
 
 
 $USAGE = "\
@@ -228,43 +228,45 @@ for $idx (0..$#col_cntl)
         # processing for col_cnt[$idx]
         if (!(\$line=~/$col_cntl[$idx]{re}/o))
         {   chop(\$line); \$out_line = \$line;
-            last;
         }
-        \$data = \$1;";
+        else
+        {   \$data = \$1;";
     if (!$opt_b)
     {   $sub .= "
-        \$out_line .= \$data; # delta will come after";
+            \$out_line .= \$data; # delta will come after";
     }
     if ($col_cntl[$idx]{delta})
     {   $sub .= "
-        if (\$data =~ /\\d+/o)
-        {";
+            if (\$data =~ /\\d+/o)
+            {";
 	if ($col_cntl[$idx]{delta_cpu})
 	{   $sub .= "
-            \$line =~ /$cpu_re/o;
-            \$cpu = \$1;";
+                \$line =~ /$cpu_re/o;
+                \$cpu = \$1;";
 	}
 	else
 	{   $sub .= "
-            \$cpu = 0;  # something consistant for non-cpu specific delta";
+                \$cpu = 0;  # something consistant for non-cpu specific delta";
 	}
 	$sub .= "
-            if (!\$col_cntl[$idx]{\"prev\$cpu\"}) { \$col_cntl[$idx]{\"prev\$cpu\"} = \$data; }
-            \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
-            \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
-        }
-        elsif (\$data =~ /^-+\$/o)
-        {   \$delta = sprintf( \"%s\", '-' x $delta_width );
-        }
-        else
-        {   \$delta = sprintf( \"%*s\", $delta_width, 'delta' );
-        }
-        \$out_line .= \$delta;";
+                if (!\$col_cntl[$idx]{\"prev\$cpu\"}) { \$col_cntl[$idx]{\"prev\$cpu\"} = \$data; }
+                \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
+                \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
+            }
+            elsif (\$data =~ /^-+\$/o)
+            {   \$delta = sprintf( \"%s\", '-' x $delta_width );
+            }
+            else
+            {   \$delta = sprintf( \"%*s\", $delta_width, 'delta' );
+            }
+            \$out_line .= \$delta;";
     };
     if ($opt_b)
     {   $sub .= "
-        \$out_line .= \$data; # delta was before";
+            \$out_line .= \$data; # delta was before";
     }
+    $sub .= "
+        }";
 }
 if ("$opt_post")
 {   $sub .= "

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.16 $';
-#   $Date: 2000-01-12 18:30:27 $
+$version = '$Revision: 1.17 $';
+#   $Date: 2000-01-12 20:16:48 $
 
 
 $USAGE = "\
@@ -21,6 +21,7 @@ options:
 -pre  <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
 -post <re>           post processing filter (of output lines)
 -b                   output delta before associated column
+-stats               min, max, ave stats on delta (except cpu deltas)
 
 cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
@@ -37,7 +38,7 @@ defaults:
 #   RECORD OPTIONS
 #
 # define options - order is important.
-@opts=('cpu,1','dw,1','dc,1','d,1','c,1','pre,1','post,1','b,0','v,0');
+@opts=('cpu,1','dw,1','dc,1','d,1','c,1','pre,1','post,1','b,0','v,0','stats,0','show_sub,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
@@ -222,6 +223,10 @@ if ("$opt_pre")
 }
 $sub .= "
         \$out_line = \"\";";
+if ("$opt_stats")
+{   $sub .= "
+        \$stat_line_cnt += 1;";
+}
 for $idx (0..$#col_cntl)
 {   $sub .= "
 
@@ -249,9 +254,29 @@ for $idx (0..$#col_cntl)
                 \$cpu = 0;  # something consistant for non-cpu specific delta";
 	}
 	$sub .= "
-                if (!\$col_cntl[$idx]{\"prev\$cpu\"}) { \$col_cntl[$idx]{\"prev\$cpu\"} = \$data; }
-                \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
-                \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
+                if (!\$col_cntl[$idx]{\"prev\$cpu\"})
+                {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
+                    \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );";
+	if ("$opt_stats" && !$col_cntl[$idx]{delta_cpu})
+	{    $sub .= "
+                    \$col_cntl[$idx]{min} = 999999999; # arbitrarily large number as 1st 0 does not count
+                    \$col_cntl[$idx]{max} = 0;
+                    \$col_cntl[$idx]{ave} = 0;         # just init";
+	}
+	$sub .= "
+                }
+                else
+                {
+                    \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
+                    \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;";
+	if ("$opt_stats" && !$col_cntl[$idx]{delta_cpu})
+	{    $sub .= "
+                    if (\$delta < \$col_cntl[$idx]{min}) { \$col_cntl[$idx]{min} = \$delta; }
+                    if (\$delta > \$col_cntl[$idx]{max}) { \$col_cntl[$idx]{max} = \$delta; }
+                    \$col_cntl[$idx]{ave} += \$delta;";
+	}
+	$sub .= "
+                }
             }
             elsif (\$data =~ /^-+\$/o)
             {   \$delta = sprintf( \"%s\", '-' x $delta_width );
@@ -277,7 +302,7 @@ $sub .= "
         print STDOUT \"\$out_line\\n\";
     }";
 
-print STDOUT "$sub\n";
+if ("$opt_show_sub") { print STDOUT "$sub\n"; }
 eval $sub;
 
 #
@@ -289,4 +314,61 @@ $_ = $line; # needed for opt_pre processing
 while (<>)
 {   $line = $_;
     &process_line;
+}
+
+if ("$opt_stats")
+{
+    # use last line as a template
+    $_ = $line;
+    foreach $ss (min,max,ave)
+    {   $out_line = "";
+	for $idx (0..$#col_cntl)
+	{
+	    if (!($line=~/$col_cntl[$idx]{re}/))
+	    {   $out_line = "problem with stats";
+		last;
+	    }
+	    else
+	    {   $data = $1;
+		if (!$opt_b)
+		{
+		    if ($col_cntl[$idx]{delta})
+		    {   $ssdata =sprintf( "%*s", length($data), $ss );
+		    }
+		    else { $ssdata =~ s/./ /g; }
+		    $out_line .= $ssdata; # delta will come after
+		}
+		if ($col_cntl[$idx]{delta})
+		{   if ($data =~ /^\s*\d+/o)
+		    {
+			if ($col_cntl[$idx]{delta_cpu})
+			{
+			    $delta = sprintf( "%*s", $delta_width, cpu );
+			}
+			else
+			{   if ($ss eq ave) { $col_cntl[$idx]{$ss} /= $stat_line_cnt; }
+			    $delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{$ss} );
+			}
+		    }
+		    elsif ($data =~ /^-+$/o)
+		    {   $delta = sprintf( "%s", '-' x $delta_width );
+		    }
+		    else
+		    {   $delta = sprintf( "%*s", $delta_width, 'delta' );
+		    }
+		    $out_line .= $delta;
+		};
+		if ($opt_b)
+		{
+		    if ($col_cntl[$idx]{delta})
+		    {   $data =sprintf( "%-*s", length($data), $ss );
+		    }
+		    else { $data =~ s/./ /g; }
+		    $out_line .= $data; # delta was before
+		}
+	    }
+	}
+        print STDOUT "$out_line\n";
+    }
+    print STDOUT "stat_line_count: $stat_line_cnt\n";
 }

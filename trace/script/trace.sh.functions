@@ -3,10 +3,10 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.2 $
-#   $Date: 2003-07-16 02:53:40 $
+#   $Revision: 1.3 $
+#   $Date: 2003-07-18 22:58:25 $
 
-tshow()    { cat /proc/trace/buffer; }
+tshow()    { cat /proc/trace/buffer | less; } # less circa Jul 2003 allow output to pipe
 tlevel()   { cat /proc/trace/level; }
 tlvl()     { cat /proc/trace/level; }
 tcontrol() { cat /proc/trace/control; }

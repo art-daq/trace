@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.21 $';
-#   $Date: 2000-02-03 16:23:03 $
+$version = '$Revision: 1.22 $';
+#   $Date: 2000-07-21 14:53:09 $
 
 
 $USAGE = "\
@@ -268,7 +268,7 @@ for $idx (0..$#col_cntl)
             if (!\$col_cntl[$idx]{rel_start_val})
             {   \$col_cntl[$idx]{rel_start_val} = \$data;
             }
-            \$data = sprintf( \"%*s\", length(\$data), \$data - \$col_cntl[$idx]{rel_start_val} );
+            \$data = sprintf( \"%*s\", length(\$data), \$data - \$col_cntl[$idx]{rel_start_val} );"
     }
     if (!$opt_b)
     {   $sub .= "

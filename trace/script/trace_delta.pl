@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.8 $';
-#   $Date: 2000-01-11 15:13:45 $
+$version = '$Revision: 1.9 $';
+#   $Date: 2000-01-11 16:06:45 $
 
 
 $USAGE = "\
@@ -14,11 +14,12 @@ usage: $0 [options] [files]...
 
 options:
 -cpu  <col_spec>     column for cpu field.
--c    <cols_spec>    columns to include in output (must specify -d or -dc)
+-c    <cols_spec>    columns to include in output
 -d    <cols_spec>    columns for non cpu specific delta
 -dc   <cols_spec>    columns for cpu specific delta
 -dw   <width>        delta column width
--re   <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
+-pre  <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
+-post <re>           post processing filter
 -b                   output delta before associated column
 
 cols_spec examples:
@@ -36,7 +37,7 @@ defaults:
 #   RECORD OPTIONS
 #
 # define options - order is important.
-@opts=('cpu,1','dw,1','dc,1','d,1','c,1','re,1','b,0','v,0');
+@opts=('cpu,1','dw,1','dc,1','d,1','c,1','pre,1','post,1','b,0','v,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
@@ -72,7 +73,7 @@ sub col_spec_to_re
     {   if ($col_spec == 0)
 	{   $re = '(\s+\S+)';
 	    $line =~ /$re/; $data = $1;
-	    $re = '(' . '.' x length($data) . ')'
+	    $re = '(' . '.' x length($data) . ')';
 	}
 	else
 	{   $re = '(' . '\s+\S+' x $col_spec . ')(\s+\S+)';
@@ -93,14 +94,26 @@ sub col_spec_to_re
 
 $delta_idx=0;
 
+sub get_cpu_re
+{   if ($cpu_col_spec =~ /\d+/)
+    {   # special - allows for more delta tricks
+	if ($cpu_col_spec == 0)
+	{   $cpu_re = '(\s+\S+)';
+	    $line =~ /$cpu_re/; $data = $1;
+	}
+	else
+	{   $cpu_re = '(' . '\s+\S+' x $col_spec . ')(\s+\S+)';
+	    $line =~ /$cpu_re/; $leader = $1; $data = $2;
+	}
+    }
+    else { &col_spec_to_re( cpu ); } # refine cpu_re
+}
+
 if ("$opt_dc")
 {   # we need a cpu spec
-    print STDERR "opt_cpu:$opt_cpu\n";
     if ("$opt_cpu") { $cpu_col_spec = $opt_cpu;}
     else            { $cpu_col_spec = CPU;}
-
-    # refine cpu_re
-    &col_spec_to_re( cpu );
+    &get_cpu_re;
 
     eval "\@opt_eval = ($opt_dc)";
     foreach $col (@opt_eval)
@@ -128,6 +141,20 @@ if (!"$opt_d" && !"$opt_dc")  # need to try default
     &col_spec_to_re( tmp );
     $delta_cntl[$delta_idx]{re}   = $tmp_re;
     $default_col[$delta_idx] = $tmp_re;
+    if ("$cpu_re") { $delta_cntl[$delta_idx]{cpu} = 1; }
+    else
+    {   # cpu_re is not manditory but see if we can get it
+	if ("$opt_cpu")
+	{   $cpu_col_spec = $opt_cpu;
+	    &get_cpu_re;
+	    $delta_cntl[$delta_idx]{cpu} = 1;
+	}
+	elsif ($line =~ /\s+CPU/)
+	{   $cpu_col_spec = CPU;
+	    &get_cpu_re;
+	    $delta_cntl[$delta_idx]{cpu} = 1;
+	}
+    }
 }
 
 sub find_delta
@@ -199,7 +226,7 @@ else
 
 sub process_line
 {   # if $_ != $line, use: "(\$_=\$line) && !($opt_dre)")
-    if ("$opt_re") { return unless eval "($opt_re)"; }  # re operates on $_
+    if ("$opt_pre") { return unless eval "($opt_pre)"; }  # re operates on $_
     $out_line = "";
     for $idx (0..$#col_cntl)
     {   if (!($line=~/$col_cntl[$idx]{re}/))
@@ -234,10 +261,11 @@ sub process_line
 	}
 	if ($opt_b) { $out_line = $out_line . $data; }
     }
+    if ("$opt_post") { return unless eval "($opt_post)"; }  # re operates on $_
     print STDOUT "$out_line\n";
 }
 
-$_ = $line; # needed for opt_re/opt_dre processing
+$_ = $line; # needed for opt_pre/post processing
 &process_line;
 
 while (<>)

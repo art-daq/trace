@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.22 $';
-#   $Date: 2000/07/21 14:53:09 $
+$version = '$Revision: 1.23 $';
+#   $Date: 2001/07/19 18:45:57 $
 
 
 $USAGE = "\
@@ -356,7 +356,7 @@ if ("$opt_stats")
         if (\$col_cntl[$idx]{stat} eq init)
         {   \$col_cntl[$idx]{\"min\$cpu\"} = 999999999; # arbitrarily large number as 1st 0 does not count
             \$col_cntl[$idx]{\"max\$cpu\"} = 0;
-            \$col_cntl[$idx]{\"ave\$cpu\"} = 0;         # just init
+            \$col_cntl[$idx]{\"tot\$cpu\"} = 0;         # just init
         }
         elsif (\$col_cntl[$idx]{stat} ne skip)
         {   if    (\$col_cntl[$idx]{\"min\$cpu\"} > \$col_cntl[$idx]{stat} \
@@ -366,7 +366,7 @@ if ("$opt_stats")
             elsif (\$col_cntl[$idx]{\"max\$cpu\"} < \$col_cntl[$idx]{stat})
             {      \$col_cntl[$idx]{\"max\$cpu\"} = \$col_cntl[$idx]{stat};
             }
-            \$col_cntl[$idx]{\"ave\$cpu\"} += \$col_cntl[$idx]{stat};
+            \$col_cntl[$idx]{\"tot\$cpu\"} += \$col_cntl[$idx]{stat};
             \$col_cntl[$idx]{\"cnt\$cpu\"}++;
         }";
     }
@@ -395,7 +395,7 @@ if ("$opt_stats")
     $_ = $line;
     for $cpu (@stat_cpus)
     {   print STDOUT "cpu=\"$cpu\"\n";
-	foreach $ss (min,max,ave,cnt)
+	foreach $ss (min,max,tot,ave,cnt)
 	{   $out_line = "";
 	    for $idx (0..$#col_cntl)
 	    {
@@ -419,7 +419,7 @@ if ("$opt_stats")
 		    if ($col_cntl[$idx]{delta})
 		    {   if ($data =~ /^\s*\d+/o)
 			{   if ($col_cntl[$idx]{"cnt$cpu"})
-			    {   if ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} /= $col_cntl[$idx]{"cnt$cpu"}; }
+			    {   if    ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} = $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"}; }
 				$delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{"${ss}$cpu"} );
 			    }
 			    else { $delta = sprintf( "%*s", $delta_width, "nocpu" ); }

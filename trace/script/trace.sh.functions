@@ -1,3 +1,11 @@
+#   This file (trace.sh.functions) was created by Ron Rechenmacher <ron@fnal.gov> on
+#   Jul 15, 2003. "TERMS AND CONDITIONS" governing this file are in the README
+#   or COPYING file. If you do not have such a file, one can be obtained by
+#   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+#   $RCSfile: trace.sh.functions,v $
+#   $Revision: 1.2 $
+#   $Date: 2003-07-16 02:53:40 $
+
 tshow()    { cat /proc/trace/buffer; }
 tlevel()   { cat /proc/trace/level; }
 tlvl()     { cat /proc/trace/level; }

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.6 $';
-#   $Date: 2000-01-11 03:03:39 $
+$version = '$Revision: 1.7 $';
+#   $Date: 2000-01-11 15:11:21 $
 
 
 $USAGE = "\
@@ -13,13 +13,15 @@ $version
 usage: $0 [options] [files]...
 
 options:
--cpu <col_spec>     column for cpu field.
--c   <cols_spec>    columns to include in output (must specify -d or -dc)
--d   <cols_spec>    columns for non cpu specific delta
--dc  <cols_spec>    columns for cpu specific delta
--dw  <width>        delta column width
--re  <re>           i.e: '/(begin|end)/ && !/947373119916951/'
--b                  output delta before associated column
+-cpu  <col_spec>     column for cpu field.
+-c    <cols_spec>    columns to include in output (must specify -d or -dc)
+-d    <cols_spec>    columns for non cpu specific delta
+-dc   <cols_spec>    columns for cpu specific delta
+-dw   <width>        delta column width
+-re   <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
+-dre  <re>           allow delta
+-dres <string>       string to output if -dre is false
+-b                   output delta before associated column
 
 cols_spec examples:
    CPU,msg
@@ -32,40 +34,24 @@ defaults:
 -d  timeStamp
 -dw 10
 ";
-
 #
 #   RECORD OPTIONS
 #
+# define options - order is important.
+@opts=('cpu,1','dw,1','dc,1','dres,1','dre,1','d,1','c,1','re,1','b,0','v,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
-    if    (/^-[h?]/)
-    {   die "$USAGE\n";
+    if (/^-[h?]/) { die "$USAGE\n"; }
+    $found = 0;
+    foreach $optset (@opts)
+    {   eval "\@opt = ($optset)";
+	if (/^-$opt[0]/)
+	{   if ($opt[1]) { eval "\$opt_$opt[0] = shift"; }
+	    else         { eval "\$opt_$opt[0] = 1"; }
+	    $found = 1; last;
+	}
     }
-    elsif (/^-cpu/)
-    {   $opt_cpu = shift;
-    }
-    elsif (/^-dw/)
-    {   $opt_dw = shift;
-    }
-    elsif (/^-dc/)
-    {   $opt_dc = shift;
-    }
-    elsif (/^-d/)
-    {   $opt_d = shift;
-    }
-    elsif (/^-c/)
-    {   $opt_c = shift;
-    }
-    elsif (/^-re/)
-    {   $opt_re = shift;
-    }
-    elsif (/^-b/)
-    {   $opt_b = 1;
-    }
-    elsif (/^-v/)
-    {   $opt_v = 1;
-    }
-    else
+    if (!$found)
     {   die "Unrecognized option: $_\n$USAGE\n";
     }
 }
@@ -78,7 +64,8 @@ $line = <>;
 #
 #   PROCESS OPTIONS
 #
-if ("$opt_dw") { $delta_width = $opt_dw; } else { $delta_width = 10; }
+if ("$opt_dw")   { $delta_width = $opt_dw; }   else { $delta_width = 10; }
+if ("$opt_dres") { $delta_skip  = $opt_dres; } else { $delta_skip  = ' '; }
 
 sub col_spec_to_re
 {   $spec = shift @_;
@@ -213,28 +200,38 @@ else
     $col_cntl[$cntl_idx]{re} = "$prev(.*)";
 }
 
-
 sub process_line
-{   if ("$opt_re") { return unless eval ($opt_re); }
+{   # if $_ != $line, use: "(\$_=\$line) && !($opt_dre)")
+    if ("$opt_re") { return unless eval "($opt_re)"; }  # re operates on $_
     $out_line = "";
     for $idx (0..$#col_cntl)
     {   if (!($line=~/$col_cntl[$idx]{re}/))
-	{   $out_line = $line;
+	{   chop($line); $out_line = $line;
 	    last;
 	}
 	$data = $1;
 	if (!$opt_b) { $out_line = $out_line . $data; }
 	if ($col_cntl[$idx]{delta})
 	{   if ($data =~ /\d+/)
-	    {   if ($col_cntl[$idx]{delta_cpu})
-		{   $line =~ /$cpu_re/o;
-		    $cpu = $1;
+	    {   
+		if ("$opt_dre" && eval "!($opt_dre)")
+		{   $delta = sprintf( "%*s", $delta_width, $opt_dres );
 		}
 		else
-		{   $cpu = 0;  # something consistant for non-cpu specific delta
+		{   if ($col_cntl[$idx]{delta_cpu})
+		    {   $line =~ /$cpu_re/o;
+			$cpu = $1;
+		    }
+		    else
+		    {   $cpu = 0;  # something consistant for non-cpu specific delta
+		    }
+		    # do not need 'if (!"$col_cntl[$idx]{\"prev$cpu\"}")'
+		    # below (which would gaurd against data==0) as data is a
+		    # string (i.e. it has leading spaces, such as '   0')
+		    if (!$col_cntl[$idx]{"prev$cpu"}) { $col_cntl[$idx]{"prev$cpu"} = $data; }
+		    $delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{"prev$cpu"}-$data );
+		    $col_cntl[$idx]{"prev$cpu"} = $data;
 		}
-		if (!$col_cntl[$idx]{"prev$cpu"}) { $col_cntl[$idx]{"prev$cpu"} = $data; }
-		$delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{"prev$cpu"}-$data );
 	    }
 	    elsif ($data =~ /^-+$/)
 	    {   $delta = sprintf( "%s", '-' x $delta_width );
@@ -249,6 +246,7 @@ sub process_line
     print STDOUT "$out_line\n";
 }
 
+$_ = $line; # needed for opt_re/opt_dre processing
 &process_line;
 
 while (<>)

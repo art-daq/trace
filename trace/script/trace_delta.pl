@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.12 $';
-#   $Date: 2000/01/11 17:48:33 $
+$version = '$Revision: 1.13 $';
+#   $Date: 2000/01/11 18:58:28 $
 
 
 $USAGE = "\
@@ -281,7 +281,7 @@ eval $sub;
 #
 #   NOW DO THE REAL WORK
 #
-$_ = $line; # needed for opt_pre/post processing
+$_ = $line; # needed for opt_pre processing
 &process_line;
 
 while (<>)

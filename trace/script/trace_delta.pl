@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.5 $';
-#   $Date: 2000/01/11 03:02:32 $
+$version = '$Revision: 1.6 $';
+#   $Date: 2000/01/11 03:03:39 $
 
 
 $USAGE = "\
@@ -19,7 +19,7 @@ options:
 -dc  <cols_spec>    columns for cpu specific delta
 -dw  <width>        delta column width
 -re  <re>           i.e: '/(begin|end)/ && !/947373119916951/'
--before             output delta before associated column
+-b                  output delta before associated column
 
 cols_spec examples:
    CPU,msg

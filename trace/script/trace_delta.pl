@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.28 $';
-#   $Date: 2002/08/14 17:33:26 $
+$version = '$Revision: 1.29 $';
+#   $Date: 2002/11/15 20:35:49 $
 
 $USAGE = "\
 $version
@@ -507,7 +507,7 @@ if ("$opt_stats")
 		    if ($col_cntl[$idx]{delta})  # if this is a column for
 		    {                            # which 'delta' was specified
 			#print STDOUT "\nin stats delta col, data=$data\n";
-			if ($data =~ /^\s*\d+/o)
+			if ($data =~ /^\s*[-]{0,1}\d+/o)
 			{   if ($col_cntl[$idx]{"cnt$cpu"})
 			    {   if    ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} = $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"}; }
 				else               { $col_cntl[$idx]{"${ss}$cpu"} =~ s/^ *//; } # strip leading spaces

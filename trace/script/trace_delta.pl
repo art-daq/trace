@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.18 $';
-#   $Date: 2000/01/12 23:17:49 $
+$version = '$Revision: 1.19 $';
+#   $Date: 2000/01/12 23:41:55 $
 
 
 $USAGE = "\
@@ -329,7 +329,8 @@ if ("$opt_stats")
             \$col_cntl[$idx]{\"ave\$cpu\"} = 0;         # just init
         }
         elsif (\$col_cntl[$idx]{stat} ne skip)
-        {   if    (\$col_cntl[$idx]{\"min\$cpu\"} > \$col_cntl[$idx]{stat})
+        {   if    (\$col_cntl[$idx]{\"min\$cpu\"} > \$col_cntl[$idx]{stat} \
+                   || \$col_cntl[$idx]{\"min\$cpu\"} eq \"\")
             {      \$col_cntl[$idx]{\"min\$cpu\"} = \$col_cntl[$idx]{stat};
             }
             elsif (\$col_cntl[$idx]{\"max\$cpu\"} < \$col_cntl[$idx]{stat})
@@ -401,7 +402,7 @@ if ("$opt_stats")
 		    if ($opt_b)
 		    {
 			if ($col_cntl[$idx]{delta})
-			{   $data =sprintf( "%-*s", length($data), $ss );
+			{   $data =sprintf( "%-*s", length($data), " $ss" );
 			}
 			else { $data =~ s/./ /g; }
 			$out_line .= $data; # delta was before

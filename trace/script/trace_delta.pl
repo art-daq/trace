@@ -4,24 +4,22 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.4 $';
-#   $Date: 2000/01/11 02:32:09 $
+$version = '$Revision: 1.5 $';
+#   $Date: 2000/01/11 03:02:32 $
 
 
 $USAGE = "\
 $version
-usage:
-       $0 [options] [files]...
+usage: $0 [options] [files]...
 
-The default col_spc is 'R0'
-
-general_options:
+options:
 -cpu <col_spec>     column for cpu field.
 -c   <cols_spec>    columns to include in output (must specify -d or -dc)
 -d   <cols_spec>    columns for non cpu specific delta
 -dc  <cols_spec>    columns for cpu specific delta
--dw  <delta_column_width>
+-dw  <width>        delta column width
 -re  <re>           i.e: '/(begin|end)/ && !/947373119916951/'
+-before             output delta before associated column
 
 cols_spec examples:
    CPU,msg
@@ -35,8 +33,6 @@ defaults:
 -dw 10
 ";
 
-$delta_width = 10;
-
 #
 #   RECORD OPTIONS
 #
@@ -44,6 +40,9 @@ while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if    (/^-[h?]/)
     {   die "$USAGE\n";
+    }
+    elsif (/^-cpu/)
+    {   $opt_cpu = shift;
     }
     elsif (/^-dw/)
     {   $opt_dw = shift;
@@ -57,11 +56,11 @@ while ($ARGV[0] =~ /^-/)
     elsif (/^-c/)
     {   $opt_c = shift;
     }
-    elsif (/^-cpu/)
-    {   $opt_cpu = shift;
-    }
     elsif (/^-re/)
     {   $opt_re = shift;
+    }
+    elsif (/^-b/)
+    {   $opt_b = 1;
     }
     elsif (/^-v/)
     {   $opt_v = 1;
@@ -79,7 +78,7 @@ $line = <>;
 #
 #   PROCESS OPTIONS
 #
-if ("$opt_dw") { $delta_width = $opt_dw; }
+if ("$opt_dw") { $delta_width = $opt_dw; } else { $delta_width = 10; }
 
 sub col_spec_to_re
 {   $spec = shift @_;
@@ -112,6 +111,7 @@ $delta_idx=0;
 
 if ("$opt_dc")
 {   # we need a cpu spec
+    print STDERR "opt_cpu:$opt_cpu\n";
     if ("$opt_cpu") { $cpu_col_spec = $opt_cpu;}
     else            { $cpu_col_spec = CPU;}
 
@@ -223,7 +223,7 @@ sub process_line
 	    last;
 	}
 	$data = $1;
-	$out_line = $out_line . $data;
+	if (!$opt_b) { $out_line = $out_line . $data; }
 	if ($col_cntl[$idx]{delta})
 	{   if ($data =~ /\d+/)
 	    {   if ($col_cntl[$idx]{delta_cpu})
@@ -244,6 +244,7 @@ sub process_line
 	    }
 	    $out_line = $out_line . $delta;
 	}
+	if ($opt_b) { $out_line = $out_line . $data; }
     }
     print STDOUT "$out_line\n";
 }

@@ -3,8 +3,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.7 $
-#   $Date: 2004-07-13 19:28:03 $
+#   $Revision: 1.8 $
+#   $Date: 2004-09-17 16:34:18 $
 
 tprint()   { echo print=count,timeStamp,PID,TID,TraceName,CPU,lvl,cycle,message >|/proc/trace/control; }
 tshow()    { cat /proc/trace/buffer | less; } # less circa Jul 2003 allow output to pipe
@@ -23,10 +23,10 @@ tmode()
 tfreeze()  { perl -e "printf \"mode=%d\n\",`tmode` & 0xfffffffe" >|/proc/trace/control; }
 tfrz()     { tfreeze "$@"; }
 tfre()     { tfreeze "$@"; }
-trelease() { perl -e "printf \"mode=%d\n\",`tmode` |          1" >|/proc/trace/control; }
+trelease() { perl -e "printf \"mode=%d\n\",`tmode` | 1"          >|/proc/trace/control; }
 trel()     { trelease "$@"; }
 treset()   { echo reset                                          >|/proc/trace/control; }
-ton()      { echo reset mode=1                                   >|/proc/trace/control; }
+ton()      { perl -e "printf \"reset mode=%d\n\",`tmode` | 1"    >|/proc/trace/control; }
 toff()     { echo       mode=0                                   >|/proc/trace/control; }
 
 tdelta()   { trace_delta.pl "$@" | less; }  # ex. tshow | grep xxx | tdelta

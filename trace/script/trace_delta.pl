@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.26 $';
-#   $Date: 2002/05/30 15:51:31 $
+$version = '$Revision: 1.27 $';
+#   $Date: 2002/08/09 05:38:02 $
 
 $USAGE = "\
 $version
@@ -68,7 +68,7 @@ $line = <>;
 #
 #   PROCESS OPTIONS
 #
-if ("$opt_dw")   { $delta_width = $opt_dw; }   else { $delta_width = 10; }
+if ("$opt_dw" ne "") { $delta_width = $opt_dw; } else { $delta_width = 10; }
 
 #
 # example: col_spec_to_re( cpu ) will return something like "........(.....)"
@@ -79,6 +79,8 @@ sub col_spec_to_re
                                              # i.e. use col_spec_to_re( tmp )
                                              # to pass tmp_col_spec
                                              # and return re in tmp_re
+    #print STDERR "col_spec_to_re(spec=$spec)\n";
+    #print STDERR "col_spec=$col_spec\n";
     if ($col_spec =~ /^\d+$/)
     {   if ($col_spec == 0)
 	{   $re = '(\s+\S+)';
@@ -102,7 +104,7 @@ sub col_spec_to_re
     eval "\$${spec}_re = \$re";
 }
 
-if ("$opt_ct")
+if ("$opt_ct" ne "")
 {   use POSIX;			# for strftime  NOTE: this is "used" at compile
     $ct_col_spec = $opt_ct;     # time, i.e. even if -ct is not specified.
     &col_spec_to_re( ct );
@@ -125,10 +127,11 @@ sub get_cpu_re
     else { &col_spec_to_re( cpu ); } # refine cpu_re
 }
 
-if ("$opt_dc")      # if "columns for *cpu specific* deltas" where specified
+#print STDERR "before if (opt_dc) opt_dc=$opt_dc\n";
+if ("$opt_dc" ne "")      # if "columns for *cpu specific* deltas" where specified
 {   # we need a cpu spec
-    if ("$opt_cpu") { $cpu_col_spec = $opt_cpu;}
-    else            { $cpu_col_spec = CPU;}
+    if ("$opt_cpu" ne "") { $cpu_col_spec = $opt_cpu;}
+    else                  { $cpu_col_spec = CPU;}
     &get_cpu_re;
 
     eval "\@opt_eval = ($opt_dc)";
@@ -147,10 +150,13 @@ if ("$opt_dc")      # if "columns for *cpu specific* deltas" where specified
 	$delta_idx++;
     }
 }
-if ("$opt_d")      # if "columns for *cpu specific* deltas" where specified
+#print STDERR "before if (opt_d) opt_d=$opt_d\n";
+if ("$opt_d" ne "")      # if "columns for *cpu specific* deltas" where specified
 {   eval "\@opt_eval = ($opt_d)";
+    print STDERR "in if (opt_d) opt_d=$opt_d\n";
     foreach $col (@opt_eval)
     {   $tmp_col_spec = $col;
+	print STDERR "calling col_spec_to_re( tmp )\n";
 	&col_spec_to_re( tmp );
 	$delta_cntl[$delta_idx]{re}   = $tmp_re;
 	if ($col eq timeStamp && $opt_r)
@@ -161,7 +167,7 @@ if ("$opt_d")      # if "columns for *cpu specific* deltas" where specified
     }
 }
 
-if (!"$opt_d" && !"$opt_dc")  # need to try default
+if ("$opt_d" eq "" && "$opt_dc" eq "")  # need to try default
 {   $tmp_col_spec = timeStamp;
     &col_spec_to_re( tmp );
     $delta_cntl[$delta_idx]{re}   = $tmp_re;
@@ -181,7 +187,7 @@ sub find_delta
 }
 
 $cntl_idx = 0;
-if ("$opt_c")      # if the -c option to specify which columns are in output
+if ("$opt_c" ne "")      # if the -c option to specify which columns are in output
 {   eval "\@opt_eval = ($opt_c)";
     foreach $col (@opt_eval)
     {   if    ($col =~ /^R(est)*$/)
@@ -212,7 +218,7 @@ if ("$opt_c")      # if the -c option to specify which columns are in output
 	    elsif ($col eq timeStamp && $opt_r)
 	    {   $col_cntl[$cntl_idx]{rel} = 1;
 	    }
-	    if ("$opt_ct" && $col_cntl[$cntl_idx]{re} eq $ct_re)
+	    if ("$opt_ct" ne "" && $col_cntl[$cntl_idx]{re} eq $ct_re)
 	    {   $col_cntl[$cntl_idx]{ct} = 1;
 	    }
 	}
@@ -243,7 +249,7 @@ else
 	if ($delta_cntl[$delta_idx]{rel})
 	{   $col_cntl[$cntl_idx]{rel} = 1;
 	}
-	if ("$opt_ct" && $col_cntl[$cntl_idx]{re} eq $ct_re)
+	if ("$opt_ct" ne "" && $col_cntl[$cntl_idx]{re} eq $ct_re)
 	{   $col_cntl[$cntl_idx]{ct} = 1;
 	}
 	$prev = $col_cntl[$cntl_idx]{re};
@@ -259,7 +265,7 @@ else
 $sub = "
     sub process_line
     {   ";
-if ("$opt_pre")
+if ("$opt_pre" ne "")
 {   $sub .= "
         return unless ($opt_pre);";
 }
@@ -273,7 +279,7 @@ for $idx (0..$#col_cntl)
         if (!(\$line=~/$col_cntl[$idx]{re}/o))  # must check for, i.e. blank line
         {   chop(\$line); \$out_line = \$line;";
 
-    if ("$opt_post")
+    if ("$opt_post" ne "")
     {   $sub .= "
             \$_ = \$out_line;
             return unless ($opt_post); # re operates on \$_";
@@ -384,7 +390,7 @@ for $idx (0..$#col_cntl)
     $sub .= "
         }";
 }
-if ("$opt_post")
+if ("$opt_post" ne "")
 {   $sub .= "
         \$_ = \$out_line;
         return unless ($opt_post); # re operates on \$_";

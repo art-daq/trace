@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.24 $';
-#   $Date: 2001/11/09 05:27:29 $
+$version = '$Revision: 1.25 $';
+#   $Date: 2002/03/21 21:08:59 $
 
 
 $USAGE = "\
@@ -364,7 +364,8 @@ if ("$opt_stats")
             {      \$col_cntl[$idx]{\"min\$cpu\"} = \$col_cntl[$idx]{stat};
             }
             elsif (\$col_cntl[$idx]{\"max\$cpu\"} < \$col_cntl[$idx]{stat})
-            {      \$col_cntl[$idx]{\"max\$cpu\"} = \$col_cntl[$idx]{stat};
+            {      # printf STDOUT \"max new=\$col_cntl[$idx]{stat} old=%d\\n\",\$col_cntl[$idx]{\"max\$cpu\"};
+                   \$col_cntl[$idx]{\"max\$cpu\"} = \$col_cntl[$idx]{stat};
             }
             \$col_cntl[$idx]{\"tot\$cpu\"} += \$col_cntl[$idx]{stat};
             \$col_cntl[$idx]{\"cnt\$cpu\"}++;
@@ -404,22 +405,28 @@ if ("$opt_stats")
 		    last;
 		}
 		else
-		{   $data = $1;
+		{   $data = $1;  # this will be the column of data (from the
+		                 # last line, as noted above)
 		    if (!$opt_b)
-		    {
+		    {   # stats and deltas do NOT come before (they are after)
+			# so if this column has a delta, the heading comes
+			# before, IF it is a column for which there is a delta.
 			if ($col_cntl[$idx]{delta})
 			{   $ssdata =sprintf( "%*s", length($data), $ss );
 			}
 			else
 			{   $ssdata = $data;
-			    $ssdata =~ s/./ /g;
+			    $ssdata =~ s/./ /g; # use the data to get the
+			                        # correct number of spaces.
 			}
 			$out_line .= $ssdata; # delta will come after
 		    }
-		    if ($col_cntl[$idx]{delta})
-		    {   if ($data =~ /^\s*\d+/o)
+		    if ($col_cntl[$idx]{delta})  # if this is a column for
+		    {                            # which 'delta' was specified
+			if ($data =~ /^\s*\d+/o)
 			{   if ($col_cntl[$idx]{"cnt$cpu"})
 			    {   if    ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} = $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"}; }
+				else               { $col_cntl[$idx]{"${ss}$cpu"} =~ s/^ */ /g; } # strip leading spaces
 				$delta = sprintf( "%*.*s", $delta_width, $delta_width-1, $col_cntl[$idx]{"${ss}$cpu"} );
 			    }
 			    else { $delta = sprintf( "%*s", $delta_width, "nocpu" ); }
@@ -432,7 +439,7 @@ if ("$opt_stats")
 			}
 			$out_line .= $delta;
 		    };
-		    if ($opt_b)
+		    if ($opt_b)  # do the labeling after
 		    {
 			if ($col_cntl[$idx]{delta})
 			{   $data =sprintf( "%-*s", length($data), " $ss" );

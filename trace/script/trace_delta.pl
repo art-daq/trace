@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.11 $';
-#   $Date: 2000-01-11 16:12:25 $
+$version = '$Revision: 1.12 $';
+#   $Date: 2000-01-11 17:48:33 $
 
 
 $USAGE = "\
@@ -19,14 +19,14 @@ options:
 -dc   <cols_spec>    columns for cpu specific delta
 -dw   <width>        delta column width
 -pre  <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
--post <re>           post processing filter
+-post <re>           post processing filter (of output lines)
 -b                   output delta before associated column
 
 cols_spec examples:
-   CPU,msg
+   CPU,message
    3..5,0,11,Rest
 
-Note: if -c is used, columns specified in the -d/-dc options must be
+Note: If -c is used, columns specified in the -d/-dc options must be
       a subset of the options specified.
 
 defaults:
@@ -210,47 +210,77 @@ else
     $col_cntl[$cntl_idx]{re} = "$prev(.*)";
 }
 
-sub process_line
-{   # if $_ != $line, use: "(\$_=\$line) && !($opt_dre)")
-    if ("$opt_pre") { return unless eval "($opt_pre)"; }  # re operates on $_
-    $out_line = "";
-    for $idx (0..$#col_cntl)
-    {   if (!($line=~/$col_cntl[$idx]{re}/))
-	{   chop($line); $out_line = $line;
-	    last;
-	}
-	$data = $1;
-	if (!$opt_b) { $out_line = $out_line . $data; }
-	if ($col_cntl[$idx]{delta})
-	{   if ($data =~ /\d+/)
-	    {   if ($col_cntl[$idx]{delta_cpu})
-		{   $line =~ /$cpu_re/o;
-		    $cpu = $1;
-		}
-		else
-		{   $cpu = 0;  # something consistant for non-cpu specific delta
-		}
-		# do not need 'if (!"$col_cntl[$idx]{\"prev$cpu\"}")'
-		# below (which would gaurd against data==0) as data is a
-		# string (i.e. it has leading spaces, such as '   0')
-		if (!$col_cntl[$idx]{"prev$cpu"}) { $col_cntl[$idx]{"prev$cpu"} = $data; }
-		$delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{"prev$cpu"}-$data );
-		$col_cntl[$idx]{"prev$cpu"} = $data;
-	    }
-	    elsif ($data =~ /^-+$/)
-	    {   $delta = sprintf( "%s", '-' x $delta_width );
-	    }
-	    else
-	    {   $delta = sprintf( "%*s", $delta_width, 'delta' );
-	    }
-	    $out_line = $out_line . $delta;
-	}
-	if ($opt_b) { $out_line = $out_line . $data; }
-    }
-    if ("$opt_post") { return unless eval "($opt_post)"; }  # re operates on $_
-    print STDOUT "$out_line\n";
+#
+#   BUILD sub process_line FOR SPEED
+#
+$sub = "
+    sub process_line
+    {   ";
+if ("$opt_pre")
+{   $sub .= "
+        return unless ($opt_pre);";
 }
+$sub .= "
+        \$out_line = \"\";";
+for $idx (0..$#col_cntl)
+{   $sub .= "
 
+        # processing for col_cnt[$idx]
+        if (!(\$line=~/$col_cntl[$idx]{re}/o))
+        {   chop(\$line); \$out_line = \$line;
+            last;
+        }
+        \$data = \$1;";
+    if (!$opt_b)
+    {   $sub .= "
+        \$out_line .= \$data; # delta will come after";
+    }
+    if ($col_cntl[$idx]{delta})
+    {   $sub .= "
+        if (\$data =~ /\\d+/o)
+        {";
+	if ($col_cntl[$idx]{delta_cpu})
+	{   $sub .= "
+            \$line =~ /$cpu_re/o;
+            \$cpu = \$1;";
+	}
+	else
+	{   $sub .= "
+            \$cpu = 0;  # something consistant for non-cpu specific delta";
+	}
+	$sub .= "
+            if (!\$col_cntl[$idx]{\"prev\$cpu\"}) { \$col_cntl[$idx]{\"prev\$cpu\"} = \$data; }
+            \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
+            \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
+        }
+        elsif (\$data =~ /^-+\$/o)
+        {   \$delta = sprintf( \"%s\", '-' x $delta_width );
+        }
+        else
+        {   \$delta = sprintf( \"%*s\", $delta_width, 'delta' );
+        }
+        \$out_line .= \$delta;";
+    };
+    if ($opt_b)
+    {   $sub .= "
+        \$out_line .= \$data; # delta was before";
+    }
+}
+if ("$opt_post")
+{   $sub .= "
+        \$_ = \$out_line;
+        return unless ($opt_post); # re operates on \$_";
+}
+$sub .= "
+        print STDOUT \"\$out_line\\n\";
+    }";
+
+#print STDOUT "$sub\n";
+eval $sub;
+
+#
+#   NOW DO THE REAL WORK
+#
 $_ = $line; # needed for opt_pre/post processing
 &process_line;
 

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.20 $';
-#   $Date: 2000/02/02 20:47:11 $
+$version = '$Revision: 1.21 $';
+#   $Date: 2000/02/03 16:23:03 $
 
 
 $USAGE = "\
@@ -22,6 +22,8 @@ options:
 -post <re>           post processing filter (of output lines)
 -b                   output delta before associated column
 -stats               min, max, ave stats on delta (except cpu deltas)
+-r                   change \"timeStamp\" column to \"relative\" (currently
+                     only works when header line is included)
 
 cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
@@ -37,15 +39,15 @@ defaults:
 #
 #   RECORD OPTIONS
 #
-# define options - order is important.
-@opts=('cpu,1','dw,1','dc,1','d,1','c,1','pre,1','post,1','b,0','v,0','stats,0','show_sub,0');
+# define options - order is important (see below). 2nd field == 1 if arg.
+@opts=('cpu,1','dw,1','dc,1','d,1','c,1','pre,1','post,1','b,0','v,0','stats,0','r,0','show_sub,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
     $found = 0;
     foreach $optset (@opts)
     {   eval "\@opt = ($optset)";
-	if (/^-$opt[0]/)
+	if (/^-$opt[0]/)  # NOTE: currently NOT /^-$opt[0]$/, hence order important (ref. above)
 	{   if ($opt[1]) { eval "\$opt_$opt[0] = shift"; }
 	    else         { eval "\$opt_$opt[0] = 1"; }
 	    $found = 1; last;
@@ -122,6 +124,12 @@ if ("$opt_dc")
 	&col_spec_to_re( tmp );
 	$delta_cntl[$delta_idx]{re}   = $tmp_re;
 	$delta_cntl[$delta_idx]{cpu}  = 1;
+	print STDERR "col=$col ";
+	if ($col eq timeStamp && $opt_r)
+	{   $delta_cntl[$delta_idx]{rel} = 1;
+	    print STDERR " setting rel\n";
+	}
+	print STDERR "\n";
 	$default_col[$delta_idx] = $tmp_re;
 	$delta_idx++;
     }
@@ -132,6 +140,9 @@ if ("$opt_d")
     {   $tmp_col_spec = $col;
 	&col_spec_to_re( tmp );
 	$delta_cntl[$delta_idx]{re}   = $tmp_re;
+	if ($col eq timeStamp && $opt_r)
+	{   $delta_cntl[$delta_idx]{rel} = 1;
+	}
 	$default_col[$delta_idx] = $tmp_re;
 	$delta_idx++;
     }
@@ -141,6 +152,9 @@ if (!"$opt_d" && !"$opt_dc")  # need to try default
 {   $tmp_col_spec = timeStamp;
     &col_spec_to_re( tmp );
     $delta_cntl[$delta_idx]{re}   = $tmp_re;
+    if ($opt_r)
+    {   $delta_cntl[$delta_idx]{rel} = 1;
+    }
     $default_col[$delta_idx] = $tmp_re;
 }
 
@@ -178,6 +192,12 @@ if ("$opt_c")
 		if ($delta_cntl[$delta_idx]{cpu})
 		{   $col_cntl[$cntl_idx]{delta_cpu} = 1;
 		}
+		if ($delta_cntl[$delta_idx]{rel})
+		{   $col_cntl[$cntl_idx]{rel} = 1;
+		}
+	    }
+	    elsif ($col eq timeStamp && $opt_r)
+	    {   $col_cntl[$cntl_idx]{rel} = 1;
 	    }
 	}
 	$cntl_idx++;
@@ -203,6 +223,9 @@ else
 	$col_cntl[$cntl_idx]{delta} = 1;
 	if ($delta_cntl[$delta_idx]{cpu})
 	{   $col_cntl[$cntl_idx]{delta_cpu} = 1;
+	}
+	if ($delta_cntl[$delta_idx]{rel})
+	{   $col_cntl[$cntl_idx]{rel} = 1;
 	}
 	$prev = $col_cntl[$cntl_idx]{re};
 	$cntl_idx++;
@@ -240,13 +263,20 @@ for $idx (0..$#col_cntl)
         }
         else
         {   \$data = \$1;";
+    if ($col_cntl[$idx]{rel})
+    {   $sub .= "
+            if (!\$col_cntl[$idx]{rel_start_val})
+            {   \$col_cntl[$idx]{rel_start_val} = \$data;
+            }
+            \$data = sprintf( \"%*s\", length(\$data), \$data - \$col_cntl[$idx]{rel_start_val} );
+    }
     if (!$opt_b)
     {   $sub .= "
             \$out_line .= \$data; # delta will come after";
     }
     if ($col_cntl[$idx]{delta})
     {   $sub .= "
-            if (\$data =~ /^\\s*\\d+/o)
+            if (\$data =~ /^\\s*[-]*\\d+/o)
             {";
 	if ($col_cntl[$idx]{delta_cpu})
 	{   $sub .= "

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.19 $';
-#   $Date: 2000/01/12 23:41:55 $
+$version = '$Revision: 1.20 $';
+#   $Date: 2000/02/02 20:47:11 $
 
 
 $USAGE = "\
@@ -380,7 +380,10 @@ if ("$opt_stats")
 			if ($col_cntl[$idx]{delta})
 			{   $ssdata =sprintf( "%*s", length($data), $ss );
 			}
-			else { $ssdata =~ s/./ /g; }
+			else
+			{   $ssdata = $data;
+			    $ssdata =~ s/./ /g;
+			}
 			$out_line .= $ssdata; # delta will come after
 		    }
 		    if ($col_cntl[$idx]{delta})
@@ -409,6 +412,8 @@ if ("$opt_stats")
 		    }
 		}
 	    }
+	    $out_line =~ s/\s*$//; # remove trailing white space (this is just
+	                           # a little nicer when just looking at stats)
 	    print STDOUT "$out_line\n";
 	}
     }

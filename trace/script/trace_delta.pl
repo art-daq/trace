@@ -4,9 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.25 $';
-#   $Date: 2002/03/21 21:08:59 $
-
+$version = '$Revision: 1.26 $';
+#   $Date: 2002/05/30 15:51:31 $
 
 $USAGE = "\
 $version
@@ -24,6 +23,7 @@ options:
 -stats               min, max, ave stats on delta (except cpu deltas)
 -r                   change \"timeStamp\" column to \"relative\" (currently
                      only works when header line is included)
+-ct   <col_spec>     make time more readable (convert time)
 
 cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
@@ -39,8 +39,8 @@ defaults:
 #
 #   RECORD OPTIONS
 #
-# define options - order is important (see below). 2nd field == 1 if arg.
-@opts=('cpu,1','dw,1','dc,1','d,1','c,1','pre,1','post,1','b,0','v,0','stats,0','r,0','show_sub,0');
+# define options - ORDER IS IMPORTANT (see below). 2nd field == 1 if arg.
+@opts=('cpu,1','dw,1','dc,1','d,1','ct,1','c,1','pre,1','post,1','b,0','v,0','stats,0','r,0','show_sub,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
@@ -60,6 +60,8 @@ while ($ARGV[0] =~ /^-/)
 
 #
 #   GET FIRST LINE .. it is a basis for alot of processing
+#   it should either a line with headings that are right justified in the
+#   colums OR a data line.
 #
 $line = <>;
 
@@ -68,10 +70,15 @@ $line = <>;
 #
 if ("$opt_dw")   { $delta_width = $opt_dw; }   else { $delta_width = 10; }
 
+#
+# example: col_spec_to_re( cpu ) will return something like "........(.....)"
+#
 sub col_spec_to_re
 {   $spec = shift @_;
-    eval "\$col_spec = \$${spec}_col_spec";
-
+    eval "\$col_spec = \$${spec}_col_spec";  # kludgie way to pass argument
+                                             # i.e. use col_spec_to_re( tmp )
+                                             # to pass tmp_col_spec
+                                             # and return re in tmp_re
     if ($col_spec =~ /^\d+$/)
     {   if ($col_spec == 0)
 	{   $re = '(\s+\S+)';
@@ -95,6 +102,12 @@ sub col_spec_to_re
     eval "\$${spec}_re = \$re";
 }
 
+if ("$opt_ct")
+{   use POSIX;			# for strftime  NOTE: this is "used" at compile
+    $ct_col_spec = $opt_ct;     # time, i.e. even if -ct is not specified.
+    &col_spec_to_re( ct );
+}
+
 $delta_idx=0;
 
 sub get_cpu_re
@@ -112,7 +125,7 @@ sub get_cpu_re
     else { &col_spec_to_re( cpu ); } # refine cpu_re
 }
 
-if ("$opt_dc")
+if ("$opt_dc")      # if "columns for *cpu specific* deltas" where specified
 {   # we need a cpu spec
     if ("$opt_cpu") { $cpu_col_spec = $opt_cpu;}
     else            { $cpu_col_spec = CPU;}
@@ -127,14 +140,14 @@ if ("$opt_dc")
 	print STDERR "col=$col ";
 	if ($col eq timeStamp && $opt_r)
 	{   $delta_cntl[$delta_idx]{rel} = 1;
-	    print STDERR " setting rel\n";
+	    print STDERR " setting relative time\n";
 	}
 	print STDERR "\n";
 	$default_col[$delta_idx] = $tmp_re;
 	$delta_idx++;
     }
 }
-if ("$opt_d")
+if ("$opt_d")      # if "columns for *cpu specific* deltas" where specified
 {   eval "\@opt_eval = ($opt_d)";
     foreach $col (@opt_eval)
     {   $tmp_col_spec = $col;
@@ -168,7 +181,7 @@ sub find_delta
 }
 
 $cntl_idx = 0;
-if ("$opt_c")
+if ("$opt_c")      # if the -c option to specify which columns are in output
 {   eval "\@opt_eval = ($opt_c)";
     foreach $col (@opt_eval)
     {   if    ($col =~ /^R(est)*$/)
@@ -199,6 +212,9 @@ if ("$opt_c")
 	    elsif ($col eq timeStamp && $opt_r)
 	    {   $col_cntl[$cntl_idx]{rel} = 1;
 	    }
+	    if ("$opt_ct" && $col_cntl[$cntl_idx]{re} eq $ct_re)
+	    {   $col_cntl[$cntl_idx]{ct} = 1;
+	    }
 	}
 	$cntl_idx++;
     }
@@ -227,6 +243,9 @@ else
 	if ($delta_cntl[$delta_idx]{rel})
 	{   $col_cntl[$cntl_idx]{rel} = 1;
 	}
+	if ("$opt_ct" && $col_cntl[$cntl_idx]{re} eq $ct_re)
+	{   $col_cntl[$cntl_idx]{ct} = 1;
+	}
 	$prev = $col_cntl[$cntl_idx]{re};
 	$cntl_idx++;
     }
@@ -246,12 +265,14 @@ if ("$opt_pre")
 }
 $sub .= "
         \$out_line = \"\";";
+
 for $idx (0..$#col_cntl)
 {   $sub .= "
 
         # processing for col_cnt[$idx]
-        if (!(\$line=~/$col_cntl[$idx]{re}/o))
+        if (!(\$line=~/$col_cntl[$idx]{re}/o))  # must check for, i.e. blank line
         {   chop(\$line); \$out_line = \$line;";
+
     if ("$opt_post")
     {   $sub .= "
             \$_ = \$out_line;
@@ -271,8 +292,23 @@ for $idx (0..$#col_cntl)
             \$data = sprintf( \"%*s\", length(\$data), \$data - \$col_cntl[$idx]{rel_start_val} );"
     }
     if (!$opt_b)
-    {   $sub .= "
+    {   
+	if ($col_cntl[$idx]{ct}) # if converting time
+	{   $sub .= "
+            if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
+            {   \$seconds = \$1;
+                \$useconds = \$2;
+                \$str = strftime( \"%a %H:%M:%S.\$useconds\", localtime(\$seconds) );
+                \$out_line .= sprintf( \"%*s\", length(\$data), \$str );
+	    }
+            else
+            {   \$out_line .= \$data; # delta will come after
+            }";
+	}
+	else
+	{   $sub .= "
             \$out_line .= \$data; # delta will come after";
+	}
     }
     if ($col_cntl[$idx]{delta})
     {   $sub .= "
@@ -327,8 +363,23 @@ for $idx (0..$#col_cntl)
             \$out_line .= \$delta;";
     };
     if ($opt_b)
-    {   $sub .= "
+    {
+	if ($col_cntl[$idx]{ct}) # if converting time
+	{   $sub .= "
+            if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
+            {   \$seconds = \$1;
+                \$useconds = \$2;
+                \$str = strftime( \"%a %H:%M:%S.\$useconds\", localtime(\$seconds) );
+                \$out_line .= sprintf( \"%*s\", length(\$data), \$str );
+	    }
+            else
+            {   \$out_line .= \$data; # delta was before
+            }";
+	}
+	else
+	{   $sub .= "
             \$out_line .= \$data; # delta was before";
+	}
     }
     $sub .= "
         }";

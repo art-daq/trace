@@ -1,11 +1,11 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #   This file (trace_delta.pl) was created by Ron Rechenmacher <ron@fnal.gov> on
 #   Jan  6, 2000. "TERMS AND CONDITIONS" governing this file are in the README
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.23 $';
-#   $Date: 2001/07/19 18:45:57 $
+$version = '$Revision: 1.24 $';
+#   $Date: 2001/11/09 05:27:29 $
 
 
 $USAGE = "\
@@ -299,7 +299,7 @@ for $idx (0..$#col_cntl)
                 }
                 else
                 {
-                    \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
+                    \$delta = sprintf( \"%*s\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
                     \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;";
 	if ("$opt_stats")
 	{    $sub .= "
@@ -420,7 +420,7 @@ if ("$opt_stats")
 		    {   if ($data =~ /^\s*\d+/o)
 			{   if ($col_cntl[$idx]{"cnt$cpu"})
 			    {   if    ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} = $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"}; }
-				$delta = sprintf( "%*d", $delta_width, $col_cntl[$idx]{"${ss}$cpu"} );
+				$delta = sprintf( "%*.*s", $delta_width, $delta_width-1, $col_cntl[$idx]{"${ss}$cpu"} );
 			    }
 			    else { $delta = sprintf( "%*s", $delta_width, "nocpu" ); }
 			}

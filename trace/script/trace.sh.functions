@@ -1,0 +1,15 @@
+tshow()    { cat /proc/trace/buffer; }
+tlevel()   { cat /proc/trace/level; }
+tlvl()     { cat /proc/trace/level; }
+tcontrol() { cat /proc/trace/control; }
+tcntl()    { cat /proc/trace/control; }
+tinfo()    { cat /proc/trace/control; }
+tmode()    { cat /proc/trace/control | grep mode | sed -e 's/mode=//'; }
+tfreeze()  { perl -e "printf \"mode=%d\n\",`tmode` & 0xfffffffe" >|/proc/trace/control; }
+tfrz()     { perl -e "printf \"mode=%d\n\",`tmode` & 0xfffffffe" >|/proc/trace/control; }
+tfre()     { perl -e "printf \"mode=%d\n\",`tmode` & 0xfffffffe" >|/proc/trace/control; }
+trelease() { perl -e "printf \"mode=%d\n\",`tmode` |          1" >|/proc/trace/control; }
+trel()     { perl -e "printf \"mode=%d\n\",`tmode` |          1" >|/proc/trace/control; }
+treset()   { echo reset                                          >|/proc/trace/control; }
+ton()      { echo reset mode=1                                   >|/proc/trace/control; }
+toff()     { echo       mode=0                                   >|/proc/trace/control; }

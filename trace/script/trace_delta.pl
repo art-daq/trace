@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.3 $';
-#   $Date: 2000/01/11 02:02:52 $
+$version = '$Revision: 1.4 $';
+#   $Date: 2000/01/11 02:32:09 $
 
 
 $USAGE = "\
@@ -17,17 +17,22 @@ The default col_spc is 'R0'
 
 general_options:
 -cpu <col_spec>     column for cpu field.
--c   <cols_spec>    columns to include in output
--d   <cols_spec>    columns 
--dc  <cols_spec>
--re  <re>               i.e: '/(begin|end)/ && !/947373119916951/'
+-c   <cols_spec>    columns to include in output (must specify -d or -dc)
+-d   <cols_spec>    columns for non cpu specific delta
+-dc  <cols_spec>    columns for cpu specific delta
+-dw  <delta_column_width>
+-re  <re>           i.e: '/(begin|end)/ && !/947373119916951/'
 
 cols_spec examples:
    CPU,msg
    3..5,0,11,Rest
 
+Note: if -c is used, columns specified in the -d/-dc options must be
+      a subset of the options specified.
+
 defaults:
--d timeStamp
+-d  timeStamp
+-dw 10
 ";
 
 $delta_width = 10;
@@ -40,6 +45,9 @@ while ($ARGV[0] =~ /^-/)
     if    (/^-[h?]/)
     {   die "$USAGE\n";
     }
+    elsif (/^-dw/)
+    {   $opt_dw = shift;
+    }
     elsif (/^-dc/)
     {   $opt_dc = shift;
     }
@@ -51,6 +59,9 @@ while ($ARGV[0] =~ /^-/)
     }
     elsif (/^-cpu/)
     {   $opt_cpu = shift;
+    }
+    elsif (/^-re/)
+    {   $opt_re = shift;
     }
     elsif (/^-v/)
     {   $opt_v = 1;
@@ -68,6 +79,7 @@ $line = <>;
 #
 #   PROCESS OPTIONS
 #
+if ("$opt_dw") { $delta_width = $opt_dw; }
 
 sub col_spec_to_re
 {   $spec = shift @_;
@@ -203,7 +215,8 @@ else
 
 
 sub process_line
-{   $out_line = "";
+{   if ("$opt_re") { return unless eval ($opt_re); }
+    $out_line = "";
     for $idx (0..$#col_cntl)
     {   if (!($line=~/$col_cntl[$idx]{re}/))
 	{   $out_line = $line;
@@ -238,7 +251,6 @@ sub process_line
 &process_line;
 
 while (<>)
-{   if ("$opt_re") { next unless eval ($opt_re); }
-    $line = $_;
+{   $line = $_;
     &process_line;
 }

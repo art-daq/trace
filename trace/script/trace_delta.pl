@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.30 $';
-#   $Date: 2003-07-25 18:51:33 $
+$version = '$Revision: 1.31 $';
+#   $Date: 2005-12-07 08:00:11 $
 
 $USAGE = "\
 $version
@@ -25,6 +25,8 @@ options:
 -r                   change \"timeStamp\" column to \"relative\" (currently
                      only works when header line is included)
 -ct   <col_spec>     make time more readable (convert time)
+-syscall             attempt read of /usr/include/asm/unistd.h to convert
+                     system call numbers in string \"system call \\d+\$\" to names
 
 cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
@@ -41,7 +43,8 @@ defaults:
 #   RECORD OPTIONS
 #
 # define options - ORDER IS IMPORTANT (see below). 2nd field == 1 if arg.
-@opts=('cpu,1','dw,1','dc,1','d,1','ct,1','c,1','pre,1','post,1','b,0','v,0','stats,0','i,0','r,0','show_sub,0');
+@opts=( 'cpu,1','dw,1','dc,1','d,1','ct,1','c,1','pre,1','post,1','b,0','v,0'
+       ,'stats,0','i,0','r,0','show_sub,0','syscall,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
@@ -272,6 +275,14 @@ if ("$opt_pre" ne "")
 }
 $sub .= "
         \$out_line = \"\";";
+if ("$opt_syscall" ne "" && -f "/usr/include/asm/unistd.h")
+{   open( SYSCALLFILE, "</usr/include/asm/unistd.h" );
+    while (<SYSCALLFILE>)
+    {    if (/define\s+__NR_(\S+)\s+(\d+)/) { $syscall[$2] = $1; } #print STDOUT "$syscall[$2] = $1\n"; }
+    }
+    $sub .= "
+        \$line =~ s/ system call (\\d+)\$/ system call \$syscall[\$1](\$1)/;";
+}
 
 for $idx (0..$#col_cntl)
 {   $sub .= "

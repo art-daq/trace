@@ -3,17 +3,23 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.8 $
-#   $Date: 2004/09/17 16:34:18 $
+#   $Revision: 1.9 $
+#   $Date: 2006/01/17 15:15:51 $
 
-tprint()   { echo print=count,timeStamp,PID,TID,TraceName,CPU,lvl,cycle,message >|/proc/trace/control; }
+tprint()
+{   if [ "${1-}" ];then echo print="$@"                                                    >|/proc/trace/control
+    else                echo print=count,timeStamp,PID,TID,TraceName,CPU,lvl,cycle,message >|/proc/trace/control;fi
+}
 tshow()    { cat /proc/trace/buffer | less; } # less circa Jul 2003 allow output to pipe
 tlevel()
 {   if [ "${1-}" ];then  echo "$@" >|/proc/trace/level
     else                 cat /proc/trace/level; fi
 }
 tlvl()     { tlevel "$@"; }
-tcontrol() { cat /proc/trace/control; }
+tcontrol()
+{   if [ "${1-}" ];then  echo "$@" >|/proc/trace/control
+    else                 cat         /proc/trace/control;fi
+}
 tcntl()    { tcontrol "$@"; }
 tinfo()    { tcontrol "$@"; }
 tmode()

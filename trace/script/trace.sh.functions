@@ -3,36 +3,58 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.9 $
-#   $Date: 2006-01-17 15:15:51 $
+#   $Revision: 1.10 $
+#   $Date: 2006-01-19 21:57:57 $
 
 tprint()
-{   if [ "${1-}" ];then echo print="$@"                                                    >|/proc/trace/control
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    if [ "${1-}" ];then echo print="$@"                                                    >|/proc/trace/control
     else                echo print=count,timeStamp,PID,TID,TraceName,CPU,lvl,cycle,message >|/proc/trace/control;fi
 }
-tshow()    { cat /proc/trace/buffer | less; } # less circa Jul 2003 allow output to pipe
+tshow()
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    cat /proc/trace/buffer | less  # less circa Jul 2003 allow output to pipe
+}
 tlevel()
-{   if [ "${1-}" ];then  echo "$@" >|/proc/trace/level
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    if [ "${1-}" ];then  echo "$@" >|/proc/trace/level
     else                 cat /proc/trace/level; fi
 }
 tlvl()     { tlevel "$@"; }
 tcontrol()
-{   if [ "${1-}" ];then  echo "$@" >|/proc/trace/control
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    if [ "${1-}" ];then  echo "$@" >|/proc/trace/control
     else                 cat         /proc/trace/control;fi
 }
 tcntl()    { tcontrol "$@"; }
 tinfo()    { tcontrol "$@"; }
 tmode()
-{   if [ "${1-}" ];then  echo "mode=$@" >|/proc/trace/control
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    if [ "${1-}" ];then  echo "mode=$@" >|/proc/trace/control
     else cat /proc/trace/control | grep mode | sed -e 's/mode=//'; fi
 }
-tfreeze()  { perl -e "printf \"mode=%d\n\",`tmode` & 0xfffffffe" >|/proc/trace/control; }
+tfreeze()
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    perl -e "printf \"mode=%d\n\",`tmode` & 0xfffffffe" >|/proc/trace/control
+}
 tfrz()     { tfreeze "$@"; }
 tfre()     { tfreeze "$@"; }
-trelease() { perl -e "printf \"mode=%d\n\",`tmode` | 1"          >|/proc/trace/control; }
+trelease()
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    perl -e "printf \"mode=%d\n\",`tmode` | 1"          >|/proc/trace/control
+}
 trel()     { trelease "$@"; }
-treset()   { echo reset                                          >|/proc/trace/control; }
-ton()      { perl -e "printf \"reset mode=%d\n\",`tmode` | 1"    >|/proc/trace/control; }
-toff()     { echo       mode=0                                   >|/proc/trace/control; }
+treset()
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    echo reset                                          >|/proc/trace/control
+}
+ton()
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    perl -e "printf \"reset mode=%d\n\",`tmode` | 1"    >|/proc/trace/control
+}
+toff()
+{   if [ ! -d /proc/trace ];then echo No TRACE;return;fi
+    echo       mode=0                                   >|/proc/trace/control
+}
 
 tdelta()   { trace_delta.pl "$@" | less; }  # ex. tshow | grep xxx | tdelta

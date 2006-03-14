@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.31 $';
-#   $Date: 2005/12/07 08:00:11 $
+$version = '$Revision: 1.32 $';
+#   $Date: 2006/03/14 16:11:33 $
 
 $USAGE = "\
 $version
@@ -44,13 +44,14 @@ defaults:
 #
 # define options - ORDER IS IMPORTANT (see below). 2nd field == 1 if arg.
 @opts=( 'cpu,1','dw,1','dc,1','d,1','ct,1','c,1','pre,1','post,1','b,0','v,0'
-       ,'stats,0','i,0','r,0','show_sub,0','syscall,0');
+       ,'stats,0','i,0','r,0','show_sub,0','syscal,0');
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
     $found = 0;
     foreach $optset (@opts)
     {   eval "\@opt = ($optset)";
+	#print STDERR "trying opt $opt[0] from ($optset)\n";
 	if (/^-$opt[0]/)  # NOTE: currently NOT /^-$opt[0]$/, hence order important (ref. above)
 	{   if ($opt[1]) { eval "\$opt_$opt[0] = shift"; }
 	    else         { eval "\$opt_$opt[0] = 1"; }

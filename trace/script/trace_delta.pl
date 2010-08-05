@@ -4,8 +4,10 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.33 $';
-#   $Date: 2006/03/14 16:15:16 $
+$version = '$Revision: 1.34 $';
+#   $Date: 2010/08/05 12:02:38 $
+
+use Time::Local; # timelocal()
 
 $USAGE = "\
 $version
@@ -27,6 +29,7 @@ options:
 -ct   <col_spec>     make time more readable (convert time)
 -syscal              attempt read of /usr/include/asm/unistd.h to convert
                      system call numbers in string \"system call \\d+\$\" to names
+-show_sub            development/debug option
 
 cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
@@ -191,6 +194,24 @@ sub find_delta
     return -1;
 }
 
+sub get_delta_data
+{   $delta_d = shift @_;
+    if ($delta_d =~ /^[\d.]+$/o)
+    {   $ret = $delta_d;
+    }
+    if ($delta_d =~ /^([0-9]+):([0-9]+):([0-9][0-9])\.(\d\d\d\d\d\d)$/o)
+    {   # convert to integer microseconds
+        $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
+        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	$ret = $time_then . $4;
+    }
+    else
+    {   $ret = $delta_d;
+    }
+    #print STDERR "ret=$ret\n";
+    return $ret;
+}
+
 $cntl_idx = 0;
 if ("$opt_c" ne "")      # if the -c option to specify which columns are in output
 {   eval "\@opt_eval = ($opt_c)";
@@ -290,7 +311,14 @@ for $idx (0..$#col_cntl)
 
         # processing for col_cnt[$idx]
         if (!(\$line=~/$col_cntl[$idx]{re}/o))  # must check for, i.e. blank line
-        {   chop(\$line); \$out_line = \$line;";
+        {   chop(\$line);
+            #\$out_line = \$line;";
+    $rest_re=$col_cntl[$idx]{re};
+    $rest_re=~s/\(.*//g;
+    $sub .= "
+             \$line=~/$rest_re(.*)/;
+             \$out_line .= \$1;";
+            
 
     if ("$opt_post" ne "")
     {   $sub .= "
@@ -331,8 +359,9 @@ for $idx (0..$#col_cntl)
     }
     if ($col_cntl[$idx]{delta})
     {   $sub .= "
-            if (\$data =~ /^\\s*[-]*\\d+/o)
-            {   #print STDERR \"data is \$data\\n\";";
+            \$delta_data = &get_delta_data(\$data);
+            if (\$delta_data =~ /^\\s*[-]*[\\d.]+/o)
+            {   #print STDERR \"delta_data is \$delta_data\\n\";";
 	if ($col_cntl[$idx]{delta_cpu})
 	{   $sub .= "
                 \$line =~ /$cpu_re/o;
@@ -345,14 +374,14 @@ for $idx (0..$#col_cntl)
 	if ("$opt_i") # invert sense of delta
 	{   $sub .= "
                 if (!\$col_cntl[$idx]{\"prev\$cpu\"})
-                {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
-                    \$delta = sprintf( \"%*d\", $delta_width, \$data-\$col_cntl[$idx]{\"prev\$cpu\"} );";
+                {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;
+                    \$delta = sprintf( \"%*d\", $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );";
         }
 	else
 	{   $sub .= "
                 if (!\$col_cntl[$idx]{\"prev\$cpu\"})
-                {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;
-                    \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );";
+                {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;
+                    \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );";
         }
 	if ("$opt_stats")
 	{    $sub .= "
@@ -364,16 +393,16 @@ for $idx (0..$#col_cntl)
                 }
                 else
                 {
-                    \$delta = sprintf( \"%*s\", $delta_width, \$data-\$col_cntl[$idx]{\"prev\$cpu\"} );
-                    \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;";
+                    \$delta = sprintf( \"%*s\", $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );
+                    \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;";
 	}
 	else
 	{   $sub .= "
                 }
                 else
                 {
-                    \$delta = sprintf( \"%*s\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$data );
-                    \$col_cntl[$idx]{\"prev\$cpu\"} = \$data;";
+                    \$delta = sprintf( \"%*s\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );
+                    \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;";
 	}
 	if ("$opt_stats")
 	{    $sub .= "
@@ -398,7 +427,8 @@ for $idx (0..$#col_cntl)
 	}
 	$sub .= "
             }
-            \$out_line .= \$delta;";
+            \$out_line .= \$delta;
+            #print STDERR \"delta=\$delta out_line=\$out_line\\n\";";
     };
     if ($opt_b)
     {

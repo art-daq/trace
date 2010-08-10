@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.35 $';
-#   $Date: 2010-08-10 19:21:56 $
+$version = '$Revision: 1.36 $';
+#   $Date: 2010-08-10 19:28:17 $
 
 use Time::Local; # timelocal()
 
@@ -27,7 +27,7 @@ options:
 -r                   change \"timeStamp\" column to \"relative\" (currently
                      only works when header line is included)
 -ct   <col_spec>     make time more readable (convert time)
--syscal              attempt read of /usr/include/asm/unistd.h to convert
+-syscall             attempt read of /usr/include/asm/unistd.h to convert
                      system call numbers in string \"system call \\d+\$\" to names
 -show_sub            development/debug option
 
@@ -47,14 +47,14 @@ defaults:
 #
 # define options - ORDER IS IMPORTANT (see below). 2nd field == 1 if arg.
 @opts=( 'cpu,1','dw,1','dc,1','d,1','ct,1','c,1','pre,1','post,1','b,0','v,0'
-       ,'stats,0','i,0','r,0','show_sub,0','syscall,0','xxx,0');  # WACKY - syscall causes compare to show_sub again?
+       ,'stats,0','i,0','r,0','show_sub,0','"syscall",0','xxx,0');  # syscall needs to be quoted as it is a function
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
     $found = 0;
     foreach $optset (@opts)
     {   eval "\@opt = ($optset)";
-	print STDERR "trying opt $opt[0] from ($optset)\n";
+	#print STDERR "trying opt $opt[0] from ($optset)\n";
 	if (/^-$opt[0]/)  # NOTE: currently NOT /^-$opt[0]$/, hence order important (ref. above)
 	{   if ($opt[1]) { eval "\$opt_$opt[0] = shift"; }
 	    else         { eval "\$opt_$opt[0] = 1"; }
@@ -297,8 +297,9 @@ if ("$opt_pre" ne "")
 }
 $sub .= "
         \$out_line = \"\";";
-if ("$opt_syscal" ne "" && -f "/usr/include/asm/unistd.h")
+if ("$opt_syscall" ne "" && -f "/usr/include/asm/unistd.h")
 {   open( SYSCALLFILE, "</usr/include/asm/unistd.h" );
+    #print STDERR "opened /usr/include/asm/unistd.h for syscall translation\n";
     while (<SYSCALLFILE>)
     {    if (/define\s+__NR_(\S+)\s+(\d+)/) { $syscal[$2] = $1; } #print STDOUT "$syscal[$2] = $1\n"; }
     }

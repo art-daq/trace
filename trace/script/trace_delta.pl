@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.36 $';
-#   $Date: 2010/08/10 19:28:17 $
+$version = '$Revision: 1.37 $';
+#   $Date: 2012/02/16 18:22:01 $
 
 use Time::Local; # timelocal()
 
@@ -196,10 +196,16 @@ sub find_delta
 
 sub get_delta_data
 {   $delta_d = shift @_;
-    if ($delta_d =~ /^[\d.]+$/o)
+    if    ($delta_d =~ /^[\d.]+\s*$/o)
     {   $ret = $delta_d;
     }
-    if ($delta_d =~ /^([0-9]+):([0-9]+):([0-9][0-9])\.(\d\d\d\d\d\d)$/o)
+    elsif ($delta_d =~ /^([0-9]+):([0-9]+):([0-9][0-9])\.(\d\d\d\d\d\d)$/o)
+    {   # convert to integer microseconds
+        $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
+        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	$ret = $time_then . $4;
+    }
+    elsif ($delta_d =~ /^([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}/o)
     {   # convert to integer microseconds
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
@@ -362,7 +368,8 @@ for $idx (0..$#col_cntl)
     {   $sub .= "
             \$delta_data = &get_delta_data(\$data);
             if (\$delta_data =~ /^\\s*[-]*[\\d.]+/o)
-            {   #print STDERR \"delta_data is \$delta_data\\n\";";
+            {   #print STDERR \"delta_data is \$delta_data\\n\";
+                 \$delta_data = eval( \$delta_data);";  # allow for hex (ie.0x1234) or decimal or float
 	if ($col_cntl[$idx]{delta_cpu})
 	{   $sub .= "
                 \$line =~ /$cpu_re/o;

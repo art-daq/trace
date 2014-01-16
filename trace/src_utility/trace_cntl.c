@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.7 $$Date: 2014/01/16 21:29:20 $";
+    rev="$Revision: 1.8 $$Date: 2014/01/16 21:38:21 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -130,10 +130,36 @@ main(  int	argc
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   snprintf( buffer, sizeof(buffer)
-		     , "this is one small param: %u %u", 12345678, ii );
+		     , "this is 2 params: %u %u", 12345678, ii );
 	    TRACE( 0, buffer );
 	}
 	TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 2 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+
+
+	TRACE_CNTL("reset");
+	TRACE_CNTL("mode",2);TRACE(0,"start snprintf 8 arg in mode 1");TRACE_CNTL("mode",1);
+	mark = get_us_timeofday();
+	for (ii=0; ii<1000000; ++ii)
+	{   snprintf( buffer, sizeof(buffer)
+		     , "this is 8 params: %u %u %u %u %u %u %u %f"
+		     , 12345678, ii, ii*2, ii+6
+		     , 12345679, ii, ii-7, (float)ii*1.5
+		     );
+	    TRACE( 0, buffer );
+	}
+	TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+
+
+	TRACE_CNTL("reset");
+	TRACE_CNTL("mode",2);TRACE(0,"start TRACE w/8 arg in mode 1");TRACE_CNTL("mode",1);
+	mark = get_us_timeofday();
+	for (ii=0; ii<1000000; ++ii)
+	{   TRACE( 0, "this is 8 params: %u %u %u %u %u %u %u %f"
+		     , 12345678, ii, ii*2, ii+6
+		     , 12345679, ii, ii-7, (float)ii*1.5
+		     );
+	}
+	TRACE_CNTL("mode",2);TRACE(0,"end   TRACE w/8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
 
 
 

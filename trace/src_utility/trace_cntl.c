@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.9 $$Date: 2014-01-16 21:57:05 $";
+    rev="$Revision: 1.10 $$Date: 2014-01-16 22:05:28 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -87,14 +87,16 @@ main(  int	argc
     }
     else if (strcmp(argv[1],"test") == 0)
     {   unsigned ii;
+	float    ff[10];
+	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );
 	TRACE( 1, "hello %d", 1 );
 	TRACE( 2, "hello %d %d", 1, 2 );
 	TRACE( 3, "hello %d %d %d", 1,2,3 );
-	TRACE( 3, "hello %d %d %d %d %d %d %d %d %d %d"
-	      , 1,2,3,4,5,6,7,8,9,10 );
+	TRACE( 3, "hello %d %d %d %d %d %d %d %d %d %d %d"
+	      , 1,2,3,4,5,6,7,8,9,10, 11 );   /* extra param does not get saved in buffer */
 	TRACE( 3, "hello %f %f %f %f %f %f %f %f %f %f"
-	      , 1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0 );
+	      , 1.0,2.0,3.0,4.0, ff[5],6.0,7.0,8.0,9.0,10.0 );
 
 #       ifndef TEST_UNUSED_FUNCTION
 	TRACE_CNTL( "trig", 3, -1, 5 );

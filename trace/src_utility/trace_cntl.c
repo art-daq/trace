@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.10 $$Date: 2014-01-16 22:05:28 $";
+    rev="$Revision: 1.11 $$Date: 2014-01-17 02:35:37 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -28,7 +28,6 @@ get_us_timeofday()
     gettimeofday( &tv, NULL );
     return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
 }
-
 
 
 int

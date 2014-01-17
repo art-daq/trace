@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.11 $$Date: 2014/01/17 02:35:37 $";
+    rev="$Revision: 1.12 $$Date: 2014/01/17 18:22:15 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -15,6 +15,7 @@ done
 #include <stdio.h>		/* printf */
 #include <libgen.h>		/* basename */
 #include <sys/time.h>           /* gettimeofday, struct timeval */
+#include <pthread.h>		/* pthread_self */
 #include "Trace_mmap.h"
 
 #define USAGE "\
@@ -87,6 +88,10 @@ main(  int	argc
     else if (strcmp(argv[1],"test") == 0)
     {   unsigned ii;
 	float    ff[10];
+
+	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu\n"
+	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t));
+
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );
 	TRACE( 1, "hello %d", 1 );
@@ -107,8 +112,6 @@ main(  int	argc
     {   unsigned ii;
 	char     buffer[200];
 	uint64_t mark;
-
-	printf("sizeof(int)=%lu\n", sizeof(int));
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start no snprintf in mode 1");TRACE_CNTL("mode",1);

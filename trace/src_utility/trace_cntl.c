@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.12 $$Date: 2014-01-17 18:22:15 $";
+    rev="$Revision: 1.13 $$Date: 2014-01-21 02:01:49 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -89,8 +89,8 @@ main(  int	argc
     {   unsigned ii;
 	float    ff[10];
 
-	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu\n"
-	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t));
+	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu double:%lu\n"
+	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t), sizeof(double));
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );
@@ -101,6 +101,8 @@ main(  int	argc
 	      , 1,2,3,4,5,6,7,8,9,10, 11 );   /* extra param does not get saved in buffer */
 	TRACE( 3, "hello %f %f %f %f %f %f %f %f %f %f"
 	      , 1.0,2.0,3.0,4.0, ff[5],6.0,7.0,8.0,9.0,10.0 );
+	TRACE( 4, "hello %d %d %f  %d %d %f  %d %d"
+	      ,           1, 2,3.3,4, 5, 6.6, 7, 8 );
 
 #       ifndef TEST_UNUSED_FUNCTION
 	TRACE_CNTL( "trig", 3, -1, 5 );

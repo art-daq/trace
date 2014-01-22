@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.13 $$Date: 2014-01-21 02:01:49 $";
+    rev="$Revision: 1.14 $$Date: 2014-01-22 16:53:18 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -89,8 +89,18 @@ main(  int	argc
     {   unsigned ii;
 	float    ff[10];
 
-	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu double:%lu\n"
-	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t), sizeof(double));
+	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu double:%lu "
+	       "struct traceControl_s:%lu\n"
+	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t), sizeof(double)
+	       , sizeof(struct traceControl_s) );
+	printf("offset: trigOffMode    =%p\n"
+	       "        trigIdxCount   =%p\n"
+	       "        num_lvlTblEnts =%p\n"
+	       "        full           =%p\n"
+	       , (void*)&((struct traceControl_s*)0)->trigOffMode
+	       , (void*)&((struct traceControl_s*)0)->trigIdxCount
+	       , (void*)&((struct traceControl_s*)0)->num_lvlTblEnts
+	       , (void*)&((struct traceControl_s*)0)->full );
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );
@@ -105,7 +115,7 @@ main(  int	argc
 	      ,           1, 2,3.3,4, 5, 6.6, 7, 8 );
 
 #       ifndef TEST_UNUSED_FUNCTION
-	TRACE_CNTL( "trig", 3, -1, 5 );
+	TRACE_CNTL( "trig", 3, (uint64_t)-1, 5 );
 #       endif
 	for (ii=0; ii<20; ++ii)
 	    TRACE( 0, "ii=%u", ii );

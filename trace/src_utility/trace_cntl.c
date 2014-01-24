@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.17 $$Date: 2014-01-24 07:48:18 $";
+    rev="$Revision: 1.18 $$Date: 2014-01-24 13:41:06 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -34,10 +34,14 @@ get_us_timeofday()
 
 void* thread_func(void *arg)
 {
-    unsigned loops=1000;
+    long loops=(long)arg;
 
-    while(loops--)
-	TRACE( 0, "loops=%u", loops );
+    while(loops-- > 0)
+    {   TRACE( 0, "loops=%u", loops );
+	TRACE( 0, "loops=%u", --loops );
+	TRACE( 0, "loops=%u", --loops );
+	TRACE( 0, "loops=%u", --loops );
+    }
     pthread_exit(NULL);
 }
 
@@ -198,7 +202,7 @@ main(  int	argc
 	pthread_t threads[NUMTHREADS];
 	if (argc == 3) TRACE_CNTL("mode",strtoul(argv[2],NULL,0));
 	for (ii=0; ii<NUMTHREADS; ii++)
-	{   pthread_create(&threads[ii],NULL,thread_func,NULL);
+	{   pthread_create(&threads[ii],NULL,thread_func,(void*)10000);
 	}
 	for (ii=0; ii<NUMTHREADS; ii++)
 	{   pthread_join(threads[ii], NULL);

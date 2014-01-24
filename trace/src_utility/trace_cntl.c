@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.19 $$Date: 2014/01/24 13:45:21 $";
+    rev="$Revision: 1.20 $$Date: 2014/01/24 14:59:40 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -108,13 +108,13 @@ main(  int	argc
 	       "struct traceControl_s:%lu traceEntryHdr_s:%lu\n"
 	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t), sizeof(double)
 	       , sizeof(struct traceControl_s),sizeof(struct traceEntryHdr_s));
-	printf("offset: trigOffMode    =%p\n"
-	       "        trigIdxCount   =%p\n"
-	       "        num_lvlTblEnts =%p\n"
-	       "        full           =%p\n"
+	printf("offset: trigOffMode       =%p\n"
+	       "        trigIdxCount      =%p\n"
+	       "        num_namLvlTblEnts =%p\n"
+	       "        full              =%p\n"
 	       , (void*)&((struct traceControl_s*)0)->trigOffMode
 	       , (void*)&((struct traceControl_s*)0)->trigIdxCount
-	       , (void*)&((struct traceControl_s*)0)->num_lvlTblEnts
+	       , (void*)&((struct traceControl_s*)0)->num_namLvlTblEnts
 	       , (void*)&((struct traceControl_s*)0)->full );
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;

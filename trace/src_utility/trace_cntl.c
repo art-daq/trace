@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.20 $$Date: 2014/01/24 14:59:40 $";
+    rev="$Revision: 1.21 $$Date: 2014/01/24 21:44:07 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -16,6 +16,7 @@ done
 #include <libgen.h>		/* basename */
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
+#include <sys/syscall.h>	/* syscall */
 #include "Trace_mmap.h"
 
 #define NUMTHREADS 4
@@ -103,6 +104,17 @@ main(  int	argc
     else if (strcmp(argv[1],"test") == 0)
     {   unsigned ii;
 	float    ff[10];
+	pid_t	 tid;
+
+#      if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
+	tid = (pid_t)syscall( SYS_gettid );
+#      elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+	tid = (pid_t)syscall( SYS_gettid );
+#      else
+	tid = (pid_t)syscall( SYS_gettid );
+#      endif
+	if (tid == -1) perror("syscall");
+	printf("tid=%ld\n", (long int)syscall(SYS_gettid) );
 
 	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu double:%lu "
 	       "struct traceControl_s:%lu traceEntryHdr_s:%lu\n"
@@ -210,7 +222,8 @@ main(  int	argc
     }
 #   endif
     else
-    {   printf("invalid command\n" USAGE );
+    {   printf("invalid command: %s\n", argv[1] );
+	printf( USAGE );
     }
     return (0);
 }   /* main */

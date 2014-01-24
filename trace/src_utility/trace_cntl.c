@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.14 $$Date: 2014/01/22 16:53:18 $";
+    rev="$Revision: 1.15 $$Date: 2014/01/24 07:37:38 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -18,6 +18,8 @@ done
 #include <pthread.h>		/* pthread_self */
 #include "Trace_mmap.h"
 
+#define NUMTHREADS 4
+
 #define USAGE "\
 %s <cmd> [command opt/args]\n\
 ", basename(argv[0])
@@ -28,6 +30,15 @@ get_us_timeofday()
 {   struct timeval tv;
     gettimeofday( &tv, NULL );
     return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
+}
+
+void* thread_func(void *arg)
+{
+    unsigned loops=1000;
+
+    while(loops--)
+	TRACE( 0, "loops=%u", loops );
+    pthread_exit(NULL);
 }
 
 
@@ -180,10 +191,19 @@ main(  int	argc
 		     );
 	}
 	TRACE_CNTL("mode",2);TRACE(0,"end   TRACE w/8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
-
-
-
     }
+#   ifdef DO_THREADS
+    else if (strcmp(argv[1],"test0") == 0)
+    {   unsigned ii;
+	pthread_t threads[NUMTHREADS];
+	for (ii=0; ii<NUMTHREADS; ii++)
+	{   pthread_create(&threads[ii],NULL,thread_func,NULL);
+	}
+	for (ii=0; ii<NUMTHREADS; ii++)
+	{   pthread_join(threads[ii], NULL);
+	}
+    }
+#   endif
     else
     {   printf("invalid command\n" USAGE );
     }

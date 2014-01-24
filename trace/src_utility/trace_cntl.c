@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.15 $$Date: 2014-01-24 07:37:38 $";
+    rev="$Revision: 1.16 $$Date: 2014-01-24 07:40:13 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -193,7 +193,7 @@ main(  int	argc
 	TRACE_CNTL("mode",2);TRACE(0,"end   TRACE w/8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
     }
 #   ifdef DO_THREADS
-    else if (strcmp(argv[1],"test0") == 0)
+    else if (strcmp(argv[1],"test1") == 0)
     {   unsigned ii;
 	pthread_t threads[NUMTHREADS];
 	for (ii=0; ii<NUMTHREADS; ii++)

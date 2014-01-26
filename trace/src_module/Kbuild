@@ -1,0 +1,9 @@
+ # This file (Kbuild) was created by Ron Rechenmacher <ron@fnal.gov> on
+ # Jan  3, 2013. "TERMS AND CONDITIONS" governing this file are in the README
+ # or COPYING file. If you do not have such a file, one can be obtained by
+ # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+ # $RCSfile: Kbuild,v $
+ # rev="$Revision: 1.1 $$Date: 2014/01/26 18:28:39 $";
+
+obj-m := TRACE.o
+TRACE-y := trace_.o

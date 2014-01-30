@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.22 $$Date: 2014-01-30 01:57:34 $";
+    rev="$Revision: 1.23 $$Date: 2014-01-30 05:02:24 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -120,19 +120,33 @@ main(  int	argc
 	if (tid == -1) perror("syscall");
 	printf("tid=%ld\n", (long int)syscall(SYS_gettid) );
 
-	printf("sizeof: int:%u pid_t:%u pthread_t:%u double:%u "
-	       "struct traceControl_s:%u traceEntryHdr_s:%u\n"
-	       , (int)sizeof(int), (int)sizeof(pid_t), (int)sizeof(pthread_t)
+	printf("sizeof: int:%u long:%u pid_t:%u pthread_t:%u timeval:%u "
+	       "double:%u traceControl_s:%u traceEntryHdr_s:%u\n"
+	       , (int)sizeof(int), (int)sizeof(long), (int)sizeof(pid_t)
+	       , (int)sizeof(pthread_t), (int)sizeof(struct timeval)
 	       , (int)sizeof(double), (int)sizeof(struct traceControl_s)
 	       , (int)sizeof(struct traceEntryHdr_s));
-	printf("offset: trigOffMode       =%p\n"
-	       "        trigIdxCount      =%p\n"
-	       "        num_namLvlTblEnts =%p\n"
-	       "        full              =%p\n"
+	printf("offset: trigOffMode    =%p\n"
+	       "        trigIdxCount   =%p\n"
+	       "        trigActivePost =%p\n"
+	       "        full           =%p\n"
+	       "        lvl            =%p\n"
+	       "        pid            =%p\n"
+	       "        TID            =%p\n"
+	       "        get_retries    =%p\n"
+	       "        param_bytes    =%p\n"
+	       "        tsc            =%p\n"
 	       , (void*)&((struct traceControl_s*)0)->trigOffMode
 	       , (void*)&((struct traceControl_s*)0)->trigIdxCount
-	       , (void*)&((struct traceControl_s*)0)->num_namLvlTblEnts
-	       , (void*)&((struct traceControl_s*)0)->full );
+	       , (void*)&((struct traceControl_s*)0)->trigActivePost
+	       , (void*)&((struct traceControl_s*)0)->full
+	       , (void*)&((struct traceEntryHdr_s*)0)->lvl
+	       , (void*)&((struct traceEntryHdr_s*)0)->pid
+	       , (void*)&((struct traceEntryHdr_s*)0)->TID
+	       , (void*)&((struct traceEntryHdr_s*)0)->get_idxCnt_retries
+	       , (void*)&((struct traceEntryHdr_s*)0)->param_bytes
+	       , (void*)&((struct traceEntryHdr_s*)0)->tsc
+	       );
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );

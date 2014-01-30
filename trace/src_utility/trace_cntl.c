@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.21 $$Date: 2014-01-24 21:44:07 $";
+    rev="$Revision: 1.22 $$Date: 2014-01-30 01:57:34 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -17,7 +17,11 @@ done
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
 #include <sys/syscall.h>	/* syscall */
-#include "Trace_mmap.h"
+#ifndef   VA_PARSE_ARGS
+# include "Trace_mmap.h"
+#else
+# include "Trace_mmap2.h"
+#endif
 
 #define NUMTHREADS 4
 
@@ -38,10 +42,10 @@ void* thread_func(void *arg)
     long loops=(long)arg;
 
     while(loops-- > 0)
-    {   TRACE( 0, "loops=%u", loops );
-	TRACE( 0, "loops=%u", --loops );
-	TRACE( 0, "loops=%u", --loops );
-	TRACE( 0, "loops=%u", --loops );
+    {   TRACE( 0, "loops=%lu", loops );
+	TRACE( 0, "loops=%lu", --loops );
+	TRACE( 0, "loops=%lu", --loops );
+	TRACE( 0, "loops=%lu", --loops );
     }
     pthread_exit(NULL);
 }
@@ -116,10 +120,11 @@ main(  int	argc
 	if (tid == -1) perror("syscall");
 	printf("tid=%ld\n", (long int)syscall(SYS_gettid) );
 
-	printf("sizeof: int:%lu pid_t:%lu pthread_t:%lu double:%lu "
-	       "struct traceControl_s:%lu traceEntryHdr_s:%lu\n"
-	       , sizeof(int), sizeof(pid_t), sizeof(pthread_t), sizeof(double)
-	       , sizeof(struct traceControl_s),sizeof(struct traceEntryHdr_s));
+	printf("sizeof: int:%u pid_t:%u pthread_t:%u double:%u "
+	       "struct traceControl_s:%u traceEntryHdr_s:%u\n"
+	       , (int)sizeof(int), (int)sizeof(pid_t), (int)sizeof(pthread_t)
+	       , (int)sizeof(double), (int)sizeof(struct traceControl_s)
+	       , (int)sizeof(struct traceEntryHdr_s));
 	printf("offset: trigOffMode       =%p\n"
 	       "        trigIdxCount      =%p\n"
 	       "        num_namLvlTblEnts =%p\n"

@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.2 $$Date: 2014-01-30 17:12:35 $";
+ // rev="$Revision: 1.3 $$Date: 2014-01-30 17:22:30 $";
  */
 
 #ifndef TRACE_H_5216
@@ -73,18 +73,21 @@
 #if   defined(__i386__)
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-# define TRACE_VA_LIST_INIT (va_list)&params_p[0]
-# define TRACE_ENT_FILLER   uint32_t x[2];
+# define TRACE_VA_LIST_INIT     (va_list)&params_p[0]
+# define TRACE_ENT_FILLER       uint32_t x[2];
+# define TRACE_32_DOUBLE_KLUDGE nargs*=2;    /* kludge to support potential double in msg fmt */
 #elif defined(__x86_64__)
-# define TRACE_XTRA_PASSED  ,0,1,2,1.0,2.1,3.2,4.3,5.4,6.5,7.6,8.7
-# define TRACE_XTRA_UNUSED  ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
-# define TRACE_VA_LIST_INIT {{6*8,6*8+9*16,&params_p[0],&params_p[0]}}
+# define TRACE_XTRA_PASSED      ,0,1,2,1.0,2.1,3.2,4.3,5.4,6.5,7.6,8.7
+# define TRACE_XTRA_UNUSED      ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
+# define TRACE_VA_LIST_INIT     {{6*8,6*8+9*16,&params_p[0],&params_p[0]}}
 # define TRACE_ENT_FILLER
+# define TRACE_32_DOUBLE_KLUDGE
 #else
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-# define TRACE_VA_LIST_INIT {&params_p[0]}
+# define TRACE_VA_LIST_INIT     {&params_p[0]}
 # define TRACE_ENT_FILLER
+# define TRACE_32_DOUBLE_KLUDGE if(sizeof(long)==4)nargs*=2;
 #endif
 
 static struct traceControl_s
@@ -221,7 +224,7 @@ static void trace( unsigned lvl, unsigned nargs
 	   address, arg2 ends up at the next higher address, etc. */
 	if (nargs)
 	{
-	    if (sizeof(long)==4) nargs*=2; /* kludge to support potential doubles on i686 */
+	    TRACE_32_DOUBLE_KLUDGE
 	    if (nargs > traceControl_p->num_params) nargs=traceControl_p->num_params;
 	    va_start( ap, msg );
 	    for (argIdx=0; argIdx<nargs; ++argIdx)

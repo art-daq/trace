@@ -3,47 +3,69 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.3 $$Date: 2014/01/30 17:22:30 $";
+ // rev="$Revision: 1.4 $$Date: 2014/01/30 20:47:59 $";
  */
 
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#include <stdio.h>		/* printf */
-#include <stdarg.h>		/* va_list */
-#include <stdlib.h>		/* getenv, strtoul */
-#include <stdint.h>		/* uint64_t */
-#include <sys/time.h>           /* timeval */
-#include <string.h>		/* strncmp */
-#include <fcntl.h>		/* open, O_RDWR */
-#include <sys/mman.h>		/* mmap */
-#include <unistd.h>		/* lseek */
-#include <sys/syscall.h>	/* syscall */
-#include <pthread.h>		/* pthread_self */
-#if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
-# include <atomic>		/* atomic<> */
-# define TRACE_ATOMIC_T     std::atomic<uint64_t>
-# define TRACE_THREAD_LOCAL thread_local 
-#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-# include <stdatomic.h>		/* atomic_compare_exchange_weak */
-# define TRACE_ATOMIC_T     _Atomic(uint64_t)
-# define TRACE_THREAD_LOCAL _Thread_local
-#else
-# define TRACE_ATOMIC_T     uint64_t
+#ifndef __KERNEL__
+
+# include <stdio.h>		/* printf */
+# include <stdarg.h>		/* va_list */
+# include <stdlib.h>		/* getenv, strtoul */
+# include <stdint.h>		/* uint64_t */
+# include <sys/time.h>           /* timeval */
+# include <string.h>		/* strncmp */
+# include <fcntl.h>		/* open, O_RDWR */
+# include <sys/mman.h>		/* mmap */
+# include <unistd.h>		/* lseek */
+# include <sys/syscall.h>	/* syscall */
+# include <pthread.h>		/* pthread_self */
+# if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
+#  include <atomic>		/* atomic<> */
+#  define TRACE_ATOMIC_T     std::atomic<uint64_t>
+#  define TRACE_THREAD_LOCAL thread_local 
+# elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#  include <stdatomic.h>		/* atomic_compare_exchange_weak */
+#  define TRACE_ATOMIC_T     _Atomic(uint64_t)
+#  define TRACE_THREAD_LOCAL _Thread_local
+# else
+#  define TRACE_ATOMIC_T     uint64_t
+#  define TRACE_THREAD_LOCAL 
+# endif
+# define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
+# define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
+# define TRACE_PRINT              printf
+# define TRACE_VPRINT             vprintf
+# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
+
+#else  /* __KERNEL__ */
+
+# include <linux/time.h>              /* do_gettimeofday */
+/*# include <linux/printk.h>	       printk, vprintk */
+# include <linux/kernel.h>	      /* printk, vprintk */
+# define TRACE_ATOMIC_T      uint64_t
 # define TRACE_THREAD_LOCAL 
-#endif
+# define TRACE_GETTIMEOFDAY( tv )  do_gettimeofday( tv )
+# define TRACE_DO_TID
+# define TRACE_PRINT               printk
+# define TRACE_VPRINT              vprintk
+# define TRACE_INIT_CHECK
+
+#endif /* __KERNEL__ */
+
 
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
 # define TRACE( lvl, ... ) do \
-    {   if ((traceControl_p!=NULL) || (traceInit()==0))		\
-        {   if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
+    {   TRACE_INIT_CHECK		\
+            if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
                 trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 \
                       TRACE_XTRA_PASSED	\
                       , __VA_ARGS__ );				\
-        } \
     } while (0)
 
 # define TRACE_CNTL( ... ) traceCntl( __VA_ARGS__ )
@@ -54,13 +76,12 @@
 #else    /* __GXX_WEAK__... */
 
 # define TRACE( lvl, msgargs... ) do		\
-    {   if ((traceControl_p!=NULL)  || (traceInit()==0))		\
-        {   if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
+    {   TRACE_INIT_CHECK		\
+            if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
 	        trace( lvl, TRACE_ARGS(msgargs)-1				\
                       TRACE_XTRA_PASSED		\
                       , msgargs );				\
-	    } \
     } while (0)
 
 # define TRACE_CNTL( cmdargs... ) traceCntl( cmdargs )
@@ -90,7 +111,7 @@
 # define TRACE_32_DOUBLE_KLUDGE if(sizeof(long)==4)nargs*=2;
 #endif
 
-static struct traceControl_s
+struct traceControl_s
 {
     uint32_t       num_params;
     uint32_t       siz_msg;
@@ -99,7 +120,7 @@ static struct traceControl_s
     uint64_t       largest_multiple;
     uint32_t       num_namLvlTblEnts;/* these and above would be read only if */
     int32_t        trace_initialized;/* in kernel */
-    uint32_t       page_align[1016]; /* allow map page readonly */
+    uint32_t       page_align[1016]; /* allow mmap page readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;
     uint64_t       cacheline1[3];
@@ -121,7 +142,7 @@ static struct traceControl_s
     uint64_t      trigIdxCount;   /* BASED ON "M" mode Counts */
     uint32_t	  trigActivePost;
     int32_t       full;
-}   traceControl;
+};
 static struct traceControl_s *traceControl_p=NULL;
 
 static struct traceEntryHdr_s
@@ -152,10 +173,15 @@ static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 
 /* forward declarations, important functions */
-static int                      traceInit(void);
 static uint64_t                 idxCnt_add( uint64_t idxCnt, int add );
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint64_t idxCnt );
 static uint32_t                 entSiz( uint32_t siz_msg, uint32_t num_params );
+static int                      traceMemLen(  int siz_msg
+					    , int num_params
+					    , int num_namLvlTblEnts
+					    , int num_entries
+					    , int *namLvls_offset );
+static void                     traceInitNames( void );
 #if 0
 static uint64_t                 idxCnt_delta( uint64_t wr, uint64_t rd );
 static void                     getPtrs(  struct traceControl_s  **cc
@@ -168,6 +194,7 @@ static void                     getPtrs(  struct traceControl_s  **cc
 /* I've worked the mode<->level checking thing out before ...
    check work/tracePrj/TRACE3...
  */
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
@@ -183,8 +210,8 @@ static void trace( unsigned lvl, unsigned nargs
 	return;
     }
 
-    gettimeofday( &tv, NULL );  /* hopefully NOT a system call */
-    if (traceTid == 0)  traceTid = syscall(SYS_gettid);
+    TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
+    TRACE_DO_TID                /* only appliable for user space */
 
     if (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl)))
     {   struct traceEntryHdr_s* myEnt_p;
@@ -234,16 +261,21 @@ static void trace( unsigned lvl, unsigned nargs
     }
 
     if (traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
-    {   printf("%10ld%06ld %2d %5d %d ",tv.tv_sec,tv.tv_usec,lvl,traceTid,nargs);
+    {   TRACE_PRINT("%10ld%06ld %2d %5d %d ",tv.tv_sec,tv.tv_usec,lvl,traceTid,nargs);
 	va_start( ap, msg );
-	vprintf( msg, ap );
-	printf("\n");
+	TRACE_VPRINT( msg, ap );
+	TRACE_PRINT("\n");
 	va_end( ap );
     }
 }   /* trace */
+
 #pragma GCC diagnostic pop
 
 
+#ifndef __KERNEL__
+
+static int                    traceInit( void );
+static struct traceControl_s  traceControl;
 
 static void traceCntl( const char *cmd, ... )
 {
@@ -333,6 +365,16 @@ static void traceCntl( const char *cmd, ... )
 	    = traceControl_p->trigActivePost
 	    = 0;
     }
+    else if (strcmp(cmd,"tids") == 0) 
+    {   unsigned ii;
+	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	{
+	    if (traceNamLvls_p[ii].name[0] != '\0')
+	    {   printf( "%3d %*s\n", ii, (int)sizeof(traceNamLvls_p->name)
+		       , traceNamLvls_p[ii].name );
+	    }
+	}
+    }
     else if (strcmp(cmd,"show") == 0) 
     {
 	uint64_t rdIdx=traceControl_p->wrIdxCnt;
@@ -390,16 +432,12 @@ static int traceInit(void)
     int  num_params=10;
     int  siz_msg=128;
     int  num_entries=1000000;
-    int  mmlen=sizeof(struct traceControl_s);
+    int  mmlen;
     int  siz_cntl_pages;
     char lvltmpbuf[80];
 
-    mmlen += 4096;
-    mmlen -= mmlen&4095;
-    siz_cntl_pages = mmlen;
-    mmlen += sizeof(struct traceNamLvls_s) * num_namLvlTblEnts
-	+ entSiz(siz_msg,num_params) * num_entries
-	+ 4096;/* extra space incase output printf somehow want more args from last entry */
+    mmlen = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
+			, &siz_cntl_pages );
 
     if (path == NULL) path="/tmp/trace_buffer";
     if (mode == NULL) mode="3";
@@ -447,6 +485,8 @@ static int traceInit(void)
 	    traceControl_p->largest_multiple = (uint64_t)-1 - ((uint64_t)-1 % num_entries);
 	    traceControl_p->siz_entry        = entSiz( siz_msg, num_params );
 
+	    traceInitNames();
+
 	    /* MUST THINK ABOUT "lvlM" and/or "lvlP" ???
 	       AND        "modeM" and/or "modeP" ???
 	    */
@@ -456,6 +496,8 @@ static int traceInit(void)
     }
     return (0);
 }   /* traceInit */
+
+#endif /* __KERNEL__ */
 
 /* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"
 // I must do the substract (ie. add negative) by hand.
@@ -494,6 +536,30 @@ static uint32_t entSiz( uint32_t siz_msg, uint32_t num_params )
     return (  sizeof(struct traceEntryHdr_s)
 	    + sizeof(uint64_t)*num_params /* NOTE: extra size for i686 (32bit processors) */
 	    + siz_msg );
+}
+
+static int traceMemLen(  int siz_msg, int num_params, int num_namLvlTblEnts
+		       , int num_entries, int *namLvls_offset )
+{
+    int len = sizeof(struct traceControl_s);
+    len += 4096;
+    len -= len&4095;
+    *namLvls_offset = len;
+    len += sizeof(struct traceNamLvls_s)*num_namLvlTblEnts
+	+ (  sizeof(struct traceEntryHdr_s)
+	   + sizeof(unsigned long)*num_params
+	   + siz_msg)*num_entries;
+    return (len);
+}
+
+static void traceInitNames( void )
+{
+    unsigned ii;
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	traceNamLvls_p[ii].name[0] = '\0';
+    strcpy( traceNamLvls_p[0].name,"KERNEL" );
+    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"FULL" );
+    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"NULL_NAME" );
 }
 
 #endif /* TRACE_H_5216 */

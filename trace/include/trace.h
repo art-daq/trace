@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.1 $$Date: 2014-01-30 17:03:34 $";
+ // rev="$Revision: 1.2 $$Date: 2014-01-30 17:12:35 $";
  */
 
 #ifndef TRACE_H_5216
@@ -40,16 +40,16 @@
     {   if ((traceControl_p!=NULL) || (traceInit()==0))		\
         {   if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
-                trace( lvl, N_ARGS(__VA_ARGS__)-1 \
+                trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 \
                       TRACE_XTRA_PASSED	\
                       , __VA_ARGS__ );				\
         } \
     } while (0)
 
 # define TRACE_CNTL( ... ) traceCntl( __VA_ARGS__ )
-# define N_ARGS(...) N_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
-# define N_ARGS_HELPER1(...) N_ARGS_HELPER2(__VA_ARGS__)
-# define N_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
+# define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
+# define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
+# define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
 
 #else    /* __GXX_WEAK__... */
 
@@ -57,16 +57,16 @@
     {   if ((traceControl_p!=NULL)  || (traceInit()==0))		\
         {   if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
-	        trace( lvl, N_ARGS(msgargs)-1				\
+	        trace( lvl, TRACE_ARGS(msgargs)-1				\
                       TRACE_XTRA_PASSED		\
                       , msgargs );				\
 	    } \
     } while (0)
 
 # define TRACE_CNTL( cmdargs... ) traceCntl( cmdargs )
-# define N_ARGS(args...) N_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
-# define N_ARGS_HELPER1(args...) N_ARGS_HELPER2(args)
-# define N_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
+# define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
+# define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
+# define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
 
 #endif   /* __GXX_WEAK__... */
 
@@ -168,7 +168,7 @@ static void                     getPtrs(  struct traceControl_s  **cc
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-static void trace( int lvl, int nargs
+static void trace( unsigned lvl, unsigned nargs
                   TRACE_XTRA_UNUSED		  
 		  , const char *msg, ... )
 {   struct timeval tv;

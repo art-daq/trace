@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.6 $$Date: 2014-01-31 04:27:11 $";
+ // rev="$Revision: 1.7 $$Date: 2014-01-31 15:24:35 $";
  */
 
 #ifndef TRACE_H_5216
@@ -28,10 +28,10 @@
 #  define TRACE_THREAD_LOCAL thread_local 
 # elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #  include <stdatomic.h>		/* atomic_compare_exchange_weak */
-#  define TRACE_ATOMIC_T     _Atomic(uint64_t)
-#  define TRACE_THREAD_LOCAL _Thread_local
+#  define TRACE_ATOMIC_T          _Atomic(uint64_t)
+#  define TRACE_THREAD_LOCAL      _Thread_local
 # else
-#  define TRACE_ATOMIC_T     uint64_t
+#  define TRACE_ATOMIC_T          uint64_t
 #  define TRACE_THREAD_LOCAL 
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
@@ -45,13 +45,14 @@
 # include <linux/time.h>              /* do_gettimeofday */
 /*# include <linux/printk.h>	       printk, vprintk */
 # include <linux/kernel.h>	      /* printk, vprintk */
-# define TRACE_ATOMIC_T      uint64_t
+# include <linux/spinlock.h>	      /* cmpxchg */
+# define TRACE_ATOMIC_T           uint64_t
 # define TRACE_THREAD_LOCAL 
-# define TRACE_GETTIMEOFDAY( tv )  do_gettimeofday( tv )
+# define TRACE_GETTIMEOFDAY( tv ) do_gettimeofday( tv )
 # define TRACE_DO_TID
-# define TRACE_PRINT               printk
-# define TRACE_VPRINT              vprintk
-# define TRACE_INIT_CHECK
+# define TRACE_PRINT              printk
+# define TRACE_VPRINT             vprintk
+# define TRACE_INIT_CHECK         if((1)||(traceInit()==0))/* should be optimized out */
 
 #endif /* __KERNEL__ */
 
@@ -97,18 +98,21 @@
 # define TRACE_VA_LIST_INIT     (va_list)&params_p[0]
 # define TRACE_ENT_FILLER       uint32_t x[2];
 # define TRACE_32_DOUBLE_KLUDGE nargs*=2;    /* kludge to support potential double in msg fmt */
+# define TRACE_TSC32( low )     __asm__ __volatile__ ("rdtsc" : "=a" (low) : : "edx")
 #elif defined(__x86_64__)
 # define TRACE_XTRA_PASSED      ,0,1,2,1.0,2.1,3.2,4.3,5.4,6.5,7.6,8.7
 # define TRACE_XTRA_UNUSED      ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
 # define TRACE_VA_LIST_INIT     {{6*8,6*8+9*16,&params_p[0],&params_p[0]}}
 # define TRACE_ENT_FILLER
 # define TRACE_32_DOUBLE_KLUDGE
+# define TRACE_TSC32( low )     __asm__ __volatile__ ("rdtsc" : "=a" (low) : : "edx")
 #else
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
 # define TRACE_VA_LIST_INIT     {&params_p[0]}
 # define TRACE_ENT_FILLER
 # define TRACE_32_DOUBLE_KLUDGE if(sizeof(long)==4)nargs*=2;
+# define TRACE_TSC32( low )     low=0
 #endif
 
 struct traceControl_s
@@ -120,7 +124,8 @@ struct traceControl_s
     uint64_t       largest_multiple;
     uint32_t       num_namLvlTblEnts;/* these and above would be read only if */
     int32_t        trace_initialized;/* in kernel */
-    uint32_t       page_align[1016]; /* allow mmap page readonly */
+    uint32_t       memlen;
+    uint32_t       page_align[1015]; /* allow mmap page readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;
     uint64_t       cacheline1[3];
@@ -157,21 +162,22 @@ struct traceEntryHdr_s
     uint64_t       tsc;
 };
 
-static struct traceNamLvls_s
+struct traceNamLvls_s
 {   uint64_t      M;
     uint64_t      S;
     uint64_t      T;
     char          name[48];
-}   traceNamLvls;
+};
 
-#ifdef __KERNEL__
-extern struct traceControl_s  *traceControl_p;
-extern struct traceEntryHdr_s *traceEntries_p;
-extern struct traceNamLvls_s  *traceNamLvls_p;
-#else
+#ifndef __KERNEL__
+static struct traceNamLvls_s  traceNamLvls;
+static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls;
 static struct traceControl_s  *traceControl_p=NULL;
 static struct traceEntryHdr_s *traceEntries_p;
-static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls;
+#else
+extern struct traceNamLvls_s  *traceNamLvls_p;
+extern struct traceControl_s  *traceControl_p;
+extern struct traceEntryHdr_s *traceEntries_p;
 #endif
 
 
@@ -203,8 +209,10 @@ static void                     getPtrs(  struct traceControl_s  **cc
    check work/tracePrj/TRACE3...
  */
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 static void trace( unsigned lvl, unsigned nargs
                   TRACE_XTRA_UNUSED		  
@@ -226,10 +234,17 @@ static void trace( unsigned lvl, unsigned nargs
 	char                  * msg_p;
 	unsigned long         * params_p;
 	unsigned                argIdx;
-	uint64_t                myIdxCnt=traceControl_p->wrIdxCnt;
 	uint16_t                get_idxCnt_retries=0;
+	uint64_t                myIdxCnt=traceControl_p->wrIdxCnt;
 
-#      if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#      if defined(__KERNEL__)
+	uint64_t desired=idxCnt_add(myIdxCnt,1);
+	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
+	{   ++get_idxCnt_retries;
+	    myIdxCnt=traceControl_p->wrIdxCnt;
+	    desired = idxCnt_add( myIdxCnt,1);
+	}
+#      elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 	uint64_t desired=idxCnt_add(myIdxCnt,1);
 	while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					     , &myIdxCnt, desired))
@@ -252,7 +267,7 @@ static void trace( unsigned lvl, unsigned nargs
 	/*myEnt_p->cpu  = -1;    maybe don't need this when sched hook show tid<-->cpu */
 	myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
 	myEnt_p->param_bytes = sizeof(long);
-	myEnt_p->tsc         = 0;
+	TRACE_TSC32( myEnt_p->tsc );
 
 	strncpy(msg_p,msg,traceControl_p->siz_msg);
 	/* emulate stack push - right to left (so that arg1 end up at a lower
@@ -277,8 +292,9 @@ static void trace( unsigned lvl, unsigned nargs
     }
 }   /* trace */
 
-#pragma GCC diagnostic pop
-
+#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+# pragma GCC diagnostic pop
+#endif
 
 #ifndef __KERNEL__
 
@@ -399,9 +415,10 @@ static void traceCntl( const char *cmd, ... )
 	    msg_p    = (char*)(myEnt_p+1);
 	    params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 
-	    printf("%6u %10ld%06ld %2d %5d "
+	    printf("%6u %10ld%06ld %10u %2d %5d "
 		   , printed
 		   , myEnt_p->time.tv_sec, myEnt_p->time.tv_usec
+		   , (unsigned)myEnt_p->tsc
 		   , myEnt_p->lvl, myEnt_p->tid );
 	    if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 	    else                             printf( ". " );
@@ -503,7 +520,55 @@ static int traceInit(void)
 	}
     }
     return (0);
-}   /* traceInit */
+}   /* traceInit - userspace */
+
+#else /* __KERNEL__ */
+
+static int traceInit(void)
+{
+    int  memlen;
+    int  num_namLvlTblEnts=200;
+    int  num_params=10;
+    int  siz_msg=128;
+    int  num_entries=10000;
+    int  siz_cntl_pages;
+
+    memlen = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
+			 , &siz_cntl_pages );
+
+    printk(  KERN_INFO "init_trace_3 called -- attempt to allocate %d bytes\n"
+	   , memlen );
+
+    traceControl_p = (struct traceControl_s *)kmalloc( memlen, GFP_KERNEL );
+    if (!traceControl_p) return -ENOMEM;
+    printk("init_trace_3 kmalloc(%d)=%p\n",memlen,traceControl_p);
+
+    traceControl_p->num_params        = num_params;
+    traceControl_p->siz_msg           = siz_msg;
+    traceControl_p->siz_entry         = entSiz(  traceControl_p->siz_msg
+					       , traceControl_p->num_params );
+    traceControl_p->num_entries       = num_entries;
+    traceControl_p->largest_multiple  = (uint64_t)-1 - ((uint64_t)-1 % num_entries);
+    traceControl_p->num_namLvlTblEnts = num_namLvlTblEnts;
+    traceControl_p->trace_initialized = 1;
+    traceControl_p->memlen            = memlen;
+
+    traceControl_p->wrIdxCnt         = 0;
+    traceControl_p->trigActivePost   = 0;
+    traceControl_p->mode.mode        = 0;
+
+    traceNamLvls_p = (struct traceNamLvls_s *)			\
+	((unsigned long)traceControl_p+siz_cntl_pages);
+
+    traceEntries_p = (struct traceEntryHdr_s *)	\
+	((unsigned long)traceNamLvls_p
+	 +sizeof(struct traceNamLvls_s)*num_namLvlTblEnts);
+
+    traceInitNames();
+
+    return (0);
+}   /* traceInit - kernel */
+
 
 #endif /* __KERNEL__ */
 

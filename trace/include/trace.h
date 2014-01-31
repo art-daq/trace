@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.7 $$Date: 2014-01-31 15:24:35 $";
+ // rev="$Revision: 1.8 $$Date: 2014-01-31 16:24:35 $";
  */
 
 #ifndef TRACE_H_5216
@@ -226,7 +226,7 @@ static void trace( unsigned lvl, unsigned nargs
 	return;
     }
 
-    TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
+    tv.tv_sec = 0;		/* indicate that we need to get the time */
     TRACE_DO_TID                /* only appliable for user space */
 
     if (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl)))
@@ -254,6 +254,8 @@ static void trace( unsigned lvl, unsigned nargs
 #       else
 	traceControl_p->wrIdxCnt = idxCnt_add(myIdxCnt,1);
 #       endif
+
+	TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
 
 	myEnt_p  = idxCnt2entPtr( myIdxCnt );
 	msg_p    = (char*)(myEnt_p+1);
@@ -284,7 +286,9 @@ static void trace( unsigned lvl, unsigned nargs
     }
 
     if (traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
-    {   TRACE_PRINT("%10ld%06ld %2d %5d %d ",tv.tv_sec,tv.tv_usec,lvl,traceTid,nargs);
+    {
+	if (tv.tv_sec == 0) TRACE_GETTIMEOFDAY( &tv );
+	TRACE_PRINT("%10ld%06ld %2d %5d %d ",tv.tv_sec,tv.tv_usec,lvl,traceTid,nargs);
 	va_start( ap, msg );
 	TRACE_VPRINT( msg, ap );
 	TRACE_PRINT("\n");

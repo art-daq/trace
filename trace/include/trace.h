@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.10 $$Date: 2014/01/31 22:07:53 $";
+ // rev="$Revision: 1.11 $$Date: 2014/01/31 22:13:13 $";
  */
 
 #ifndef TRACE_H_5216
@@ -38,7 +38,11 @@
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
-# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
+# ifndef NO_TRACE
+#  define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
+# else
+#  define TRACE_INIT_CHECK         if(0)/*whole trace should be optimized out*/
+# endif
 
 #else  /* __KERNEL__ */
 

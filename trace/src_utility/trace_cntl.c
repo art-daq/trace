@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.29 $$Date: 2014/01/31 22:31:55 $";
+    rev="$Revision: 1.30 $$Date: 2014/01/31 23:46:53 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -172,37 +172,36 @@ main(  int	argc
     {   unsigned ii;
 	char     buffer[200];
 	uint64_t mark;
+	unsigned compares=1000; /* some big number */
+	if (argc == 3) compares=strtoul(argv[2],NULL,0);
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start no snprintf in mode 1");TRACE_CNTL("mode",1);
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   TRACE( 0, "any msg" );
-	}
-	TRACE_CNTL("mode",2);TRACE(0,"end   no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,"end   no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
 
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start snprintf 1 arg in mode 1");TRACE_CNTL("mode",1);
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
-	{   snprintf( buffer, sizeof(buffer)
-		     , "this is one small param: %u", 12345678 );
+	{   snprintf( buffer, sizeof(buffer), "this is one small param: %u", 12345678 );
 	    TRACE( 0, buffer );
-	}
-	TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 1 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 1 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
 
+	if (--compares == 0) return (0);
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start snprintf 2 arg in mode 1");TRACE_CNTL("mode",1);
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
-	{   snprintf( buffer, sizeof(buffer)
-		     , "this is 2 params: %u %u", 12345678, ii );
+	{   snprintf( buffer, sizeof(buffer), "this is 2 params: %u %u", 12345678, ii );
 	    TRACE( 0, buffer );
-	}
-	TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 2 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 2 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
 
+	if (--compares == 0) return (0);
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start snprintf 8 arg in mode 1");TRACE_CNTL("mode",1);
@@ -214,9 +213,9 @@ main(  int	argc
 		     , 12345679, ii, ii-7, (float)ii*1.5
 		     );
 	    TRACE( 0, buffer );
-	}
-	TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
 
+	if (--compares == 0) return (0);
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start TRACE w/8 arg in mode 1");TRACE_CNTL("mode",1);
@@ -226,17 +225,16 @@ main(  int	argc
 		     , 12345678, ii, ii*2, ii+6
 		     , 12345679, ii, ii-7, (float)ii*1.5
 		     );
-	}
-	TRACE_CNTL("mode",2);TRACE(0,"end   TRACE w/8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,"end   TRACE w/8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
 
+	if (--compares == 0) return (0);
 
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start (repeat) no snprintf in mode 1");TRACE_CNTL("mode",1);
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   TRACE( 0, "any msg" );
-	}
-	TRACE_CNTL("mode",2);TRACE(0,"end   (repeat) no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,"end   (repeat) no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
     }
 #   ifdef DO_THREADS
     else if (strcmp(argv[1],"test-threads") == 0)

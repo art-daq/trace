@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.5 $$Date: 2014-01-30 20:55:57 $";
+ // rev="$Revision: 1.6 $$Date: 2014-01-31 04:27:11 $";
  */
 
 #ifndef TRACE_H_5216
@@ -143,9 +143,8 @@ struct traceControl_s
     uint32_t	  trigActivePost;
     int32_t       full;
 };
-static struct traceControl_s *traceControl_p=NULL;
 
-static struct traceEntryHdr_s
+struct traceEntryHdr_s
 {   struct timeval time;
     TRACE_ENT_FILLER
     int32_t        lvl;
@@ -156,7 +155,7 @@ static struct traceEntryHdr_s
     uint32_t       get_idxCnt_retries;
     uint32_t       param_bytes;
     uint64_t       tsc;
-}   *traceEntries_p;
+};
 
 static struct traceNamLvls_s
 {   uint64_t      M;
@@ -164,7 +163,16 @@ static struct traceNamLvls_s
     uint64_t      T;
     char          name[48];
 }   traceNamLvls;
-static struct traceNamLvls_s *traceNamLvls_p=&traceNamLvls;
+
+#ifdef __KERNEL__
+extern struct traceControl_s  *traceControl_p;
+extern struct traceEntryHdr_s *traceEntries_p;
+extern struct traceNamLvls_s  *traceNamLvls_p;
+#else
+static struct traceControl_s  *traceControl_p=NULL;
+static struct traceEntryHdr_s *traceEntries_p;
+static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls;
+#endif
 
 
 static int                      traceTID=0;  /* idx into lvlTbl, namTbl */

@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.11 $$Date: 2014-01-31 22:13:13 $";
+ // rev="$Revision: 1.12 $$Date: 2014-01-31 23:47:59 $";
  */
 
 #ifndef TRACE_H_5216
@@ -60,6 +60,11 @@
 
 #endif /* __KERNEL__ */
 
+
+#define TRACE_DFLT_MAX_MSG_SZ       80
+#define TRACE_DFLT_MAX_PARAMS        6
+#define TRACE_DFLT_NAMTBL_ENTS     200
+#define TRACE_DFLT_NUM_ENTRIES   50000
 
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
@@ -464,10 +469,10 @@ static int traceInit(void)
     const char *mode=getenv("TRACE_MODE");
     const char *path=getenv("TRACE_FILE");
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
-    int  num_namLvlTblEnts=200;
-    int  num_params=10;
-    int  siz_msg=128;
-    int  num_entries=1000000;
+    int  num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
+    int  num_params       =TRACE_DFLT_MAX_PARAMS;
+    int  siz_msg          =TRACE_DFLT_MAX_MSG_SZ;
+    int  num_entries      =TRACE_DFLT_NUM_ENTRIES;
     int  mmlen;
     int  siz_cntl_pages;
     char lvltmpbuf[80];

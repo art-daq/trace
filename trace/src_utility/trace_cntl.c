@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.27 $$Date: 2014-01-31 16:48:00 $";
+    rev="$Revision: 1.28 $$Date: 2014-01-31 17:51:09 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -44,10 +44,10 @@ void* thread_func(void *arg)
     long loops=(long)arg;
 
     while(loops-- > 0)
-    {   TRACE( 0, "loops=%lu", loops );
-	TRACE( 0, "loops=%lu", --loops );
-	TRACE( 0, "loops=%lu", --loops );
-	TRACE( 0, "loops=%lu", --loops );
+    {   TRACE( 0, "loops=%ld", loops );
+	TRACE( 0, "loops=%ld", --loops );
+	TRACE( 0, "loops=%ld", --loops );
+	TRACE( 0, "loops=%ld", --loops );
     }
     pthread_exit(NULL);
 }

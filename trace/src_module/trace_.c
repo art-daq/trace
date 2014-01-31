@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.4 $$Date: 2014/01/31 15:35:40 $";
+    rev="$Revision: 1.5 $$Date: 2014/01/31 19:27:09 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -17,7 +17,7 @@
 #include <linux/proc_fs.h>      /* create_proc_entry, struct proc_dir_entry */
 #include <asm/io.h>             /* virt_to_phys */
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
-
+#include <trace/events/irq.h>	/*  */
 
 #include "Trace_mmap4.h"
 
@@ -120,7 +120,7 @@ static void trace_proc_remove( void )
 }   // trace_proc_remove
 
 
-
+/* based on code in kernel/trace/trace_sched_switch.c */
 static void
 trace_sched_switch_hook(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
@@ -128,23 +128,22 @@ trace_sched_switch_hook(
 # else
                         struct rq *__rq
 # endif
-                        , struct task_struct *prev
-                        , struct task_struct *next )
+                        , struct task_struct *prev, struct task_struct *next )
 {
         unsigned long flags;
-        int cpu;
-        int pc;
-
-        pc = preempt_count(); /* what is this??? */
-
         local_irq_save(flags);
-
-        cpu = raw_smp_processor_id();
-
-	TRACE( 1, "sched: cpu=%d prev=%d next=%d", cpu, prev->pid, next->pid );
-
+	TRACE( 1, "sched: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
         local_irq_restore(flags);
-}
+}   // trace_sched_switch_hook
+
+static void
+trace_irq( int irq, struct irqaction *action )
+{
+        unsigned long flags;
+        local_irq_save(flags);
+	TRACE( 2, "irq_hander_entry: cpu=%d irq=%d",raw_smp_processor_id(),irq);
+        local_irq_restore(flags);
+}   // trace_irq
 
 static int  trace_sched_switch_hook_add( void )
 {
@@ -154,11 +153,26 @@ static int  trace_sched_switch_hook_add( void )
                                       , NULL
 # endif
                                       );
-    printk("trace_sched_switch_hook_init returning %d (0=success)\n", err );
+    printk("trace_sched_switch_hook_add: sched returning %d (0=success)\n", err );
+    if (err) return (err);
+
+    err = register_trace_irq_handler_entry( trace_irq
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+                                      , NULL
+# endif
+                                      );
+    printk("trace_sched_switch_hook_add: irq returning %d (0=success)\n", err );
+
     return (err);
 }   // trace_sched_switch_hook_add
+
 static void trace_sched_switch_hook_remove( void )
 {
+    unregister_trace_irq_handler_entry( trace_irq
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+                                      , NULL
+# endif
+                                      );
     unregister_trace_sched_switch( trace_sched_switch_hook
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
                                   , NULL

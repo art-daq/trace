@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.9 $$Date: 2014-01-31 18:18:42 $";
+ // rev="$Revision: 1.10 $$Date: 2014-01-31 22:07:53 $";
  */
 
 #ifndef TRACE_H_5216
@@ -101,7 +101,7 @@
 # define TRACE_32_DOUBLE_KLUDGE nargs*=2;    /* kludge to support potential double in msg fmt */
 # define TRACE_TSC32( low )     __asm__ __volatile__ ("rdtsc" : "=a" (low) : : "edx")
 #elif defined(__x86_64__)
-# define TRACE_XTRA_PASSED      ,0,1,2,1.0,2.1,3.2,4.3,5.4,6.5,7.6,8.7
+# define TRACE_XTRA_PASSED      ,0,0,0, .0,.0,.0,.0,.0,.0,.0,.0
 # define TRACE_XTRA_UNUSED      ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
   static void trace(unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
 # define TRACE_VA_LIST_INIT     {{6*8,6*8+9*16,&params_p[0],&params_p[0]}}

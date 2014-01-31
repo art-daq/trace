@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.2 $$Date: 2014-01-30 21:56:31 $";
+    rev="$Revision: 1.3 $$Date: 2014-01-31 04:25:52 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -20,6 +20,14 @@
 
 
 #include "Trace_mmap4.h"
+
+struct traceControl_s  *traceControl_p=NULL;
+struct traceEntryHdr_s *traceEntries_p;
+struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls;
+EXPORT_SYMBOL( traceControl_p );
+EXPORT_SYMBOL( traceEntries_p );
+EXPORT_SYMBOL( traceNamLvls_p );
+
 
 // ls /sys/module/TRACE/parameters
 static int        entries;
@@ -133,7 +141,7 @@ trace_sched_switch_hook(
 
         cpu = raw_smp_processor_id();
 
-	TRACE( 1, "sched: cpu=%d", cpu );
+	TRACE( 1, "sched: cpu=%d prev=%d next=%d", cpu, prev->pid, next->pid );
 
         local_irq_restore(flags);
 }

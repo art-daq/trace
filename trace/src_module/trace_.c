@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.3 $$Date: 2014/01/31 04:25:52 $";
+    rev="$Revision: 1.4 $$Date: 2014/01/31 15:35:40 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -23,7 +23,7 @@
 
 struct traceControl_s  *traceControl_p=NULL;
 struct traceEntryHdr_s *traceEntries_p;
-struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls;
+struct traceNamLvls_s  *traceNamLvls_p;
 EXPORT_SYMBOL( traceControl_p );
 EXPORT_SYMBOL( traceEntries_p );
 EXPORT_SYMBOL( traceNamLvls_p );
@@ -170,43 +170,8 @@ static void trace_sched_switch_hook_remove( void )
 static int __init init_trace_3(void)
 {
     int  ret=0;          /* SUCCESS */
-    int  len;
-    int  num_namLvlTblEnts=200;
-    int  num_params=10;
-    int  siz_msg=128;
-    int  num_entries=10000;
-    int  siz_cntl_pages;
 
-    len = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
-		      , &siz_cntl_pages );
-
-    printk(  KERN_INFO "init_trace_3 called -- attempt to allocate %d bytes\n"
-	   , len );
-
-    traceControl_p = (struct traceControl_s *)kmalloc( len, GFP_KERNEL );
-    if (!traceControl_p) return -ENOMEM;
-    printk("init_trace_3 kmalloc(%d)=%p\n",len,traceControl_p);
-
-    traceControl_p->trace_initialized = 1;
-    traceControl_p->num_namLvlTblEnts = num_namLvlTblEnts;
-    traceControl_p->num_params       = num_params;
-    traceControl_p->siz_msg          = siz_msg;
-    traceControl_p->num_entries      = num_entries;
-    traceControl_p->largest_multiple = (uint64_t)-1 - ((uint64_t)-1 % num_entries);
-    traceControl_p->siz_entry        = entSiz( siz_msg, num_params );
-
-    traceControl_p->wrIdxCnt         = 0;
-    traceControl_p->trigActivePost   = 0;
-    traceControl_p->mode.mode        = 0;
-
-    traceNamLvls_p = (struct traceNamLvls_s *)			\
-	((unsigned long)traceControl_p+siz_cntl_pages);
-
-    traceEntries_p = (struct traceEntryHdr_s *)	\
-	((unsigned long)traceNamLvls_p
-	 +sizeof(struct traceNamLvls_s)*num_namLvlTblEnts);
-
-    traceInitNames();
+    if ((ret=traceInit()) != 0) return (ret);
 
     traceTID = 0;
 
@@ -218,11 +183,13 @@ static int __init init_trace_3(void)
        3) register some traces
        4) setup userspace interrupt (sw)
     */
-    if ((ret=trace_proc_add(len)))           return (ret);
-    if ((ret=trace_sched_switch_hook_add())) goto undo1;
+    if ((ret=trace_proc_add(traceControl_p->memlen))) goto undo1;
+    if ((ret=trace_sched_switch_hook_add()))          goto undo2;
     return (ret);               /* success */
- undo1:
+ undo2:
     trace_proc_remove();
+ undo1:
+    kfree( traceControl_p );
     return (ret);
 }   // init_trace_3
 

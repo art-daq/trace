@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.12 $$Date: 2014-01-31 23:47:59 $";
+ // rev="$Revision: 1.13 $$Date: 2014-02-03 01:48:04 $";
  */
 
 #ifndef TRACE_H_5216
@@ -78,10 +78,14 @@
                       , __VA_ARGS__ );				\
     } while (0)
 
-# define TRACE_CNTL( ... ) traceCntl( __VA_ARGS__ )
 # define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 # define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
+# ifndef NO_TRACE
+#  define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__), __VA_ARGS__ )
+# else
+#  define TRACE_CNTL( ... )
+# endif
 
 #else    /* __GXX_WEAK__... */
 
@@ -94,10 +98,14 @@
                       , msgargs );				\
     } while (0)
 
-# define TRACE_CNTL( cmdargs... ) traceCntl( cmdargs )
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 # define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
+# ifndef NO_TRACE
+#  define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS(cmdargs), cmdargs )
+# else
+#  define TRACE_CNTL( cmdargs... )
+# endif
 
 #endif   /* __GXX_WEAK__... */
 
@@ -182,8 +190,8 @@ struct traceNamLvls_s
 };
 
 #ifndef __KERNEL__
-static struct traceNamLvls_s  traceNamLvls;
-static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls;
+static struct traceNamLvls_s  traceNamLvls[3];
+static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
 static struct traceControl_s  *traceControl_p=NULL;
 static struct traceEntryHdr_s *traceEntries_p;
 #else
@@ -317,7 +325,7 @@ static void trace( unsigned lvl, unsigned nargs
 static int                    traceInit( void );
 static struct traceControl_s  traceControl;
 
-static void traceCntl( const char *cmd, ... )
+static void traceCntl( int nargs, const char *cmd, ... )
 {
     va_list ap;
 
@@ -326,6 +334,13 @@ static void traceCntl( const char *cmd, ... )
 	   env.var as it could be used to set a file-per-thread.
 	   But... what if this negative impacts thread performace???
 	*/
+    }
+    else if (strncmp(cmd,"name",4) == 0)
+    {   /* although it may be counter intuitive, this should override
+	   env.var as it could be used to set a file-per-thread.
+	   But... what if this negative impacts thread performace???
+	*/
+	/* HOW DOES THE NAME TO TID WORK???? */
     }
 
     if (traceControl_p == NULL) traceInit();
@@ -378,6 +393,7 @@ static void traceCntl( const char *cmd, ... )
 	       "wrIdxCnt offset   =%p\n"
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
+	       "memlen            =%u\n"
 	       , traceControl_p->trace_initialized
 	       , traceControl_p->mode.mode
 	       , (unsigned long long)wrSav, (unsigned long long)used
@@ -394,6 +410,7 @@ static void traceCntl( const char *cmd, ... )
 	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
+	       , traceControl_p->memlen
 	       );
     }
     else if (strcmp(cmd,"reset") == 0) 
@@ -457,7 +474,7 @@ static void traceCntl( const char *cmd, ... )
 	}
     }
     else
-    {   fprintf( stderr, "TRACE: invalid control string %s\n", cmd );
+    {   fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
     }
 
     va_end(ap);
@@ -469,13 +486,13 @@ static int traceInit(void)
     const char *mode=getenv("TRACE_MODE");
     const char *path=getenv("TRACE_FILE");
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
-    int  num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
-    int  num_params       =TRACE_DFLT_MAX_PARAMS;
-    int  siz_msg          =TRACE_DFLT_MAX_MSG_SZ;
-    int  num_entries      =TRACE_DFLT_NUM_ENTRIES;
-    int  mmlen;
-    int  siz_cntl_pages;
-    char lvltmpbuf[80];
+    int      num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
+    int      num_params       =TRACE_DFLT_MAX_PARAMS;
+    int      siz_msg          =TRACE_DFLT_MAX_MSG_SZ;
+    int      num_entries      =TRACE_DFLT_NUM_ENTRIES;
+    int      mmlen;
+    int      siz_cntl_pages;
+    char     lvltmpbuf[80];
 
     mmlen = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
 			, &siz_cntl_pages );
@@ -491,7 +508,8 @@ static int traceInit(void)
     }
     else
     {
-	off_t off = lseek( fd, 0, SEEK_END );
+	uint8_t *rw_p;
+	off_t    off = lseek( fd, 0, SEEK_END );
 	if (off == (off_t)-1) { perror("lseek"); exit(1); }
 	if (off != mmlen)
 	{   uint8_t one_byte='\0';
@@ -499,14 +517,27 @@ static int traceInit(void)
 	    if (off == (off_t)-1) { perror("lseek"); exit(1); }
 	    write( fd, &one_byte, 1 );
 	}
-	traceControl_p = (struct traceControl_s *)mmap( NULL, mmlen
-						       , PROT_READ|PROT_WRITE
-						       , MAP_SHARED, fd, 0 );
-	if (traceControl_p == (struct traceControl_s *)-1)
-	{   perror( "mmap(NULL,mmlen,PROT_READ,MAP_PRIVATE,fd,0) error" );
+
+
+	rw_p = (uint8_t*)mmap( NULL, mmlen-0x1000
+			      , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x1000 );
+	if (rw_p == (void *)-1)
+	{   perror( "mmap(NULL,mmlen-0x1000,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
 	    printf( "mmlen=%d\n", mmlen );
 	    traceControl_p=&traceControl;
 	}
+
+	off = (off_t)&((struct traceControl_s *)0)->wrIdxCnt;
+	traceControl_p = (struct traceControl_s *)mmap( rw_p-off, 0x1000
+						       , PROT_READ|PROT_WRITE
+						       , MAP_SHARED, fd, 0 );
+	if (traceControl_p == (struct traceControl_s *)-1)
+	{   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	    printf( "mmlen=%d\n", mmlen );
+	    traceControl_p=&traceControl;
+	}
+
+	/*printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );*/
 
 	tracePid = getpid();
 
@@ -531,8 +562,8 @@ static int traceInit(void)
 	    /* MUST THINK ABOUT "lvlM" and/or "lvlP" ???
 	       AND        "modeM" and/or "modeP" ???
 	    */
-	    traceCntl( "lvl",  strtoul(levl,NULL,0) );
-	    traceCntl( "mode", strtoul(mode,NULL,0) );
+	    traceCntl( 2, "lvl",  strtoul(levl,NULL,0) );
+	    traceCntl( 2, "mode", strtoul(mode,NULL,0) );
 	}
     }
     return (0);
@@ -651,8 +682,8 @@ static void traceInitNames( void )
     traceNamLvls_p[0].S = traceNamLvls_p[0].T = 0;
     traceNamLvls_p[0].M = 0x1;
 #  endif
-    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"FULL" );
-    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"NULL_NAME" );
+    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-2].name,"NO_NAME" );
+    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"OVERFLOW" );
 }
 
 #endif /* TRACE_H_5216 */

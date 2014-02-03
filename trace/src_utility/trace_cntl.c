@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.32 $$Date: 2014/02/03 06:15:14 $";
+    rev="$Revision: 1.33 $$Date: 2014/02/03 15:22:29 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -103,6 +103,7 @@ main(  int	argc
     {   unsigned ii;
 	float    ff[10];
 	pid_t	 tid;
+	uint64_t desired, myIdx;
 
 #      if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 	tid = (pid_t)syscall( SYS_gettid );
@@ -144,6 +145,19 @@ main(  int	argc
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );
+	myIdx = traceControl_p->largest_multiple - 3;
+	printf("myIdx=0x%016lx\n", myIdx );
+	for (ii=0; ii<6; ++ii)
+	{   desired = IDXCNT_ADD(myIdx,1);
+	    printf( "myIdx==>myIdx+1: 0x%016lx 0x%016lx\n",myIdx, desired );
+	    myIdx = desired;
+	}
+	for (ii=0; ii<6; ++ii)
+	{   desired = IDXCNT_ADD(myIdx,-1);
+	    printf( "myIdx==>myIdx-1: 0x%016lx 0x%016lx\n",myIdx, desired );
+	    myIdx = desired;
+	}
+	printf("myIdx=0x%016lx\n", myIdx );
 # if defined(TEST_WRITE_PROTECT)
 	traceControl_p->trace_initialized = 2;
 # elif defined(TEST_WRITE_PAST_END)

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.33 $$Date: 2014/02/03 15:22:29 $";
+    rev="$Revision: 1.34 $$Date: 2014/02/03 17:17:01 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -85,21 +85,7 @@ main(  int	argc
     if (argc <= 1) { printf(USAGE); exit(0); }
 
 
-    if     (strcmp(argv[1],"lvl") == 0) 
-    {
-	if (argc <= 2) { printf(USAGE); exit(0); }
-	TRACE_CNTL( argv[1], strtoul(argv[2],NULL,0) );
-    }
-    else if (strcmp(argv[1],"mode") == 0) 
-    {
-	if (argc <= 2) { printf(USAGE); exit(0); }
-	TRACE_CNTL( argv[1], strtoul(argv[2],NULL,0) );
-    }
-    else if (strcmp(argv[1],"show") == 0) 
-    {
-	TRACE_CNTL( argv[1] );
-    }
-    else if (strcmp(argv[1],"test") == 0)
+    if      (strcmp(argv[1],"test") == 0)
     {   unsigned ii;
 	float    ff[10];
 	pid_t	 tid;
@@ -265,14 +251,17 @@ main(  int	argc
     }
 #   endif
     else
-    {   
+    {   int sts=0;
 	switch (argc)
 	{
-	case 2: TRACE_CNTL( argv[1] ); break;
-	case 3: TRACE_CNTL( argv[1], argv[2] ); break;
+	case 2: sts=TRACE_CNTL( argv[1] ); break;
+	case 3: sts=TRACE_CNTL( argv[1], strtoull(argv[2],NULL,0) ); break;
+	case 4: sts=TRACE_CNTL( argv[1], strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0) ); break;
 	}
-	printf("invalid command: %s\n", argv[1] );
-	printf( USAGE );
+	if (sts < 0)
+	{   printf("invalid command: %s\n", argv[1] );
+	    printf( USAGE );
+	}
     }
     return (0);
 }   /* main */

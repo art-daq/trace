@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.31 $$Date: 2014/02/03 01:40:41 $";
+    rev="$Revision: 1.32 $$Date: 2014/02/03 06:15:14 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -144,6 +144,11 @@ main(  int	argc
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 	TRACE( 0, "hello" );
+# if defined(TEST_WRITE_PROTECT)
+	traceControl_p->trace_initialized = 2;
+# elif defined(TEST_WRITE_PAST_END)
+	*(((uint8_t*)traceControl_p)+traceControl_p->memlen) = 6;
+# endif
 	TRACE( 1, "hello %d", 1 );
 	TRACE( 2, "hello %d %d", 1, 2 );
 	TRACE( 3, "hello %d %d %d", 1,2,3 );

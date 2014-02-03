@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.34 $$Date: 2014-02-03 17:17:01 $";
+    rev="$Revision: 1.35 $$Date: 2014-02-03 18:48:38 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -118,7 +118,7 @@ main(  int	argc
 	       "        param_bytes    =%p\n"
 	       "        tsc            =%p\n"
 	       , (void*)&((struct traceControl_s*)0)->trigOffMode
-	       , (void*)&((struct traceControl_s*)0)->trigIdxCount
+	       , (void*)&((struct traceControl_s*)0)->trigIdxCnt
 	       , (void*)&((struct traceControl_s*)0)->trigActivePost
 	       , (void*)&((struct traceControl_s*)0)->full
 	       , (void*)&((struct traceEntryHdr_s*)0)->lvl
@@ -130,6 +130,7 @@ main(  int	argc
 	       );
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
+	TRACE_CNTL( "lvlmskS", 0xfL ); TRACE_CNTL( "lvlmskM", 0xfL );
 	TRACE( 0, "hello" );
 	myIdx = traceControl_p->largest_multiple - 3;
 	printf("myIdx=0x%016lx\n", myIdx );

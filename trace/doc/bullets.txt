@@ -1,0 +1,42 @@
+Main Goals:
+  * timing info  ( microsecond timeofday timestamp ) - to look for anomolies
+    o  delta time between application specific points.
+    o  real time (high speed/efficient) samples -- store every one (several
+          thousand to maybe a few million). (basic stats)
+       -  low performance impact
+Other Goals
+  * multiple application specific points at the same time
+    - selectable (names,masks) -- min-to-no impact, (recompile -DNO_TRACE?)
+  * multi-threaded (multiple buffers?)
+  * system info - tid
+  * system info - task switch, interrupts  -- module
+  * application parameters  (avoid most "formatting")
+  * configurable  - msgSz,numParams,numEntries,names
+  * trigger
+  * subset to stdout (console log)  - should this (default) to human readable?
+  * user "logger" function
+
+Companion utility - trace_delta.pl
+   delta time
+   filter out time not between points
+
+
+Trace vs. other utilities:
+
+   The most basic trace example would, on the surface, look like something
+   a profiling utility would do:
+     sample points near the beginning and end of some function.
+   -- profile the function: min max ave.
+   But, maybe you really want only a sub part of the funtion (and it's unnatural
+   to restructure the code).
+
+   With parameters, you can easily filter... (i.e. function part only when
+   parameter is within some range).
+
+   Profiling will just give basic stats (and likely sparse sampling) vs.
+      every sample for a particular (snapshot) timeperiod.
+
+   What (else) was happening at a specific time...
+
+Running "under" a profiler...
+   Does a profile effect operation???

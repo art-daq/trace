@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.13 $$Date: 2014/02/03 01:48:04 $";
+ // rev="$Revision: 1.14 $$Date: 2014/02/03 06:16:08 $";
  */
 
 #ifndef TRACE_H_5216
@@ -63,9 +63,12 @@
 
 #define TRACE_DFLT_MAX_MSG_SZ       80
 #define TRACE_DFLT_MAX_PARAMS        6
-#define TRACE_DFLT_NAMTBL_ENTS     200
-#define TRACE_DFLT_NUM_ENTRIES   50000
-
+#define TRACE_DFLT_NAMTBL_ENTS      20
+#define TRACE_DFLT_NUM_ENTRIES   20000
+#define TRACE_DFLT_NAM_SZ           16
+#ifndef  TRACE_NAME
+# define TRACE_NAME "TRACE"
+#endif
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
@@ -186,7 +189,7 @@ struct traceNamLvls_s
 {   uint64_t      M;
     uint64_t      S;
     uint64_t      T;
-    char          name[48];
+    char          name[TRACE_DFLT_NAM_SZ];
 };
 
 #ifndef __KERNEL__
@@ -216,6 +219,7 @@ static int                      traceMemLen(  int siz_msg
 					    , int num_entries
 					    , int *namLvls_offset );
 static void                     traceInitNames( void );
+static uint32_t                 name2tid( const char *name );
 #if 0
 static uint64_t                 idxCnt_delta( uint64_t wr, uint64_t rd );
 static void                     getPtrs(  struct traceControl_s  **cc
@@ -427,8 +431,13 @@ static void traceCntl( int nargs, const char *cmd, ... )
 	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	{
 	    if (traceNamLvls_p[ii].name[0] != '\0')
-	    {   printf( "%3d %*s\n", ii, (int)sizeof(traceNamLvls_p->name)
-		       , traceNamLvls_p[ii].name );
+	    {   printf( "%3d %*s 0x%16lx 0x%16lx 0x%16lx\n", ii
+		       , (int)sizeof(traceNamLvls_p->name)
+		       , traceNamLvls_p[ii].name
+		       , traceNamLvls_p[ii].M
+		       , traceNamLvls_p[ii].S
+		       , traceNamLvls_p[ii].T
+		       );
 	    }
 	}
     }
@@ -485,6 +494,7 @@ static int traceInit(void)
     const char *levl=getenv("TRACE_LVL");
     const char *mode=getenv("TRACE_MODE");
     const char *path=getenv("TRACE_FILE");
+    const char *name=getenv("TRACE_NAME");
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
     int      num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
     int      num_params       =TRACE_DFLT_MAX_PARAMS;
@@ -500,6 +510,7 @@ static int traceInit(void)
     if (path == NULL) path="/tmp/trace_buffer";
     if (mode == NULL) mode="3";
     if (levl == NULL) {sprintf(lvltmpbuf,"0x%llx",(unsigned long long)-1);levl=lvltmpbuf;}
+    if (name == NULL) name=TRACE_NAME;
 
     /* need to special processing (lock file?) for create */
     if ((fd=open(path,O_RDWR|O_CREAT,0666)) == -1)
@@ -537,7 +548,7 @@ static int traceInit(void)
 	    traceControl_p=&traceControl;
 	}
 
-	/*printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );*/
+	printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );
 
 	tracePid = getpid();
 
@@ -565,6 +576,7 @@ static int traceInit(void)
 	    traceCntl( 2, "lvl",  strtoul(levl,NULL,0) );
 	    traceCntl( 2, "mode", strtoul(mode,NULL,0) );
 	}
+	traceTID = name2tid( name );
     }
     return (0);
 }   /* traceInit - userspace */
@@ -574,10 +586,10 @@ static int traceInit(void)
 static int traceInit(void)
 {
     int  memlen;
-    int  num_namLvlTblEnts=200;
-    int  num_params=10;
-    int  siz_msg=128;
-    int  num_entries=10000;
+    int  num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
+    int  num_params=TRACE_DFLT_MAX_PARAMS;
+    int  siz_msg=TRACE_DFLT_MAX_MSG_SZ;
+    int  num_entries=TRACE_DFLT_NUM_ENTRIES;
     int  siz_cntl_pages;
 
     memlen = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
@@ -612,6 +624,7 @@ static int traceInit(void)
 	 +sizeof(struct traceNamLvls_s)*num_namLvlTblEnts);
 
     traceInitNames();
+    traceTID=name2tid( "KERNEL" );
 
     return (0);
 }   /* traceInit - kernel */
@@ -669,6 +682,9 @@ static int traceMemLen(  int siz_msg, int num_params, int num_namLvlTblEnts
 	+ (  sizeof(struct traceEntryHdr_s)
 	   + sizeof(unsigned long)*num_params
 	   + siz_msg)*num_entries;
+    len += 4096;
+    len -= len%4096;  /* page align as mapping always likes page align */
+    len += 4096; /* make 100% sure there is a bit more for last entry read doubles */
     return (len);
 }
 
@@ -682,8 +698,20 @@ static void traceInitNames( void )
     traceNamLvls_p[0].S = traceNamLvls_p[0].T = 0;
     traceNamLvls_p[0].M = 0x1;
 #  endif
-    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-2].name,"NO_NAME" );
-    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"OVERFLOW" );
+    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-2].name,"TRACE" );
+    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"_TRACE_" );
 }
 
+static uint32_t name2tid( const char *name )
+{
+    uint32_t ii;
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) return (ii);
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	if (traceNamLvls_p[ii].name[0] == '\0')
+	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
+	    return (ii);
+	}
+    return (traceControl_p->num_namLvlTblEnts-1);
+}
 #endif /* TRACE_H_5216 */

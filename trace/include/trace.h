@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.18 $$Date: 2014-02-03 17:17:53 $";
+ // rev="$Revision: 1.19 $$Date: 2014-02-03 17:43:07 $";
  */
 
 #ifndef TRACE_H_5216
@@ -712,11 +712,12 @@ static void traceInitNames( void )
 {
     unsigned ii;
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	traceNamLvls_p[ii].name[0] = '\0';
+    {   traceNamLvls_p[ii].name[0] = '\0';
+	traceNamLvls_p[ii].S = traceNamLvls_p[ii].T = 0;
+	traceNamLvls_p[ii].M = 0x1;
+    }
 #  ifdef __KERNEL__
     strcpy( traceNamLvls_p[0].name,"KERNEL" );
-    traceNamLvls_p[0].S = traceNamLvls_p[0].T = 0;
-    traceNamLvls_p[0].M = 0x1;
 #  endif
     strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-2].name,"TRACE" );
     strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"_TRACE_" );

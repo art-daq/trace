@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.30 $$Date: 2014-01-31 23:46:53 $";
+    rev="$Revision: 1.31 $$Date: 2014-02-03 01:40:41 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -85,15 +85,7 @@ main(  int	argc
     if (argc <= 1) { printf(USAGE); exit(0); }
 
 
-    if      (strncmp(argv[1],"info",4) == 0) 
-    {
-	TRACE_CNTL( argv[1] );
-    }
-    else if (strcmp(argv[1],"reset") == 0) 
-    {
-	TRACE_CNTL( argv[1] );
-    }
-    else if (strcmp(argv[1],"lvl") == 0) 
+    if     (strcmp(argv[1],"lvl") == 0) 
     {
 	if (argc <= 2) { printf(USAGE); exit(0); }
 	TRACE_CNTL( argv[1], strtoul(argv[2],NULL,0) );
@@ -254,7 +246,13 @@ main(  int	argc
     }
 #   endif
     else
-    {   printf("invalid command: %s\n", argv[1] );
+    {   
+	switch (argc)
+	{
+	case 2: TRACE_CNTL( argv[1] ); break;
+	case 3: TRACE_CNTL( argv[1], argv[2] ); break;
+	}
+	printf("invalid command: %s\n", argv[1] );
 	printf( USAGE );
     }
     return (0);

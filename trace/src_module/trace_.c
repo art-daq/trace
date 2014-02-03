@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.6 $$Date: 2014-02-03 06:17:26 $";
+    rev="$Revision: 1.7 $$Date: 2014-02-03 18:50:02 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -220,7 +220,7 @@ static int __init init_trace_3(void)
 
     traceTID = 0;
 
-    traceControl_p->mode.s.M = 1;
+    traceControl_p->mode.bits.M = 1;
     TRACE( 0, "kernel trace buffer initialized" );
 
     /* 1) create the buffer

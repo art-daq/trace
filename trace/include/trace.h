@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.19 $$Date: 2014/02/03 17:43:07 $";
+ // rev="$Revision: 1.20 $$Date: 2014/02/03 18:48:38 $";
  */
 
 #ifndef TRACE_H_5216
@@ -74,8 +74,8 @@
 
 # define TRACE( lvl, ... ) do \
     {   TRACE_INIT_CHECK		\
-            if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
-                ||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
+            if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
+                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
                 trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 \
                       TRACE_XTRA_PASSED	\
                       , __VA_ARGS__ );				\
@@ -94,8 +94,8 @@
 
 # define TRACE( lvl, msgargs... ) do		\
     {   TRACE_INIT_CHECK		\
-            if (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
-                ||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
+            if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
+                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
 	        trace( lvl, TRACE_ARGS(msgargs)-1				\
                       TRACE_XTRA_PASSED		\
                       , msgargs );				\
@@ -157,19 +157,21 @@ struct traceControl_s
     {   struct
 	{   uint32_t M:1; /* b0 high speed circular Memory */
 	    uint32_t S:1; /* b1 printf (formatted) to Screen/Stdout */
-	}   s;
+	}   bits;
 	uint32_t  mode;
     }             mode;
     union
     {   struct
 	{   uint32_t M:1; /* b0 high speed circular Memory */
 	    uint32_t S:1; /* b1 printf (formatted) to stdout */
-	}   s;
+	}   bits;
 	uint32_t  mode;
     }             trigOffMode;    /* can configurably cause Print to stop */
-    uint64_t      trigIdxCount;   /* BASED ON "M" mode Counts */
+    uint64_t      trigIdxCnt;   /* BASED ON "M" mode Counts */
+    int32_t       triggered;
     uint32_t	  trigActivePost;
     int32_t       full;
+    uint32_t      xtra;
 };
 
 struct traceEntryHdr_s
@@ -254,17 +256,12 @@ static void trace( unsigned lvl, unsigned nargs
 		  , const char *msg, ... )
 {   struct timeval tv;
     va_list ap;
-    if (   traceControl_p->trigActivePost
-	&&((traceControl_p->wrIdxCnt-traceControl_p->trigIdxCount)
-	   >=traceControl_p->trigActivePost))
-    {   traceControl_p->mode.mode = 0;
-	return;
-    }
+    int     trig_reset_S=0;
 
     tv.tv_sec = 0;		/* indicate that we need to get the time */
     TRACE_DO_TID                /* only appliable for user space */
 
-    if (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & (1<<lvl)))
+    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl)))
     {   struct traceEntryHdr_s* myEnt_p;
 	char                  * msg_p;
 	unsigned long         * params_p;
@@ -310,17 +307,36 @@ static void trace( unsigned lvl, unsigned nargs
 	/* emulate stack push - right to left (so that arg1 end up at a lower
 	   address, arg2 ends up at the next higher address, etc. */
 	if (nargs)
-	{
-	    TRACE_32_DOUBLE_KLUDGE
+	{   TRACE_32_DOUBLE_KLUDGE
 	    if (nargs > traceControl_p->num_params) nargs=traceControl_p->num_params;
 	    va_start( ap, msg );
 	    for (argIdx=0; argIdx<nargs; ++argIdx)
 		params_p[argIdx]=va_arg(ap,unsigned long);
 	    va_end( ap );
 	}
+	if (traceControl_p->trigActivePost) /* armed, armed/trigger */
+	{
+	    if (traceControl_p->triggered) /* triggered */
+	    {
+		if ((myIdxCnt-traceControl_p->trigIdxCnt)
+		    >=traceControl_p->trigActivePost )
+		{   /* I think there should be an indication in the M buffer */
+		    traceControl_p->mode.bits.M = 0;
+		    if (traceControl_p->trigOffMode.bits.S) trig_reset_S = 1;
+		    traceControl_p->trigActivePost = 0;
+		    /* triggered and trigIdxCnt should be cleared when
+		       "armed" (when trigActivePost is set) */
+		}
+		/* else just waiting... */
+	    }
+	    else if (traceNamLvls_p[traceTID].T & (1<<lvl))
+	    {   traceControl_p->triggered = 1;
+		traceControl_p->trigIdxCnt = myIdxCnt;
+	    }
+	}
     }
 
-    if (traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
+    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
     {
 	if (tv.tv_sec == 0) TRACE_GETTIMEOFDAY( &tv );
 	TRACE_PRINT("%10ld%06ld %2d %5d %d ",tv.tv_sec,tv.tv_usec,lvl,traceTid,nargs);
@@ -329,6 +345,7 @@ static void trace( unsigned lvl, unsigned nargs
 	TRACE_PRINT("\n");
 	va_end( ap );
     }
+    if (trig_reset_S) traceControl_p->mode.bits.S = 0;
 }   /* trace */
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
@@ -367,11 +384,12 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	uint32_t modeMsk=va_arg(ap,uint64_t);
 	uint64_t lvlsMsk=va_arg(ap,uint64_t);
 	unsigned post_entries=va_arg(ap,unsigned);
-	if (   (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & lvlsMsk))
-		||(traceControl_p->mode.s.S && (traceNamLvls_p[traceTID].S & lvlsMsk)) )
-	    && !traceControl_p->trigActivePost)
-	{   traceControl_p->trigIdxCount   = traceControl_p->wrIdxCnt;
-	    traceControl_p->trigActivePost = post_entries?post_entries:1; /* must be at least 1 */
+	if (   (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M&lvlsMsk))
+	    && !traceControl_p->trigActivePost )
+	{   traceNamLvls_p[traceTID].T       = lvlsMsk;
+	    traceControl_p->trigActivePost   = post_entries?post_entries:1; /* must be at least 1 */
+	    traceControl_p->triggered        = 0;
+	    traceControl_p->trigIdxCnt       = 0;
 	    traceControl_p->trigOffMode.mode = modeMsk;
 	}
     }
@@ -408,7 +426,8 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	       "mode              =0x%x\n"
 	       "writeIdxCount     =0x%16llx entries used: %llu\n"
                "largestMultiple   =0x%16llx\n"
-	       "trigIdxCount      =0x%16llx\n"
+	       "trigIdxCnt        =0x%16llx\n"
+	       "triggered         =%d\n"
 	       "trigActivePost    =%u\n"
 	       "traceLevel        =0x%*llx 0x%*llx\n"
 	       "num_entries       =%u\n"
@@ -424,7 +443,8 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	       , traceControl_p->mode.mode
 	       , (unsigned long long)wrSav, (unsigned long long)used
 	       , (unsigned long long)traceControl_p->largest_multiple
-	       , (unsigned long long)traceControl_p->trigIdxCount
+	       , (unsigned long long)traceControl_p->trigIdxCnt
+	       , traceControl_p->triggered
 	       , traceControl_p->trigActivePost
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].S
@@ -444,9 +464,10 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	if (traceControl_p == NULL) traceInit();
 	traceControl_p->full
 	    = traceControl_p->wrIdxCnt
-	    = traceControl_p->trigIdxCount
+	    = traceControl_p->trigIdxCnt
 	    = traceControl_p->trigActivePost
 	    = 0;
+	traceControl_p->triggered = 0;
     }
     else if (strcmp(cmd,"tids") == 0) 
     {   unsigned ii;

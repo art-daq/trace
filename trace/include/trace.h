@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.15 $$Date: 2014/02/03 15:22:29 $";
+ // rev="$Revision: 1.16 $$Date: 2014/02/03 15:55:52 $";
  */
 
 #ifndef TRACE_H_5216
@@ -234,7 +234,7 @@ static void                     getPtrs(  struct traceControl_s  **cc
        :(idxCnt-(-add))%traceControl_p->largest_multiple\
       )						\
      :(idxCnt+add)%traceControl_p->largest_multiple\
-     )
+    )
 
 
 /* I've worked the mode<->level checking thing out before ...

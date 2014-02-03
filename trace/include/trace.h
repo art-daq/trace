@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.17 $$Date: 2014/02/03 16:07:05 $";
+ // rev="$Revision: 1.18 $$Date: 2014/02/03 17:17:53 $";
  */
 
 #ifndef TRACE_H_5216
@@ -87,7 +87,7 @@
 # ifndef NO_TRACE
 #  define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__), __VA_ARGS__ )
 # else
-#  define TRACE_CNTL( ... )
+#  define TRACE_CNTL( ... ) (0)
 # endif
 
 #else    /* __GXX_WEAK__... */
@@ -107,7 +107,7 @@
 # ifndef NO_TRACE
 #  define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS(cmdargs), cmdargs )
 # else
-#  define TRACE_CNTL( cmdargs... )
+#  define TRACE_CNTL( cmdargs... ) (0)
 # endif
 
 #endif   /* __GXX_WEAK__... */
@@ -340,7 +340,7 @@ static void trace( unsigned lvl, unsigned nargs
 static int                    traceInit( void );
 static struct traceControl_s  traceControl;
 
-static void traceCntl( int nargs, const char *cmd, ... )
+static int traceCntl( int nargs, const char *cmd, ... )
 {
     va_list ap;
 
@@ -364,7 +364,7 @@ static void traceCntl( int nargs, const char *cmd, ... )
 
     if      (strncmp(cmd,"trig",4) == 0)    /* takes 3 args: modeMsks, lvlsMsk, postEntries */
     {
-	uint32_t modeMsk=va_arg(ap,uint32_t);
+	uint32_t modeMsk=va_arg(ap,uint64_t);
 	uint64_t lvlsMsk=va_arg(ap,uint64_t);
 	unsigned post_entries=va_arg(ap,unsigned);
 	if (   (  (traceControl_p->mode.s.M && (traceNamLvls_p[traceTID].M & lvlsMsk))
@@ -375,12 +375,23 @@ static void traceCntl( int nargs, const char *cmd, ... )
 	    traceControl_p->trigOffMode.mode = modeMsk;
 	}
     }
-    else if (strcmp(cmd,"lvl") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    else if (strcmp(cmd,"lvlmskM") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
 	traceNamLvls_p[traceTID].M = lvl;
+	printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
+    }
+    else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    {   
+	uint64_t lvl=va_arg(ap,uint64_t);
 	traceNamLvls_p[traceTID].S = lvl;
-	printf("set levels for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
+	printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
+    }
+    else if (strcmp(cmd,"lvlmskT") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    {   
+	uint64_t lvl=va_arg(ap,uint64_t);
+	traceNamLvls_p[traceTID].T = lvl;
+	printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
     }
     else if (strcmp(cmd,"mode") == 0)
     {   
@@ -495,9 +506,11 @@ static void traceCntl( int nargs, const char *cmd, ... )
     }
     else
     {   fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
+	return (-1);
     }
 
     va_end(ap);
+    return (0);
 }   /* traceCntl */
 
 static int traceInit(void)

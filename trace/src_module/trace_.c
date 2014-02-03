@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.5 $$Date: 2014/01/31 19:27:09 $";
+    rev="$Revision: 1.6 $$Date: 2014/02/03 06:17:26 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -14,8 +14,10 @@
 #include <linux/kernel.h>	// KERN_INFO, printk
 #include <linux/version.h>      /* KERNEL_VERSION */
 #include <linux/mm.h>           /* do_mmap, vm_area_struct */
+#include <linux/io.h>		/* ioremap_page_range */
 #include <linux/proc_fs.h>      /* create_proc_entry, struct proc_dir_entry */
 #include <asm/io.h>             /* virt_to_phys */
+#include <asm-generic/uaccess.h>/* copy_to_user */
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
 #include <trace/events/irq.h>	/*  */
 
@@ -46,26 +48,55 @@ static int trace_proc_buffer_mmap(  struct file              *file
 {
     int           sts;
     void          *phys_addr;
+    pgprot_t      prot_ro;
+    off_t         off=vma->vm_pgoff<<PAGE_SHIFT;
+    unsigned long size;
 
-    phys_addr = (void *)virt_to_phys( (char *)traceControl_p+vma->vm_pgoff );
+    /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
+    pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
+
+    if (off == 0) {size=0x1000;vma->vm_page_prot=prot_ro;vma->vm_flags&=~VM_WRITE;}
+    else          {size=vma->vm_end - vma->vm_start;}
+# if 0
+    printk("start=0x%lx, end=0x%lx pgoff=%lu off=%lu prot=0x%lx ro=0x%lx "
+	   "flags=0x%lx\n"
+	   , vma->vm_start, vma->vm_end, vma->vm_pgoff, off
+	   , pgprot_val(vma->vm_page_prot)
+	   , pgprot_val(prot_ro), vma->vm_flags
+	   );
+# endif
+    phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
     sts = io_remap_pfn_range(  vma, vma->vm_start
                              , (unsigned long)phys_addr >> PAGE_SHIFT
-                             , vma->vm_end-vma->vm_start /* size */
+                             , size
                              , vma->vm_page_prot );
     if (sts) return -EAGAIN;
+
     return (0);
 }   // trace_proc_buffer_mmap
 
+static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
+				  , size_t siz, loff_t *off )
+{
+    long must_check;
+    if (siz > (traceControl_p->memlen-*off)) siz = traceControl_p->memlen-*off;
+    must_check = copy_to_user( dst_p, ((char*)traceControl_p)+*off, siz );
+    if (must_check != 0)
+	return (-EACCES);
+    *off += siz;
+    return (siz);
+}
+
 static
 struct file_operations trace_proc_buffer_file_operations = {
-    owner:   THIS_MODULE,
-    llseek:  NULL,           		/* lseek        */
-    read:    NULL,   			/* read         */
-    write:   NULL,           		/* write        */
-    readdir: NULL,              	/* readdir      */
-    poll:    NULL,              	/* poll         */
-    ioctl:   NULL,         		/* ioctl        */
-    mmap:    trace_proc_buffer_mmap,   	/* mmap         */
+    .owner=   THIS_MODULE,
+    .llseek=  NULL,           		/* lseek        */
+    .read=    trace_proc_buffer_read,	/* read         */
+    .write=   NULL,           		/* write        */
+    .readdir= NULL,              	/* readdir      */
+    .poll=    NULL,              	/* poll         */
+    .ioctl=   NULL,         		/* ioctl        */
+    .mmap=    trace_proc_buffer_mmap,   /* mmap         */
     NULL,                       	/* open         */
     NULL,                       	/* flush        */
     NULL,                       	/* release (close?)*/
@@ -96,7 +127,7 @@ static int  trace_proc_add( int len )
     }
 
     /* CREATE BUFFER FILE */
-    child = create_proc_entry( "buffer", S_IFREG|S_IRUGO, trace_proc_root );
+    child = create_proc_entry( "buffer", S_IFREG|S_IRUGO|S_IWUGO, trace_proc_root );
     if (!child)
     {   remove_proc_entry( "buffer",  trace_proc_root );
 	printk( "proc_trace_create: error creating buffer file\n" );

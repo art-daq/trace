@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.14 $$Date: 2014-02-03 06:16:08 $";
+ // rev="$Revision: 1.15 $$Date: 2014-02-03 15:22:29 $";
  */
 
 #ifndef TRACE_H_5216
@@ -210,7 +210,7 @@ static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 
 /* forward declarations, important functions */
-static uint64_t                 idxCnt_add( uint64_t idxCnt, int add );
+static inline uint64_t          idxCnt_add( uint64_t idxCnt, int add );
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint64_t idxCnt );
 static uint32_t                 entSiz( uint32_t siz_msg, uint32_t num_params );
 static int                      traceMemLen(  int siz_msg
@@ -227,6 +227,14 @@ static void                     getPtrs(  struct traceControl_s  **cc
 					, struct traceNamLvls_s     **ll
 					, int siz_lvlTbl );
 #endif
+#define IDXCNT_ADD( idxCnt, add ) \
+    ((add<0)							\
+     ?(((uint32_t)-add>idxCnt)						\
+       ?(traceControl_p->largest_multiple-(-add-idxCnt))%traceControl_p->largest_multiple \
+       :(idxCnt-(-add))%traceControl_p->largest_multiple\
+      )						\
+     :(idxCnt+add)%traceControl_p->largest_multiple\
+     )
 
 
 /* I've worked the mode<->level checking thing out before ...
@@ -269,11 +277,11 @@ static void trace( unsigned lvl, unsigned nargs
 	    desired = idxCnt_add( myIdxCnt,1);
 	}
 #      elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-	uint64_t desired=idxCnt_add(myIdxCnt,1);
+	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					     , &myIdxCnt, desired))
 	{   ++get_idxCnt_retries;
-	    desired = idxCnt_add( myIdxCnt,1);
+	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #       else
 	traceControl_p->wrIdxCnt = idxCnt_add(myIdxCnt,1);
@@ -636,19 +644,15 @@ static int traceInit(void)
 // I must do the substract (ie. add negative) by hand.
 // Ref. ShmRW class (~/src/ShmRW?)
 */
-static uint64_t idxCnt_add( uint64_t idxCnt, int add )
+static inline uint64_t idxCnt_add( uint64_t idxCnt, int add )
 {   uint64_t tt;
     if (add < 0)
     {   add = -add;
-        if ((uint32_t)add > idxCnt)
-        {   add -= idxCnt;
-            tt=traceControl_p->largest_multiple - add;
-        }
-        else
-            tt=idxCnt-add;
-    }
-    else
-        tt=idxCnt+add;
+        if ((uint32_t)add > idxCnt) /* i.e. idxCnt==0 */
+        {      add -= idxCnt;
+               tt=traceControl_p->largest_multiple - add;
+        } else tt=idxCnt-add;
+    } else     tt=idxCnt+add;
     return (tt%traceControl_p->largest_multiple);
 }
 

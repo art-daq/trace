@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.22 $$Date: 2014-02-04 20:12:30 $";
+ // rev="$Revision: 1.23 $$Date: 2014-02-04 20:47:35 $";
  */
 
 #ifndef TRACE_H_5216
@@ -408,7 +408,8 @@ static int traceCntl( int nargs, const char *cmd, ... )
     else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
-	if ((strcmp(traceNamLvls_p[traceTID],"KERNEL")==0)&&(lvl&0xff000000))
+	if (  (strcmp(traceNamLvls_p[traceTID].name,"KERNEL")==0)
+	    &&(lvl&0xff000000) )
 	{   fprintf(stderr, "not allowed to set some level bits which could "
 		    "cause KERNEL issues\n");
 	} else

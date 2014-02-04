@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.21 $$Date: 2014-02-04 00:38:03 $";
+ // rev="$Revision: 1.22 $$Date: 2014-02-04 20:12:30 $";
  */
 
 #ifndef TRACE_H_5216
@@ -70,6 +70,7 @@
 # define TRACE_NAME "TRACE"
 #endif
 
+
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
 # define TRACE( lvl, ... ) do \
@@ -111,6 +112,7 @@
 # endif
 
 #endif   /* __GXX_WEAK__... */
+
 
 #if   defined(__i386__)
 # define TRACE_XTRA_PASSED
@@ -212,7 +214,6 @@ static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 
 /* forward declarations, important functions */
-static inline uint64_t          idxCnt_add( uint64_t idxCnt, int add );
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint64_t idxCnt );
 static uint32_t                 entSiz( uint32_t siz_msg, uint32_t num_params );
 static int                      traceMemLen(  int siz_msg
@@ -229,9 +230,14 @@ static void                     getPtrs(  struct traceControl_s  **cc
 					, struct traceNamLvls_s     **ll
 					, int siz_lvlTbl );
 #endif
-/* use of the following seem not to produce code different from the optimized
-   code which just calls idxCnt_delta (the c11/c++11 optimizer seem to do what
-   this macro does).  I'll keep the macro around for a while. */
+
+/* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"
+   I must do the substract (ie. add negative) by hand.
+   Ref. ShmRW class (~/src/ShmRW?)
+   Some standards don't seem to line "static inline"
+   Use of the following seems to produce the same code as the optimized
+   code which calls inline idxCnt_add (the c11/c++11 optimizer seem to do what
+   this macro does). */
 #define IDXCNT_ADD( idxCnt, add ) \
     ((add<0)							\
      ?(((uint32_t)-add>idxCnt)						\
@@ -270,21 +276,21 @@ static void trace( unsigned lvl, unsigned nargs
 	uint64_t                myIdxCnt=traceControl_p->wrIdxCnt;
 
 #      if defined(__KERNEL__)
-	uint64_t desired=idxCnt_add(myIdxCnt,1);
+	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
 	{   ++get_idxCnt_retries;
 	    myIdxCnt=traceControl_p->wrIdxCnt;
-	    desired = idxCnt_add( myIdxCnt,1);
+	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #      elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-	uint64_t desired=idxCnt_add(myIdxCnt,1);
+	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					     , &myIdxCnt, desired))
 	{   ++get_idxCnt_retries;
-	    desired = idxCnt_add( myIdxCnt,1);
+	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #       else
-	traceControl_p->wrIdxCnt = idxCnt_add(myIdxCnt,1);
+	traceControl_p->wrIdxCnt = IDXCNT_ADD(myIdxCnt,1);
 #       endif
 
 	TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
@@ -293,6 +299,7 @@ static void trace( unsigned lvl, unsigned nargs
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 
+	TRACE_TSC32( myEnt_p->tsc );
 	myEnt_p->time = tv;
 	myEnt_p->lvl  = lvl;
 	myEnt_p->pid  = tracePid;
@@ -301,7 +308,6 @@ static void trace( unsigned lvl, unsigned nargs
 	/*myEnt_p->cpu  = -1;    maybe don't need this when sched hook show tid<-->cpu */
 	myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
 	myEnt_p->param_bytes = sizeof(long);
-	TRACE_TSC32( myEnt_p->tsc );
 
 	strncpy(msg_p,msg,traceControl_p->siz_msg);
 	/* emulate stack push - right to left (so that arg1 end up at a lower
@@ -402,8 +408,14 @@ static int traceCntl( int nargs, const char *cmd, ... )
     else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
-	traceNamLvls_p[traceTID].S = lvl;
-	printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
+	if ((strcmp(traceNamLvls_p[traceTID],"KERNEL")==0)&&(lvl&0xff000000))
+	{   fprintf(stderr, "not allowed to set some level bits which could "
+		    "cause KERNEL issues\n");
+	} else
+	{   traceNamLvls_p[traceTID].S = lvl;
+	    printf("set level for TID=%d to 0x%llx\n", traceTID
+		   , (unsigned long long)lvl );
+	}
     }
     else if (strcmp(cmd,"lvlmskT") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
@@ -494,7 +506,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	char                  * msg_p;
 	unsigned long         * params_p;
 
-	rdIdx = idxCnt_add( rdIdx, -1 );
+	rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	for (printed=0; printed<max; ++printed)
 	{   myEnt_p = idxCnt2entPtr( rdIdx );
 	    msg_p    = (char*)(myEnt_p+1);
@@ -522,7 +534,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 
 	    printf("\n");
 
-	    rdIdx = idxCnt_add( rdIdx, -1 );
+	    rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	}
     }
     else
@@ -678,21 +690,6 @@ static int traceInit(void)
 
 #endif /* __KERNEL__ */
 
-/* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"
-// I must do the substract (ie. add negative) by hand.
-// Ref. ShmRW class (~/src/ShmRW?)
-*/
-static inline uint64_t idxCnt_add( uint64_t idxCnt, int add )
-{   uint64_t tt;
-    if (add < 0)
-    {   add = -add;
-        if ((uint32_t)add > idxCnt) /* i.e. idxCnt==0 */
-        {      add -= idxCnt;
-               tt=traceControl_p->largest_multiple - add;
-        } else tt=idxCnt-add;
-    } else     tt=idxCnt+add;
-    return (tt%traceControl_p->largest_multiple);
-}
 
 #if 0
 static uint64_t idxCnt_delta( uint64_t wr, uint64_t rd )

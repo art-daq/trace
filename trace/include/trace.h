@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.23 $$Date: 2014-02-04 20:47:35 $";
+ // rev="$Revision: 1.24 $$Date: 2014-02-04 21:14:12 $";
  */
 
 #ifndef TRACE_H_5216
@@ -61,11 +61,11 @@
 #endif /* __KERNEL__ */
 
 
-#define TRACE_DFLT_MAX_MSG_SZ       80
-#define TRACE_DFLT_MAX_PARAMS        6
+#define TRACE_DFLT_MAX_MSG_SZ       88
+#define TRACE_DFLT_MAX_PARAMS        7
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   20000
-#define TRACE_DFLT_NAM_SZ           16
+#define TRACE_DFLT_NAM_SZ            8
 #ifndef  TRACE_NAME
 # define TRACE_NAME "TRACE"
 #endif

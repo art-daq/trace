@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.20 $$Date: 2014/02/03 18:48:38 $";
+ // rev="$Revision: 1.21 $$Date: 2014/02/04 00:38:03 $";
  */
 
 #ifndef TRACE_H_5216
@@ -593,7 +593,8 @@ static int traceInit(void)
 	    traceControl_p=&traceControl;
 	}
 
-	printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );
+	if (rw_p != ((uint8_t*)traceControl_p)+0x1000)
+	    printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );
 
 	tracePid = getpid();
 

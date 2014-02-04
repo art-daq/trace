@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.7 $$Date: 2014-02-03 18:50:02 $";
+    rev="$Revision: 1.8 $$Date: 2014-02-04 00:38:45 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -163,7 +163,7 @@ trace_sched_switch_hook(
 {
         unsigned long flags;
         local_irq_save(flags);
-	TRACE( 1, "sched: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
+	TRACE( 31, "sched: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
         local_irq_restore(flags);
 }   // trace_sched_switch_hook
 
@@ -172,7 +172,7 @@ trace_irq( int irq, struct irqaction *action )
 {
         unsigned long flags;
         local_irq_save(flags);
-	TRACE( 2, "irq_hander_entry: cpu=%d irq=%d",raw_smp_processor_id(),irq);
+	TRACE( 30, "irq_hander_entry: cpu=%d irq=%d",raw_smp_processor_id(),irq);
         local_irq_restore(flags);
 }   // trace_irq
 

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: some_module.c,v $
-    rev="$Revision: 1.2 $$Date: 2014/02/04 00:39:29 $";
+    rev="$Revision: 1.3 $$Date: 2014/02/05 18:22:30 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -25,7 +25,7 @@ static void my_work_function( struct work_struct *w );
 static DECLARE_WORK(my_work, my_work_function);
 static void my_work_function( struct work_struct *w )
 {
-    TRACE( 0,"hello from my_work_function" );
+    TRACE( 0,"hello from my_work_function jiffies: %ld", jiffies );
     msleep( 1500 );
     if (!stop_requested)
 	queue_work( wq, &my_work );    

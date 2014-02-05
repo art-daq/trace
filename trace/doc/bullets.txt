@@ -14,6 +14,7 @@ Other Goals
   * configurable  - msgSz,numParams,numEntries,names
   * trigger
   * subset to stdout (console log)  - should this (default) to human readable?
+      - correlate console log (error) output with high-speed details.
   * user "logger" function
 
 Companion utility - trace_delta.pl
@@ -29,6 +30,17 @@ Trace vs. other utilities:
    -- profile the function: min max ave.
    But, maybe you really want only a sub part of the funtion (and it's unnatural
    to restructure the code).
+
+   Yes, TRACE is _like_ "instrumenting" your code and this takes compiling it.
+   But its also significantly different then instrumenting you code.
+   The goal is that you would _not_ recompile after your done:
+       - the instrumenting is only at (relatively, i.e. not every function call
+         entry/exit) a few key/significant locations
+       - tracing is low impact and masked of is much lower (near, but
+         admittedly not zero).
+       - some of the location you would want console output
+       - (just) in case you want to enable and check trace details in the
+         future.
 
    With parameters, you can easily filter... (i.e. function part only when
    parameter is within some range).

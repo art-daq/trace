@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.25 $$Date: 2014/02/06 02:34:24 $";
+ // rev="$Revision: 1.26 $$Date: 2014/02/06 14:31:58 $";
  */
 
 #ifndef TRACE_H_5216
@@ -588,7 +588,19 @@ static int traceInit(void)
 	    write( fd, &one_byte, 1 );
 	}
 
-
+# if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
+	traceControl_p = (struct traceControl_s *)mmap( NULL, mmlen
+						       , PROT_READ|PROT_WRITE
+						       , MAP_SHARED, fd, 0 );
+	if (traceControl_p == (struct traceControl_s *)-1)
+	{   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	    printf( "mmlen=%d\n", mmlen );
+	    traceControl_p=&traceControl;
+	}
+	printf("initialize=%d namLvlTblEnts=%u\n"
+	       , traceControl_p->trace_initialized
+	       , traceControl_p->num_namLvlTblEnts );
+# else
 	rw_p = (uint8_t*)mmap( NULL, mmlen-0x1000
 			      , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x1000 );
 	if (rw_p == (void *)-1)
@@ -609,6 +621,7 @@ static int traceInit(void)
 
 	if (rw_p != ((uint8_t*)traceControl_p)+0x1000)
 	    printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );
+# endif
 
 	tracePid = getpid();
 

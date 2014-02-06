@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.24 $$Date: 2014/02/04 21:14:12 $";
+ // rev="$Revision: 1.25 $$Date: 2014/02/06 02:34:24 $";
  */
 
 #ifndef TRACE_H_5216
@@ -49,6 +49,7 @@
 # include <linux/time.h>              /* do_gettimeofday */
 /*# include <linux/printk.h>	       printk, vprintk */
 # include <linux/kernel.h>	      /* printk, vprintk */
+# include <linux/mm.h>		      /* kmalloc */
 # include <linux/spinlock.h>	      /* cmpxchg */
 # define TRACE_ATOMIC_T           uint64_t
 # define TRACE_THREAD_LOCAL 

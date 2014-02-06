@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.8 $$Date: 2014-02-04 00:38:45 $";
+    rev="$Revision: 1.9 $$Date: 2014-02-06 14:40:12 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -48,8 +48,10 @@ static int trace_proc_buffer_mmap(  struct file              *file
 {
     int           sts;
     void          *phys_addr;
-    pgprot_t      prot_ro;
     off_t         off=vma->vm_pgoff<<PAGE_SHIFT;
+
+# if 1    // expect 2 mmap calles
+    pgprot_t      prot_ro;
     unsigned long size;
 
     /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
@@ -72,6 +74,42 @@ static int trace_proc_buffer_mmap(  struct file              *file
                              , vma->vm_page_prot );
     if (sts) return -EAGAIN;
 
+# else
+    // Currently can't get 1st page read-only with single mmap call :(
+    ulong vm_start=vma->vm_start;
+    if (off == 0)
+    {   // force 1st page read-only
+	pgprot_t      prot_sav=vma->vm_page_prot;
+	ulong vm_flags_sav=vma->vm_flags;
+	//pgprot_val(vma->vm_page_prot) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
+	vma->vm_page_prot = PAGE_READONLY;
+	vma->vm_flags&=~VM_WRITE;
+	phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
+	sts = io_remap_pfn_range(  vma, vma->vm_start
+				 , (unsigned long)phys_addr >> PAGE_SHIFT
+				 , PAGE_SIZE
+				 , vma->vm_page_prot );
+	if (sts)
+	    return (-EAGAIN);
+	printk( "mapped first %lu bytes\n", PAGE_SIZE );
+	vm_start += PAGE_SIZE; // we mapped a page, so...
+	if (vm_start >= vma->vm_end) // maybe...
+	    return (0);                   // we're done
+	vma->vm_flags = vm_flags_sav; // prepare for more mapping
+	vma->vm_page_prot = prot_sav;
+	//vma->vm_pgoff += 1;
+	off = PAGE_SIZE;
+    }
+
+    phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
+    sts = io_remap_pfn_range(  vma, vm_start
+			     , (unsigned long)phys_addr >> PAGE_SHIFT
+			     , vma->vm_end - vm_start
+			     , vma->vm_page_prot );
+    if (sts)
+	return (-EAGAIN);
+    printk( "mapped %lu bytes\n", vma->vm_end - vma->vm_start );
+# endif
     return (0);
 }   // trace_proc_buffer_mmap
 
@@ -99,7 +137,7 @@ struct file_operations trace_proc_buffer_file_operations = {
     .mmap=    trace_proc_buffer_mmap,   /* mmap         */
     NULL,                       	/* open         */
     NULL,                       	/* flush        */
-    NULL,                       	/* release (close?)*/
+    NULL,                       	/* release (close?) */
     NULL,                       	/* fsync        */
     NULL,                       	/* fasync       */
     NULL,                       	/* check_media_change */

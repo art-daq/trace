@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.35 $$Date: 2014-02-03 18:48:38 $";
+    rev="$Revision: 1.36 $$Date: 2014-02-06 14:31:58 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -146,7 +146,9 @@ main(  int	argc
 	}
 	printf("myIdx=0x%016lx\n", myIdx );
 # if defined(TEST_WRITE_PROTECT)
+	printf("try write to (presumably kernel memory) write-protected 1st page...\n");
 	traceControl_p->trace_initialized = 2;
+	printf("write succeeded.\n");
 # elif defined(TEST_WRITE_PAST_END)
 	*(((uint8_t*)traceControl_p)+traceControl_p->memlen) = 6;
 # endif

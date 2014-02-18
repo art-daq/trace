@@ -1,10 +1,10 @@
 TRACE package:
 
 TRACE_DIR=<prod_root>/TRACE/v3_0
-TRACE/v3_0/README
+TRACE/v3_1/README
           /include/trace.h
           /script/trace_delta.pl
-                 /trace_mk.sh     - to make utility, module, and/or example
+                 /trace_mk.sh     - to make utility, module, and/or example SPECIFYING OUTDIR
 	         /trace.sh.functions
           /doc/package_files.txt  -  mentions: these lines, that the (control) "utility" can do tests
 	      /bullets.txt
@@ -17,6 +17,10 @@ TRACE/v3_0/README
 	  /src_module/Makefile
                      /Kbuild
                      /trace_.c
-          /src_example/Makefile
-                      /just.cc  - mentions don't want "..unused.."
+          /src_example/userspace/Makefile
+                                /just.cc  - mentions don't want "..unused.."
+          /src_example/module/Makefile
+                             /Kbuild
+                             /some_module.c
           /ups/trace.table
+          /TRACE/v3_1.version

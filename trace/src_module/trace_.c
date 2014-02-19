@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.9 $$Date: 2014-02-06 14:40:12 $";
+    rev="$Revision: 1.10 $$Date: 2014-02-19 17:43:37 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -21,7 +21,7 @@
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
 #include <trace/events/irq.h>	/*  */
 
-#include "Trace_mmap4.h"
+#include "trace.h"
 
 struct traceControl_s  *traceControl_p=NULL;
 struct traceEntryHdr_s *traceEntries_p;
@@ -47,12 +47,15 @@ static int trace_proc_buffer_mmap(  struct file              *file
 				  , struct vm_area_struct    *vma )
 {
     int           sts;
-    void          *phys_addr;
+    /*void          *phys_addr;*/
+    unsigned long pfn;
     off_t         off=vma->vm_pgoff<<PAGE_SHIFT;
+    unsigned long start = vma->vm_start;
+
 
 # if 1    // expect 2 mmap calles
     pgprot_t      prot_ro;
-    unsigned long size;
+    long 	  size;
 
     /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
     pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
@@ -67,12 +70,26 @@ static int trace_proc_buffer_mmap(  struct file              *file
 	   , pgprot_val(prot_ro), vma->vm_flags
 	   );
 # endif
+    while (size > 0)
+    {
+	pfn = vmalloc_to_pfn( ((char *)traceControl_p)+off );
+	sts = io_remap_pfn_range(  vma, start
+			      , pfn
+			      , PAGE_SIZE
+			  , vma->vm_page_prot );
+	if (sts) return -EAGAIN;
+	start += PAGE_SIZE;
+	off += PAGE_SIZE;
+	size -= PAGE_SIZE;
+    }
+#if 0
     phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
     sts = io_remap_pfn_range(  vma, vma->vm_start
                              , (unsigned long)phys_addr >> PAGE_SHIFT
                              , size
                              , vma->vm_page_prot );
     if (sts) return -EAGAIN;
+#endif
 
 # else
     // Currently can't get 1st page read-only with single mmap call :(
@@ -272,7 +289,7 @@ static int __init init_trace_3(void)
  undo2:
     trace_proc_remove();
  undo1:
-    kfree( traceControl_p );
+    vfree( traceControl_p );
     return (ret);
 }   // init_trace_3
 
@@ -291,8 +308,8 @@ static void __exit exit_trace_3(void)
         trace_proc_remove();
 
 	if (traceControl_p)
-	{   printk("exit_trace_3 kfree(%p)\n", traceControl_p );
-	    kfree( traceControl_p );
+	{   printk("exit_trace_3 vfree(%p)\n", traceControl_p );
+	    vfree( traceControl_p );
 	}
 }   // exit_trace_3
 

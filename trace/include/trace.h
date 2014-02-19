@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.26 $$Date: 2014-02-06 14:31:58 $";
+ // rev="$Revision: 1.27 $$Date: 2014-02-19 17:43:37 $";
  */
 
 #ifndef TRACE_H_5216
@@ -32,7 +32,22 @@
 #  define TRACE_THREAD_LOCAL      _Thread_local
 # else
 #  define TRACE_ATOMIC_T          uint64_t
-#  define TRACE_THREAD_LOCAL 
+#  define TRACE_THREAD_LOCAL
+#  if defined(__x86_64__)
+#    define cmpxchg(ptr, old, new) \
+    ({ uint64_t __ret;							\
+    uint64_t __old = (old);						\
+    uint64_t __new = (new);						\
+    volatile uint64_t *__ptr = (volatile uint64_t *)(ptr);		\
+    asm volatile("lock cmpxchgq %2,%1"					\
+		 : "=a" (__ret), "+m" (*__ptr)				\
+		 : "r" (__new), "0" (__old)				\
+		 : "memory");						\
+    __ret;								\
+    })
+#  else
+#    define cmpxchg(ptr, old, new) (*(ptr)=new,old)
+#  endif
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
@@ -49,7 +64,8 @@
 # include <linux/time.h>              /* do_gettimeofday */
 /*# include <linux/printk.h>	       printk, vprintk */
 # include <linux/kernel.h>	      /* printk, vprintk */
-# include <linux/mm.h>		      /* kmalloc */
+# include <linux/mm.h>		      /* kmalloc OR __get_free_pages */
+# include <linux/vmalloc.h>	      /* __vmalloc, vfree */
 # include <linux/spinlock.h>	      /* cmpxchg */
 # define TRACE_ATOMIC_T           uint64_t
 # define TRACE_THREAD_LOCAL 
@@ -62,8 +78,9 @@
 #endif /* __KERNEL__ */
 
 
-#define TRACE_DFLT_MAX_MSG_SZ       88
-#define TRACE_DFLT_MAX_PARAMS        7
+/* 88,7=192 bytes/ent   96,6=192   128,10=256*/
+#define TRACE_DFLT_MAX_MSG_SZ      128
+#define TRACE_DFLT_MAX_PARAMS       10
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   20000
 #define TRACE_DFLT_NAM_SZ            8
@@ -291,7 +308,12 @@ static void trace( unsigned lvl, unsigned nargs
 	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #       else
-	traceControl_p->wrIdxCnt = IDXCNT_ADD(myIdxCnt,1);
+	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
+	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
+	{   ++get_idxCnt_retries;
+	    myIdxCnt=traceControl_p->wrIdxCnt;
+	    desired = IDXCNT_ADD( myIdxCnt,1);
+	}
 #       endif
 
 	TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
@@ -404,7 +426,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
 	traceNamLvls_p[traceTID].M = lvl;
-	printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
+	/*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
     }
     else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
@@ -415,20 +437,29 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		    "cause KERNEL issues\n");
 	} else
 	{   traceNamLvls_p[traceTID].S = lvl;
-	    printf("set level for TID=%d to 0x%llx\n", traceTID
-		   , (unsigned long long)lvl );
+	    /*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
 	}
     }
     else if (strcmp(cmd,"lvlmskT") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
 	traceNamLvls_p[traceTID].T = lvl;
-	printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );
+	/*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
     }
     else if (strcmp(cmd,"mode") == 0)
     {   
 	uint32_t mode=va_arg(ap,uint64_t);
 	traceControl_p->mode.mode = mode;
+    }
+    else if (strcmp(cmd,"modeset") == 0)
+    {   
+	uint32_t mode=va_arg(ap,uint64_t);
+	traceControl_p->mode.mode |= mode;
+    }
+    else if (strcmp(cmd,"modeclr") == 0)
+    {   
+	uint32_t mode=va_arg(ap,uint64_t);
+	traceControl_p->mode.mode &= ~mode;
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {
@@ -646,7 +677,7 @@ static int traceInit(void)
 	    /* MUST THINK ABOUT "lvlM" and/or "lvlP" ???
 	       AND        "modeM" and/or "modeP" ???
 	    */
-	    traceCntl( 2, "lvl",  strtoul(levl,NULL,0) );
+	    traceCntl( 2, "lvlmskM",  strtoul(levl,NULL,0) );
 	    traceCntl( 2, "mode", strtoul(mode,NULL,0) );
 	}
 	traceTID = name2tid( name );
@@ -671,9 +702,15 @@ static int traceInit(void)
     printk(  KERN_INFO "init_trace_3 called -- attempt to allocate %d bytes\n"
 	   , memlen );
 
+    traceControl_p = (struct traceControl_s *)vmalloc( memlen );
+#if 0
+    traceControl_p = (struct traceControl_s *)__vmalloc( memlen,GFP_KERNEL,PAGE_KERNEL );
+    traceControl_p = (struct traceControl_s *)__vmalloc( memlen,GFP_KERNEL|GFP_DMA32,PAGE_KERNEL_IO );
+    traceControl_p = (struct traceControl_s *)__get_free_pages( GFP_KERNEL, get_order(memlen) );
     traceControl_p = (struct traceControl_s *)kmalloc( memlen, GFP_KERNEL );
+#endif
     if (!traceControl_p) return -ENOMEM;
-    printk("init_trace_3 kmalloc(%d)=%p\n",memlen,traceControl_p);
+    printk("init_trace_3 alloc(%d)=%p\n",memlen,traceControl_p);
 
     traceControl_p->num_params        = num_params;
     traceControl_p->siz_msg           = siz_msg;

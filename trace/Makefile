@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.1 $$Date: 2014-02-19 17:43:37 $";
+ # rev="$Revision: 1.2 $$Date: 2014-02-19 18:55:47 $";
 
 # TOP LEVEL Makefile
 
@@ -19,7 +19,7 @@ src_example src_module src_utility: OUT_check
 	subdir=`expr "$@" : 'src_\(.*\)'`;\
 	test -d "${OUT}/$$subdir" || mkdir "${OUT}/$$subdir";\
 	cp -ar $@/. "${OUT}/$$subdir/.";\
-	$(MAKE) -e -C "${OUT}/$$subdir"
+	$(MAKE) -e -C "${OUT}/$$subdir" CFLAGS=-I${TRACE_INC} CPPFLAGS=-I${TRACE_INC}
 
 .PHONY: OUT_check
 OUT_check:

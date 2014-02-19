@@ -17,9 +17,10 @@ TRACE/v3_1/README
 	  /src_module/Makefile
                      /Kbuild
                      /trace_.c
-          /src_example/userspace/Makefile
+          /src_example/Makefile
+                      /userspace/Makefile
                                 /just.cc  - mentions don't want "..unused.."
-          /src_example/module/Makefile
+                      /module/Makefile
                              /Kbuild
                              /some_module.c
           /ups/trace.table

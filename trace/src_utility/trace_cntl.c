@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.37 $$Date: 2014/02/08 03:50:18 $";
+    rev="$Revision: 1.38 $$Date: 2014/02/19 17:43:37 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -17,11 +17,8 @@ done
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
 #include <sys/syscall.h>	/* syscall */
-#ifndef   VA_PARSE_ARGS
-# include "Trace_mmap4.h"
-#else
-# include "Trace_mmap2.h"
-#endif
+
+#include "../include/trace.h"
 
 #define NUMTHREADS 4
 

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.1 $$Date: 2014/01/31 04:24:43 $";
+ # rev="$Revision: 1.2 $$Date: 2014/02/19 17:43:37 $";
 
 # Ref. Documentation/kbuild/modules.txt
 # Ref. http://www.tldp.org/LDP/lkmpg/2.6/html/  (2007-05-18 ver 2.6.4)
@@ -24,7 +24,7 @@ PARENT_DIR := $(shell dirname $(PWD))
 	$(MAKE) -C $(KDIR) M=$(PWD) $@
 
 all default:
-	$(MAKE) -C $(KDIR) M=$(PWD) KBUILD_EXTRA_SYMBOLS=$(PARENT_DIR)/module3/Module.symvers
+	$(MAKE) -C $(KDIR) M=$(PWD) KBUILD_EXTRA_SYMBOLS=${OUT}/module/Module.symvers
 
 .PHONY: /
 /:

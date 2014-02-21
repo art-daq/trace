@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.28 $$Date: 2014/02/21 02:08:58 $";
+ // rev="$Revision: 1.29 $$Date: 2014/02/21 18:49:17 $";
  */
 
 #ifndef TRACE_H_5216
@@ -24,30 +24,26 @@
 # include <pthread.h>		/* pthread_self */
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
-#  define TRACE_ATOMIC_T     std::atomic<uint64_t>
+#  define TRACE_ATOMIC_T     std::atomic<uint32_t>
 #  define TRACE_THREAD_LOCAL thread_local 
 # elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #  include <stdatomic.h>		/* atomic_compare_exchange_weak */
-#  define TRACE_ATOMIC_T          _Atomic(uint64_t)
+#  define TRACE_ATOMIC_T          _Atomic(uint32_t)
 #  define TRACE_THREAD_LOCAL      _Thread_local
 # else
-#  define TRACE_ATOMIC_T          uint64_t
+#  define TRACE_ATOMIC_T          uint32_t
 #  define TRACE_THREAD_LOCAL
-#  if defined(__x86_64__)
-#    define cmpxchg(ptr, old, new) \
-    ({ uint64_t __ret;							\
-    uint64_t __old = (old);						\
-    uint64_t __new = (new);						\
-    volatile uint64_t *__ptr = (volatile uint64_t *)(ptr);		\
-    asm volatile("lock cmpxchgq %2,%1"					\
+#  define cmpxchg(ptr, old, new) \
+    ({ uint32_t __ret;							\
+    uint32_t __old = (old);						\
+    uint32_t __new = (new);						\
+    volatile uint32_t *__ptr = (volatile uint32_t *)(ptr);		\
+    asm volatile("lock cmpxchgl %2,%1"					\
 		 : "=a" (__ret), "+m" (*__ptr)				\
 		 : "r" (__new), "0" (__old)				\
 		 : "memory");						\
     __ret;								\
     })
-#  else
-#    define cmpxchg(ptr, old, new) (*(ptr)=new,old)
-#  endif
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
@@ -67,7 +63,7 @@
 # include <linux/mm.h>		      /* kmalloc OR __get_free_pages */
 # include <linux/vmalloc.h>	      /* __vmalloc, vfree */
 # include <linux/spinlock.h>	      /* cmpxchg */
-# define TRACE_ATOMIC_T           uint64_t
+# define TRACE_ATOMIC_T           uint32_t
 # define TRACE_THREAD_LOCAL 
 # define TRACE_GETTIMEOFDAY( tv ) do_gettimeofday( tv )
 # define TRACE_DO_TID
@@ -164,14 +160,14 @@ struct traceControl_s
     uint32_t       siz_msg;
     uint32_t       siz_entry;
     uint32_t       num_entries;
-    uint64_t       largest_multiple;
+    uint32_t       largest_multiple;
     uint32_t       num_namLvlTblEnts;/* these and above would be read only if */
     int32_t        trace_initialized;/* in kernel */
     uint32_t       memlen;
-    uint32_t       page_align[1015]; /* allow mmap page readonly */
+    uint32_t       page_align[1016]; /* allow mmap page readonly */
 
-    TRACE_ATOMIC_T wrIdxCnt;
-    uint64_t       cacheline1[3];
+    TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
+    uint32_t       cacheline1[15];
 
     union
     {   struct
@@ -187,11 +183,11 @@ struct traceControl_s
 	}   bits;
 	uint32_t  mode;
     }             trigOffMode;    /* can configurably cause Print to stop */
-    uint64_t      trigIdxCnt;   /* BASED ON "M" mode Counts */
+    uint32_t      trigIdxCnt;   /* BASED ON "M" mode Counts */
     int32_t       triggered;
     uint32_t	  trigActivePost;
     int32_t       full;
-    uint32_t      xtra;
+    uint32_t      xtra[2];
 };
 
 struct traceEntryHdr_s
@@ -232,7 +228,7 @@ static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 
 /* forward declarations, important functions */
-static struct traceEntryHdr_s*  idxCnt2entPtr( uint64_t idxCnt );
+static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
 static uint32_t                 entSiz( uint32_t siz_msg, uint32_t num_params );
 static int                      traceMemLen(  int siz_msg
 					    , int num_params
@@ -242,7 +238,7 @@ static int                      traceMemLen(  int siz_msg
 static void                     traceInitNames( void );
 static uint32_t                 name2tid( const char *name );
 #if 0
-static uint64_t                 idxCnt_delta( uint64_t wr, uint64_t rd );
+static uint64_t                 idxCnt_delta( uint32_t wr, uint32_t rd );
 static void                     getPtrs(  struct traceControl_s  **cc
 					, struct traceEntryHdr_s **ee
 					, struct traceNamLvls_s     **ll
@@ -291,7 +287,7 @@ static void trace( unsigned lvl, unsigned nargs
 	unsigned long         * params_p;
 	unsigned                argIdx;
 	uint16_t                get_idxCnt_retries=0;
-	uint64_t                myIdxCnt=traceControl_p->wrIdxCnt;
+	uint32_t                myIdxCnt=traceControl_p->wrIdxCnt;
 
 #      if defined(__KERNEL__)
 	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
@@ -463,15 +459,15 @@ static int traceCntl( int nargs, const char *cmd, ... )
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {
-	uint64_t wrSav=traceControl_p->wrIdxCnt;
-	uint64_t used=((wrSav<=traceControl_p->num_entries)
+	uint32_t wrSav=traceControl_p->wrIdxCnt;
+	uint32_t used=((wrSav<=traceControl_p->num_entries)
 		       ?wrSav
 		       :traceControl_p->num_entries);
 	printf("trace_initialized =%d\n"
 	       "mode              =0x%x\n"
-	       "writeIdxCount     =0x%16llx entries used: %llu\n"
-               "largestMultiple   =0x%16llx\n"
-	       "trigIdxCnt        =0x%16llx\n"
+	       "writeIdxCount     =0x%08x entries used: %u\n"
+               "largestMultiple   =0x%08x\n"
+	       "trigIdxCnt        =0x%08x\n"
 	       "triggered         =%d\n"
 	       "trigActivePost    =%u\n"
 	       "traceLevel        =0x%*llx 0x%*llx\n"
@@ -486,9 +482,9 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	       "memlen            =%u\n"
 	       , traceControl_p->trace_initialized
 	       , traceControl_p->mode.mode
-	       , (unsigned long long)wrSav, (unsigned long long)used
-	       , (unsigned long long)traceControl_p->largest_multiple
-	       , (unsigned long long)traceControl_p->trigIdxCnt
+	       , wrSav, used
+	       , traceControl_p->largest_multiple
+	       , traceControl_p->trigIdxCnt
 	       , traceControl_p->triggered
 	       , traceControl_p->trigActivePost
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M
@@ -531,10 +527,10 @@ static int traceCntl( int nargs, const char *cmd, ... )
     }
     else if (strcmp(cmd,"show") == 0) 
     {
-	uint64_t rdIdx=traceControl_p->wrIdxCnt;
-	unsigned printed=0;
-	uint64_t max=(rdIdx<=traceControl_p->num_entries)
+	uint32_t rdIdx=traceControl_p->wrIdxCnt;
+	uint32_t max=(rdIdx<=traceControl_p->num_entries)
 	    ?rdIdx:traceControl_p->num_entries;
+	unsigned printed=0;
 	struct traceEntryHdr_s* myEnt_p;
 	char                  * msg_p;
 	unsigned long         * params_p;
@@ -669,7 +665,7 @@ static int traceInit(void)
 	    traceControl_p->num_params       = num_params;
 	    traceControl_p->siz_msg          = siz_msg;
 	    traceControl_p->num_entries      = num_entries;
-	    traceControl_p->largest_multiple = (uint64_t)-1 - ((uint64_t)-1 % num_entries);
+	    traceControl_p->largest_multiple = (uint32_t)-1 - ((uint32_t)-1 % num_entries);
 	    traceControl_p->siz_entry        = entSiz( siz_msg, num_params );
 
 	    traceInitNames();
@@ -717,7 +713,7 @@ static int traceInit(void)
     traceControl_p->siz_entry         = entSiz(  traceControl_p->siz_msg
 					       , traceControl_p->num_params );
     traceControl_p->num_entries       = num_entries;
-    traceControl_p->largest_multiple  = (uint64_t)-1 - ((uint64_t)-1 % num_entries);
+    traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % num_entries);
     traceControl_p->num_namLvlTblEnts = num_namLvlTblEnts;
     traceControl_p->trace_initialized = 1;
     traceControl_p->memlen            = memlen;
@@ -744,13 +740,13 @@ static int traceInit(void)
 
 
 #if 0
-static uint64_t idxCnt_delta( uint64_t wr, uint64_t rd )
+static uint64_t idxCnt_delta( uint32_t wr, uint32_t rd )
 {   return ((wr-rd)%traceControl_p->largest_multiple);
 }
 #endif
 
-static struct traceEntryHdr_s* idxCnt2entPtr( uint64_t idxCnt )
-{   uint64_t idx=idxCnt%traceControl_p->num_entries;
+static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
+{   uint32_t idx=idxCnt%traceControl_p->num_entries;
     off_t off=idx*traceControl_p->siz_entry;
     return (struct traceEntryHdr_s *)((unsigned long)traceEntries_p+off);
 }

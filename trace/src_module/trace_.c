@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.10 $$Date: 2014-02-19 17:43:37 $";
+    rev="$Revision: 1.11 $$Date: 2014-02-21 18:49:17 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -150,7 +150,13 @@ struct file_operations trace_proc_buffer_file_operations = {
     .write=   NULL,           		/* write        */
     .readdir= NULL,              	/* readdir      */
     .poll=    NULL,              	/* poll         */
+# if 0
+#  if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
     .ioctl=   NULL,         		/* ioctl        */
+#  else
+    .unlocked_ioctl=NULL,         		/* ioctl        */
+#  endif
+# endif
     .mmap=    trace_proc_buffer_mmap,   /* mmap         */
     NULL,                       	/* open         */
     NULL,                       	/* flush        */
@@ -223,7 +229,12 @@ trace_sched_switch_hook(
 }   // trace_sched_switch_hook
 
 static void
-trace_irq( int irq, struct irqaction *action )
+trace_irq(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+	  void *new,
+# endif
+	  int irq
+	  , struct irqaction *action )
 {
         unsigned long flags;
         local_irq_save(flags);

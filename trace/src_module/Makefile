@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.2 $$Date: 2014/02/19 17:43:37 $";
+ # rev="$Revision: 1.3 $$Date: 2014/02/21 02:08:58 $";
 
 #
 # src_module/Makefile   -- NOTE: top level make file calls this make file
@@ -21,6 +21,8 @@ KDIR ?= /lib/modules/$(shell uname -r)/build
 
 TRACE_INC = $$PWD/../include   # default _if_ make interactively called in this directory
 
+CFLAGS_MODULE=-I${TRACE_INC}
+
 # to allow: make trace_proc.lst    # not working?
 #           make trace_proc.o
 #           make TRACE.ko
@@ -29,7 +31,7 @@ TRACE_INC = $$PWD/../include   # default _if_ make interactively called in this 
 	$(MAKE) -C $(KDIR) M=$$PWD $@
 
 all default:
-	$(MAKE) -C $(KDIR) M=$$PWD CFLAGS_MODULE=-I${TRACE_INC}
+	$(MAKE) -C $(KDIR) M=$$PWD CFLAGS_MODULE=${CFLAGS_MODULE}
 
 
 # After testing with just "insmod TRACE.ko". Of course, this needs to be done

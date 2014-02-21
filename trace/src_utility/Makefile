@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.1 $
-#  $Date: 2014/02/19 18:55:47 $
+#  $Revision: 1.2 $
+#  $Date: 2014/02/21 02:08:58 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -39,22 +39,23 @@ CXXFLAGS = $(CFLAGS)
 #       http://www.delorie.com/gnu/docs/make/make_101.html
 #   and 10.7 Old-Fashioned Suffix Rules
 #       http://www.delorie.com/gnu/docs/make/make_112.html
-%.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+%.o : %.c        # cancel the built-in rule (give no recipe)
+${OUT}%.o : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
 # just use the C++ linker
 % : %.o
 	@echo 'CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" ^="$^"'
 	@echo 'LOADLIBES="$(LOADLIBES)" LDLIBS="$(LDLIBS)" @="$@"'
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
 
-%.o : %.cc
+${OUT}%.o : %.cc
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
-%.d: %.c
-	@set -e; rm -f $@; \
+${OUT}%.d: %.c
+	set -e; rm -f $@; \
 	$(CC) -MM $(CPPFLAGS) $< > $@; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@ > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,${OUT}\1.o $@ : ,g' < $@ > $@.$$$$; \
 	mv -f $@.$$$$ $@
-%.d: %.cc
+${OUT}%.d: %.cc
 	@set -e; rm -f $@; \
 	$(CC) -MM $(CPPFLAGS) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
@@ -73,16 +74,27 @@ objects     := $(patsubst %.c,%.o,$(filter-out $(cexesrc),$(wildcard *.c))) \
                $(patsubst %.cc,%.o,$(filter-out $(c++exesrc),$(wildcard *.cc)))
 headers     := $(wildcard *.h)
 
-include $(cexesrc:.c=.d)
-include $(c++exesrc:.cc=.d)
+out_executables := $(patsubst %,${OUT}%,$(executables))
 
-all: $(executables)
+#all: $(executables)
+#all: $(patsubst %,${OUT}%,$(executables))
+all: ${OUT}trace_cntl
+	echo done with ${OUT}trace_cntl out_executables=$(out_executables)
+
+${OUT}trace_cntl: ${OUT}trace_cntl.o
+
+include ${OUT}$(cexesrc:.c=.d)
+ifneq ($(c++exesrc),)
+include ${OUT}$(c++exesrc:.cc=.d)
+endif
+
 
 # "$(executables): $(objects)" says that all executables depend on all objects.
 # I probably just want the "% : %.o" rule above and the "include mk.dep" below
 # to handle any further dependencies
 # Note: "objects" can be controlled: make hello objects=hello.o
 #$(executables): $(objects)
+$(patsubst %,${OUT}%,$(executables)): $(patsubst %,${OUT}%,$(objects))
 
 .PHONY: tags
 tags:

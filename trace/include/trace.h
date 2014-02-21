@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.27 $$Date: 2014/02/19 17:43:37 $";
+ // rev="$Revision: 1.28 $$Date: 2014/02/21 02:08:58 $";
  */
 
 #ifndef TRACE_H_5216
@@ -139,7 +139,7 @@
 # define TRACE_VA_LIST_INIT     (va_list)&params_p[0]
 # define TRACE_ENT_FILLER       uint32_t x[2];
 # define TRACE_32_DOUBLE_KLUDGE nargs*=2;    /* kludge to support potential double in msg fmt */
-# define TRACE_TSC32( low )     __asm__ __volatile__ ("rdtsc" : "=a" (low) : : "edx")
+# define TRACE_TSC32( low )     __asm__ __volatile__ ("rdtsc;movl %%eax,%0":"=m"(low)::"eax","edx")
 #elif defined(__x86_64__)
 # define TRACE_XTRA_PASSED      ,0,0,0, .0,.0,.0,.0,.0,.0,.0,.0
 # define TRACE_XTRA_UNUSED      ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
@@ -196,7 +196,7 @@ struct traceControl_s
 
 struct traceEntryHdr_s
 {   struct timeval time;
-    TRACE_ENT_FILLER
+    TRACE_ENT_FILLER	/* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
     int32_t        lvl;
     pid_t          pid;   /* system info */
     pid_t          tid;   /* system info - "thread id" */

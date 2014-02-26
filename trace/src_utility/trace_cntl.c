@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.39 $$Date: 2014-02-19 18:55:47 $";
+    rev="$Revision: 1.40 $$Date: 2014-02-26 18:05:02 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -13,6 +13,7 @@ done
    
 */
 #include <stdio.h>		/* printf */
+#include <stdint.h>		/* uint64_t */
 #include <libgen.h>		/* basename */
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
@@ -29,8 +30,7 @@ commands: info, reset, show, mode, lvl\n\
 ", basename(argv[0])
 
 
-uint64_t
-get_us_timeofday()
+uint64_t get_us_timeofday()
 {   struct timeval tv;
     gettimeofday( &tv, NULL );
     return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
@@ -49,12 +49,54 @@ void* thread_func(void *arg)
     pthread_exit(NULL);
 }
 
-
-int
-main(  int	argc
-     , char	*argv[] )
+void traceShow()
 {
+    traceInit();
+    uint32_t rdIdx=traceControl_p->wrIdxCnt;
+    uint32_t max=((rdIdx<=traceControl_p->num_entries)
+		  ?rdIdx:traceControl_p->num_entries);
+    unsigned printed=0;
+    struct traceEntryHdr_s* myEnt_p;
+    char                  * msg_p;
+    unsigned long         * params_p;
+#   defined(__i386__)
+#   endif
 
+    for (printed=0; printed<max; ++printed)
+    {   rdIdx = IDXCNT_ADD( rdIdx, -1 );
+	myEnt_p = idxCnt2entPtr( rdIdx );
+	msg_p    = (char*)(myEnt_p+1);
+	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
+
+	printf("%6u %10ld%06ld %10u %2d %5d "
+	       , printed
+	       , myEnt_p->time.tv_sec, myEnt_p->time.tv_usec
+	       , (unsigned)myEnt_p->tsc
+	       , myEnt_p->lvl, myEnt_p->tid );
+	if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
+	else                             printf( ". " );
+
+	/* MUST change all %s possibilities to %p */
+	/* MUST change %* beyond num_params to %% */
+	msg_p[traceControl_p->siz_msg - 1] = '\0';
+
+	/*typedef unsigned long parm_array_t[1];*/
+	/*va_start( ap, params_p[-1] );*/
+	{   /* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
+	     */
+	    va_list ap=TRACE_VA_LIST_INIT;
+	    vprintf( msg_p, ap );
+	}
+
+	    printf("\n");
+    }
+}   /*traceShow*/
+
+
+int main(  int	argc
+	 , char	*argv[] )
+{
+    const char *cmd;
 #  if 0
     int         opt;
     while (1)
@@ -76,13 +118,19 @@ main(  int	argc
     {   printf( "Need cmd\n" );
         printf( USAGE ); exit( 0 );
     }
+#  else
+    if (argc <= 1) { printf(USAGE); exit(0); }
+    cmd=argv[1];
 #  endif
 
 
-    if (argc <= 1) { printf(USAGE); exit(0); }
 
 
-    if      (strcmp(argv[1],"test") == 0)
+    if      (strcmp(cmd,"test1") == 0)
+    {
+	TRACE( 0, "hello" );
+    }
+    else if (strcmp(cmd,"test") == 0)
     {   unsigned ii;
 	float    ff[10];
 	pid_t	 tid;
@@ -165,7 +213,7 @@ main(  int	argc
 	for (ii=0; ii<20; ++ii)
 	    TRACE( 0, "ii=%u", ii );
     }
-    else if (strcmp(argv[1],"test-compare") == 0)
+    else if (strcmp(cmd,"test-compare") == 0)
     {   unsigned ii;
 	char     buffer[200];
 	uint64_t mark;
@@ -234,7 +282,7 @@ main(  int	argc
 	} TRACE_CNTL("mode",2);TRACE(0,"end   (repeat) no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
     }
 #   ifdef DO_THREADS
-    else if (strcmp(argv[1],"test-threads") == 0)
+    else if (strcmp(cmd,"test-threads") == 0)
     {   unsigned ii;
 	pthread_t threads[NUMTHREADS];
 	long loops=10000;
@@ -250,18 +298,22 @@ main(  int	argc
 	TRACE( 0, "after pthread_join" );
     }
 #   endif
+    else if (strcmp(cmd,"show") == 0) 
+    {
+	traceShow();
+    }
     else
     {   int sts=0;
 	switch (argc)
 	{
-	case 2: sts=TRACE_CNTL( argv[1] ); break;
-	case 3: sts=TRACE_CNTL( argv[1], strtoull(argv[2],NULL,0) ); break;
-	case 4: sts=TRACE_CNTL( argv[1], strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0) ); break;
-	case 5: sts=TRACE_CNTL( argv[1], strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0)
+	case 2: sts=TRACE_CNTL( cmd ); break;
+	case 3: sts=TRACE_CNTL( cmd, strtoull(argv[2],NULL,0) ); break;
+	case 4: sts=TRACE_CNTL( cmd, strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0) ); break;
+	case 5: sts=TRACE_CNTL( cmd, strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0)
 			       , strtoull(argv[4],NULL,0) ); break;
 	}
 	if (sts < 0)
-	{   printf("invalid command: %s\n", argv[1] );
+	{   printf("invalid command: %s\n", cmd );
 	    printf( USAGE );
 	}
     }

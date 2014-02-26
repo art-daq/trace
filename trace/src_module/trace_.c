@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.11 $$Date: 2014-02-21 18:49:17 $";
+    rev="$Revision: 1.12 $$Date: 2014-02-26 18:05:02 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -21,6 +21,7 @@
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
 #include <trace/events/irq.h>	/*  */
 
+#define TRACE_IMPL		/* implement traceCntl */
 #include "trace.h"
 
 struct traceControl_s  *traceControl_p=NULL;
@@ -29,6 +30,7 @@ struct traceNamLvls_s  *traceNamLvls_p;
 EXPORT_SYMBOL( traceControl_p );
 EXPORT_SYMBOL( traceEntries_p );
 EXPORT_SYMBOL( traceNamLvls_p );
+EXPORT_SYMBOL( traceCntl );
 
 
 // ls /sys/module/TRACE/parameters
@@ -277,6 +279,7 @@ static void trace_sched_switch_hook_remove( void )
                                   );
 }   // trace_sched_switch_hook_remove
 
+
  
 static int __init init_trace_3(void)
 {
@@ -303,6 +306,7 @@ static int __init init_trace_3(void)
     vfree( traceControl_p );
     return (ret);
 }   // init_trace_3
+
 
 static void __exit exit_trace_3(void)
 {

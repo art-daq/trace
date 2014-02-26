@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.29 $$Date: 2014-02-21 18:49:17 $";
+ // rev="$Revision: 1.30 $$Date: 2014-02-26 18:05:02 $";
  */
 
 #ifndef TRACE_H_5216
@@ -49,11 +49,7 @@
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
-# ifndef NO_TRACE
-#  define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
-# else
-#  define TRACE_INIT_CHECK         if(0)/*whole trace should be optimized out*/
-# endif
+# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
 
 #else  /* __KERNEL__ */
 
@@ -69,7 +65,7 @@
 # define TRACE_DO_TID
 # define TRACE_PRINT              printk
 # define TRACE_VPRINT             vprintk
-# define TRACE_INIT_CHECK         if((1)||(traceInit()==0))/* should be optimized out */
+# define TRACE_INIT_CHECK         /* no check for kernel -- init when module loaded */
 
 #endif /* __KERNEL__ */
 
@@ -99,11 +95,7 @@
 # define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 # define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
-# ifndef NO_TRACE
-#  define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__), __VA_ARGS__ )
-# else
-#  define TRACE_CNTL( ... ) (0)
-# endif
+# define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__), __VA_ARGS__ )
 
 #else    /* __GXX_WEAK__... */
 
@@ -119,11 +111,7 @@
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 # define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
-# ifndef NO_TRACE
-#  define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS(cmdargs), cmdargs )
-# else
-#  define TRACE_CNTL( cmdargs... ) (0)
-# endif
+# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS(cmdargs), cmdargs )
 
 #endif   /* __GXX_WEAK__... */
 
@@ -164,7 +152,8 @@ struct traceControl_s
     uint32_t       num_namLvlTblEnts;/* these and above would be read only if */
     int32_t        trace_initialized;/* in kernel */
     uint32_t       memlen;
-    uint32_t       page_align[1016]; /* allow mmap page readonly */
+    uint32_t	   version;
+    uint32_t       page_align[1015]; /* allow mmap 1st page (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
     uint32_t       cacheline1[15];
@@ -210,15 +199,15 @@ struct traceNamLvls_s
     char          name[TRACE_DFLT_NAM_SZ];
 };
 
-#ifndef __KERNEL__
+#ifdef __KERNEL__
+extern struct traceNamLvls_s  *traceNamLvls_p;
+extern struct traceControl_s  *traceControl_p;
+extern struct traceEntryHdr_s *traceEntries_p;
+#else
 static struct traceNamLvls_s  traceNamLvls[3];
 static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
 static struct traceControl_s  *traceControl_p=NULL;
 static struct traceEntryHdr_s *traceEntries_p;
-#else
-extern struct traceNamLvls_s  *traceNamLvls_p;
-extern struct traceControl_s  *traceControl_p;
-extern struct traceEntryHdr_s *traceEntries_p;
 #endif
 
 
@@ -228,22 +217,27 @@ static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 
 /* forward declarations, important functions */
+static int traceCntl( int nargs, const char *cmd, ... );
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
-static uint32_t                 entSiz( uint32_t siz_msg, uint32_t num_params );
-static int                      traceMemLen(  int siz_msg
-					    , int num_params
-					    , int num_namLvlTblEnts
-					    , int num_entries
-					    , int *namLvls_offset );
 static void                     traceInitNames( void );
 static uint32_t                 name2tid( const char *name );
 #if 0
-static uint64_t                 idxCnt_delta( uint32_t wr, uint32_t rd );
 static void                     getPtrs(  struct traceControl_s  **cc
 					, struct traceEntryHdr_s **ee
 					, struct traceNamLvls_s     **ll
 					, int siz_lvlTbl );
 #endif
+
+#define cntlPagesSiz() (((uint32_t)sizeof(struct traceControl_s)+4096)&~4095)
+#define entSiz( siz_msg, num_params ) ( sizeof(struct traceEntryHdr_s)\
+    + sizeof(uint64_t)*num_params /* NOTE: extra size for i686 (32bit processors) */\
+    + siz_msg )
+#define traceMemLen( siz_cntl_pages, num_namLvlTblEnts, siz_msg, num_params, num_entries ) \
+    (( siz_cntl_pages							\
+      + (uint32_t)sizeof(struct traceNamLvls_s)*num_namLvlTblEnts	\
+      + entSiz(siz_msg,num_params)*num_entries				\
+      + 4096 )								\
+     & ~4095 )
 
 /* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"
    I must do the substract (ie. add negative) by hand.
@@ -370,17 +364,18 @@ static void trace( unsigned lvl, unsigned nargs
 	TRACE_PRINT("\n");
 	va_end( ap );
     }
-    if (trig_reset_S) traceControl_p->mode.bits.S = 0;
+    if (trig_reset_S) TRACE_CNTL( "modeS", 0 ); /* this is how trace references traceCntl to avoid "unused" warnings when only TRACE is used */
 }   /* trace */
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 # pragma GCC diagnostic pop
 #endif
 
-#ifndef __KERNEL__
 
 static int                    traceInit( void );
+#ifndef __KERNEL__
 static struct traceControl_s  traceControl;
+#endif
 
 static int traceCntl( int nargs, const char *cmd, ... )
 {
@@ -427,11 +422,13 @@ static int traceCntl( int nargs, const char *cmd, ... )
     else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
+#       ifndef __KERNEL__
 	if (  (strcmp(traceNamLvls_p[traceTID].name,"KERNEL")==0)
 	    &&(lvl&0xff000000) )
 	{   fprintf(stderr, "not allowed to set some level bits which could "
 		    "cause KERNEL issues\n");
 	} else
+#       endif
 	{   traceNamLvls_p[traceTID].S = lvl;
 	    /*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
 	}
@@ -457,6 +454,17 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	uint32_t mode=va_arg(ap,uint64_t);
 	traceControl_p->mode.mode &= ~mode;
     }
+    else if (strcmp(cmd,"reset") == 0) 
+    {
+	if (traceControl_p == NULL) traceInit();
+	traceControl_p->full
+	    = traceControl_p->wrIdxCnt
+	    = traceControl_p->trigIdxCnt
+	    = traceControl_p->trigActivePost
+	    = 0;
+	traceControl_p->triggered = 0;
+    }
+#   ifndef __KERNEL__
     else if (strncmp(cmd,"info",4) == 0) 
     {
 	uint32_t wrSav=traceControl_p->wrIdxCnt;
@@ -500,16 +508,6 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	       , traceControl_p->memlen
 	       );
     }
-    else if (strcmp(cmd,"reset") == 0) 
-    {
-	if (traceControl_p == NULL) traceInit();
-	traceControl_p->full
-	    = traceControl_p->wrIdxCnt
-	    = traceControl_p->trigIdxCnt
-	    = traceControl_p->trigActivePost
-	    = 0;
-	traceControl_p->triggered = 0;
-    }
     else if (strcmp(cmd,"tids") == 0) 
     {   unsigned ii;
 	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
@@ -525,255 +523,151 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    }
 	}
     }
-    else if (strcmp(cmd,"show") == 0) 
-    {
-	uint32_t rdIdx=traceControl_p->wrIdxCnt;
-	uint32_t max=(rdIdx<=traceControl_p->num_entries)
-	    ?rdIdx:traceControl_p->num_entries;
-	unsigned printed=0;
-	struct traceEntryHdr_s* myEnt_p;
-	char                  * msg_p;
-	unsigned long         * params_p;
-
-	rdIdx = IDXCNT_ADD( rdIdx, -1 );
-	for (printed=0; printed<max; ++printed)
-	{   myEnt_p = idxCnt2entPtr( rdIdx );
-	    msg_p    = (char*)(myEnt_p+1);
-	    params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
-
-	    printf("%6u %10ld%06ld %10u %2d %5d "
-		   , printed
-		   , myEnt_p->time.tv_sec, myEnt_p->time.tv_usec
-		   , (unsigned)myEnt_p->tsc
-		   , myEnt_p->lvl, myEnt_p->tid );
-	    if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
-	    else                             printf( ". " );
-
-	    /* MUST change all %s possibilities to %p */
-	    /* MUST change %* beyond num_params to %% */
-	    msg_p[traceControl_p->siz_msg - 1] = '\0';
-
-	    /*typedef unsigned long parm_array_t[1];*/
-	    /*va_start( ap, params_p[-1] );*/
-	    {   /* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
-		 */
-		va_list ap=TRACE_VA_LIST_INIT;
-		vprintf( msg_p, ap );
-	    }
-
-	    printf("\n");
-
-	    rdIdx = IDXCNT_ADD( rdIdx, -1 );
-	}
-    }
     else
     {   fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
 	return (-1);
     }
-
+#   endif /*__KERNEL__*/
     va_end(ap);
     return (0);
 }   /* traceCntl */
 
-static int traceInit(void)
-{   int   fd;
-    const char *levl=getenv("TRACE_LVL");
-    const char *mode=getenv("TRACE_MODE");
-    const char *path=getenv("TRACE_FILE");
-    const char *name=getenv("TRACE_NAME");
-    /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
-    int      num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
-    int      num_params       =TRACE_DFLT_MAX_PARAMS;
-    int      siz_msg          =TRACE_DFLT_MAX_MSG_SZ;
-    int      num_entries      =TRACE_DFLT_NUM_ENTRIES;
-    int      mmlen;
-    int      siz_cntl_pages;
-    char     lvltmpbuf[80];
+#ifndef __KERNEL__
+struct traceControl_s *trace_mmap_file( const char *_file, int      memlen )
+{
+    int                    fd;
+    struct traceControl_s *t_p;
+    uint8_t               *rw_p;
+    off_t                  off;
 
-    mmlen = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
-			, &siz_cntl_pages );
+    if ((fd=open(_file,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
+    {   /* successfully created new file - must init */
+	uint8_t one_byte='\0';
+	off = lseek( fd, memlen-1, SEEK_SET );
+	if (off == (off_t)-1) { perror("lseek"); return (&traceControl); }
+	write( fd, &one_byte, 1 );
 
-    if (path == NULL) path="/tmp/trace_buffer";
-    if (mode == NULL) mode="3";
-    if (levl == NULL) {sprintf(lvltmpbuf,"0x%llx",(unsigned long long)-1);levl=lvltmpbuf;}
-    if (name == NULL) name=TRACE_NAME;
-
-    /* need to special processing (lock file?) for create */
-    if ((fd=open(path,O_RDWR|O_CREAT,0666)) == -1)
-    {    fprintf( stderr,"open of %s returned %d\n", path, fd );
-	 traceControl_p=&traceControl;
     }
     else
-    {
-	uint8_t *rw_p;
-	off_t    off = lseek( fd, 0, SEEK_END );
-	if (off == (off_t)-1) { perror("lseek"); exit(1); }
-	if (off != mmlen)
-	{   uint8_t one_byte='\0';
-	    off = lseek( fd, mmlen-1, SEEK_SET );
-	    if (off == (off_t)-1) { perror("lseek"); exit(1); }
-	    write( fd, &one_byte, 1 );
+    {   /* must verify that it already exists */
+	fd=open(_file,O_RDWR);
+	if (fd == -1)
+	{   fprintf( stderr,"open of %s returned %d\n", _file, fd );
+	    return (&traceControl);
 	}
+	/* file must be at least 2 pages */
+    }
 
 # if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
-	traceControl_p = (struct traceControl_s *)mmap( NULL, mmlen
-						       , PROT_READ|PROT_WRITE
-						       , MAP_SHARED, fd, 0 );
-	if (traceControl_p == (struct traceControl_s *)-1)
-	{   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
-	    printf( "mmlen=%d\n", mmlen );
-	    traceControl_p=&traceControl;
-	}
-	printf("initialize=%d namLvlTblEnts=%u\n"
-	       , traceControl_p->trace_initialized
-	       , traceControl_p->num_namLvlTblEnts );
-# else
-	rw_p = (uint8_t*)mmap( NULL, mmlen-0x1000
-			      , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x1000 );
-	if (rw_p == (void *)-1)
-	{   perror( "mmap(NULL,mmlen-0x1000,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
-	    printf( "mmlen=%d\n", mmlen );
-	    traceControl_p=&traceControl;
-	}
-
-	off = (off_t)&((struct traceControl_s *)0)->wrIdxCnt;
-	traceControl_p = (struct traceControl_s *)mmap( rw_p-off, 0x1000
-						       , PROT_READ|PROT_WRITE
-						       , MAP_SHARED, fd, 0 );
-	if (traceControl_p == (struct traceControl_s *)-1)
-	{   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
-	    printf( "mmlen=%d\n", mmlen );
-	    traceControl_p=&traceControl;
-	}
-
-	if (rw_p != ((uint8_t*)traceControl_p)+0x1000)
-	    printf( "traceControl_p=%p rw_p=%p\n",(void*)traceControl_p,rw_p );
-# endif
-
-	tracePid = getpid();
-
-	traceNamLvls_p = (struct traceNamLvls_s *)			\
-	    ((unsigned long)traceControl_p+siz_cntl_pages);
-
-	traceEntries_p = (struct traceEntryHdr_s *)	\
-	    ((unsigned long)traceNamLvls_p
-	     +sizeof(struct traceNamLvls_s)*num_namLvlTblEnts);
-
-	if (traceControl_p->trace_initialized == 0)
-	{   traceControl_p->trace_initialized = 1;
-	    traceControl_p->num_namLvlTblEnts = num_namLvlTblEnts;
-	    traceControl_p->num_params       = num_params;
-	    traceControl_p->siz_msg          = siz_msg;
-	    traceControl_p->num_entries      = num_entries;
-	    traceControl_p->largest_multiple = (uint32_t)-1 - ((uint32_t)-1 % num_entries);
-	    traceControl_p->siz_entry        = entSiz( siz_msg, num_params );
-
-	    traceInitNames();
-
-	    /* MUST THINK ABOUT "lvlM" and/or "lvlP" ???
-	       AND        "modeM" and/or "modeP" ???
-	    */
-	    traceCntl( 2, "lvlmskM",  strtoul(levl,NULL,0) );
-	    traceCntl( 2, "mode", strtoul(mode,NULL,0) );
-	}
-	traceTID = name2tid( name );
+    t_p = (struct traceControl_s *)mmap( NULL, memlen
+						   , PROT_READ|PROT_WRITE
+						   , MAP_SHARED, fd, 0 );
+    if (t_p == (struct traceControl_s *)-1)
+    {   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	printf( "memlen=%d\n", memlen );
+	return (&traceControl);
     }
-    return (0);
-}   /* traceInit - userspace */
+    printf("initialize=%d namLvlTblEnts=%u\n"
+	   , t_p->trace_initialized
+	   , t_p->num_namLvlTblEnts );
+# else
+    rw_p = (uint8_t*)mmap( NULL, memlen-0x1000
+			  , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x1000 );
+    if (rw_p == (void *)-1)
+    {   perror( "mmap(NULL,memlen-0x1000,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
+	printf( "memlen=%d\n", memlen );
+	return (&traceControl);
+    }
 
-#else /* __KERNEL__ */
+    off = (off_t)&((struct traceControl_s *)0)->wrIdxCnt;
+    t_p = (struct traceControl_s *)mmap( rw_p-off, 0x1000
+					, PROT_READ|PROT_WRITE
+					, MAP_SHARED, fd, 0 );
+    if (t_p == (struct traceControl_s *)-1)
+    {   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	printf( "memlen=%d\n", memlen );
+	return (&traceControl);
+    }
+
+    if (rw_p != ((uint8_t*)t_p)+0x1000)
+	printf( "traceControl_p=%p rw_p=%p\n",(void*)t_p,rw_p );
+# endif
+    return (t_p);
+}
+#endif	/*__KERNEL__*/
+
 
 static int traceInit(void)
 {
-    int  memlen;
-    int  num_namLvlTblEnts=TRACE_DFLT_NAMTBL_ENTS;
-    int  num_params=TRACE_DFLT_MAX_PARAMS;
-    int  siz_msg=TRACE_DFLT_MAX_MSG_SZ;
-    int  num_entries=TRACE_DFLT_NUM_ENTRIES;
-    int  siz_cntl_pages;
+    int         memlen;
+    int         siz_cntl_pages;
+    uint32_t    _numparams=0, _msgsiz=0, _numents=0, _namtblents=0;
+#   ifndef __KERNEL__
+    int         activate=0;
+    const char *_file;
+    const char *_name;
+    const char *cp;
 
-    memlen = traceMemLen( siz_msg, num_params, num_namLvlTblEnts, num_entries
-			 , &siz_cntl_pages );
+    /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
+    ((_file=getenv("TRACE_FILE"))&&(activate=1))||(_file="/tmp/trace_buffer");
+    ((_name=getenv("TRACE_NAME"))&&(activate=1))||(_name="TRACE");
+    ((cp=getenv("TRACE_NUMPARAMS")) &&(_numparams =strtoul(cp,NULL,0))&&(activate=1))||(_numparams =TRACE_DFLT_MAX_PARAMS);
+    ((cp=getenv("TRACE_MSGSIZ"))    &&(_msgsiz    =strtoul(cp,NULL,0))&&(activate=1))||(_msgsiz    =TRACE_DFLT_MAX_MSG_SZ);
+    ((cp=getenv("TRACE_NUMENTS"))   &&(_numents   =strtoul(cp,NULL,0))&&(activate=1))||(_numents   =TRACE_DFLT_NUM_ENTRIES);
+    ((cp=getenv("TRACE_NAMTBLENTS"))&&(_namtblents=strtoul(cp,NULL,0))&&(activate=1))||(_namtblents=TRACE_DFLT_NAMTBL_ENTS);
 
-    printk(  KERN_INFO "init_trace_3 called -- attempt to allocate %d bytes\n"
-	   , memlen );
+    if (!activate)
+    {   traceControl_p=&traceControl;
+	return (0);
+    }
 
+    siz_cntl_pages = cntlPagesSiz();
+    memlen = traceMemLen( siz_cntl_pages, _namtblents, _msgsiz, _numparams, _numents );
+
+    traceControl_p = trace_mmap_file( _file, memlen );
+    if (traceControl_p == &traceControl)
+    {   return (0);
+    }
+    tracePid = getpid();
+#   else
+    const char *_name="KERNEL";
+    siz_cntl_pages = cntlPagesSiz();
+    _namtblents   =TRACE_DFLT_NAMTBL_ENTS;
+    _msgsiz       =TRACE_DFLT_MAX_MSG_SZ;
+    _numparams    =TRACE_DFLT_MAX_PARAMS;
+    _numents      =TRACE_DFLT_NUM_ENTRIES;
+    memlen = traceMemLen( siz_cntl_pages, _namtblents, _msgsiz, _numparams, _numents );
     traceControl_p = (struct traceControl_s *)vmalloc( memlen );
-#if 0
-    traceControl_p = (struct traceControl_s *)__vmalloc( memlen,GFP_KERNEL,PAGE_KERNEL );
-    traceControl_p = (struct traceControl_s *)__vmalloc( memlen,GFP_KERNEL|GFP_DMA32,PAGE_KERNEL_IO );
-    traceControl_p = (struct traceControl_s *)__get_free_pages( GFP_KERNEL, get_order(memlen) );
-    traceControl_p = (struct traceControl_s *)kmalloc( memlen, GFP_KERNEL );
-#endif
-    if (!traceControl_p) return -ENOMEM;
-    printk("init_trace_3 alloc(%d)=%p\n",memlen,traceControl_p);
+    traceControl_p->trace_initialized = 0;
+#   endif
 
-    traceControl_p->num_params        = num_params;
-    traceControl_p->siz_msg           = siz_msg;
-    traceControl_p->siz_entry         = entSiz(  traceControl_p->siz_msg
-					       , traceControl_p->num_params );
-    traceControl_p->num_entries       = num_entries;
-    traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % num_entries);
-    traceControl_p->num_namLvlTblEnts = num_namLvlTblEnts;
-    traceControl_p->trace_initialized = 1;
-    traceControl_p->memlen            = memlen;
-
-    traceControl_p->wrIdxCnt         = 0;
-    traceControl_p->trigActivePost   = 0;
-    traceControl_p->mode.mode        = 0;
 
     traceNamLvls_p = (struct traceNamLvls_s *)			\
 	((unsigned long)traceControl_p+siz_cntl_pages);
 
     traceEntries_p = (struct traceEntryHdr_s *)	\
 	((unsigned long)traceNamLvls_p
-	 +sizeof(struct traceNamLvls_s)*num_namLvlTblEnts);
+	 +sizeof(struct traceNamLvls_s)*_namtblents);
 
-    traceInitNames();
-    traceTID=name2tid( "KERNEL" );
+    if (traceControl_p->trace_initialized == 0)
+    {
+	traceControl_p->num_params        = _numparams;
+	traceControl_p->siz_msg           = _msgsiz;
+	traceControl_p->siz_entry         = entSiz( _msgsiz, _numparams );
+	traceControl_p->num_entries       = _numents;
+	traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % _numents);
+	traceControl_p->num_namLvlTblEnts = _namtblents;
+	traceControl_p->memlen            = memlen;
+	traceControl_p->trace_initialized = 1;
 
+	traceControl_p->mode.bits.M       = 1;
+	traceInitNames();
+    }
+    traceTID = name2tid( _name );
     return (0);
-}   /* traceInit - kernel */
+}   /* traceInit - userspace */
 
 
-#endif /* __KERNEL__ */
-
-
-#if 0
-static uint64_t idxCnt_delta( uint32_t wr, uint32_t rd )
-{   return ((wr-rd)%traceControl_p->largest_multiple);
-}
-#endif
-
-static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
-{   uint32_t idx=idxCnt%traceControl_p->num_entries;
-    off_t off=idx*traceControl_p->siz_entry;
-    return (struct traceEntryHdr_s *)((unsigned long)traceEntries_p+off);
-}
-
-static uint32_t entSiz( uint32_t siz_msg, uint32_t num_params )
-{
-    return (  sizeof(struct traceEntryHdr_s)
-	    + sizeof(uint64_t)*num_params /* NOTE: extra size for i686 (32bit processors) */
-	    + siz_msg );
-}
-
-static int traceMemLen(  int siz_msg, int num_params, int num_namLvlTblEnts
-		       , int num_entries, int *namLvls_offset )
-{
-    int len = sizeof(struct traceControl_s);
-    len += 4096;
-    len -= len&4095;
-    *namLvls_offset = len;
-    len += sizeof(struct traceNamLvls_s)*num_namLvlTblEnts
-	+ (  sizeof(struct traceEntryHdr_s)
-	   + sizeof(unsigned long)*num_params
-	   + siz_msg)*num_entries;
-    len += 4096;
-    len -= len%4096;  /* page align as mapping always likes page align */
-    len += 4096; /* make 100% sure there is a bit more for last entry read doubles */
-    return (len);
-}
 
 static void traceInitNames( void )
 {
@@ -802,4 +696,11 @@ static uint32_t name2tid( const char *name )
 	}
     return (traceControl_p->num_namLvlTblEnts-1);
 }
+
+static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
+{   uint32_t idx=idxCnt%traceControl_p->num_entries;
+    off_t off=idx*traceControl_p->siz_entry;
+    return (struct traceEntryHdr_s *)((unsigned long)traceEntries_p+off);
+}
+
 #endif /* TRACE_H_5216 */

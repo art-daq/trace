@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.40 $$Date: 2014-02-26 18:05:02 $";
+    rev="$Revision: 1.41 $$Date: 2014-02-26 18:41:31 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -59,7 +59,7 @@ void traceShow()
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
-#   defined(__i386__)
+#   if defined(__i386__)
 #   endif
 
     for (printed=0; printed<max; ++printed)

@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.31 $$Date: 2014-02-27 05:41:23 $";
+ // rev="$Revision: 1.32 $$Date: 2014-02-27 14:02:16 $";
  */
 
 #ifndef TRACE_H_5216
@@ -284,21 +284,21 @@ static void trace( unsigned lvl, unsigned nargs
 	uint32_t                myIdxCnt=traceControl_p->wrIdxCnt;
 
 #      if defined(__KERNEL__)
-	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
+	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
 	{   ++get_idxCnt_retries;
 	    myIdxCnt=traceControl_p->wrIdxCnt;
 	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #      elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
+	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					     , &myIdxCnt, desired))
 	{   ++get_idxCnt_retries;
 	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #       else
-	uint64_t desired=IDXCNT_ADD(myIdxCnt,1);
+	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
 	{   ++get_idxCnt_retries;
 	    myIdxCnt=traceControl_p->wrIdxCnt;

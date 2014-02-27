@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.12 $$Date: 2014-02-26 18:05:02 $";
+    rev="$Revision: 1.13 $$Date: 2014-02-27 05:41:23 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -49,85 +49,57 @@ static int trace_proc_buffer_mmap(  struct file              *file
 				  , struct vm_area_struct    *vma )
 {
     int           sts;
-    /*void          *phys_addr;*/
     unsigned long pfn;
     off_t         off=vma->vm_pgoff<<PAGE_SHIFT;
     unsigned long start = vma->vm_start;
-
-
-# if 1    // expect 2 mmap calles
-    pgprot_t      prot_ro;
     long 	  size;
+    pgprot_t      prot_ro;
 
+
+# if 1
+    // expect 2 mmap calles
     /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
     pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
 
     if (off == 0) {size=0x1000;vma->vm_page_prot=prot_ro;vma->vm_flags&=~VM_WRITE;}
     else          {size=vma->vm_end - vma->vm_start;}
-# if 0
-    printk("start=0x%lx, end=0x%lx pgoff=%lu off=%lu prot=0x%lx ro=0x%lx "
-	   "flags=0x%lx\n"
-	   , vma->vm_start, vma->vm_end, vma->vm_pgoff, off
-	   , pgprot_val(vma->vm_page_prot)
-	   , pgprot_val(prot_ro), vma->vm_flags
-	   );
-# endif
     while (size > 0)
     {
 	pfn = vmalloc_to_pfn( ((char *)traceControl_p)+off );
-	sts = io_remap_pfn_range(  vma, start
-			      , pfn
-			      , PAGE_SIZE
-			  , vma->vm_page_prot );
+	sts = io_remap_pfn_range(  vma, start, pfn, PAGE_SIZE
+				 , vma->vm_page_prot );
 	if (sts) return -EAGAIN;
 	start += PAGE_SIZE;
 	off += PAGE_SIZE;
 	size -= PAGE_SIZE;
     }
-#if 0
-    phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
-    sts = io_remap_pfn_range(  vma, vma->vm_start
-                             , (unsigned long)phys_addr >> PAGE_SHIFT
-                             , size
-                             , vma->vm_page_prot );
-    if (sts) return -EAGAIN;
-#endif
 
 # else
-    // Currently can't get 1st page read-only with single mmap call :(
-    ulong vm_start=vma->vm_start;
-    if (off == 0)
-    {   // force 1st page read-only
-	pgprot_t      prot_sav=vma->vm_page_prot;
-	ulong vm_flags_sav=vma->vm_flags;
-	//pgprot_val(vma->vm_page_prot) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
-	vma->vm_page_prot = PAGE_READONLY;
-	vma->vm_flags&=~VM_WRITE;
-	phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
-	sts = io_remap_pfn_range(  vma, vma->vm_start
-				 , (unsigned long)phys_addr >> PAGE_SHIFT
-				 , PAGE_SIZE
+
+    pgprot_t	  prot_rw=vma->vm_page_prot;
+    /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
+    pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
+    size=vma->vm_end - vma->vm_start;
+    while (size > 0)
+    {
+	if (off == 0)
+	{   vma->vm_page_prot=prot_ro;
+	    vma->vm_flags&=~(VM_WRITE|VM_MAYWRITE);
+	    vma->vm_flags|=VM_DENYWRITE;
+	}
+	else
+	{   vma->vm_page_prot=prot_rw;
+	    vma->vm_flags|=VM_WRITE;
+	}
+	pfn = vmalloc_to_pfn( ((char *)traceControl_p)+off );
+	sts = io_remap_pfn_range(  vma, start, pfn, PAGE_SIZE
 				 , vma->vm_page_prot );
-	if (sts)
-	    return (-EAGAIN);
-	printk( "mapped first %lu bytes\n", PAGE_SIZE );
-	vm_start += PAGE_SIZE; // we mapped a page, so...
-	if (vm_start >= vma->vm_end) // maybe...
-	    return (0);                   // we're done
-	vma->vm_flags = vm_flags_sav; // prepare for more mapping
-	vma->vm_page_prot = prot_sav;
-	//vma->vm_pgoff += 1;
-	off = PAGE_SIZE;
+	if (sts) return -EAGAIN;
+	start += PAGE_SIZE;
+	off += PAGE_SIZE;
+	size -= PAGE_SIZE;
     }
 
-    phys_addr = (void *)virt_to_phys( ((char *)traceControl_p)+off );
-    sts = io_remap_pfn_range(  vma, vm_start
-			     , (unsigned long)phys_addr >> PAGE_SHIFT
-			     , vma->vm_end - vm_start
-			     , vma->vm_page_prot );
-    if (sts)
-	return (-EAGAIN);
-    printk( "mapped %lu bytes\n", vma->vm_end - vma->vm_start );
 # endif
     return (0);
 }   // trace_proc_buffer_mmap

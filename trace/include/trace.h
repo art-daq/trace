@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.30 $$Date: 2014-02-26 18:05:02 $";
+ // rev="$Revision: 1.31 $$Date: 2014-02-27 05:41:23 $";
  */
 
 #ifndef TRACE_H_5216
@@ -533,11 +533,11 @@ static int traceCntl( int nargs, const char *cmd, ... )
 }   /* traceCntl */
 
 #ifndef __KERNEL__
-struct traceControl_s *trace_mmap_file( const char *_file, int      memlen )
+static struct traceControl_s *trace_mmap_file( const char *_file, int      memlen )
 {
     int                    fd;
     struct traceControl_s *t_p;
-    uint8_t               *rw_p;
+    /*uint8_t               *rw_p;*/
     off_t                  off;
 
     if ((fd=open(_file,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
@@ -558,7 +558,7 @@ struct traceControl_s *trace_mmap_file( const char *_file, int      memlen )
 	/* file must be at least 2 pages */
     }
 
-# if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
+# if 1  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
     t_p = (struct traceControl_s *)mmap( NULL, memlen
 						   , PROT_READ|PROT_WRITE
 						   , MAP_SHARED, fd, 0 );
@@ -567,9 +567,6 @@ struct traceControl_s *trace_mmap_file( const char *_file, int      memlen )
 	printf( "memlen=%d\n", memlen );
 	return (&traceControl);
     }
-    printf("initialize=%d namLvlTblEnts=%u\n"
-	   , t_p->trace_initialized
-	   , t_p->num_namLvlTblEnts );
 # else
     rw_p = (uint8_t*)mmap( NULL, memlen-0x1000
 			  , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x1000 );

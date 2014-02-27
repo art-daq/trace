@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.41 $$Date: 2014-02-26 18:41:31 $";
+    rev="$Revision: 1.42 $$Date: 2014-02-27 05:41:23 $";
     */
 /*
 gxx_standards.sh Trace_test.c
@@ -51,14 +51,19 @@ void* thread_func(void *arg)
 
 void traceShow()
 {
-    traceInit();
-    uint32_t rdIdx=traceControl_p->wrIdxCnt;
-    uint32_t max=((rdIdx<=traceControl_p->num_entries)
-		  ?rdIdx:traceControl_p->num_entries);
+    uint32_t rdIdx;
+    uint32_t max;
     unsigned printed=0;
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
+
+    traceInit();
+    rdIdx=traceControl_p->wrIdxCnt;
+    max=((rdIdx<=traceControl_p->num_entries)
+	 ?rdIdx:traceControl_p->num_entries);
+
+
 #   if defined(__i386__)
 #   endif
 
@@ -190,13 +195,6 @@ int main(  int	argc
 	    myIdx = desired;
 	}
 	printf("myIdx=0x%016lx\n", myIdx );
-# if defined(TEST_WRITE_PROTECT)
-	printf("try write to (presumably kernel memory) write-protected 1st page...\n");
-	traceControl_p->trace_initialized = 2;
-	printf("write succeeded.\n");
-# elif defined(TEST_WRITE_PAST_END)
-	*(((uint8_t*)traceControl_p)+traceControl_p->memlen) = 6;
-# endif
 	TRACE( 1, "hello %d", 1 );
 	TRACE( 2, "hello %d %d", 1, 2 );
 	TRACE( 3, "hello %d %d %d", 1,2,3 );
@@ -212,6 +210,17 @@ int main(  int	argc
 #       endif
 	for (ii=0; ii<20; ++ii)
 	    TRACE( 0, "ii=%u", ii );
+    }
+    else if (strcmp(cmd,"test-ro") == 0)
+    {
+	setenv("TRACE_FILE","/proc/trace/buffer",1);
+	traceInit();
+	printf("try write to (presumably kernel memory) write-protected 1st page...\n");
+	traceControl_p->trace_initialized = 2;
+	printf("write succeeded.\n");
+# if defined(TEST_WRITE_PAST_END)
+	*(((uint8_t*)traceControl_p)+traceControl_p->memlen) = 6;
+# endif
     }
     else if (strcmp(cmd,"test-compare") == 0)
     {   unsigned ii;

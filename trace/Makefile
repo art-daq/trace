@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.4 $$Date: 2014/02/27 13:39:43 $";
+ # rev="$Revision: 1.5 $$Date: 2014/02/27 13:40:41 $";
 
 # TOP LEVEL Makefile
 
@@ -11,9 +11,9 @@ TRACE_DIR := $(shell pwd)
 export TRACE_INC=${TRACE_DIR}/include
 
 
-all: src_example src_module src_utility
+all: src_utility src_example src_module
 
-.PHONY: src_example src_module src_utility
+.PHONY: src_utility src_example src_module
 src_example: src_module
 src_example: OUT_check
 	subdir=`expr "$@" : 'src_\(.*\)'`;\

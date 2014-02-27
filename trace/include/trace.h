@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.34 $$Date: 2014/02/27 19:34:43 $";
+ // rev="$Revision: 1.35 $$Date: 2014/02/27 20:09:46 $";
  */
 
 #ifndef TRACE_H_5216
@@ -87,6 +87,8 @@
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
+/* c++98 c99 c++0x c11 c++11 */
+
 # define TRACE( lvl, ... ) do \
     {   TRACE_INIT_CHECK		\
             if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
@@ -103,11 +105,13 @@
 
 #else    /* __GXX_WEAK__... */
 
+/* c89 */
+
 # define TRACE( lvl, msgargs... ) do		\
     {   TRACE_INIT_CHECK		\
             if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
-	        trace( lvl, TRACE_ARGS(msgargs)-1				\
+	        trace( lvl, TRACE_ARGS( 0, msgargs ) - 2			\
                       TRACE_XTRA_PASSED		\
                       , msgargs );				\
     } while (0)
@@ -115,7 +119,7 @@
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 # define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
-# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS(cmdargs), cmdargs )
+# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS( 0, cmdargs ) - 1 , cmdargs )
 
 #endif   /* __GXX_WEAK__... */
 
@@ -211,8 +215,8 @@ extern struct traceControl_s  *traceControl_p;
 static struct traceNamLvls_s  traceNamLvls[3];
 static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
 static struct traceEntryHdr_s *traceEntries_p;
-static /*TRACE_THREAD_LOCAL*/ struct traceControl_s  *traceControl_p=NULL;
-static /*TRACE_THREAD_LOCAL*/ const char *traceFile="%s/.trace_buffer";
+static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
+static TRACE_THREAD_LOCAL const char *traceFile="%s/.trace_buffer";
 static TRACE_THREAD_LOCAL const char *traceName="TRACE";
 #endif
 

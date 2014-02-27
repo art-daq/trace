@@ -3,10 +3,12 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.42 $$Date: 2014/02/27 05:41:23 $";
+    rev="$Revision: 1.43 $$Date: 2014/02/27 17:15:07 $";
     */
 /*
-gxx_standards.sh Trace_test.c
+NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
+      comes to extended initializer lists.
+gxx_standards.sh trace_cntl.c
 for std in $standards;do\
   for ll in 0 1 2 3;do echo $std $ll:;TRACE_LVL=$ll ./Trace_test-$std;done;\
 done
@@ -15,6 +17,7 @@ done
 #include <stdio.h>		/* printf */
 #include <stdint.h>		/* uint64_t */
 #include <libgen.h>		/* basename */
+#include <unistd.h>		/* getopt */
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
 #include <sys/syscall.h>	/* syscall */
@@ -25,9 +28,22 @@ done
 
 #define USAGE "\
 %s <cmd> [command opt/args]\n\
-commands: info, reset, show, mode, lvl\n\
-   tests: test, test-compare, test-threads, \n\
-", basename(argv[0])
+commands:\n\
+ info, tids, reset, show\n\
+ mode <mode>\n\
+ modeset <mode>\n\
+ modeclr <mode>\n\
+ lvlmskM <msk>    mask for Memory buffer\n\
+ lvlmskS <msk>    mask for stdout\n\
+ lvlmskM <msk>    mask for trigger\n\
+ trig <modeMsk> <lvlmskM> <postEntries>\n\
+tests:  (use %s show after test)\n\
+ test1          a single TRACE\n\
+ test           various\n\
+ test-ro        test first page of mmap read-only (for kernel module)\n\
+ test-compare   compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
+ test-threads   threading\n\
+", basename(argv[0]), basename(argv[0])
 
 
 uint64_t get_us_timeofday()
@@ -39,7 +55,9 @@ uint64_t get_us_timeofday()
 void* thread_func(void *arg)
 {
     long loops=(long)arg;
-
+    char path[PATH_MAX];
+    snprintf(path,PATH_MAX,"%s/.trace_buffer_%lu",getenv("HOME"),syscall(SYS_gettid) );
+    TRACE_CNTL( "file", path );
     while(loops-- > 0)
     {   TRACE( 0, "loops=%ld", loops );
 	TRACE( 0, "loops=%ld", --loops );
@@ -101,34 +119,24 @@ void traceShow()
 int main(  int	argc
 	 , char	*argv[] )
 {
-    const char *cmd;
-#  if 0
-    int         opt;
-    while (1)
-    {   int option_index = 0;
-        static struct option long_options[] =
-        {   /* name,   has_arg, int* flag, val_for_flag */
-            {0,            0,      0,          0}
-        };
-        opt = getopt_long (argc, argv, "?hn:s:p",
-                        long_options, &option_index);
-        if (opt == -1) break;
-        switch (opt)
-        {
+	const char *cmd;
+extern  char       *optarg;        /* for getopt */
+extern  int        optind;         /* for getopt */
+        int        opt;            /* for how I use getopt */
+
+    while ((opt=getopt(argc,argv,"?hn:f:")) != -1)
+    {   switch (opt)
+        { /* '?' is also what you get w/ "invalid option -- -" */
         case '?': case 'h':  printf( USAGE );  exit( 0 ); break;
-        default:  printf ("?? getopt returned character code 0%o ??\n", opt);
+	case 'n': setenv("TRACE_NAME",optarg,1); break;
+	case 'f': setenv("TRACE_FILE",optarg,1); break;
         }
     }
     if (argc - optind != 1)
     {   printf( "Need cmd\n" );
         printf( USAGE ); exit( 0 );
     }
-#  else
-    if (argc <= 1) { printf(USAGE); exit(0); }
-    cmd=argv[1];
-#  endif
-
-
+    cmd = argv[optind];
 
 
     if      (strcmp(cmd,"test1") == 0)
@@ -290,7 +298,7 @@ int main(  int	argc
 	{   TRACE( 0, "any msg" );
 	} TRACE_CNTL("mode",2);TRACE(0,"end   (repeat) no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
     }
-#   ifdef DO_THREADS
+#   ifdef DO_THREADS   /* requires linking with -lpthreads */
     else if (strcmp(cmd,"test-threads") == 0)
     {   unsigned ii;
 	pthread_t threads[NUMTHREADS];

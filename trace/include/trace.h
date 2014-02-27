@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.32 $$Date: 2014/02/27 14:02:16 $";
+ // rev="$Revision: 1.33 $$Date: 2014/02/27 17:15:06 $";
  */
 
 #ifndef TRACE_H_5216
@@ -18,6 +18,10 @@
 # include <sys/time.h>           /* timeval */
 # include <string.h>		/* strncmp */
 # include <fcntl.h>		/* open, O_RDWR */
+# include <limits.h>		/* PATH_MAX */
+# ifndef PATH_MAX
+#   define PATH_MAX 1024  /* conservative */
+# endif
 # include <sys/mman.h>		/* mmap */
 # include <unistd.h>		/* lseek */
 # include <sys/syscall.h>	/* syscall */
@@ -38,7 +42,7 @@
     uint32_t __old = (old);						\
     uint32_t __new = (new);						\
     volatile uint32_t *__ptr = (volatile uint32_t *)(ptr);		\
-    asm volatile("lock cmpxchgl %2,%1"					\
+    __asm__ volatile("lock cmpxchgl %2,%1"					\
 		 : "=a" (__ret), "+m" (*__ptr)				\
 		 : "r" (__new), "0" (__old)				\
 		 : "memory");						\
@@ -206,14 +210,16 @@ extern struct traceEntryHdr_s *traceEntries_p;
 #else
 static struct traceNamLvls_s  traceNamLvls[3];
 static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
-static struct traceControl_s  *traceControl_p=NULL;
+static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
 static struct traceEntryHdr_s *traceEntries_p;
 #endif
 
 
-static int                      traceTID=0;  /* idx into lvlTbl, namTbl */
 static pid_t                    tracePid=0;
+static TRACE_THREAD_LOCAL int   traceTID=0;  /* idx into lvlTbl, namTbl */
 static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
+static TRACE_THREAD_LOCAL char *traceName="TRACE";
+static TRACE_THREAD_LOCAL char *traceFile="%s/.trace_buffer";
 
 
 /* forward declarations, important functions */
@@ -381,23 +387,28 @@ static int traceCntl( int nargs, const char *cmd, ... )
 {
     va_list ap;
 
+    va_start( ap, cmd );
+
+   /* although it may be counter intuitive, this should override
+      env.var as it could be used to set a file-per-thread.
+      NO!!!  -- I think env will over ride, this will just change
+      the default for name/file.
+      NOTE: CAN'T HAVE FILE-PER-THREAD unless traceControl_p is THREAD_LOCAL
+            CAN'T HAVE NAME-PER-THREAD unless traceTID       is THREAD_LOCAL
+   */
     if (strncmp(cmd,"file",4) == 0)
-    {   /* although it may be counter intuitive, this should override
-	   env.var as it could be used to set a file-per-thread.
-	   But... what if this negative impacts thread performace???
-	*/
+    {	traceFile = va_arg(ap,char*);
+	traceInit();		/* force (re)init */
+	va_end(ap); return (0);
     }
-    else if (strncmp(cmd,"name",4) == 0)
-    {   /* although it may be counter intuitive, this should override
-	   env.var as it could be used to set a file-per-thread.
-	   But... what if this negative impacts thread performace???
-	*/
-	/* HOW DOES THE NAME TO TID WORK???? */
+    else
+    if (strncmp(cmd,"name",4) == 0)
+    {	traceName = va_arg(ap,char*);
+	traceInit();		/* force (re)init */
+	va_end(ap); return (0);
     }
 
     if (traceControl_p == NULL) traceInit();
-
-    va_start( ap, cmd );
 
     if      (strncmp(cmd,"trig",4) == 0)    /* takes 3 args: modeMsks, lvlsMsk, postEntries */
     {
@@ -539,8 +550,11 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
     struct traceControl_s *t_p;
     /*uint8_t               *rw_p;*/
     off_t                  off;
+    char                   path[PATH_MAX];
+    char                  *home=getenv("HOME");
 
-    if ((fd=open(_file,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
+    snprintf( path, PATH_MAX, _file, home?home:"/tmp");
+    if ((fd=open(path,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
     {   /* successfully created new file - must init */
 	uint8_t one_byte='\0';
 	off = lseek( fd, memlen-1, SEEK_SET );
@@ -550,9 +564,9 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
     }
     else
     {   /* must verify that it already exists */
-	fd=open(_file,O_RDWR);
+	fd=open(path,O_RDWR);
 	if (fd == -1)
-	{   fprintf( stderr,"open of %s returned %d\n", _file, fd );
+	{   fprintf( stderr,"open of %s returned %d\n", path, fd );
 	    return (&traceControl);
 	}
 	/* file must be at least 2 pages */
@@ -606,8 +620,8 @@ static int traceInit(void)
     const char *cp;
 
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
-    ((_file=getenv("TRACE_FILE"))&&(activate=1))||(_file="/tmp/trace_buffer");
-    ((_name=getenv("TRACE_NAME"))&&(activate=1))||(_name="TRACE");
+    if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
+    if (!((_name=getenv("TRACE_NAME"))&&(activate=1))) _name=traceName;
     ((cp=getenv("TRACE_NUMPARAMS")) &&(_numparams =strtoul(cp,NULL,0))&&(activate=1))||(_numparams =TRACE_DFLT_MAX_PARAMS);
     ((cp=getenv("TRACE_MSGSIZ"))    &&(_msgsiz    =strtoul(cp,NULL,0))&&(activate=1))||(_msgsiz    =TRACE_DFLT_MAX_MSG_SZ);
     ((cp=getenv("TRACE_NUMENTS"))   &&(_numents   =strtoul(cp,NULL,0))&&(activate=1))||(_numents   =TRACE_DFLT_NUM_ENTRIES);

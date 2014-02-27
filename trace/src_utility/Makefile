@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.3 $
-#  $Date: 2014/02/27 13:39:43 $
+#  $Revision: 1.4 $
+#  $Date: 2014/02/27 17:15:06 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -30,10 +30,10 @@
 #endif
 CC       = gcc
 CXX      = g++   # a variable named "C++" is not compatible with bourne shell
-CFLAGS   = -g -Wall
+CFLAGS   = -g -Wall -DDO_THREADS
 CXXFLAGS = $(CFLAGS)
 CPPFLAGS = -I../include
-#LDFLAGS  =   # -g not needed
+LDFLAGS  = -lpthread  # -g not needed
 
 # in case someone (SoftRelTools) sets -r (or `--no-builtin-rules') in MAKEFLAGS
 # ref.  10.2 Catalogue of Implicit Rules

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.45 $$Date: 2014-02-27 20:09:46 $";
+    rev="$Revision: 1.46 $$Date: 2014-02-27 20:11:32 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -91,7 +91,7 @@ void traceShow()
 #   endif
 
     printf("   idx           us_tod        tsc TID lv   tid r msg\n");
-    printf("------ ---------------- ---------- --- -- ----- - -------------------");
+    printf("------ ---------------- ---------- --- -- ----- - -------------------\n");
     for (printed=0; printed<max; ++printed)
     {   rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	myEnt_p = idxCnt2entPtr( rdIdx );

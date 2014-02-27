@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.35 $$Date: 2014/02/27 20:09:46 $";
+ // rev="$Revision: 1.36 $$Date: 2014/02/27 20:34:57 $";
  */
 
 #ifndef TRACE_H_5216
@@ -213,8 +213,8 @@ extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
 #else
 static struct traceNamLvls_s  traceNamLvls[3];
-static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
-static struct traceEntryHdr_s *traceEntries_p;
+static TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
+static TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
 static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
 static TRACE_THREAD_LOCAL const char *traceFile="%s/.trace_buffer";
 static TRACE_THREAD_LOCAL const char *traceName="TRACE";
@@ -397,7 +397,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
        env.var as it could be used to set a file-per-thread.
        NO!!!  -- I think env will over ride, this will just change
        the default for name/file.
-       NOTE: CAN'T HAVE FILE-PER-THREAD unless traceControl_p is THREAD_LOCAL
+       NOTE: CAN'T HAVE FILE-PER-THREAD unless traceControl_p,traceEntries_p,traceNamLvls_p are THREAD_LOCAL
              CAN'T HAVE NAME-PER-THREAD unless traceTID       is THREAD_LOCAL
     */
 #  ifndef __KERNEL__
@@ -474,7 +474,6 @@ static int traceCntl( int nargs, const char *cmd, ... )
     }
     else if (strcmp(cmd,"reset") == 0) 
     {
-	if (traceControl_p == NULL) traceInit();
 	traceControl_p->full
 	    = traceControl_p->wrIdxCnt
 	    = traceControl_p->trigIdxCnt
@@ -611,7 +610,7 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 	printf( "traceControl_p=%p rw_p=%p\n",(void*)t_p,rw_p );
 # endif
     return (t_p);
-}
+}   /* trace_mmap_file */
 #endif	/*__KERNEL__*/
 
 

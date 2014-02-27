@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.46 $$Date: 2014/02/27 20:11:32 $";
+    rev="$Revision: 1.47 $$Date: 2014/02/27 20:34:57 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -312,12 +312,14 @@ extern  int        optind;         /* for getopt */
 	if (argc == 3) loops=strtoul(argv[2],NULL,0);
 	loops -= loops%4;	/* assuming thread does 4 TRACEs per loop */
 	TRACE( 0, "before pthread_create - loops=%lu (must be multiple of 4)", loops );
+	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
 	for (ii=0; ii<NUMTHREADS; ii++)
 	{   pthread_create(&threads[ii],NULL,thread_func,(void*)loops);
 	}
 	for (ii=0; ii<NUMTHREADS; ii++)
 	{   pthread_join(threads[ii], NULL);
 	}
+	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
 	TRACE( 0, "after pthread_join" );
 	sleep( 10 ); /* in lieu of at_exit close files */
     }

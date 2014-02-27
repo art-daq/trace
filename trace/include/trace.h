@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.33 $$Date: 2014-02-27 17:15:06 $";
+ // rev="$Revision: 1.34 $$Date: 2014-02-27 19:34:43 $";
  */
 
 #ifndef TRACE_H_5216
@@ -78,7 +78,7 @@
 #define TRACE_DFLT_MAX_MSG_SZ      128
 #define TRACE_DFLT_MAX_PARAMS       10
 #define TRACE_DFLT_NAMTBL_ENTS      20
-#define TRACE_DFLT_NUM_ENTRIES   20000
+#define TRACE_DFLT_NUM_ENTRIES   50000
 #define TRACE_DFLT_NAM_SZ            8
 #ifndef  TRACE_NAME
 # define TRACE_NAME "TRACE"
@@ -205,21 +205,21 @@ struct traceNamLvls_s
 
 #ifdef __KERNEL__
 extern struct traceNamLvls_s  *traceNamLvls_p;
-extern struct traceControl_s  *traceControl_p;
 extern struct traceEntryHdr_s *traceEntries_p;
+extern struct traceControl_s  *traceControl_p;
 #else
 static struct traceNamLvls_s  traceNamLvls[3];
 static struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
-static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
 static struct traceEntryHdr_s *traceEntries_p;
+static /*TRACE_THREAD_LOCAL*/ struct traceControl_s  *traceControl_p=NULL;
+static /*TRACE_THREAD_LOCAL*/ const char *traceFile="%s/.trace_buffer";
+static TRACE_THREAD_LOCAL const char *traceName="TRACE";
 #endif
 
 
 static pid_t                    tracePid=0;
 static TRACE_THREAD_LOCAL int   traceTID=0;  /* idx into lvlTbl, namTbl */
 static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
-static TRACE_THREAD_LOCAL char *traceName="TRACE";
-static TRACE_THREAD_LOCAL char *traceFile="%s/.trace_buffer";
 
 
 /* forward declarations, important functions */
@@ -389,26 +389,29 @@ static int traceCntl( int nargs, const char *cmd, ... )
 
     va_start( ap, cmd );
 
-   /* although it may be counter intuitive, this should override
-      env.var as it could be used to set a file-per-thread.
-      NO!!!  -- I think env will over ride, this will just change
-      the default for name/file.
-      NOTE: CAN'T HAVE FILE-PER-THREAD unless traceControl_p is THREAD_LOCAL
-            CAN'T HAVE NAME-PER-THREAD unless traceTID       is THREAD_LOCAL
-   */
+    /* although it may be counter intuitive, this should override
+       env.var as it could be used to set a file-per-thread.
+       NO!!!  -- I think env will over ride, this will just change
+       the default for name/file.
+       NOTE: CAN'T HAVE FILE-PER-THREAD unless traceControl_p is THREAD_LOCAL
+             CAN'T HAVE NAME-PER-THREAD unless traceTID       is THREAD_LOCAL
+    */
+#  ifndef __KERNEL__
     if (strncmp(cmd,"file",4) == 0)
     {	traceFile = va_arg(ap,char*);
 	traceInit();		/* force (re)init */
 	va_end(ap); return (0);
     }
     else
-    if (strncmp(cmd,"name",4) == 0)
+    if (strncmp(cmd,"name",4) == 0)/*THIS MAY/SHOULD BE MOVED DOWN W/ THE REST*/
     {	traceName = va_arg(ap,char*);
-	traceInit();		/* force (re)init */
+	if (traceControl_p == NULL) traceInit();
+	else traceTID = name2tid( traceName );
 	va_end(ap); return (0);
     }
 
     if (traceControl_p == NULL) traceInit();
+#  endif
 
     if      (strncmp(cmd,"trig",4) == 0)    /* takes 3 args: modeMsks, lvlsMsk, postEntries */
     {
@@ -548,7 +551,7 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 {
     int                    fd;
     struct traceControl_s *t_p;
-    /*uint8_t               *rw_p;*/
+    uint8_t               *rw_p;
     off_t                  off;
     char                   path[PATH_MAX];
     char                  *home=getenv("HOME");
@@ -572,18 +575,19 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 	/* file must be at least 2 pages */
     }
 
-# if 1  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
+# if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
     t_p = (struct traceControl_s *)mmap( NULL, memlen
 						   , PROT_READ|PROT_WRITE
 						   , MAP_SHARED, fd, 0 );
     if (t_p == (struct traceControl_s *)-1)
-    {   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
-	printf( "memlen=%d\n", memlen );
+    {   rw_p=(uint8_t*)t_p;/*just use rw_p here to allow easy switch (#if) and warngings*/
+	perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	printf( "memlen=%d t_p=%p\n", memlen, (void*)rw_p );
 	return (&traceControl);
     }
 # else
-    rw_p = (uint8_t*)mmap( NULL, memlen-0x1000
-			  , PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0x1000 );
+    rw_p = (uint8_t*)mmap( NULL, memlen-0x1000, PROT_READ|PROT_WRITE
+			  , MAP_SHARED, fd, 0x1000 );
     if (rw_p == (void *)-1)
     {   perror( "mmap(NULL,memlen-0x1000,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d\n", memlen );
@@ -591,9 +595,8 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
     }
 
     off = (off_t)&((struct traceControl_s *)0)->wrIdxCnt;
-    t_p = (struct traceControl_s *)mmap( rw_p-off, 0x1000
-					, PROT_READ|PROT_WRITE
-					, MAP_SHARED, fd, 0 );
+    t_p = (struct traceControl_s *)mmap( rw_p-off, 0x1000, PROT_READ|PROT_WRITE
+					, MAP_SHARED|MAP_FIXED, fd, 0 );
     if (t_p == (struct traceControl_s *)-1)
     {   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d\n", memlen );
@@ -618,6 +621,7 @@ static int traceInit(void)
     const char *_file;
     const char *_name;
     const char *cp;
+    struct traceControl_s *sav=traceControl_p;
 
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
     if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
@@ -636,6 +640,7 @@ static int traceInit(void)
     memlen = traceMemLen( siz_cntl_pages, _namtblents, _msgsiz, _numparams, _numents );
 
     traceControl_p = trace_mmap_file( _file, memlen );
+    printf("traceControl_p was=0x%lx now=0x%lx\n",(long)sav,(long)traceControl_p);
     if (traceControl_p == &traceControl)
     {   return (0);
     }
@@ -676,7 +681,7 @@ static int traceInit(void)
     }
     traceTID = name2tid( _name );
     return (0);
-}   /* traceInit - userspace */
+}   /* traceInit */
 
 
 
@@ -703,6 +708,7 @@ static uint32_t name2tid( const char *name )
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	if (traceNamLvls_p[ii].name[0] == '\0')
 	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
+	    traceNamLvls_p[ii].M = 0x1;
 	    return (ii);
 	}
     return (traceControl_p->num_namLvlTblEnts-1);

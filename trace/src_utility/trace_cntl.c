@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.43 $$Date: 2014-02-27 17:15:07 $";
+    rev="$Revision: 1.44 $$Date: 2014-02-27 19:34:43 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -57,7 +57,9 @@ void* thread_func(void *arg)
     long loops=(long)arg;
     char path[PATH_MAX];
     snprintf(path,PATH_MAX,"%s/.trace_buffer_%lu",getenv("HOME"),syscall(SYS_gettid) );
-    TRACE_CNTL( "file", path );
+    /*TRACE_CNTL( "file", path );*/
+    snprintf(path,PATH_MAX,"T%ld",syscall(SYS_gettid) );
+    TRACE_CNTL( "name", path );
     while(loops-- > 0)
     {   TRACE( 0, "loops=%ld", loops );
 	TRACE( 0, "loops=%ld", --loops );
@@ -85,17 +87,18 @@ void traceShow()
 #   if defined(__i386__)
 #   endif
 
+    printf("   idx           us_tod        tsc TID lv   tid r msg\n");
+    printf("------ ---------------- ---------- --- -- ----- - -------------------");
     for (printed=0; printed<max; ++printed)
     {   rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	myEnt_p = idxCnt2entPtr( rdIdx );
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 
-	printf("%6u %10ld%06ld %10u %2d %5d "
-	       , printed
-	       , myEnt_p->time.tv_sec, myEnt_p->time.tv_usec
+	printf("%6u %10ld%06ld %10u %3u %2d %5d "
+	       , printed, myEnt_p->time.tv_sec, myEnt_p->time.tv_usec
 	       , (unsigned)myEnt_p->tsc
-	       , myEnt_p->lvl, myEnt_p->tid );
+	       , myEnt_p->TID, myEnt_p->lvl, myEnt_p->tid );
 	if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 	else                             printf( ". " );
 
@@ -313,6 +316,7 @@ extern  int        optind;         /* for getopt */
 	{   pthread_join(threads[ii], NULL);
 	}
 	TRACE( 0, "after pthread_join" );
+	sleep( 10 ); /* in lieu of at_exit close files */
     }
 #   endif
     else if (strcmp(cmd,"show") == 0) 

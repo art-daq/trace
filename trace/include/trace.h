@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.38 $$Date: 2014-02-28 02:53:08 $";
+ // rev="$Revision: 1.39 $$Date: 2014-02-28 03:35:32 $";
  */
 
 #ifndef TRACE_H_5216
@@ -227,10 +227,13 @@ static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 
 /* forward declarations, important functions */
-static int traceCntl( int nargs, const char *cmd, ... );
+static int                      traceCntl( int nargs, const char *cmd, ... );
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)
+static int                      traceInit( void );
 static void                     traceInitNames( void );
 static uint32_t                 name2tid( const char *name );
+#endif
 #if 0
 static void                     getPtrs(  struct traceControl_s  **cc
 					, struct traceEntryHdr_s **ee
@@ -382,7 +385,6 @@ static void trace( unsigned lvl, unsigned nargs
 #endif
 
 
-static int                    traceInit( void );
 #ifndef __KERNEL__
 static struct traceControl_s  traceControl;
 #endif
@@ -550,8 +552,11 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 # endif
     return (t_p);
 }   /* trace_mmap_file */
+
 #endif	/*__KERNEL__*/
 
+
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
 static int traceInit(void)
 {
@@ -624,7 +629,6 @@ static int traceInit(void)
 }   /* traceInit */
 
 
-
 static void traceInitNames( void )
 {
     unsigned ii;
@@ -653,6 +657,9 @@ static uint32_t name2tid( const char *name )
 	}
     return (traceControl_p->num_namLvlTblEnts-1);
 }
+
+#endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
+
 
 static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 {   uint32_t idx=idxCnt%traceControl_p->num_entries;

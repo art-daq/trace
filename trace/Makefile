@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.5 $$Date: 2014/02/27 13:40:41 $";
+ # rev="$Revision: 1.6 $$Date: 2014/02/28 03:35:00 $";
 
 # TOP LEVEL Makefile
 
@@ -34,7 +34,7 @@ src_utility: OUT_check
 	$(MAKE) -C $@ OUT="${OUT}/$$subdir/" CPPFLAGS=-I${TRACE_INC};\
 	if [ `uname -m` = x86_64 ];then\
 	    test -d "${OUT}/$${subdir}32" || mkdir "${OUT}/$${subdir}32";\
-	    $(MAKE) -C $@ OUT="${OUT}/$${subdir}32/" LDFLAGS=-m32 CPPFLAGS="-m32 -I${TRACE_INC}";\
+	    $(MAKE) -C $@ OUT="${OUT}/$${subdir}32/" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC}";\
 	fi
 
 .PHONY: OUT_check

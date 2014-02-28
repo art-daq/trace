@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.37 $$Date: 2014-02-28 02:43:19 $";
+ // rev="$Revision: 1.38 $$Date: 2014-02-28 02:53:08 $";
  */
 
 #ifndef TRACE_H_5216
@@ -563,7 +563,6 @@ static int traceInit(void)
     const char *_file;
     const char *_name;
     const char *cp;
-    struct traceControl_s *sav=traceControl_p;
 
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
     if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
@@ -582,7 +581,6 @@ static int traceInit(void)
     memlen = traceMemLen( siz_cntl_pages, _namtblents, _msgsiz, _numparams, _numents );
 
     traceControl_p = trace_mmap_file( _file, memlen );
-    printf("traceControl_p was=0x%lx now=0x%lx\n",(long)sav,(long)traceControl_p);
     if (traceControl_p == &traceControl)
     {   return (0);
     }

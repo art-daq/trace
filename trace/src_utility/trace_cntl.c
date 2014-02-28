@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.47 $$Date: 2014-02-27 20:34:57 $";
+    rev="$Revision: 1.48 $$Date: 2014-02-28 02:43:19 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -33,18 +33,26 @@ commands:\n\
  mode <mode>\n\
  modeset <mode>\n\
  modeclr <mode>\n\
- lvlmskM <msk>    mask for Memory buffer\n\
- lvlmskS <msk>    mask for stdout\n\
- lvlmskM <msk>    mask for trigger\n\
+ lvlmskM <msk>  mask for Memory buffer\n\
+ lvlmskS <msk>  mask for stdout\n\
+ lvlmskM <msk>  mask for trigger\n\
  trig <modeMsk> <lvlmskM> <postEntries>\n\
 tests:  (use %s show after test)\n\
  test1          a single TRACE\n\
  test           various\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
  test-compare   compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
- test-threads   threading\n\
-", basename(argv[0]), basename(argv[0])
+ %s\n\
+", basename(argv[0]), basename(argv[0]), "test-threads   threading"
 
+
+#if __SIZEOF_LONG__ == 8
+#  define LX "lx"
+#  define LU "lu"
+#else
+#  define LX "llx"
+#  define LU "llu"
+#endif
 
 uint64_t get_us_timeofday()
 {   struct timeval tv;
@@ -57,7 +65,7 @@ void* thread_func(void *arg)
     long loops=(long)arg;
     char path[PATH_MAX];
 # if 1
-    snprintf(path,PATH_MAX,"%s/.trace_buffer_%lu",getenv("HOME"),syscall(SYS_gettid) );
+    snprintf(path,PATH_MAX,"%s/.trace_buffer_%ld",getenv("HOME"),(long)syscall(SYS_gettid) );
     TRACE_CNTL( "file", path );
 # else
     snprintf(path,PATH_MAX,"T%ld",syscall(SYS_gettid) );
@@ -153,7 +161,7 @@ extern  int        optind;         /* for getopt */
     {   unsigned ii;
 	float    ff[10];
 	pid_t	 tid;
-	uint64_t desired, myIdx;
+	uint32_t desired, myIdx;
 
 #      if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 	tid = (pid_t)syscall( SYS_gettid );
@@ -197,18 +205,18 @@ extern  int        optind;         /* for getopt */
 	TRACE_CNTL( "lvlmskS", 0xfL ); TRACE_CNTL( "lvlmskM", 0xfL );
 	TRACE( 0, "hello" );
 	myIdx = traceControl_p->largest_multiple - 3;
-	printf("myIdx=0x%016lx\n", myIdx );
+	printf("myIdx=0x%08x\n", myIdx );
 	for (ii=0; ii<6; ++ii)
 	{   desired = IDXCNT_ADD(myIdx,1);
-	    printf( "myIdx==>myIdx+1: 0x%016lx 0x%016lx\n",myIdx, desired );
+	    printf( "myIdx==>myIdx+1: 0x%08x 0x%08x\n",myIdx, desired );
 	    myIdx = desired;
 	}
 	for (ii=0; ii<6; ++ii)
 	{   desired = IDXCNT_ADD(myIdx,-1);
-	    printf( "myIdx==>myIdx-1: 0x%016lx 0x%016lx\n",myIdx, desired );
+	    printf( "myIdx==>myIdx-1: 0x%08x 0x%08x\n",myIdx, desired );
 	    myIdx = desired;
 	}
-	printf("myIdx=0x%016lx\n", myIdx );
+	printf("myIdx=0x%08x\n", myIdx );
 	TRACE( 1, "hello %d", 1 );
 	TRACE( 2, "hello %d %d", 1, 2 );
 	TRACE( 3, "hello %d %d %d", 1,2,3 );
@@ -219,9 +227,9 @@ extern  int        optind;         /* for getopt */
 	TRACE( 4, "hello %d %d %f  %d %d %f  %d %d"
 	      ,           1, 2,3.3,4, 5, 6.6, 7, 8 );
 
-#       ifndef TEST_UNUSED_FUNCTION
+#      ifndef TEST_UNUSED_FUNCTION
 	TRACE_CNTL( "trig", 3, (uint64_t)-1, 5 );
-#       endif
+#      endif
 	for (ii=0; ii<20; ++ii)
 	    TRACE( 0, "ii=%u", ii );
     }
@@ -232,9 +240,9 @@ extern  int        optind;         /* for getopt */
 	printf("try write to (presumably kernel memory) write-protected 1st page...\n");
 	traceControl_p->trace_initialized = 2;
 	printf("write succeeded.\n");
-# if defined(TEST_WRITE_PAST_END)
+#      if defined(TEST_WRITE_PAST_END)
 	*(((uint8_t*)traceControl_p)+traceControl_p->memlen) = 6;
-# endif
+#      endif
     }
     else if (strcmp(cmd,"test-compare") == 0)
     {   unsigned ii;
@@ -243,12 +251,13 @@ extern  int        optind;         /* for getopt */
 	unsigned compares=1000; /* some big number */
 	if (argc == 3) compares=strtoul(argv[2],NULL,0);
 
+#      define END_FMT "end   in mode 1 delta=%" LU
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2);TRACE(0,"start no snprintf in mode 1");TRACE_CNTL("mode",1);
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   TRACE( 0, "any msg" );
-	} TRACE_CNTL("mode",2);TRACE(0,"end   no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,END_FMT,get_us_timeofday()-mark );
 
 
 	TRACE_CNTL("reset");
@@ -257,7 +266,7 @@ extern  int        optind;         /* for getopt */
 	for (ii=0; ii<1000000; ++ii)
 	{   snprintf( buffer, sizeof(buffer), "this is one small param: %u", 12345678 );
 	    TRACE( 0, buffer );
-	} TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 1 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,END_FMT,get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -267,7 +276,7 @@ extern  int        optind;         /* for getopt */
 	for (ii=0; ii<1000000; ++ii)
 	{   snprintf( buffer, sizeof(buffer), "this is 2 params: %u %u", 12345678, ii );
 	    TRACE( 0, buffer );
-	} TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 2 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,END_FMT,get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -281,7 +290,7 @@ extern  int        optind;         /* for getopt */
 		     , 12345679, ii, ii-7, (float)ii*1.5
 		     );
 	    TRACE( 0, buffer );
-	} TRACE_CNTL("mode",2);TRACE(0,"end   snprintf 8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,END_FMT,get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -293,7 +302,7 @@ extern  int        optind;         /* for getopt */
 		     , 12345678, ii, ii*2, ii+6
 		     , 12345679, ii, ii-7, (float)ii*1.5
 		     );
-	} TRACE_CNTL("mode",2);TRACE(0,"end   TRACE w/8 arg in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,END_FMT,get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -302,7 +311,7 @@ extern  int        optind;         /* for getopt */
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   TRACE( 0, "any msg" );
-	} TRACE_CNTL("mode",2);TRACE(0,"end   (repeat) no snprintf in mode 1 delta=%lu", get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2);TRACE(0,END_FMT,get_us_timeofday()-mark );
     }
 #   ifdef DO_THREADS   /* requires linking with -lpthreads */
     else if (strcmp(cmd,"test-threads") == 0)
@@ -327,6 +336,66 @@ extern  int        optind;         /* for getopt */
     else if (strcmp(cmd,"show") == 0) 
     {
 	traceShow();
+    }
+    else if (strncmp(cmd,"info",4) == 0) 
+    {
+	uint32_t wrSav, used;
+	traceInit();
+	wrSav=traceControl_p->wrIdxCnt;
+	used=((wrSav<=traceControl_p->num_entries)
+	      ?wrSav
+	      :traceControl_p->num_entries);
+	printf("trace_initialized =%d\n"
+	       "mode              =0x%x\n"
+	       "writeIdxCount     =0x%08x entries used: %u\n"
+               "largestMultiple   =0x%08x\n"
+	       "trigIdxCnt        =0x%08x\n"
+	       "triggered         =%d\n"
+	       "trigActivePost    =%u\n"
+	       "traceLevel        =0x%0*" LX " 0x%0*" LX "\n"
+	       "num_entries       =%u\n"
+	       "max_msg_sz        =%u  includes system inforced terminator\n"
+	       "max_params        =%u\n"
+	       "entry_size        =%u\n"
+	       "namLvlTbl_ents    =%u\n"
+	       "wrIdxCnt offset   =%p\n"
+	       "namLvls offset    =0x%lx\n"
+	       "buffer_offset     =0x%lx\n"
+	       "memlen            =%u\n"
+	       , traceControl_p->trace_initialized
+	       , traceControl_p->mode.mode
+	       , wrSav, used
+	       , traceControl_p->largest_multiple
+	       , traceControl_p->trigIdxCnt
+	       , traceControl_p->triggered
+	       , traceControl_p->trigActivePost
+	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].M
+	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].S
+	       , traceControl_p->num_entries
+	       , traceControl_p->siz_msg
+	       , traceControl_p->num_params
+	       , traceControl_p->siz_entry
+	       , traceControl_p->num_namLvlTblEnts
+	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
+	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
+	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
+	       , traceControl_p->memlen
+	       );
+    }
+    else if (strcmp(cmd,"tids") == 0) 
+    {   unsigned ii;
+	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	{
+	    if (traceNamLvls_p[ii].name[0] != '\0')
+	    {   printf("%3d %*s 0x%16" LX " 0x%16" LX " 0x%16" LX "\n"
+		       , ii, (int)sizeof(traceNamLvls_p->name)
+		       , traceNamLvls_p[ii].name
+		       , traceNamLvls_p[ii].M
+		       , traceNamLvls_p[ii].S
+		       , traceNamLvls_p[ii].T
+		       );
+	    }
+	}
     }
     else
     {   int sts=0;

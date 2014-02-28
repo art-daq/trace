@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.36 $$Date: 2014-02-27 20:34:57 $";
+ // rev="$Revision: 1.37 $$Date: 2014-02-28 02:43:19 $";
  */
 
 #ifndef TRACE_H_5216
@@ -435,7 +435,6 @@ static int traceCntl( int nargs, const char *cmd, ... )
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
 	traceNamLvls_p[traceTID].M = lvl;
-	/*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
     }
     else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
@@ -448,14 +447,12 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	} else
 #       endif
 	{   traceNamLvls_p[traceTID].S = lvl;
-	    /*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
 	}
     }
     else if (strcmp(cmd,"lvlmskT") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
 	traceNamLvls_p[traceTID].T = lvl;
-	/*printf("set level for TID=%d to 0x%llx\n", traceTID, (unsigned long long)lvl );*/
     }
     else if (strcmp(cmd,"mode") == 0)
     {   
@@ -482,64 +479,6 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	traceControl_p->triggered = 0;
     }
 #   ifndef __KERNEL__
-    else if (strncmp(cmd,"info",4) == 0) 
-    {
-	uint32_t wrSav=traceControl_p->wrIdxCnt;
-	uint32_t used=((wrSav<=traceControl_p->num_entries)
-		       ?wrSav
-		       :traceControl_p->num_entries);
-	printf("trace_initialized =%d\n"
-	       "mode              =0x%x\n"
-	       "writeIdxCount     =0x%08x entries used: %u\n"
-               "largestMultiple   =0x%08x\n"
-	       "trigIdxCnt        =0x%08x\n"
-	       "triggered         =%d\n"
-	       "trigActivePost    =%u\n"
-	       "traceLevel        =0x%*llx 0x%*llx\n"
-	       "num_entries       =%u\n"
-	       "max_msg_sz        =%u  includes system inforced terminator\n"
-	       "max_params        =%u\n"
-	       "entry_size        =%u\n"
-	       "namLvlTbl_ents    =%u\n"
-	       "wrIdxCnt offset   =%p\n"
-	       "namLvls offset    =0x%lx\n"
-	       "buffer_offset     =0x%lx\n"
-	       "memlen            =%u\n"
-	       , traceControl_p->trace_initialized
-	       , traceControl_p->mode.mode
-	       , wrSav, used
-	       , traceControl_p->largest_multiple
-	       , traceControl_p->trigIdxCnt
-	       , traceControl_p->triggered
-	       , traceControl_p->trigActivePost
-	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M
-	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].S
-	       , traceControl_p->num_entries
-	       , traceControl_p->siz_msg
-	       , traceControl_p->num_params
-	       , traceControl_p->siz_entry
-	       , traceControl_p->num_namLvlTblEnts
-	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
-	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
-	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
-	       , traceControl_p->memlen
-	       );
-    }
-    else if (strcmp(cmd,"tids") == 0) 
-    {   unsigned ii;
-	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	{
-	    if (traceNamLvls_p[ii].name[0] != '\0')
-	    {   printf( "%3d %*s 0x%16lx 0x%16lx 0x%16lx\n", ii
-		       , (int)sizeof(traceNamLvls_p->name)
-		       , traceNamLvls_p[ii].name
-		       , traceNamLvls_p[ii].M
-		       , traceNamLvls_p[ii].S
-		       , traceNamLvls_p[ii].T
-		       );
-	    }
-	}
-    }
     else
     {   fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
 	return (-1);

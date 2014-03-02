@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.48 $$Date: 2014/02/28 02:43:19 $";
+    rev="$Revision: 1.49 $$Date: 2014/03/02 14:13:20 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -146,7 +146,7 @@ extern  int        optind;         /* for getopt */
 	case 'f': setenv("TRACE_FILE",optarg,1); break;
         }
     }
-    if (argc - optind != 1)
+    if (argc - optind < 1)
     {   printf( "Need cmd\n" );
         printf( USAGE ); exit( 0 );
     }
@@ -249,7 +249,7 @@ extern  int        optind;         /* for getopt */
 	char     buffer[200];
 	uint64_t mark;
 	unsigned compares=1000; /* some big number */
-	if (argc == 3) compares=strtoul(argv[2],NULL,0);
+	if (argc == 3) compares=strtoul(argv[optind+1],NULL,0);
 
 #      define END_FMT "end   in mode 1 delta=%" LU
 	TRACE_CNTL("reset");
@@ -318,7 +318,7 @@ extern  int        optind;         /* for getopt */
     {   unsigned ii;
 	pthread_t threads[NUMTHREADS];
 	long loops=10000;
-	if (argc == 3) loops=strtoul(argv[2],NULL,0);
+	if (argc == 3) loops=strtoul(argv[optind+1],NULL,0);
 	loops -= loops%4;	/* assuming thread does 4 TRACEs per loop */
 	TRACE( 0, "before pthread_create - loops=%lu (must be multiple of 4)", loops );
 	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
@@ -399,13 +399,16 @@ extern  int        optind;         /* for getopt */
     }
     else
     {   int sts=0;
-	switch (argc)
+	/*printf("argc - optind = %d\n", argc - optind );*/
+	switch (argc - optind)
 	{
-	case 2: sts=TRACE_CNTL( cmd ); break;
-	case 3: sts=TRACE_CNTL( cmd, strtoull(argv[2],NULL,0) ); break;
-	case 4: sts=TRACE_CNTL( cmd, strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0) ); break;
-	case 5: sts=TRACE_CNTL( cmd, strtoull(argv[2],NULL,0), strtoull(argv[3],NULL,0)
-			       , strtoull(argv[4],NULL,0) ); break;
+	case 1: sts=TRACE_CNTL( cmd ); break;
+	case 2: sts=TRACE_CNTL( cmd, strtoull(argv[optind+1],NULL,0) ); break;
+	case 3: sts=TRACE_CNTL( cmd, strtoull(argv[optind+1],NULL,0)
+			       , strtoull(argv[optind+2],NULL,0) ); break;
+	case 4: sts=TRACE_CNTL( cmd, strtoull(argv[optind+1],NULL,0)
+			       , strtoull(argv[optind+2],NULL,0)
+			       , strtoull(argv[optind+3],NULL,0) ); break;
 	}
 	if (sts < 0)
 	{   printf("invalid command: %s\n", cmd );

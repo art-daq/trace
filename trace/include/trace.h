@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.39 $$Date: 2014-02-28 03:35:32 $";
+ // rev="$Revision: 1.40 $$Date: 2014-03-02 14:13:20 $";
  */
 
 #ifndef TRACE_H_5216
@@ -101,7 +101,7 @@
 # define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 # define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
-# define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__), __VA_ARGS__ )
+# define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__) - 1, __VA_ARGS__ )
 
 #else    /* __GXX_WEAK__... */
 
@@ -119,7 +119,7 @@
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 # define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
 # define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
-# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS( 0, cmdargs ) - 1 , cmdargs )
+# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS( 0, cmdargs ) - 2 , cmdargs )
 
 #endif   /* __GXX_WEAK__... */
 
@@ -216,7 +216,7 @@ static struct traceNamLvls_s  traceNamLvls[3];
 static TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
 static TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
 static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
-static TRACE_THREAD_LOCAL const char *traceFile="%s/.trace_buffer";
+static TRACE_THREAD_LOCAL const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; opperation when path is on NFS device has not been studied*/
 static TRACE_THREAD_LOCAL const char *traceName="TRACE";
 #endif
 
@@ -392,6 +392,13 @@ static struct traceControl_s  traceControl;
 static int traceCntl( int nargs, const char *cmd, ... )
 {
     va_list ap;
+#  if 0 && !defined(__KERNEL__)
+    int ii;
+    va_start( ap, cmd );
+    for (ii=0; ii<nargs; ++ii)
+	printf("arg%u=0x%llx\n",ii,va_arg(ap,unsigned long long));
+    va_end( ap );
+#  endif
 
     va_start( ap, cmd );
 
@@ -498,9 +505,9 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
     uint8_t               *rw_p;
     off_t                  off;
     char                   path[PATH_MAX];
-    char                  *home=getenv("HOME");
+    char                  *logname=getenv("LOGNAME");
 
-    snprintf( path, PATH_MAX, _file, home?home:"/tmp");
+    snprintf( path, PATH_MAX, _file, logname?logname:"");/* in case, for some strange reason, LOGNAME does not exist */
     if ((fd=open(path,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
     {   /* successfully created new file - must init */
 	uint8_t one_byte='\0';

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.4 $$Date: 2014-02-21 15:38:28 $";
+ # rev="$Revision: 1.5 $$Date: 2014-03-03 05:34:19 $";
 
 #
 # src_module/Makefile   -- NOTE: top level make file calls this make file
@@ -18,9 +18,7 @@
 # Specify another kernel via: make KDIR=/usr/local/src/linux-3.7.1
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
-
 TRACE_INC = $$PWD/../include   # default _if_ make interactively called in this directory
-
 EXTRA_CFLAGS=-I${TRACE_INC}
 
 # to allow: make trace_proc.lst    # not working?

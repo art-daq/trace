@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.6 $$Date: 2014/02/28 03:35:00 $";
+ # rev="$Revision: 1.7 $$Date: 2014/03/03 05:34:19 $";
 
 # TOP LEVEL Makefile
 
@@ -11,15 +11,16 @@ TRACE_DIR := $(shell pwd)
 export TRACE_INC=${TRACE_DIR}/include
 
 
-all: src_utility src_example src_module
+all: src_utility src_module src_example
 
-.PHONY: src_utility src_example src_module
+.PHONY: src_utility src_module src_example
 src_example: src_module
 src_example: OUT_check
 	subdir=`expr "$@" : 'src_\(.*\)'`;\
 	test -d "${OUT}/$$subdir" || mkdir "${OUT}/$$subdir";\
 	cp -ar $@/. "${OUT}/$$subdir/.";\
-	$(MAKE) -e -C "${OUT}/$$subdir" CFLAGS=-I${TRACE_INC} CPPFLAGS=-I${TRACE_INC}
+	$(MAKE) -e -C "${OUT}/$$subdir" CFLAGS=-I${TRACE_INC} CPPFLAGS=-I${TRACE_INC} \
+	EXTRA_SYMBOLS=KBUILD_EXTRA_SYMBOLS=${OUT}/module/Module.symvers
 
 # don't seem to be able to build 32bit module on 64bit machine
 src_module: OUT_check

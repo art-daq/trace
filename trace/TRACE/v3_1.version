@@ -4,13 +4,26 @@ VERSION = v3_1
 
 #*************************************************
 #
-FLAVOR = NULL
+FLAVOR = Linux64bit+2.6
 QUALIFIERS = ""
   DECLARER = ron
   DECLARED = 2014-02-05 19.33.02 GMT
   MODIFIER = ron
   MODIFIED = 2014-02-05 19.33.02 GMT
-  PROD_DIR = TRACE/v3_0
+  PROD_DIR = TRACE/..
+  UPS_DIR = ups
+  TABLE_DIR = ups
+  TABLE_FILE = TRACE.table
+
+#*************************************************
+#
+FLAVOR = Linux+2.6
+QUALIFIERS = ""
+  DECLARER = ron
+  DECLARED = 2014-02-05 19.33.02 GMT
+  MODIFIER = ron
+  MODIFIED = 2014-02-05 19.33.02 GMT
+  PROD_DIR = TRACE/..
   UPS_DIR = ups
   TABLE_DIR = ups
   TABLE_FILE = TRACE.table

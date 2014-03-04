@@ -1,12 +1,20 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.1 $
-#   $Date: 2014/02/18 14:50:29 $
+#   $Revision: 1.2 $
+#   $Date: 2014/03/04 18:20:18 $
 FILE = TABLE
 GROUP:
 
-FLAVOR = NULL
+FLAVOR = Linux64bit+2.6
 QUALIFIERS = ""
     ACTION = setup
+        envSet( TRACE_FQ, Linux64bit+2.6-2.12 )
+        exeActionRequired("setup__")
+        envPrepend( PATH, ${UPS_PROD_DIR}/script )
+
+FLAVOR = Linux+2.6
+QUALIFIERS = ""
+    ACTION = setup
+        envSet( TRACE_FQ, Linux+2.6-2.12 )
         exeActionRequired("setup__")
         envPrepend( PATH, ${UPS_PROD_DIR}/script )
 
@@ -14,6 +22,7 @@ Flavor=ANY
 Qualifiers=""
     ACTION = setup
         exeActionRequired("setup__")
+        envPrepend( PATH, ${UPS_PROD_DIR}/script )
 
 # ADD qualified instances here. For example:
 #Flavor=Linux+2.6
@@ -42,7 +51,7 @@ COMMON:
 	# These are use by other products' build system
 	# double(2) double-quotes(") is a bit of a trick - ups is enclosing things inside of double quotes so it thinks it can strip off the first and last...
 	# double(2) double-quotes(") is needed to be shell independent - to work on cshell or bourne shell
-	prodDir( _INC, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/ "";do for ii in ${UPS_PROD_NAME} inc include h;do [ -d ${UPS_PROD_DIR}/${dd}$ii ] && echo ${dd}$ii && exit;done;done'`"" )
+	prodDir( _INC, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/ "";do for ii in include ${UPS_PROD_NAME} inc h;do [ -d ${UPS_PROD_DIR}/${dd}$ii ] && echo ${dd}$ii && exit;done;done'`"" )
 	prodDir( _LIB, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/lib lib/$${UPS_PROD_NAME_UC}_FQ lib.$${UPS_PROD_NAME_UC}_FQ;do [ -d ${UPS_PROD_DIR}/$dd ] && echo $dd && exit;done;echo .'`"" )
 
 	prodDir( _BIN, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/bin bin/$${UPS_PROD_NAME_UC}_FQ bin.$${UPS_PROD_NAME_UC}_FQ;do [ -d ${UPS_PROD_DIR}/$dd ] && echo $dd && exit;done;echo .'`"" )

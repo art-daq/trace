@@ -1,0 +1,23 @@
+FILE = chain
+PRODUCT = TRACE
+CHAIN = current
+
+#*************************************************
+#
+FLAVOR = Linux64bit+2.6
+VERSION = v3_1
+QUALIFIERS = ""
+  DECLARER = ron
+  DECLARED = 2014-03-04 18.03.56 GMT
+  MODIFIER = ron
+  MODIFIED = 2014-03-04 18.03.56 GMT
+
+#*************************************************
+#
+FLAVOR = Linux+2.6
+VERSION = v3_1
+QUALIFIERS = ""
+  DECLARER = ron
+  DECLARED = 2014-03-04 18.03.56 GMT
+  MODIFIER = ron
+  MODIFIED = 2014-03-04 18.03.56 GMT

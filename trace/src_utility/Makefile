@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.4 $
-#  $Date: 2014/02/27 17:15:06 $
+#  $Revision: 1.5 $
+#  $Date: 2014/03/04 18:20:18 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -42,6 +42,9 @@ LDFLAGS  = -lpthread  # -g not needed
 #       http://www.delorie.com/gnu/docs/make/make_112.html
 %.o : %.c        # cancel the built-in rule (give no recipe)
 ${OUT}%.o : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
+% : %.c        # cancel the built-in rule (give no recipe)
+${OUT}% : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
 # just use the C++ linker
 % : %.o
@@ -82,7 +85,7 @@ out_executables := $(patsubst %,${OUT}%,$(executables))
 all: ${OUT}trace_cntl
 	echo done with ${OUT}trace_cntl out_executables=$(out_executables)
 
-${OUT}trace_cntl: ${OUT}trace_cntl.o
+${OUT}trace_cntl: trace_cntl.c
 
 include ${OUT}$(cexesrc:.c=.d)
 ifneq ($(c++exesrc),)

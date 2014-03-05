@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.42 $$Date: 2014-03-05 19:02:19 $";
+ // rev="$Revision: 1.43 $$Date: 2014-03-05 23:14:27 $";
  */
 
 #ifndef TRACE_H_5216
@@ -25,7 +25,6 @@
 # include <sys/mman.h>		/* mmap */
 # include <unistd.h>		/* lseek */
 # include <sys/syscall.h>	/* syscall */
-# include <pthread.h>		/* pthread_self */
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
 #  define TRACE_ATOMIC_T     std::atomic<uint32_t>

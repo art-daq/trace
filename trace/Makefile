@@ -3,9 +3,21 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.10 $$Date: 2014/03/05 15:32:10 $";
+ # rev="$Revision: 1.11 $$Date: 2014/03/05 19:01:47 $";
 
 # TOP LEVEL Makefile
+
+HELP=\
+echo "OUT=<dir> must be specified and <dir> must exist.";\
+echo "Examples:";\
+echo "  make OUT=\$$PWD -j4     \# the default is to build the 2 userspace programs";\
+echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
+echo "  make OUT=\$$PWD src_module";\
+echo "  make OUT=\$$PWD modules";\
+echo "  make OUT=\$$PWD modules KDIR=<path_to_built_kernel>";\
+echo "If \"ups\" is available and OUT is set to \$$PWD, you should be able to:";\
+echo "  setup -r\$$PWD -z\$$PWD TRACE";\
+echo "to get env.var. TRACE_INC set and env.var. PATH adjusted."
 
 TRACE_DIR := $(shell pwd)
 export TRACE_INC=${TRACE_DIR}/include
@@ -18,18 +30,26 @@ FLAVOR_SUBDIR = os=`uname -s`;\
 	echo os=$$os mach=$$mach b64=$$b64 os_rev1=$$os_rev1 libc1=$$libc1
 
 
-all: src_utility src_module src_example script ups
+default: src_utility src_example_user script ups
 	@${FLAVOR_SUBDIR};\
 	echo add to PATH: PATH=${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin:${OUT}/script:\$$PATH
 	@echo Possibly: setup -r\$$PWD -z\$$PWD TRACE
 
-.PHONY: src_utility src_module src_example script ups
+.PHONY: src_utility src_module src_example_user src_example_module script ups module default
 
-src_example: src_module      # the example module depends on symbols from the TRACE module
+modules: src_module src_example_module
+all: default modules
+	@echo Done with $@
+
+
+
+src_example_module: src_module      # the example module depends on symbols from the TRACE module
 
 # don't seem to be able to build 32bit module on 64bit machine
 src_module: OUT_check
-	subdir=module/`uname -r`;\
+	test -n "${KDIR}"\
+	  && subdir=module/`cat ${KDIR}/include/config/kernel.release`\
+	  || subdir=module/`uname -r`;\
 	test -d "${OUT}/$$subdir" || mkdir -p "${OUT}/$$subdir";\
 	cp -ar $@/*.[ch] $@/[MK]* "${OUT}/$$subdir/.";\
 	$(MAKE) -e -C "${OUT}/$$subdir";
@@ -37,7 +57,7 @@ src_module: OUT_check
 # have to do this in two parts:
 #    1) module (which needs src copied)
 #    2) userspace - src can remain
-src_example: OUT_check
+src_example_user: OUT_check
 	${FLAVOR_SUBDIR};\
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin/";\
 	test -d "$$out" || mkdir -p "$$out";\
@@ -47,8 +67,11 @@ src_example: OUT_check
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C src_example userspace OUT=$$out CPPFLAGS="-m32 -I$$PWD/include" LDFLAGS=-m32;\
 	fi
-	modsubdir=module/`uname -r`;\
-	cp -a $@/module/*.c "${OUT}/$$modsubdir/.";\
+src_example_module: OUT_check
+	test -n "${KDIR}"\
+	  && modsubdir=module/`cat ${KDIR}/include/config/kernel.release`\
+	  || modsubdir=module/`uname -r`;\
+	cp -a src_example/module/*.c "${OUT}/$$modsubdir/.";\
 	grep some_module.o "${OUT}/$$modsubdir/Kbuild" || \
 	sed -i -e '/TRACE.o$$/s/$$/ some_mod.o/;$$a\
 	some_mod-y := some_module.o' "${OUT}/$$modsubdir/Kbuild";\
@@ -67,18 +90,13 @@ src_utility: OUT_check
 
 script ups: OUT_check
 	test -d "${OUT}/$@" || mkdir "${OUT}/$@"
-	-cp -au $@/[a-z]* "${OUT}/$@"
+	-cp -au $@/[a-zABD-Z]*[^~] "${OUT}/$@"   # filter out CVS dir and backups files
 
-HELP=\
-must specify OUT=<dir> and <dir> must exist.\n\
-Examples: make OUT=\$$PWD\n\
-If \"ups\" is available and OUT is set to \$$PWD, you should be able to:\n\
-  setup -r\$$PWD -z\$$PWD TRACE\n\
-to get env.var. TRACE_INC set and env.var. PATH adjusted.
-
+help:
+	@$(HELP)
 
 .PHONY: OUT_check
 OUT_check:
-	@echo "checking OUT"
-	@if [ -z "${OUT}" -o ! -d "${OUT}" ];then echo -e "$(HELP)"; exit 1;fi
+	@echo "checking OUT..."
+	@if [ -z "${OUT}" -o ! -d "${OUT}" ];then $(HELP); exit 1;fi
 	@echo "\$$OUT=${OUT}"

@@ -4,7 +4,30 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_feature_test.sh,v $
- # rev='$Revision: 1.2 $$Date: 2014/02/26 18:05:02 $'
+ # rev='$Revision: 1.3 $$Date: 2014/03/05 23:05:15 $'
+
+USAGE="\
+`basename $0` <file>
+"
+if [ $# -ne 1 ];then echo "$USAGE"; exit 1;fi
+
+file=$1
+
+if objdump --disassemble $file | grep -m1 lock;then
+    echo "This file seems to have the basic multi-process locked memory
+access functionality."
+else
+    echo "This file does not seem to have the basic multi-process locked
+memory access functionality."
+fi
+
+if objdump --disassemble $file | grep -m1 '%[fg]s:0xf';then
+    echo "This file seems to have basic thread local storage functionality"
+else
+    echo "This file does not seem to have basic thread local storage functionality"
+fi
+
+exit
 
 build directory:
 

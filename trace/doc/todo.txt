@@ -1,19 +1,12 @@
 go back to 1 mmap - ref nova dcm_kernel_module/dcm_data.c
   -- preliminary attempt failed
 
-add -n<NAME> option to Trace_cntl to setenv("TRACENAME","<NAME>",1)
-
 process msg string in "show"
    make sure last char is not '\n'
    convert %s,... to %p
    I think I should forget about "%m$" and "*m$"
 
 libtrace.c -> libtrace.a, libtrace.so
-
-rename struct member to indicate trigger _armed_:
-    when activePost is non-zero --> "armed"
-    when trigIdxCnt is set  --> triggered/"collecting post trigger samples"
-    triggerComplete (when post# complete and mode has been turned offf)
 
 a way to set a level mask (or lvl bit) on for all tids/names -- usefull for
 setting all trigger masks for "trigger on anything"

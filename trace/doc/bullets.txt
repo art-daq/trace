@@ -1,6 +1,8 @@
 Main Goals:
   * timing info  ( microsecond timeofday timestamp ) - to look for anomolies
     o  delta time between application specific points.
+       - points (locations) with key information -- the presense of TRACE will help
+         identify/document these locations.
     o  real time (high speed/efficient) samples -- store every one (several
           thousand to maybe a few million). (basic stats)
        -  low performance impact
@@ -19,8 +21,11 @@ Other Goals
 
 Companion utility - trace_delta.pl
    delta time
-   filter out time not between points
+   use with grep -- standard filtering "unix philosophy"
+   "post filter" to help get basic stats on sub-operations.
 
+Macro
+   a macro allows a function call to be wrappered by a test.
 
 Trace vs. other utilities:
 

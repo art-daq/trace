@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.49 $$Date: 2014-03-02 14:13:20 $";
+    rev="$Revision: 1.50 $$Date: 2014-03-05 15:32:10 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -38,13 +38,16 @@ commands:\n\
  lvlmskM <msk>  mask for trigger\n\
  trig <modeMsk> <lvlmskM> <postEntries>\n\
 tests:  (use %s show after test)\n\
- test1          a single TRACE\n\
+%s\n\
+", basename(argv[0]), basename(argv[0]), USAGE_TESTS
+#define USAGE_TESTS "\
+ test1 [loops]  a single TRACE [or more if loops != 0]\n\
  test           various\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
  test-compare   compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
- %s\n\
-", basename(argv[0]), basename(argv[0]), "test-threads   threading"
-
+ test-threads   threading\n\
+ trace <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
+"
 
 #if __SIZEOF_LONG__ == 8
 #  define LX "lx"
@@ -80,49 +83,176 @@ void* thread_func(void *arg)
     pthread_exit(NULL);
 }
 
+
+struct sizepush
+{   unsigned size:16;
+    unsigned push:16;
+};
+
+void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush *sizes_out )
+{   char    *in;
+    char    *percent_sav;
+    int      numArgs=0;
+    int      maxArgs=10;
+    int      modifier=0;
+    int      skip=0;
+    in = fmt;
+    while ((in=strchr(in,'%')))
+    {   percent_sav = in;       /* save in case we need to modify it (too many args) */
+	++in;  			/* point to next char */
+	//printf("next char=%c\n",*in);
+	if ((*in=='%')||(*in=='m')) { ++in; continue; }/* ingore %% which specified a % char */
+	if (numArgs == maxArgs) { *percent_sav = '*'; continue; }  /* SAFETY - no args beyond max */
+	if ((skip=strspn(in,"0123456789.-# +'I"))) in+=skip;
+ chkChr:
+	switch (*in++)
+	{
+	    // Basic conversion specifiers
+	case 'd': case 'i': case 'o': case 'u': case 'x': case 'X':
+	    switch (modifier)
+	    {
+	    case -2: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4; break; /* char */
+	    case -1: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* short */
+	    case 0:  sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* int */
+	    case 1:  sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=param_bytes;break;/* long */
+	    case 2:  sizes_out[numArgs].push=8;          sizes_out[numArgs].size=8;break;/* long long */
+	    default: printf("error\n");
+	    }
+	    modifier=0;
+	    break;
+	case 'e': case 'E': case 'f': case 'F': case 'g': case 'G': case 'a': case 'A':
+	    if (modifier)
+	    {   sizes_out[numArgs].push=(param_bytes==4)?12:16;
+		sizes_out[numArgs].size=(param_bytes==4)?12:16;
+		modifier=0;
+	    }/* long double */
+	    else
+	    {   sizes_out[numArgs].push=8;
+		sizes_out[numArgs].size=8;
+	    } /* double */
+	    break;
+
+	    // length modifiers
+	case 'h':  --modifier; goto chkChr;
+	case 'l':  ++modifier; goto chkChr;
+	case 'L':  ++modifier; goto chkChr;
+
+	case 's': case 'n': case 'p':       /* SAFETY -- CONVERT %s to %p */
+	    *(in-1)='p';
+	    break;
+	case 'm':
+	    continue;
+	    break;
+	case '*':   /* special -- "arg" in an arg */
+	    sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;
+	    if (++numArgs == maxArgs) break;
+	    goto chkChr;
+	default:
+	    printf("unknown\n");
+	}
+	++numArgs;
+    }
+    if (numArgs < maxArgs) sizes_out[numArgs].push=0;
+}
+
 void traceShow()
 {
     uint32_t rdIdx;
     uint32_t max;
     unsigned printed=0;
+    unsigned ii;
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
+    uint8_t               * local_params;
+    char                  * local_msg;
+    void                  * param_va_ptr;
+    struct sizepush       * params_sizes;
+    uint8_t               * ent_param_ptr;
+    uint8_t               * lcl_param_ptr;
 
     traceInit();
     rdIdx=traceControl_p->wrIdxCnt;
     max=((rdIdx<=traceControl_p->num_entries)
 	 ?rdIdx:traceControl_p->num_entries);
+    local_msg    = malloc( traceControl_p->siz_msg );
+    local_params = malloc( traceControl_p->num_params*sizeof(uint64_t) );
+    params_sizes = malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
-
-#   if defined(__i386__)
-#   endif
-
-    printf("   idx           us_tod        tsc TID lv   tid r msg\n");
-    printf("------ ---------------- ---------- --- -- ----- - -------------------\n");
+    printf("   idx              us_tod        tsc TID lv   tid r msg\n");
+    printf("------ ------------------- ---------- --- -- ----- - -------------------\n");
     for (printed=0; printed<max; ++printed)
-    {   rdIdx = IDXCNT_ADD( rdIdx, -1 );
+    {   unsigned seconds, useconds;
+	rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	myEnt_p = idxCnt2entPtr( rdIdx );
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 
-	printf("%6u %10ld%06ld %10u %3u %2d %5d "
-	       , printed, myEnt_p->time.tv_sec, myEnt_p->time.tv_usec
+	/* MUST change all %s possibilities to %p */
+	/* MUST change %* beyond num_params to %% */
+	msg_p[traceControl_p->siz_msg - 1] = '\0';
+	strcpy( local_msg, msg_p );
+	get_arg_sizes(  local_msg, traceControl_p->num_params
+		      , myEnt_p->param_bytes, params_sizes );
+
+        if        (  ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
+		   ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
+	{   seconds  = myEnt_p->time.tv_sec;
+	    useconds = myEnt_p->time.tv_usec;
+	    param_va_ptr = (void*)params_p;
+	} else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
+	{   unsigned *ptr=(unsigned*)&myEnt_p->time;
+	    seconds  = *ptr++;
+	    useconds = *ptr;
+	    ent_param_ptr = (uint8_t*)params_p;
+	    lcl_param_ptr = local_params;
+	    for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
+	    {
+		if      (params_sizes[ii].push == 4)
+		{   *(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
+		    lcl_param_ptr += sizeof(long);
+		}
+		else /* (params_sizes[ii].push == 8) */
+		{   *(long*)lcl_param_ptr =      *(long*)ent_param_ptr;
+		    lcl_param_ptr += sizeof(long);
+		}
+		ent_param_ptr += params_sizes[ii].push;
+	    }
+	    param_va_ptr = (void*)local_params;
+	} else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
+	{   long long *ptr=(long long*)&myEnt_p->time;
+	    seconds  = (unsigned)*ptr++;
+	    useconds = (unsigned)*ptr;
+	    ent_param_ptr = (uint8_t*)params_p;
+	    lcl_param_ptr = local_params;
+	    for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
+	    {
+		if      (params_sizes[ii].size == 4)
+		{   *(unsigned*)lcl_param_ptr = (unsigned)*(unsigned long long*)ent_param_ptr;
+		    lcl_param_ptr += sizeof(long);
+		}
+		else /* (params_sizes[ii].size == 8) */
+		{   *(unsigned long long*)lcl_param_ptr = *(unsigned long long*)ent_param_ptr;
+		    lcl_param_ptr += sizeof(long long);		    
+		}
+		ent_param_ptr += params_sizes[ii].push;
+	    }
+	    param_va_ptr = (void*)local_params;
+	}
+
+	printf("%6u %13u%06u %10u %3u %2d %5d "
+	       , printed, seconds, useconds
 	       , (unsigned)myEnt_p->tsc
 	       , myEnt_p->TID, myEnt_p->lvl, myEnt_p->tid );
 	if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 	else                             printf( ". " );
 
-	/* MUST change all %s possibilities to %p */
-	/* MUST change %* beyond num_params to %% */
-	msg_p[traceControl_p->siz_msg - 1] = '\0';
-
 	/*typedef unsigned long parm_array_t[1];*/
 	/*va_start( ap, params_p[-1] );*/
 	{   /* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
 	     */
-	    va_list ap=TRACE_VA_LIST_INIT;
-	    vprintf( msg_p, ap );
+	    va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
+	    vprintf( local_msg, ap );
 	}
 
 	    printf("\n");
@@ -150,12 +280,13 @@ extern  int        optind;         /* for getopt */
     {   printf( "Need cmd\n" );
         printf( USAGE ); exit( 0 );
     }
-    cmd = argv[optind];
+    cmd = argv[optind++];
 
 
     if      (strcmp(cmd,"test1") == 0)
-    {
-	TRACE( 0, "hello" );
+    {   unsigned loops=0;
+	if (argc - optind == 1) loops=strtoul(argv[optind],NULL,0);
+	do { TRACE( 0, "Hello. \"1 2.5 5 10 15\" should be repeated here: %d %.1f %d %d %d",1,2.5,5,10,15 ); } while (loops--);
     }
     else if (strcmp(cmd,"test") == 0)
     {   unsigned ii;
@@ -397,18 +528,51 @@ extern  int        optind;         /* for getopt */
 	    }
 	}
     }
+    else if (strcmp(cmd,"trace") == 0)
+    {   
+	switch (argc - optind)
+	{
+	case 0: printf("\"trace\" cmd rquires at least lvl and fmt arguments."); break;
+	case 1: printf("\"trace\" cmd rquires at least lvl and fmt arguments."); break;
+	case 2: TRACE( strtoull(argv[optind+0],NULL,0)
+		      ,         argv[optind+1] );
+	    break;
+	case 3: TRACE( strtoull(argv[optind+0],NULL,0)
+		      ,         argv[optind+1]
+		      ,strtoull(argv[optind+2],NULL,0) );
+	    break;
+	case 4: TRACE( strtoull(argv[optind+0],NULL,0)
+		      ,         argv[optind+1]
+		      ,strtoull(argv[optind+2],NULL,0)
+		      ,strtoull(argv[optind+3],NULL,0) );
+	    break;
+	case 5: TRACE( strtoull(argv[optind+0],NULL,0)
+		      ,         argv[optind+1]
+		      ,strtoull(argv[optind+2],NULL,0)
+		      ,strtoull(argv[optind+3],NULL,0)
+		      ,strtoull(argv[optind+4],NULL,0) );
+	    break;
+	case 6: TRACE( strtoull(argv[optind+0],NULL,0)
+		      ,         argv[optind+1]
+		      ,strtoull(argv[optind+2],NULL,0)
+		      ,strtoull(argv[optind+3],NULL,0)
+		      ,strtoull(argv[optind+4],NULL,0)
+		      ,strtoull(argv[optind+5],NULL,0) );
+	    break;
+	}
+    }
     else
     {   int sts=0;
 	/*printf("argc - optind = %d\n", argc - optind );*/
 	switch (argc - optind)
 	{
-	case 1: sts=TRACE_CNTL( cmd ); break;
-	case 2: sts=TRACE_CNTL( cmd, strtoull(argv[optind+1],NULL,0) ); break;
-	case 3: sts=TRACE_CNTL( cmd, strtoull(argv[optind+1],NULL,0)
+	case 0: sts=TRACE_CNTL( cmd ); break;
+	case 1: sts=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) ); break;
+	case 2: sts=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0)
+			       , strtoull(argv[optind+1],NULL,0) ); break;
+	case 3: sts=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0)
+			       , strtoull(argv[optind+1],NULL,0)
 			       , strtoull(argv[optind+2],NULL,0) ); break;
-	case 4: sts=TRACE_CNTL( cmd, strtoull(argv[optind+1],NULL,0)
-			       , strtoull(argv[optind+2],NULL,0)
-			       , strtoull(argv[optind+3],NULL,0) ); break;
 	}
 	if (sts < 0)
 	{   printf("invalid command: %s\n", cmd );

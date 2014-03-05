@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.37 $';
-#   $Date: 2012/02/16 18:22:01 $
+$version = '$Revision: 1.38 $';
+#   $Date: 2014/03/05 15:32:10 $
 
 use Time::Local; # timelocal()
 
@@ -25,7 +25,7 @@ options:
 -stats               min, max, ave stats on delta (except cpu deltas)
 -i                   invert (use this is deltas are always negative)
 -r                   change \"timeStamp\" column to \"relative\" (currently
-                     only works when header line is included)
+                     effects all -d columns)
 -ct   <col_spec>     make time more readable (convert time)
 -syscall             attempt read of /usr/include/asm/unistd.h to convert
                      system call numbers in string \"system call \\d+\$\" to names
@@ -89,7 +89,7 @@ sub col_spec_to_re
                                              # and return re in tmp_re
     #print STDERR "col_spec_to_re(spec=$spec)\n";
     #print STDERR "col_spec=$col_spec\n";
-    if ($col_spec =~ /^\d+$/)
+    if ($col_spec =~ /^\d+$/)  # if col_spec is a column _number_
     {   if ($col_spec == 0)
 	{   $re = '(\s*\S+)';
 	    $line =~ /$re/; $data = $1;
@@ -101,7 +101,7 @@ sub col_spec_to_re
 	    $re = '.' x length($leader) . '(' . '.' x length($data) . ')';
 	}
     }
-    else
+    else          # col_spec is a column _heading_ (or header)
     {   $re = '^((\s+\S+)*)(\s+' . $col_spec . ')';
 	$line =~ /$re/; $leader = $1; $data = $3;
 	$re = '.' x length($leader) . '(' . '.' x length($data) . ')';
@@ -112,6 +112,8 @@ sub col_spec_to_re
     eval "\$${spec}_re = \$re";
 }
 
+
+#print STDERR "before if (opt_ct) opt_ct=$opt_ct\n";
 if ("$opt_ct" ne "")
 {   use POSIX;			# for strftime  NOTE: this is "used" at compile
     $ct_col_spec = $opt_ct;     # time, i.e. even if -ct is not specified.
@@ -146,10 +148,11 @@ if ("$opt_dc" ne "")      # if "columns for *cpu specific* deltas" where specifi
     foreach $col (@opt_eval)
     {   $tmp_col_spec = $col;
 	&col_spec_to_re( tmp );
+	$delta_cntl[$delta_idx]{do_delta} = 1;
 	$delta_cntl[$delta_idx]{re}   = $tmp_re;
 	$delta_cntl[$delta_idx]{cpu}  = 1;
 	print STDERR "col=$col ";
-	if ($col eq timeStamp && $opt_r)
+	if (($col eq "timeStamp" || $col eq "us_tod") && $opt_r)
 	{   $delta_cntl[$delta_idx]{rel} = 1;
 	    print STDERR " setting relative time\n";
 	}
@@ -158,6 +161,7 @@ if ("$opt_dc" ne "")      # if "columns for *cpu specific* deltas" where specifi
 	$delta_idx++;
     }
 }
+
 #print STDERR "before if (opt_d) opt_d=$opt_d\n";
 if ("$opt_d" ne "")      # if "columns for *cpu specific* deltas" where specified
 {   eval "\@opt_eval = ($opt_d)";
@@ -166,18 +170,32 @@ if ("$opt_d" ne "")      # if "columns for *cpu specific* deltas" where specifie
     {   $tmp_col_spec = $col;
 	#print STDERR "calling col_spec_to_re( tmp )\n";
 	&col_spec_to_re( tmp );
+	$delta_cntl[$delta_idx]{do_delta} = 1;
 	$delta_cntl[$delta_idx]{re}   = $tmp_re;
-	if ($col eq timeStamp && $opt_r)
+	#if ($col eq timeStamp && $opt_r)
+	if ($opt_r)
 	{   $delta_cntl[$delta_idx]{rel} = 1;
 	}
+	#print STDERR "default_col[$delta_idx] = $tmp_re\n";
 	$default_col[$delta_idx] = $tmp_re;
 	$delta_idx++;
     }
 }
 
-if ("$opt_d" eq "" && "$opt_dc" eq "")  # need to try default
-{   $tmp_col_spec = timeStamp;
+if ("$opt_d" eq "" && "$opt_ct" ne "")
+{   $tmp_col_spec = $opt_ct;  # let's just say only one ct column for now
+    #print STDERR "calling col_spec_to_re( tmp )\n";
     &col_spec_to_re( tmp );
+    $delta_cntl[$delta_idx]{re}   = $tmp_re;
+    #print STDERR "default_col[$delta_idx] = $tmp_re\n";
+    $default_col[$delta_idx] = $tmp_re;
+    $delta_idx++;
+}
+
+if ("$opt_d" eq "" && "$opt_dc" eq "" && "$opt_ct" eq "")  # need to try default
+{   $tmp_col_spec = "(timeStamp|us_tod)";
+    &col_spec_to_re( tmp );
+    $delta_cntl[$delta_idx]{do_delta} = 1;
     $delta_cntl[$delta_idx]{re}   = $tmp_re;
     if ($opt_r)
     {   $delta_cntl[$delta_idx]{rel} = 1;
@@ -264,6 +282,7 @@ else
     sort @default_col;
 
     $prev="";
+    #print STDERR "delta_cntl=$#delta_cntl\n";
     foreach $idx (0..$#delta_cntl)
     {   $default_col[$idx] =~ /^(\.*)/; $leader = $1;
 	$prev =~ s/[()]//g;
@@ -274,7 +293,9 @@ else
 	}
 	$col_cntl[$cntl_idx]{re} = $default_col[$idx];
 	$delta_idx = &find_delta( $col_cntl[$cntl_idx]{re} );
-	$col_cntl[$cntl_idx]{delta} = 1;
+	if ($delta_cntl[$delta_idx]{do_delta})
+	{   $col_cntl[$cntl_idx]{delta} = 1;
+	}
 	if ($delta_cntl[$delta_idx]{cpu})
 	{   $col_cntl[$cntl_idx]{delta_cpu} = 1;
 	}
@@ -340,12 +361,15 @@ for $idx (0..$#col_cntl)
         {   \$data = \$1;";
     if ($col_cntl[$idx]{rel})
     {   $sub .= "
-            if (!\$col_cntl[$idx]{rel_start_val})
-            {   \$col_cntl[$idx]{rel_start_val} = \$data;
-            }
-            \$data = sprintf( \"%*s\", length(\$data), \$data - \$col_cntl[$idx]{rel_start_val} );"
+            if (\$data =~ /^\\s*\\d+\$/)
+            {   if (!\$col_cntl[$idx]{rel_start_val})
+                {   \$col_cntl[$idx]{rel_start_val} = \$data;
+                    #print STDERR \"setting rel_start_val to \$data\\n\";
+                }
+                \$data = sprintf( \"%*s\", length(\$data), \$data - \$col_cntl[$idx]{rel_start_val} );
+            }"
     }
-    if (!$opt_b)
+    if (!$opt_b) # if "not delta before" 
     {   
 	if ($col_cntl[$idx]{ct}) # if converting time
 	{   $sub .= "
@@ -381,13 +405,13 @@ for $idx (0..$#col_cntl)
 	}
 	if ("$opt_i") # invert sense of delta
 	{   $sub .= "
-                if (!\$col_cntl[$idx]{\"prev\$cpu\"})
+                if (\$col_cntl[$idx]{\"prev\$cpu\"} eq \"\")
                 {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;
                     \$delta = sprintf( \"%*d\", $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );";
         }
 	else
 	{   $sub .= "
-                if (!\$col_cntl[$idx]{\"prev\$cpu\"})
+                if (\$col_cntl[$idx]{\"prev\$cpu\"} eq \"\")
                 {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;
                     \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );";
         }

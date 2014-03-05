@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.5 $
-#  $Date: 2014/03/04 18:20:18 $
+#  $Revision: 1.6 $
+#  $Date: 2014/03/05 15:32:10 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -45,7 +45,7 @@ ${OUT}%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
 % : %.c        # cancel the built-in rule (give no recipe)
 ${OUT}% : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -g -o $@ $< $(LDFLAGS)
 # just use the C++ linker
 % : %.o
 	@echo 'CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" ^="$^"'

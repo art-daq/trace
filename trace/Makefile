@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.9 $$Date: 2014/03/04 18:20:18 $";
+ # rev="$Revision: 1.10 $$Date: 2014/03/05 15:32:10 $";
 
 # TOP LEVEL Makefile
 
@@ -21,7 +21,7 @@ FLAVOR_SUBDIR = os=`uname -s`;\
 all: src_utility src_module src_example script ups
 	@${FLAVOR_SUBDIR};\
 	echo add to PATH: PATH=${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin:${OUT}/script:\$$PATH
-
+	@echo Possibly: setup -r\$$PWD -z\$$PWD TRACE
 
 .PHONY: src_utility src_module src_example script ups
 

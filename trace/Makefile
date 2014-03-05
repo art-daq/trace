@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.11 $$Date: 2014-03-05 19:01:47 $";
+ # rev="$Revision: 1.12 $$Date: 2014-03-05 23:04:38 $";
 
 # TOP LEVEL Makefile
 
@@ -15,6 +15,7 @@ echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
 echo "  make OUT=\$$PWD src_module";\
 echo "  make OUT=\$$PWD modules";\
 echo "  make OUT=\$$PWD modules KDIR=<path_to_built_kernel>";\
+echo "  make OUT=\$$PWD CPPFLAGS=-std=c++11 src_example_user";\
 echo "If \"ups\" is available and OUT is set to \$$PWD, you should be able to:";\
 echo "  setup -r\$$PWD -z\$$PWD TRACE";\
 echo "to get env.var. TRACE_INC set and env.var. PATH adjusted."
@@ -45,7 +46,6 @@ all: default modules
 
 src_example_module: src_module      # the example module depends on symbols from the TRACE module
 
-# don't seem to be able to build 32bit module on 64bit machine
 src_module: OUT_check
 	test -n "${KDIR}"\
 	  && subdir=module/`cat ${KDIR}/include/config/kernel.release`\
@@ -55,8 +55,8 @@ src_module: OUT_check
 	$(MAKE) -e -C "${OUT}/$$subdir";
 
 # have to do this in two parts:
-#    1) module (which needs src copied)
-#    2) userspace - src can remain
+#    1) userspace - src can remain
+#    2) module (which needs src copied)
 src_example_user: OUT_check
 	${FLAVOR_SUBDIR};\
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin/";\
@@ -65,7 +65,7 @@ src_example_user: OUT_check
 	if [ `uname -m` = x86_64 ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/bin/";\
 	    test -d "$$out" || mkdir -p "$$out";\
-	    $(MAKE) -C src_example userspace OUT=$$out CPPFLAGS="-m32 -I$$PWD/include" LDFLAGS=-m32;\
+	    $(MAKE) -C src_example userspace OUT=$$out CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32;\
 	fi
 src_example_module: OUT_check
 	test -n "${KDIR}"\
@@ -81,11 +81,11 @@ src_utility: OUT_check
 	${FLAVOR_SUBDIR};\
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin/";\
 	test -d "$$out" || mkdir -p "$$out";\
-	$(MAKE) -C $@ OUT="$$out" CPPFLAGS=-I${TRACE_INC};\
+	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
 	if [ `uname -m` = x86_64 ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/bin/";\
 	    test -d "$$out" || mkdir -p "$$out";\
-	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC}";\
+	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
 	fi
 
 script ups: OUT_check

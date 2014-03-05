@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.41 $$Date: 2014/03/05 15:32:10 $";
+ // rev="$Revision: 1.42 $$Date: 2014/03/05 19:02:19 $";
  */
 
 #ifndef TRACE_H_5216
@@ -628,7 +628,8 @@ static int traceInit(void)
 	traceControl_p->memlen            = memlen;
 	traceControl_p->trace_initialized = 1;
 
-	traceControl_p->mode.bits.M       = 1;
+	TRACE_CNTL( "reset" );
+	traceControl_p->mode.mode         = 1;
 	traceInitNames();
     }
     traceTID = name2tid( _name );

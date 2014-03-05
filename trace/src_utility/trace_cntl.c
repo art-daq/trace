@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.50 $$Date: 2014/03/05 15:32:10 $";
+    rev="$Revision: 1.51 $$Date: 2014/03/05 19:04:20 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -27,7 +27,7 @@ done
 #define NUMTHREADS 4
 
 #define USAGE "\
-%s <cmd> [command opt/args]\n\
+%s [opts] <cmd> [command opt/args]\n\
 commands:\n\
  info, tids, reset, show\n\
  mode <mode>\n\
@@ -37,6 +37,9 @@ commands:\n\
  lvlmskS <msk>  mask for stdout\n\
  lvlmskM <msk>  mask for trigger\n\
  trig <modeMsk> <lvlmskM> <postEntries>\n\
+opts:\n\
+ -f<file>\n\
+ -n<name>\n\
 tests:  (use %s show after test)\n\
 %s\n\
 ", basename(argv[0]), basename(argv[0]), USAGE_TESTS
@@ -515,6 +518,7 @@ extern  int        optind;         /* for getopt */
     }
     else if (strcmp(cmd,"tids") == 0) 
     {   unsigned ii;
+	traceInit();
 	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	{
 	    if (traceNamLvls_p[ii].name[0] != '\0')

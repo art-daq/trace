@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.12 $$Date: 2014-03-05 23:04:38 $";
+ # rev="$Revision: 1.13 $$Date: 2014-03-06 00:15:40 $";
 
 # TOP LEVEL Makefile
 
@@ -27,7 +27,7 @@ FLAVOR_SUBDIR = os=`uname -s`;\
 	b64=`sh -c "case $$mach in x86_64|sun*) echo 64bit;;*) :;;esac"`;\
 	mach=`sh -c "case $$mach in *86*|sun*) :;; *) echo $mach;;esac"`;\
 	os_rev1=`uname -r |cut -d. -f1-2`;\
-	libc1=-`/bin/ls /lib*/libc-* /lib/*/libc-* 2>/dev/null|sed '{s/.*libc-//;s/[^0-9]*$$//;q}'`;\
+	libc1=-`/bin/ls /lib*/libc-* /lib/*/libc-* 2>/dev/null|sed '{s/.*libc-//;s/[^0-9]*$$//;q;}'`;\
 	echo os=$$os mach=$$mach b64=$$b64 os_rev1=$$os_rev1 libc1=$$libc1
 
 

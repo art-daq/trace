@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.6 $
-#  $Date: 2014/03/05 15:32:10 $
+#  $Revision: 1.7 $
+#  $Date: 2014/03/06 15:43:57 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -57,7 +57,7 @@ ${OUT}%.o : %.cc
 ${OUT}%.d: %.c
 	set -e; rm -f $@; \
 	$(CC) -MM $(CPPFLAGS) $< > $@; \
-	sed 's,\($*\)\.o[ :]*,${OUT}\1.o $@ : ,g' < $@ > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,${OUT}\1 $@ : ,g' < $@ > $@.$$$$; \
 	mv -f $@.$$$$ $@
 ${OUT}%.d: %.cc
 	@set -e; rm -f $@; \

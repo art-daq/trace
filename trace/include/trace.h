@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.43 $$Date: 2014-03-05 23:14:27 $";
+ // rev="$Revision: 1.44 $$Date: 2014-03-06 02:10:20 $";
  */
 
 #ifndef TRACE_H_5216
@@ -18,13 +18,13 @@
 # include <sys/time.h>           /* timeval */
 # include <string.h>		/* strncmp */
 # include <fcntl.h>		/* open, O_RDWR */
+# include <sys/mman.h>		/* mmap */
+# include <unistd.h>		/* lseek */
+# include <sys/syscall.h>	/* syscall */
 # include <limits.h>		/* PATH_MAX */
 # ifndef PATH_MAX
 #   define PATH_MAX 1024  /* conservative */
 # endif
-# include <sys/mman.h>		/* mmap */
-# include <unistd.h>		/* lseek */
-# include <sys/syscall.h>	/* syscall */
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
 #  define TRACE_ATOMIC_T     std::atomic<uint32_t>
@@ -50,7 +50,9 @@
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
-# define TRACE_PRINT              printf
+# ifndef TRACE_PRINT
+#  define TRACE_PRINT              printf /* a move toward allowing the user to define a print function */
+# endif
 # define TRACE_VPRINT             vprintf
 # define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
 
@@ -83,6 +85,7 @@
 # define TRACE_NAME "TRACE"
 #endif
 
+#define TRACE_PAGESIZE 0x2000
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
@@ -160,7 +163,7 @@ struct traceControl_s
     int32_t        trace_initialized;/* in kernel */
     uint32_t       memlen;
     uint32_t	   version;
-    uint32_t       page_align[1015]; /* allow mmap 1st page (stuff above) readonly */
+    uint32_t       page_align[TRACE_PAGESIZE/4-9]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
     uint32_t       cacheline1[15];
@@ -248,8 +251,8 @@ static void                     getPtrs(  struct traceControl_s  **cc
     (( siz_cntl_pages							\
       + (uint32_t)sizeof(struct traceNamLvls_s)*num_namLvlTblEnts	\
       + entSiz(siz_msg,num_params)*num_entries				\
-      + 4096 )								\
-     & ~4095 )
+      + TRACE_PAGESIZE )								\
+     & ~(TRACE_PAGESIZE-1) )
 
 /* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"
    I must do the substract (ie. add negative) by hand.
@@ -531,29 +534,29 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 						   , MAP_SHARED, fd, 0 );
     if (t_p == (struct traceControl_s *)-1)
     {   rw_p=(uint8_t*)t_p;/*just use rw_p here to allow easy switch (#if) and warngings*/
-	perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	perror( "mmap(NULL,memlen,PROT_READ,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d t_p=%p\n", memlen, (void*)rw_p );
 	return (&traceControl);
     }
 # else
-    rw_p = (uint8_t*)mmap( NULL, memlen-0x1000, PROT_READ|PROT_WRITE
-			  , MAP_SHARED, fd, 0x1000 );
+    rw_p = (uint8_t*)mmap( NULL, memlen-TRACE_PAGESIZE, PROT_READ|PROT_WRITE
+			  , MAP_SHARED, fd, TRACE_PAGESIZE );
     if (rw_p == (void *)-1)
-    {   perror( "mmap(NULL,memlen-0x1000,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
+    {   perror( "mmap(NULL,memlen-TRACE_PAGESIZE,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d\n", memlen );
 	return (&traceControl);
     }
 
     off = (off_t)&((struct traceControl_s *)0)->wrIdxCnt;
-    t_p = (struct traceControl_s *)mmap( rw_p-off, 0x1000, PROT_READ|PROT_WRITE
+    t_p = (struct traceControl_s *)mmap( rw_p-off, TRACE_PAGESIZE, PROT_READ|PROT_WRITE
 					, MAP_SHARED|MAP_FIXED, fd, 0 );
     if (t_p == (struct traceControl_s *)-1)
-    {   perror( "mmap(NULL,0x1000,PROT_READ,MAP_PRIVATE,fd,0) error" );
+    {   perror( "mmap(rw_p-off,TRACE_PAGESIZE,PROT_READ,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d\n", memlen );
 	return (&traceControl);
     }
 
-    if (rw_p != ((uint8_t*)t_p)+0x1000)
+    if (rw_p != ((uint8_t*)t_p)+TRACE_PAGESIZE)
 	printf( "traceControl_p=%p rw_p=%p\n",(void*)t_p,rw_p );
 # endif
     return (t_p);

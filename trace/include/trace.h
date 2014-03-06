@@ -3,11 +3,12 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
- // rev="$Revision: 1.44 $$Date: 2014/03/06 02:10:20 $";
  */
 
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
+
+#define TRACE_REV  "$Revision: 1.45 $$Date: 2014/03/06 15:45:11 $"
 
 #ifndef __KERNEL__
 
@@ -24,6 +25,11 @@
 # include <limits.h>		/* PATH_MAX */
 # ifndef PATH_MAX
 #   define PATH_MAX 1024  /* conservative */
+# endif
+# ifdef __sun__
+#  define SYS_GETTID SYS_lwp_self
+# else
+#  define SYS_GETTID SYS_gettid
 # endif
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
@@ -49,7 +55,7 @@
     })
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
-# define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_gettid);
+# define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_GETTID);
 # ifndef TRACE_PRINT
 #  define TRACE_PRINT              printf /* a move toward allowing the user to define a print function */
 # endif
@@ -80,12 +86,13 @@
 #define TRACE_DFLT_MAX_PARAMS       10
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   50000
-#define TRACE_DFLT_NAM_SZ            8
+#define TRACE_DFLT_NAM_SZ           16
 #ifndef  TRACE_NAME
 # define TRACE_NAME "TRACE"
 #endif
 
-#define TRACE_PAGESIZE 0x2000
+#define TRACE_PAGESIZE         0x2000
+#define TRACE_CACHELINE        64
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
@@ -154,6 +161,8 @@
 
 struct traceControl_s
 {
+    char           version_string[sizeof(int32_t)*16];
+    uint32_t	   version;
     uint32_t       num_params;
     uint32_t       siz_msg;
     uint32_t       siz_entry;
@@ -162,11 +171,10 @@ struct traceControl_s
     uint32_t       num_namLvlTblEnts;/* these and above would be read only if */
     int32_t        trace_initialized;/* in kernel */
     uint32_t       memlen;
-    uint32_t	   version;
-    uint32_t       page_align[TRACE_PAGESIZE/4-9]; /* allow mmap 1st page(s) (stuff above) readonly */
+    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-25]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
-    uint32_t       cacheline1[15];
+    uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
 
     union
     {   struct
@@ -186,7 +194,7 @@ struct traceControl_s
     int32_t       triggered;
     uint32_t	  trigActivePost;
     int32_t       full;
-    uint32_t      xtra[2];
+    uint32_t      xtra[TRACE_CACHELINE/sizeof(int32_t)-6]; /* force some sort of alignment -- here 10+6(fields above) = 16 */
 };
 
 struct traceEntryHdr_s
@@ -236,14 +244,9 @@ static int                      traceInit( void );
 static void                     traceInitNames( void );
 static uint32_t                 name2tid( const char *name );
 #endif
-#if 0
-static void                     getPtrs(  struct traceControl_s  **cc
-					, struct traceEntryHdr_s **ee
-					, struct traceNamLvls_s     **ll
-					, int siz_lvlTbl );
-#endif
 
-#define cntlPagesSiz() (((uint32_t)sizeof(struct traceControl_s)+4096)&~4095)
+#define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
+#define namtblSiz( ents )       (((uint32_t)sizeof(struct traceNamLvls_s)*ents+TRACE_CACHELINE)&~(TRACE_CACHELINE-1))
 #define entSiz( siz_msg, num_params ) ( sizeof(struct traceEntryHdr_s)\
     + sizeof(uint64_t)*num_params /* NOTE: extra size for i686 (32bit processors) */\
     + siz_msg )
@@ -570,7 +573,6 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 static int traceInit(void)
 {
     int         memlen;
-    int         siz_cntl_pages;
     uint32_t    _numparams=0, _msgsiz=0, _numents=0, _namtblents=0;
 #   ifndef __KERNEL__
     int         activate=0;
@@ -591,8 +593,7 @@ static int traceInit(void)
 	return (0);
     }
 
-    siz_cntl_pages = cntlPagesSiz();
-    memlen = traceMemLen( siz_cntl_pages, _namtblents, _msgsiz, _numparams, _numents );
+    memlen = traceMemLen( cntlPagesSiz(), _namtblents, _msgsiz, _numparams, _numents );
 
     traceControl_p = trace_mmap_file( _file, memlen );
     if (traceControl_p == &traceControl)
@@ -601,26 +602,26 @@ static int traceInit(void)
     tracePid = getpid();
 #   else
     const char *_name="KERNEL";
-    siz_cntl_pages = cntlPagesSiz();
     _namtblents   =TRACE_DFLT_NAMTBL_ENTS;
     _msgsiz       =TRACE_DFLT_MAX_MSG_SZ;
     _numparams    =TRACE_DFLT_MAX_PARAMS;
     _numents      =TRACE_DFLT_NUM_ENTRIES;
-    memlen = traceMemLen( siz_cntl_pages, _namtblents, _msgsiz, _numparams, _numents );
+    memlen = traceMemLen( cntlPagesSiz(), _namtblents, _msgsiz, _numparams, _numents );
     traceControl_p = (struct traceControl_s *)vmalloc( memlen );
     traceControl_p->trace_initialized = 0;
 #   endif
 
 
     traceNamLvls_p = (struct traceNamLvls_s *)			\
-	((unsigned long)traceControl_p+siz_cntl_pages);
+	((unsigned long)traceControl_p+cntlPagesSiz());
 
     traceEntries_p = (struct traceEntryHdr_s *)	\
-	((unsigned long)traceNamLvls_p
-	 +sizeof(struct traceNamLvls_s)*_namtblents);
+	((unsigned long)traceNamLvls_p+namtblSiz(_namtblents));
 
     if (traceControl_p->trace_initialized == 0)
     {
+	strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
+	traceControl_p->version_string[sizeof(traceControl_p->version_string)-1] = '\0';
 	traceControl_p->num_params        = _numparams;
 	traceControl_p->siz_msg           = _msgsiz;
 	traceControl_p->siz_entry         = entSiz( _msgsiz, _numparams );

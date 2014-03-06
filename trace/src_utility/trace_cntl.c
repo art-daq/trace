@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.51 $$Date: 2014/03/05 19:04:20 $";
+    rev="$Revision: 1.52 $$Date: 2014/03/06 15:45:11 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -71,10 +71,10 @@ void* thread_func(void *arg)
     long loops=(long)arg;
     char path[PATH_MAX];
 # if 1
-    snprintf(path,PATH_MAX,"%s/.trace_buffer_%ld",getenv("HOME"),(long)syscall(SYS_gettid) );
+    snprintf(path,PATH_MAX,"%s/.trace_buffer_%ld",getenv("HOME"),(long)syscall(SYS_GETTID) );
     TRACE_CNTL( "file", path );
 # else
-    snprintf(path,PATH_MAX,"T%ld",syscall(SYS_gettid) );
+    snprintf(path,PATH_MAX,"T%ld",syscall(SYS_GETTID) );
     TRACE_CNTL( "name", path );
 # endif
     while(loops-- > 0)
@@ -298,14 +298,14 @@ extern  int        optind;         /* for getopt */
 	uint32_t desired, myIdx;
 
 #      if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
-	tid = (pid_t)syscall( SYS_gettid );
+	tid = (pid_t)syscall( SYS_GETTID );
 #      elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-	tid = (pid_t)syscall( SYS_gettid );
-#      else
-	tid = (pid_t)syscall( SYS_gettid );
+	tid = (pid_t)syscall( SYS_GETTID );
+#      elif !defined(__sparc__)
+	tid = (pid_t)syscall( SYS_GETTID );
 #      endif
 	if (tid == -1) perror("syscall");
-	printf("tid=%ld\n", (long int)syscall(SYS_gettid) );
+	printf("tid=%ld\n", (long int)syscall(SYS_GETTID) );
 
 	printf("sizeof: int:%u long:%u pid_t:%u pthread_t:%u timeval:%u "
 	       "double:%u traceControl_s:%u traceEntryHdr_s:%u\n"
@@ -492,6 +492,7 @@ extern  int        optind;         /* for getopt */
 	       "max_params        =%u\n"
 	       "entry_size        =%u\n"
 	       "namLvlTbl_ents    =%u\n"
+	       "namLvlTbl_name_sz =%u\n"
 	       "wrIdxCnt offset   =%p\n"
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
@@ -510,6 +511,7 @@ extern  int        optind;         /* for getopt */
 	       , traceControl_p->num_params
 	       , traceControl_p->siz_entry
 	       , traceControl_p->num_namLvlTblEnts
+	       , (int)sizeof(traceNamLvls_p[0].name)
 	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p

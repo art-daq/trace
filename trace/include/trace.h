@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.45 $$Date: 2014/03/06 15:45:11 $"
+#define TRACE_REV  "$Revision: 1.46 $$Date: 2014/03/06 16:21:12 $"
 
 #ifndef __KERNEL__
 
@@ -39,7 +39,7 @@
 #  include <stdatomic.h>		/* atomic_compare_exchange_weak */
 #  define TRACE_ATOMIC_T          _Atomic(uint32_t)
 #  define TRACE_THREAD_LOCAL      _Thread_local
-# else
+# elif defined(__x86_64__) || defined(__i686__) || defined(__i386__)
 #  define TRACE_ATOMIC_T          uint32_t
 #  define TRACE_THREAD_LOCAL
 #  define cmpxchg(ptr, old, new) \
@@ -53,6 +53,11 @@
 		 : "memory");						\
     __ret;								\
     })
+# else
+#  define TRACE_ATOMIC_T          uint32_t
+#  define TRACE_THREAD_LOCAL
+#  define cmpxchg(ptr, old, new) \
+  ({ uint32_t __old = (old); old=*ptr; *ptr=new; __old;  })
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_GETTID);

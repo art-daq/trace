@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.3 $
-#  $Date: 2014-03-06 15:43:57 $
+#  $Revision: 1.4 $
+#  $Date: 2014-03-06 18:33:48 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -80,19 +80,15 @@ objects     := $(patsubst %.c,%.o,$(filter-out $(cexesrc),$(wildcard *.c))) \
 headers     := $(wildcard *.h)
 
 out_executables := $(patsubst %,${OUT}%,$(executables))
+out_deps        := $(patsubst %,${OUT}%.d,$(executables))
 
-#all: $(executables)
-#all: $(patsubst %,${OUT}%,$(executables))
-all: ${OUT}just
+
+all: $(out_executables)
 	echo done with ${OUT}just out_executables=$(out_executables)
 
-${OUT}just: just.cc
 
-ifneq ($(cexesrc),)
-include ${OUT}$(cexesrc:.c=.d)
-endif
-ifneq ($(c++exesrc),)
-include ${OUT}$(c++exesrc:.cc=.d)
+ifneq ($(executables),)
+include ${out_deps}
 endif
 
 

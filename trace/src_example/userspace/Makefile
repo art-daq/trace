@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.2 $
-#  $Date: 2014-03-04 15:55:45 $
+#  $Revision: 1.3 $
+#  $Date: 2014-03-06 15:43:57 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -63,7 +63,7 @@ ${OUT}%.d: %.c
 ${OUT}%.d: %.cc
 	@set -e; rm -f $@; \
 	$(CC) -MM $(CPPFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	sed 's,\($*\)\.o[ :]*,${OUT}\1 $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 # ref. "The Function wildcard"

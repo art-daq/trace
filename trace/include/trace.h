@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.47 $$Date: 2014/03/06 16:23:50 $"
+#define TRACE_REV  "$Revision: 1.48 $$Date: 2014/03/06 18:20:38 $"
 
 #ifndef __KERNEL__
 
@@ -61,9 +61,7 @@
 # endif
 # define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
 # define TRACE_DO_TID             if(traceTid==0)traceTid=syscall(SYS_GETTID);
-# ifndef TRACE_PRINT
-#  define TRACE_PRINT              printf /* a move toward allowing the user to define a print function */
-# endif
+# define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
 # define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))
 
@@ -104,12 +102,11 @@
 /* c++98 c99 c++0x c11 c++11 */
 
 # define TRACE( lvl, ... ) do \
-    {   TRACE_INIT_CHECK		\
+    {   TRACE_INIT_CHECK						\
             if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
-                trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 \
-                      TRACE_XTRA_PASSED	\
-                      , __VA_ARGS__ );				\
+                trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED	\
+                      , __VA_ARGS__ );					\
     } while (0)
 
 # define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
@@ -122,12 +119,11 @@
 /* c89 */
 
 # define TRACE( lvl, msgargs... ) do		\
-    {   TRACE_INIT_CHECK		\
+    {   TRACE_INIT_CHECK						\
             if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl))) \
                 ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl))) ) \
-	        trace( lvl, TRACE_ARGS( 0, msgargs ) - 2			\
-                      TRACE_XTRA_PASSED		\
-                      , msgargs );				\
+	        trace( lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
+                      , msgargs );				       \
     } while (0)
 
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
@@ -278,15 +274,15 @@ static uint32_t                 name2tid( const char *name );
      :(idxCnt+add)%traceControl_p->largest_multiple\
     )
 
-
-/* I've worked the mode<->level checking thing out before ...
-   check work/tracePrj/TRACE3...
- */
-
-#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
+#ifndef TRACE_LOG_FUNCTION
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,msg,ap)  trace_user( tvp,tid,lvl,msg,ap )
+static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
+{
+    TRACE_PRINT( "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
+    TRACE_VPRINT( msg, ap );
+    TRACE_PRINT("\n");
+}
+#endif /* TRACE_LOG_FUNCTION */
 
 static void trace( unsigned lvl, unsigned nargs
                   TRACE_XTRA_UNUSED		  
@@ -380,19 +376,14 @@ static void trace( unsigned lvl, unsigned nargs
 
     if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
     {
-	if (tv.tv_sec == 0) TRACE_GETTIMEOFDAY( &tv );
-	TRACE_PRINT("%10ld%06ld %2d %5d %d ",tv.tv_sec,tv.tv_usec,lvl,traceTid,nargs);
+   	if (tv.tv_sec == 0) TRACE_GETTIMEOFDAY( &tv );
 	va_start( ap, msg );
-	TRACE_VPRINT( msg, ap );
-	TRACE_PRINT("\n");
+	TRACE_LOG_FUNCTION( &tv,traceTID,lvl, msg, ap );
 	va_end( ap );
     }
     if (trig_reset_S) TRACE_CNTL( "modeS", 0 ); /* this is how trace references traceCntl to avoid "unused" warnings when only TRACE is used */
 }   /* trace */
 
-#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-# pragma GCC diagnostic pop
-#endif
 
 
 #ifndef __KERNEL__
@@ -478,15 +469,15 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	uint32_t mode=va_arg(ap,uint64_t);
 	traceControl_p->mode.mode = mode;
     }
-    else if (strcmp(cmd,"modeset") == 0)
+    else if (strcmp(cmd,"modeM") == 0)
     {   
 	uint32_t mode=va_arg(ap,uint64_t);
-	traceControl_p->mode.mode |= mode;
+	traceControl_p->mode.bits.M = mode;
     }
-    else if (strcmp(cmd,"modeclr") == 0)
+    else if (strcmp(cmd,"modeS") == 0)
     {   
 	uint32_t mode=va_arg(ap,uint64_t);
-	traceControl_p->mode.mode &= ~mode;
+	traceControl_p->mode.bits.S = mode;
     }
     else if (strcmp(cmd,"reset") == 0) 
     {

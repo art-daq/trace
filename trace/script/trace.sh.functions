@@ -3,14 +3,19 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.12 $
-#   $Date: 2014-03-06 15:45:11 $
+#   $Revision: 1.13 $
+#   $Date: 2014-03-06 18:20:38 $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { trace_cntl show "$@" | less; }
 tinfo()   { trace_cntl info; }
 ttids()   { trace_cntl tids; }
-tmode()   { trace_cntl mode "$@"; }
+tlvlM()   { trace_cntl lvlmskM "$@"; }
+tlvlS()   { trace_cntl lvlmskS "$@"; }
+tlvlT()   { trace_cntl lvlmskT "$@"; }
+tmode()   { trace_cntl mode  "$@"; }
+tmodeM()  { trace_cntl modeM "$@"; }
+tmodeS()  { trace_cntl modeS "$@"; }
 tfreeze() { trace_cntl modeM 0; }
 treset()  { trace_cntl reset; }
 ton()     { trace_cntl modeM 1; }

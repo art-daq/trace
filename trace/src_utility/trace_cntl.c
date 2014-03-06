@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.53 $$Date: 2014-03-06 16:21:12 $";
+    rev="$Revision: 1.54 $$Date: 2014-03-06 18:20:38 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -31,11 +31,11 @@ done
 commands:\n\
  info, tids, reset, show\n\
  mode <mode>\n\
- modeset <mode>\n\
- modeclr <mode>\n\
+ modeM <mode>\n\
+ modeS <mode>\n\
  lvlmskM <msk>  mask for Memory buffer\n\
  lvlmskS <msk>  mask for stdout\n\
- lvlmskM <msk>  mask for trigger\n\
+ lvlmskT <msk>  mask for trigger\n\
  trig <modeMsk> <lvlmskM> <postEntries>\n\
 opts:\n\
  -f<file>\n\
@@ -182,8 +182,8 @@ void traceShow()
     local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
-    printf("   idx              us_tod        tsc TID lv   tid r msg\n");
-    printf("------ ------------------- ---------- --- -- ----- - -------------------\n");
+    printf("   idx              us_tod        tsc   tid TID lv r msg\n");
+    printf("------ ------------------- ---------- ----- --- -- - -------------------\n");
     for (printed=0; printed<max; ++printed)
     {   unsigned seconds, useconds;
 	rdIdx = IDXCNT_ADD( rdIdx, -1 );
@@ -243,10 +243,10 @@ void traceShow()
 	    param_va_ptr = (void*)local_params;
 	}
 
-	printf("%6u %13u%06u %10u %3u %2d %5d "
+	printf("%6u %13u%06u %10u %5d %3u %2d "
 	       , printed, seconds, useconds
 	       , (unsigned)myEnt_p->tsc
-	       , myEnt_p->TID, myEnt_p->lvl, myEnt_p->tid );
+	       , myEnt_p->tid, myEnt_p->TID, myEnt_p->lvl );
 	if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 	else                             printf( ". " );
 

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.46 $$Date: 2014/03/06 16:21:12 $"
+#define TRACE_REV  "$Revision: 1.47 $$Date: 2014/03/06 16:23:50 $"
 
 #ifndef __KERNEL__
 
@@ -637,7 +637,8 @@ static int traceInit(void)
 	traceControl_p->trace_initialized = 1;
 
 	TRACE_CNTL( "reset" );
-	traceControl_p->mode.mode         = 1;
+	traceControl_p->mode.mode         = 0;
+	traceControl_p->mode.bits.M       = 1;
 	traceInitNames();
     }
     traceTID = name2tid( _name );

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.52 $$Date: 2014/03/06 15:45:11 $";
+    rev="$Revision: 1.53 $$Date: 2014/03/06 16:21:12 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -103,14 +103,14 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
     while ((in=strchr(in,'%')))
     {   percent_sav = in;       /* save in case we need to modify it (too many args) */
 	++in;  			/* point to next char */
-	//printf("next char=%c\n",*in);
+	/*printf("next char=%c\n",*in);*/
 	if ((*in=='%')||(*in=='m')) { ++in; continue; }/* ingore %% which specified a % char */
 	if (numArgs == maxArgs) { *percent_sav = '*'; continue; }  /* SAFETY - no args beyond max */
 	if ((skip=strspn(in,"0123456789.-# +'I"))) in+=skip;
  chkChr:
 	switch (*in++)
 	{
-	    // Basic conversion specifiers
+	    /* Basic conversion specifiers */
 	case 'd': case 'i': case 'o': case 'u': case 'x': case 'X':
 	    switch (modifier)
 	    {
@@ -135,7 +135,7 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
 	    } /* double */
 	    break;
 
-	    // length modifiers
+	    /* length modifiers */
 	case 'h':  --modifier; goto chkChr;
 	case 'l':  ++modifier; goto chkChr;
 	case 'L':  ++modifier; goto chkChr;
@@ -178,9 +178,9 @@ void traceShow()
     rdIdx=traceControl_p->wrIdxCnt;
     max=((rdIdx<=traceControl_p->num_entries)
 	 ?rdIdx:traceControl_p->num_entries);
-    local_msg    = malloc( traceControl_p->siz_msg );
-    local_params = malloc( traceControl_p->num_params*sizeof(uint64_t) );
-    params_sizes = malloc( traceControl_p->num_params*sizeof(struct sizepush) );
+    local_msg    =            (char*)malloc( traceControl_p->siz_msg );
+    local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
+    params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
     printf("   idx              us_tod        tsc TID lv   tid r msg\n");
     printf("------ ------------------- ---------- --- -- ----- - -------------------\n");

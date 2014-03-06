@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.54 $$Date: 2014-03-06 18:20:38 $";
+    rev="$Revision: 1.55 $$Date: 2014-03-06 22:15:14 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -49,7 +49,7 @@ tests:  (use %s show after test)\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
  test-compare   compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
  test-threads   threading\n\
- trace <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
+ TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
 "
 
 #if __SIZEOF_LONG__ == 8
@@ -521,10 +521,25 @@ extern  int        optind;         /* for getopt */
     else if (strcmp(cmd,"tids") == 0) 
     {   unsigned ii;
 	traceInit();
+#       define UNDERLINE "----------------------------------------------"
+	printf("%*s %*s %*s %*s %*s\n"
+	       , 3, "TID"
+	       , (int)sizeof(traceNamLvls_p[0].name), "NAME"
+	       , 18, "maskM"
+	       , 18, "maskS"
+	       , 18, "maskT"
+	       );
+	printf("%.*s %.*s %.*s %.*s %.*s\n"
+	       , 3, UNDERLINE
+	       , (int)sizeof(traceNamLvls_p[0].name), UNDERLINE
+	       , 18, UNDERLINE
+	       , 18, UNDERLINE
+	       , 18, UNDERLINE
+	       );
 	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	{
 	    if (traceNamLvls_p[ii].name[0] != '\0')
-	    {   printf("%3d %*s 0x%16" LX " 0x%16" LX " 0x%16" LX "\n"
+	    {   printf("%3d %*s 0x%016" LX " 0x%016" LX " 0x%016" LX "\n"
 		       , ii, (int)sizeof(traceNamLvls_p->name)
 		       , traceNamLvls_p[ii].name
 		       , traceNamLvls_p[ii].M
@@ -534,7 +549,7 @@ extern  int        optind;         /* for getopt */
 	    }
 	}
     }
-    else if (strcmp(cmd,"trace") == 0)
+    else if (strcmp(cmd,"TRACE") == 0)
     {   
 	switch (argc - optind)
 	{

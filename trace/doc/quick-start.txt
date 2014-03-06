@@ -1,0 +1,10 @@
+Quick start for TRACE (version 3):
+
+    - get the SW and cd to it.
+    - make OUT=$PWD    # this should create 1 or 2 Linux*/bin directories
+    - export TRACE_NAME=TRACE
+    - Linux+*/bin/trace_cntl test
+    - Linux+*/bin/trace_cntl show
+
+After that, just poke around and ... ?have fun? :)
+

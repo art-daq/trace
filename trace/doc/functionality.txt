@@ -11,7 +11,7 @@ The c11 and c++11 standards give:
          processor cannot do it) and the only choice would be to do a system
          call to get the OS involved then I would not implement trace on
          this platform.
-  c)* varargs macros
+  c)* {name,anonymous} variadic macros (varargs macros)
   d)* braced-groups within expressions
   e)* long long with printf "ll"
 

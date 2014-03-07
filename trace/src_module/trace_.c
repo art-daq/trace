@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.15 $$Date: 2014-03-07 04:55:57 $";
+    rev="$Revision: 1.16 $$Date: 2014-03-07 13:40:11 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -20,12 +20,6 @@
 #include <asm-generic/uaccess.h>/* copy_to_user */
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
 #include <trace/events/irq.h>	/*  */
-
-
-static int        entries=50000;	// forward decl
-static int        fmtmax=128;	// forward decl
-static int        argsmax=10;	// forward decl
-static int        namtblents=200;	// forward decl
 #define TRACE_IMPL		// implement traceInit
 #include "trace.h"
 
@@ -39,20 +33,16 @@ EXPORT_SYMBOL( traceCntl );
 
 
 // ls /sys/module/TRACE/parameters
-//static int        entries=TRACE_DFLT_NUM_ENTRIES;
-module_param(     entries, int, 0444 );
-MODULE_PARM_DESC( entries, "The number for entries in the circular buffer - default 128K" );
+module_param(     msgmax,  int, 0444 ); // defined in trace.h
+MODULE_PARM_DESC( msgmax,  "Character beyond this length will be discarded" );
 
-//static int        fmtmax=TRACE_DFLT_MAX_MSG_SZ;
-module_param(     fmtmax,  int, 0444 );
-MODULE_PARM_DESC( fmtmax,  "Character beyond this length will be discarded" );
-
-//static int        argsmax=TRACE_DFLT_MAX_PARAMS;
-module_param(     argsmax, int, 0444 );
+module_param(     argsmax, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( argsmax, "Maximum number of arguments that will be stored" );
 
-//static int        namtblents=TRACE_DFLT_NAMTBL_ENTS;
-module_param(     namtblents, int, 0444 );
+module_param(     numents, int, 0444 ); // defined in trace.h
+MODULE_PARM_DESC( numents, "The number for entries in the circular buffer" );
+
+module_param(     namtblents, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( namtblents, "Number of name table entries" );
 
 

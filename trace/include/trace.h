@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.54 $$Date: 2014-03-07 17:53:13 $"
+#define TRACE_REV  "$Revision: 1.55 $$Date: 2014-03-07 21:17:57 $"
 
 #ifndef __KERNEL__
 
@@ -419,13 +419,13 @@ static int traceCntl( int nargs, const char *cmd, ... )
     */
 #  ifndef __KERNEL__
     if (strncmp(cmd,"file",4) == 0)
-    {	traceFile = va_arg(ap,char*);
+    {	traceFile = va_arg(ap,char*);/* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
 	traceInit();		/* force (re)init */
 	va_end(ap); return (0);
     }
     else
     if (strncmp(cmd,"name",4) == 0)/*THIS MAY/SHOULD BE MOVED DOWN W/ THE REST*/
-    {	traceName = va_arg(ap,char*);
+    {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
 	if (traceControl_p == NULL) traceInit();
 	else traceTID = name2tid( traceName );
 	va_end(ap); return (0);

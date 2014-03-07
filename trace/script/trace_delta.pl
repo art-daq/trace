@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.38 $';
-#   $Date: 2014-03-05 15:32:10 $
+$version = '$Revision: 1.39 $';
+#   $Date: 2014-03-07 21:17:57 $
 
 use Time::Local; # timelocal()
 
@@ -376,11 +376,11 @@ for $idx (0..$#col_cntl)
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
-                \$str = strftime( \"%a %H:%M:%S.\$useconds\", localtime(\$seconds) );
-                \$out_line .= sprintf( \"%*s\", length(\$data), \$str );
+                \$str = strftime( \"%m/%d %H:%M:%S.\$useconds\", localtime(\$seconds) );
+                \$out_line .= sprintf( \"%*s\", 22, \$str );
 	    }
             else
-            {   \$out_line .= \$data; # delta will come after
+            {   \$out_line .= sprintf( \"%*s\", 22, \$data ); # delta will come after
             }";
 	}
 	else
@@ -469,11 +469,11 @@ for $idx (0..$#col_cntl)
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
-                \$str = strftime( \"%a %H:%M:%S.\$useconds\", localtime(\$seconds) );
-                \$out_line .= sprintf( \"%*s\", length(\$data), \$str );
+                \$str = strftime( \"%m/%d %H:%M:%S.\$useconds\", localtime(\$seconds) );
+                \$out_line .= sprintf( \"%*s\", 22, \$str );
 	    }
             else
-            {   \$out_line .= \$data; # delta was before
+            {   \$out_line .= sprintf( \"%*s\", 22,\$data ); # delta was before
             }";
 	}
 	else

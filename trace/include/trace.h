@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.51 $$Date: 2014/03/07 04:55:57 $"
+#define TRACE_REV  "$Revision: 1.52 $$Date: 2014/03/07 13:40:11 $"
 
 #ifndef __KERNEL__
 
@@ -245,6 +245,12 @@ static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
 static int                      traceInit( void );
 static void                     traceInitNames( void );
 static uint32_t                 name2tid( const char *name );
+#ifdef __KERNEL__         /* i.e. defined(__KERNEL__) && defined(TRACE_IMPL) */
+static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
+static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
+static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
+static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
+#endif
 #endif
 
 #define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
@@ -499,6 +505,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
     return (0);
 }   /* traceCntl */
 
+
 #ifndef __KERNEL__
 static struct traceControl_s *trace_mmap_file( const char *_file, int      memlen )
 {
@@ -570,7 +577,7 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 static int traceInit(void)
 {
     int         memlen;
-    uint32_t    numparams_=0, msgsiz_=0, numents_=0, namtblents_=0;
+    uint32_t    msgmax_=0, argsmax_=0, numents_=0, namtblents_=0;
 #   ifndef __KERNEL__
     int         activate=0;
     const char *_file;
@@ -580,8 +587,8 @@ static int traceInit(void)
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
     if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
     if (!((_name=getenv("TRACE_NAME"))&&(activate=1))) _name=traceName;
-    ((cp=getenv("TRACE_NUMPARAMS")) &&(numparams_ =strtoul(cp,NULL,0))&&(activate=1))||(numparams_ =TRACE_DFLT_MAX_PARAMS);
-    ((cp=getenv("TRACE_MSGSIZ"))    &&(msgsiz_    =strtoul(cp,NULL,0))&&(activate=1))||(msgsiz_    =TRACE_DFLT_MAX_MSG_SZ);
+    ((cp=getenv("TRACE_MSGMAX"))    &&(msgmax_    =strtoul(cp,NULL,0))&&(activate=1))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
+    ((cp=getenv("TRACE_ARGSMAX")) &&(argsmax_ =strtoul(cp,NULL,0))&&(activate=1))||(argsmax_ =TRACE_DFLT_MAX_PARAMS);
     ((cp=getenv("TRACE_NUMENTS"))   &&(numents_   =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
     ((cp=getenv("TRACE_NAMTBLENTS"))&&(namtblents_=strtoul(cp,NULL,0))&&(activate=1))||(namtblents_=TRACE_DFLT_NAMTBL_ENTS);
 
@@ -590,7 +597,7 @@ static int traceInit(void)
 	return (0);
     }
 
-    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgsiz_, numparams_, numents_ );
+    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
 
     traceControl_p = trace_mmap_file( _file, memlen );
     if (traceControl_p == &traceControl)
@@ -599,13 +606,13 @@ static int traceInit(void)
     tracePid = getpid();
 #   else
     const char *_name="KERNEL";
-    numents_      =entries;	/* module_param */
-    msgsiz_       =fmtmax;	/* module_param */
-    numparams_    =argsmax;	/* module_param */
+    msgmax_       =msgmax;	/* module_param */
+    argsmax_    =argsmax;	/* module_param */
+    numents_      =numents;	/* module_param */
     namtblents_   =namtblents;	/* module_param */
-    printk("numents_=%d msgsiz_=%d numparams_=%d namtblents_=%d\n"
-	   ,numents_,   msgsiz_,   numparams_,   namtblents );
-    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgsiz_, numparams_, numents_ );
+    printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
+	   ,numents_,   msgmax_,   argsmax_,   namtblents );
+    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
     traceControl_p = (struct traceControl_s *)vmalloc( memlen );
     traceControl_p->trace_initialized = 0;
 #   endif
@@ -621,9 +628,9 @@ static int traceInit(void)
     {
 	strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
 	traceControl_p->version_string[sizeof(traceControl_p->version_string)-1] = '\0';
-	traceControl_p->num_params        = numparams_;
-	traceControl_p->siz_msg           = msgsiz_;
-	traceControl_p->siz_entry         = entSiz( msgsiz_, numparams_ );
+	traceControl_p->num_params        = argsmax_;
+	traceControl_p->siz_msg           = msgmax_;
+	traceControl_p->siz_entry         = entSiz( msgmax_, argsmax_ );
 	traceControl_p->num_entries       = numents_;
 	traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % numents_);
 	traceControl_p->num_namLvlTblEnts = namtblents_;

@@ -25,13 +25,13 @@ that later.
 The env.vars. are:
 TRACE_FILE  -- location of the trace file to be used (created if it does
                not exist) -- the default is /tmp/trace_buffer_$USER
-TRACE_NAME -- "TRACE NAME" for the program (more on this later) --
+TRACE_NAME  -- "TRACE NAME" for the program (more on this later) --
                the default is "TRACE"
-TRACE_NUMPARAMS -- the max number of parameter that will be saved --
-                   default 10.
-TRACE_MSGSIZ    -- the max bytes of _format_spec_ that will be saved --
-                   default 128.
-TRACE_NUMENTS   -- the number of entries in the buffer -- default 50000
+TRACE_MSGMAX     -- the max bytes of _format_spec_ that will be saved --
+                    default 128.
+TRACE_ARGSMAX    -- the max number of parameter that will be saved --
+                    default 10.
+TRACE_NUMENTS    -- the number of entries in the buffer -- default 50000
 TRACE_NAMTBLENTS -- the number of different possible trace names (including
                     a special one which is used if all the other entries are
                     used) -- default 20.
@@ -39,6 +39,8 @@ TRACE_NAMTBLENTS -- the number of different possible trace names (including
 The last four are used when a file is created.  Once the file is create,
 the parameters cannot be changed -- delete the file or use a different one.
 
+Note: I have only tested what I believe are reasonable values for the last
+      env.vars.
 
 The trace_cntl program can be used to create the file. For example, one could
 do:

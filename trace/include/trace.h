@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.48 $$Date: 2014-03-06 18:20:38 $"
+#define TRACE_REV  "$Revision: 1.49 $$Date: 2014-03-07 03:54:56 $"
 
 #ifndef __KERNEL__
 
@@ -199,17 +199,18 @@ struct traceControl_s
 };
 
 struct traceEntryHdr_s
-{   struct timeval time;
-    TRACE_ENT_FILLER	/* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
-    int32_t        lvl;
-    pid_t          pid;   /* system info */
-    pid_t          tid;   /* system info - "thread id" */
-    uint32_t       TID;   /* Trace ID ==> idx into lvlTbl, namTbl */
+{   struct timeval time;/*T*/
+    TRACE_ENT_FILLER	     /* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
+    int32_t        lvl; /*lL*/
+    pid_t          pid; /*pP system info */
+    pid_t          tid; /*i system info - "thread id" */
+    uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
     /* int32_t       cpu; -- kernel sched switch will indicat this info */
-    uint32_t       get_idxCnt_retries;
-    uint32_t       param_bytes;
-    uint64_t       tsc;
-};
+    uint32_t       get_idxCnt_retries;/*rR*/
+    uint32_t       param_bytes;       /*bB*/
+    uint64_t       tsc;               /*t*/
+};                                    /*mM -- NO, ALWAY PRINTED LAST! formated Message */
+                                      /*nN  index */
 
 struct traceNamLvls_s
 {   uint64_t      M;

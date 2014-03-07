@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.59 $$Date: 2014-03-07 17:53:13 $";
+    rev="$Revision: 1.60 $$Date: 2014-03-07 20:04:08 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -70,10 +70,10 @@ void* thread_func(void *arg)
 {
     long loops=(long)arg;
     char path[PATH_MAX];
-# if 1
+# if   0   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
     snprintf(path,PATH_MAX,"%s/.trace_buffer_%ld",getenv("HOME"),(long)syscall(SYS_GETTID) );
     TRACE_CNTL( "file", path );
-# else
+# elif 0
     snprintf(path,PATH_MAX,"T%ld",syscall(SYS_GETTID) );
     TRACE_CNTL( "name", path );
 # endif

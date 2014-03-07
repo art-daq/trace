@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.52 $$Date: 2014-03-07 13:40:11 $"
+#define TRACE_REV  "$Revision: 1.53 $$Date: 2014-03-07 15:05:17 $"
 
 #ifndef __KERNEL__
 
@@ -260,7 +260,7 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
     + siz_msg )
 #define traceMemLen( siz_cntl_pages, num_namLvlTblEnts, siz_msg, num_params, num_entries ) \
     (( siz_cntl_pages							\
-      + (uint32_t)sizeof(struct traceNamLvls_s)*num_namLvlTblEnts	\
+      + namtblSiz( num_namLvlTblEnts )					\
       + entSiz(siz_msg,num_params)*num_entries				\
       + TRACE_PAGESIZE )								\
      & ~(TRACE_PAGESIZE-1) )
@@ -611,18 +611,15 @@ static int traceInit(void)
     numents_      =numents;	/* module_param */
     namtblents_   =namtblents;	/* module_param */
     printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
-	   ,numents_,   msgmax_,   argsmax_,   namtblents );
+	   ,numents_,   msgmax_,   argsmax_,   namtblents_ );
     memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
     traceControl_p = (struct traceControl_s *)vmalloc( memlen );
     traceControl_p->trace_initialized = 0;
 #   endif
 
-
+    /* this is needed in order to initNames */
     traceNamLvls_p = (struct traceNamLvls_s *)			\
 	((unsigned long)traceControl_p+cntlPagesSiz());
-
-    traceEntries_p = (struct traceEntryHdr_s *)	\
-	((unsigned long)traceNamLvls_p+namtblSiz(namtblents_));
 
     if (traceControl_p->trace_initialized == 0)
     {
@@ -642,6 +639,13 @@ static int traceInit(void)
 	traceControl_p->mode.bits.M       = 1;
 	traceInitNames();
     }
+
+    /* this depends on the actual value of the num_namLvlTblEnts which
+       may be different from the "calculated" value WHEN the buffer has
+       previously been configured */
+    traceEntries_p = (struct traceEntryHdr_s *)	\
+	((unsigned long)traceNamLvls_p+namtblSiz(traceControl_p->num_namLvlTblEnts));
+
     traceTID = name2tid( _name );
     return (0);
 }   /* traceInit */

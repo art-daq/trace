@@ -29,6 +29,9 @@ Macro
 
 Trace vs. other utilities:
 
+   Debugger -- one could get simply print-output info via examine from with
+       debugger.  TRACE allows the "print-output" while the program is executing
+       in the production environment.
    The most basic trace example would, on the surface, look like something
    a profiling utility would do:
      sample points near the beginning and end of some function.

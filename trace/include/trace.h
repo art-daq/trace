@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.49 $$Date: 2014/03/07 03:54:56 $"
+#define TRACE_REV  "$Revision: 1.50 $$Date: 2014/03/07 04:24:44 $"
 
 #ifndef __KERNEL__
 
@@ -570,7 +570,7 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
 static int traceInit(void)
 {
     int         memlen;
-    uint32_t    _numparams=0, _msgsiz=0, _numents=0, _namtblents=0;
+    uint32_t    numparams_=0, msgsiz_=0, numents_=0, namtblents_=0;
 #   ifndef __KERNEL__
     int         activate=0;
     const char *_file;
@@ -580,17 +580,17 @@ static int traceInit(void)
     /*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
     if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
     if (!((_name=getenv("TRACE_NAME"))&&(activate=1))) _name=traceName;
-    ((cp=getenv("TRACE_NUMPARAMS")) &&(_numparams =strtoul(cp,NULL,0))&&(activate=1))||(_numparams =TRACE_DFLT_MAX_PARAMS);
-    ((cp=getenv("TRACE_MSGSIZ"))    &&(_msgsiz    =strtoul(cp,NULL,0))&&(activate=1))||(_msgsiz    =TRACE_DFLT_MAX_MSG_SZ);
-    ((cp=getenv("TRACE_NUMENTS"))   &&(_numents   =strtoul(cp,NULL,0))&&(activate=1))||(_numents   =TRACE_DFLT_NUM_ENTRIES);
-    ((cp=getenv("TRACE_NAMTBLENTS"))&&(_namtblents=strtoul(cp,NULL,0))&&(activate=1))||(_namtblents=TRACE_DFLT_NAMTBL_ENTS);
+    ((cp=getenv("TRACE_NUMPARAMS")) &&(numparams_ =strtoul(cp,NULL,0))&&(activate=1))||(numparams_ =TRACE_DFLT_MAX_PARAMS);
+    ((cp=getenv("TRACE_MSGSIZ"))    &&(msgsiz_    =strtoul(cp,NULL,0))&&(activate=1))||(msgsiz_    =TRACE_DFLT_MAX_MSG_SZ);
+    ((cp=getenv("TRACE_NUMENTS"))   &&(numents_   =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
+    ((cp=getenv("TRACE_NAMTBLENTS"))&&(namtblents_=strtoul(cp,NULL,0))&&(activate=1))||(namtblents_=TRACE_DFLT_NAMTBL_ENTS);
 
     if (!activate)
     {   traceControl_p=&traceControl;
 	return (0);
     }
 
-    memlen = traceMemLen( cntlPagesSiz(), _namtblents, _msgsiz, _numparams, _numents );
+    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgsiz_, numparams_, numents_ );
 
     traceControl_p = trace_mmap_file( _file, memlen );
     if (traceControl_p == &traceControl)
@@ -599,11 +599,11 @@ static int traceInit(void)
     tracePid = getpid();
 #   else
     const char *_name="KERNEL";
-    _namtblents   =TRACE_DFLT_NAMTBL_ENTS;
-    _msgsiz       =TRACE_DFLT_MAX_MSG_SZ;
-    _numparams    =TRACE_DFLT_MAX_PARAMS;
-    _numents      =TRACE_DFLT_NUM_ENTRIES;
-    memlen = traceMemLen( cntlPagesSiz(), _namtblents, _msgsiz, _numparams, _numents );
+    namtblents_   =TRACE_DFLT_NAMTBL_ENTS;
+    msgsiz_       =TRACE_DFLT_MAX_MSG_SZ;
+    numparams_    =TRACE_DFLT_MAX_PARAMS;
+    numents_      =TRACE_DFLT_NUM_ENTRIES;
+    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgsiz_, numparams_, numents_ );
     traceControl_p = (struct traceControl_s *)vmalloc( memlen );
     traceControl_p->trace_initialized = 0;
 #   endif
@@ -613,18 +613,18 @@ static int traceInit(void)
 	((unsigned long)traceControl_p+cntlPagesSiz());
 
     traceEntries_p = (struct traceEntryHdr_s *)	\
-	((unsigned long)traceNamLvls_p+namtblSiz(_namtblents));
+	((unsigned long)traceNamLvls_p+namtblSiz(namtblents_));
 
     if (traceControl_p->trace_initialized == 0)
     {
 	strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
 	traceControl_p->version_string[sizeof(traceControl_p->version_string)-1] = '\0';
-	traceControl_p->num_params        = _numparams;
-	traceControl_p->siz_msg           = _msgsiz;
-	traceControl_p->siz_entry         = entSiz( _msgsiz, _numparams );
-	traceControl_p->num_entries       = _numents;
-	traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % _numents);
-	traceControl_p->num_namLvlTblEnts = _namtblents;
+	traceControl_p->num_params        = numparams_;
+	traceControl_p->siz_msg           = msgsiz_;
+	traceControl_p->siz_entry         = entSiz( msgsiz_, numparams_ );
+	traceControl_p->num_entries       = numents_;
+	traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % numents_);
+	traceControl_p->num_namLvlTblEnts = namtblents_;
 	traceControl_p->memlen            = memlen;
 	traceControl_p->trace_initialized = 1;
 

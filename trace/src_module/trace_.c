@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.13 $$Date: 2014/02/27 05:41:23 $";
+    rev="$Revision: 1.14 $$Date: 2014/03/07 04:24:44 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -37,12 +37,18 @@ EXPORT_SYMBOL( traceCntl );
 static int        entries;
 module_param(     entries, int, 0444 );
 MODULE_PARM_DESC( entries, "The number for entries in the circular buffer - default 128K" );
+
 static int        fmtmax;
 module_param(     fmtmax,  int, 0444 );
 MODULE_PARM_DESC( fmtmax,  "Character beyond this length will be discarded" );
+
 static int        argsmax;
 module_param(     argsmax, int, 0444 );
 MODULE_PARM_DESC( argsmax, "Maximum number of arguments that will be stored" );
+
+static int        namtblents;
+module_param(     namtblents, int, 0444 );
+MODULE_PARM_DESC( namtblents, "Number of name table entries" );
 
 
 static int trace_proc_buffer_mmap(  struct file              *file

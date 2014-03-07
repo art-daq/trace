@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.55 $$Date: 2014/03/06 22:15:14 $";
+    rev="$Revision: 1.56 $$Date: 2014/03/07 03:54:56 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -158,7 +158,7 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
     if (numArgs < maxArgs) sizes_out[numArgs].push=0;
 }
 
-void traceShow()
+void traceShow( char *ospec, int do_heading )
 {
     uint32_t rdIdx;
     uint32_t max;
@@ -173,6 +173,7 @@ void traceShow()
     struct sizepush       * params_sizes;
     uint8_t               * ent_param_ptr;
     uint8_t               * lcl_param_ptr;
+    char                  * sp; /*spec ptr*/
 
     traceInit();
     rdIdx=traceControl_p->wrIdxCnt;
@@ -182,23 +183,54 @@ void traceShow()
     local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
-    printf("   idx              us_tod        tsc   tid TID lv r msg\n");
-    printf("------ ------------------- ---------- ----- --- -- - -------------------\n");
+    if (do_heading)
+    {   sp = ospec;
+	for (sp=ospec; *sp; ++sp)
+	{
+	    switch (*sp)
+	    {
+	    case 'N': printf("   idx "); break;
+	    case 'T': printf("             us_tod "); break;
+	    case 't': printf("       tsc "); break;
+	    case 'i': printf("  tid "); break;
+	    case 'I': printf("TID "); break;
+	    case 'L': printf("lv "); break;
+	    case 'B': printf("B "); break;
+	    case 'P': printf("  pid "); break;
+	    case 'R': printf("r "); break;
+	    }
+	}
+	printf("msg\n");
+	sp = ospec;
+	for (sp=ospec; *sp; ++sp)
+	{
+	    switch (*sp)
+	    {
+	    case 'N': printf("------ "); break;
+	    case 'T': printf("------------------- "); break;
+	    case 't': printf("---------- "); break;
+	    case 'i': printf("----- "); break;
+	    case 'I': printf("--- "); break;
+	    case 'L': printf("-- "); break;
+	    case 'B': printf("-- "); break;
+	    case 'P': printf("------ "); break;
+	    case 'R': printf("- "); break;
+	    }
+	}
+	printf("-----------------------------\n");
+    }
     for (printed=0; printed<max; ++printed)
     {   unsigned seconds, useconds;
 	rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	myEnt_p = idxCnt2entPtr( rdIdx );
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
-
-	/* MUST change all %s possibilities to %p */
-	/* MUST change %* beyond num_params to %% */
 	msg_p[traceControl_p->siz_msg - 1] = '\0';
 	strcpy( local_msg, msg_p );
 	get_arg_sizes(  local_msg, traceControl_p->num_params
 		      , myEnt_p->param_bytes, params_sizes );
 
-        if        (  ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
+	if        (  ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
 		   ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
 	{   seconds  = myEnt_p->time.tv_sec;
 	    useconds = myEnt_p->time.tv_usec;
@@ -242,13 +274,24 @@ void traceShow()
 	    }
 	    param_va_ptr = (void*)local_params;
 	}
-
-	printf("%6u %13u%06u %10u %5d %3u %2d "
-	       , printed, seconds, useconds
-	       , (unsigned)myEnt_p->tsc
-	       , myEnt_p->tid, myEnt_p->TID, myEnt_p->lvl );
-	if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
-	else                             printf( ". " );
+	sp = ospec;
+	for (sp=ospec; *sp; ++sp)
+	{
+	    switch (*sp)
+	    {
+	    case 'N': printf("%6u ", printed ); break;
+	    case 'T': printf("%13u%06u ", seconds, useconds); break;
+	    case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
+	    case 'i': printf("%5d ", myEnt_p->tid); break;
+	    case 'I': printf("%3u ", myEnt_p->TID); break;
+	    case 'L': printf("%2d ", myEnt_p->lvl); break;
+	    case 'B': printf("%u ", myEnt_p->param_bytes); break;
+	    case 'P': printf("%6d ", myEnt_p->pid); break;
+	    case 'R':
+		if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
+		else                             printf( ". " );
+	    }
+	}
 
 	/*typedef unsigned long parm_array_t[1];*/
 	/*va_start( ap, params_p[-1] );*/
@@ -257,8 +300,7 @@ void traceShow()
 	    va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
 	    vprintf( local_msg, ap );
 	}
-
-	    printf("\n");
+	printf("\n");
     }
 }   /*traceShow*/
 
@@ -468,8 +510,9 @@ extern  int        optind;         /* for getopt */
     }
 #   endif
     else if (strcmp(cmd,"show") == 0) 
-    {
-	traceShow();
+    {   char *ospec=getenv("TRACE_SHOW");
+	if (!ospec) ospec="NTtiILR";
+	traceShow(ospec,1);
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.60 $$Date: 2014/03/07 20:04:08 $";
+    rev="$Revision: 1.61 $$Date: 2014/03/07 21:17:57 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -66,17 +66,28 @@ uint64_t get_us_timeofday()
     return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
 }
 
+static int trace_thread_option=0;
+
 void* thread_func(void *arg)
 {
     long loops=(long)arg;
-    char path[PATH_MAX];
-# if   0   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
-    snprintf(path,PATH_MAX,"%s/.trace_buffer_%ld",getenv("HOME"),(long)syscall(SYS_GETTID) );
-    TRACE_CNTL( "file", path );
-# elif 0
-    snprintf(path,PATH_MAX,"T%ld",syscall(SYS_GETTID) );
-    TRACE_CNTL( "name", path );
-# endif
+    char tmp[PATH_MAX];
+    long tid;
+    if      (trace_thread_option == 1)
+    {   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
+	tid = (long)syscall(SYS_GETTID);
+	snprintf( tmp, sizeof(tmp),"%s/.trace_buffer_%ld",getenv("HOME"),tid );
+	printf("%ld: traceControl_p=%p\n",tid,(void*)traceEntries_p);
+	TRACE_CNTL( "file", tmp );
+    }
+    else if (trace_thread_option == 2)
+    {   tid = (long)syscall(SYS_GETTID);
+	snprintf( tmp, sizeof(tmp), "T%ld", tid );
+	printf( "setting name to %s\n",tmp );
+	printf("%ld: traceControl_p=%p\n",tid,(void*)traceEntries_p);
+	TRACE_CNTL( "name", tmp );
+    }
+
     while(loops-- > 0)
     {   TRACE( 0, "loops=%ld", loops );
 	TRACE( 0, "loops=%ld", --loops );
@@ -190,7 +201,7 @@ void traceShow( char *ospec, int do_heading )
 	    switch (*sp)
 	    {
 	    case 'N': printf("   idx "); break;
-	    case 'T': printf("             us_tod "); break;
+	    case 'T': printf("          us_tod "); break;
 	    case 't': printf("       tsc "); break;
 	    case 'i': printf("  tid "); break;
 	    case 'I': printf("TID "); break;
@@ -207,7 +218,7 @@ void traceShow( char *ospec, int do_heading )
 	    switch (*sp)
 	    {
 	    case 'N': printf("------ "); break;
-	    case 'T': printf("------------------- "); break;
+	    case 'T': printf("---------------- "); break;
 	    case 't': printf("---------- "); break;
 	    case 'i': printf("----- "); break;
 	    case 'I': printf("--- "); break;
@@ -280,7 +291,7 @@ void traceShow( char *ospec, int do_heading )
 	    switch (*sp)
 	    {
 	    case 'N': printf("%6u ", printed ); break;
-	    case 'T': printf("%13u%06u ", seconds, useconds); break;
+	    case 'T': printf("%10u%06u ", seconds, useconds); break;
 	    case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 	    case 'i': printf("%5d ", myEnt_p->tid); break;
 	    case 'I': printf("%3u ", myEnt_p->TID); break;
@@ -312,13 +323,16 @@ int main(  int	argc
 extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
+	int	   do_heading=1;
 
-    while ((opt=getopt(argc,argv,"?hn:f:")) != -1)
+    while ((opt=getopt(argc,argv,"?hn:f:x:H")) != -1)
     {   switch (opt)
         { /* '?' is also what you get w/ "invalid option -- -" */
-        case '?': case 'h': printf(USAGE);exit(0); break;
-	case 'n': setenv("TRACE_NAME",optarg,1);   break;
-	case 'f': setenv("TRACE_FILE",optarg,1);   break;
+        case '?': case 'h': printf(USAGE);exit(0);           break;
+	case 'n': setenv("TRACE_NAME",optarg,1);             break;
+	case 'f': setenv("TRACE_FILE",optarg,1);             break;
+	case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
+	case 'H': do_heading=0;                              break;
         }
     }
     if (argc - optind < 1)
@@ -494,7 +508,10 @@ extern  int        optind;         /* for getopt */
     {   unsigned ii;
 	pthread_t threads[NUMTHREADS];
 	long loops=10000;
-	if (argc == 3) loops=strtoul(argv[optind+1],NULL,0);
+	if ((argc-optind)==1)
+	{   loops=strtoul(argv[optind],NULL,0);
+	    printf("loops set to %ld\n", loops );
+	}
 	loops -= loops%4;	/* assuming thread does 4 TRACEs per loop */
 	TRACE( 0, "before pthread_create - loops=%lu (must be multiple of 4)", loops );
 	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
@@ -506,13 +523,12 @@ extern  int        optind;         /* for getopt */
 	}
 	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
 	TRACE( 0, "after pthread_join" );
-	sleep( 10 ); /* in lieu of at_exit close files */
     }
 #   endif
     else if (strcmp(cmd,"show") == 0) 
     {   char *ospec=getenv("TRACE_SHOW");
 	if (!ospec) ospec="NTtiILR";
-	traceShow(ospec,1);
+	traceShow(ospec,do_heading);
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {

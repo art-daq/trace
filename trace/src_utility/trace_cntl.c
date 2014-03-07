@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.57 $$Date: 2014/03/07 13:40:11 $";
+    rev="$Revision: 1.58 $$Date: 2014/03/07 13:46:20 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -309,18 +309,16 @@ int main(  int	argc
 	 , char	*argv[] )
 {
 	const char *cmd;
-	int        *opt_global=0;  /* globally set all entries in the namtbl */
 extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
 
-    while ((opt=getopt(argc,argv,"?hn:f:g")) != -1)
+    while ((opt=getopt(argc,argv,"?hn:f:")) != -1)
     {   switch (opt)
         { /* '?' is also what you get w/ "invalid option -- -" */
         case '?': case 'h': printf(USAGE);exit(0); break;
 	case 'n': setenv("TRACE_NAME",optarg,1);   break;
 	case 'f': setenv("TRACE_FILE",optarg,1);   break;
-	case 'g': opt_global=1;                    break;
         }
     }
     if (argc - optind < 1)

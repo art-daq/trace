@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.58 $$Date: 2014-03-07 13:46:20 $";
+    rev="$Revision: 1.59 $$Date: 2014-03-07 17:53:13 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -522,7 +522,9 @@ extern  int        optind;         /* for getopt */
 	used=((wrSav<=traceControl_p->num_entries)
 	      ?wrSav
 	      :traceControl_p->num_entries);
-	printf("trace_initialized =%d\n"
+	printf("trace.h rev       = %s\n"
+	       "revision          = %s\n"
+	       "trace_initialized =%d\n"
 	       "mode              =0x%x\n"
 	       "writeIdxCount     =0x%08x entries used: %u\n"
                "largestMultiple   =0x%08x\n"
@@ -540,6 +542,8 @@ extern  int        optind;         /* for getopt */
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u\n"
+	       , TRACE_REV
+	       , traceControl_p->version_string
 	       , traceControl_p->trace_initialized
 	       , traceControl_p->mode.mode
 	       , wrSav, used

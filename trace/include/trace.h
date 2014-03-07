@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.53 $$Date: 2014-03-07 15:05:17 $"
+#define TRACE_REV  "$Revision: 1.54 $$Date: 2014-03-07 17:53:13 $"
 
 #ifndef __KERNEL__
 
@@ -399,9 +399,9 @@ static struct traceControl_s  traceControl;
 
 static int traceCntl( int nargs, const char *cmd, ... )
 {
-    va_list ap;
+    va_list  ap;
+    unsigned ii;
 #  if 0 && !defined(__KERNEL__)
-    int ii;
     va_start( ap, cmd );
     for (ii=0; ii<nargs; ++ii)
 	printf("arg%u=0x%llx\n",ii,va_arg(ap,unsigned long long));
@@ -448,28 +448,80 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    traceControl_p->trigOffMode.mode = modeMsk;
 	}
     }
-    else if (strcmp(cmd,"lvlmskM") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    else if (strncmp(cmd,"lvlmskM",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
-	traceNamLvls_p[traceTID].M = lvl;
+	if (cmd[7] == 'g')
+	{
+	    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+		traceNamLvls_p[ii].M = lvl;
+	} else 	traceNamLvls_p[traceTID].M = lvl;
     }
-    else if (strcmp(cmd,"lvlmskS") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
-    {   
+    else if (strncmp(cmd,"lvlmskS",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    {   unsigned ee;
 	uint64_t lvl=va_arg(ap,uint64_t);
-#       ifndef __KERNEL__
-	if (  (strcmp(traceNamLvls_p[traceTID].name,"KERNEL")==0)
-	    &&(lvl&0xff000000) )
-	{   fprintf(stderr, "not allowed to set some level bits which could "
-		    "cause KERNEL issues\n");
-	} else
-#       endif
-	{   traceNamLvls_p[traceTID].S = lvl;
+	if (cmd[7] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
+	else               { ii=traceTID; ee=traceTID+1; }
+	for ( ; ii<ee; ++ii)
+	{
+#         ifndef __KERNEL__
+	    if (  (strcmp(traceNamLvls_p[ii].name,"KERNEL")==0)
+		&&(lvl&0xff000000) )
+	    {   fprintf(stderr, "not allowed to set some level bits which could "
+			"cause KERNEL issues\n");
+	    } else
+#         endif
+	    {   traceNamLvls_p[ii].S = lvl;
+	    }
 	}
     }
-    else if (strcmp(cmd,"lvlmskT") == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    else if (strncmp(cmd,"lvlmskT",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
 	uint64_t lvl=va_arg(ap,uint64_t);
-	traceNamLvls_p[traceTID].T = lvl;
+	if (cmd[7] == 'g')
+	{
+	    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+		traceNamLvls_p[ii].T = lvl;
+	} else 	traceNamLvls_p[traceTID].T = lvl;
+    }
+    else if (strncmp(cmd,"lvlset",6) == 0)   /* takes 3 args: M S T ((0 val ==> no-op) */
+    {   uint64_t lvlm, lvls, lvlt;
+	unsigned ee;
+	if (nargs != 3) { TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs); va_end(ap); return (-1); }
+	if (cmd[6] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
+	else               { ii=traceTID; ee=traceTID+1; }
+	lvlm=va_arg(ap,uint64_t);
+	lvls=va_arg(ap,uint64_t);
+	lvlt=va_arg(ap,uint64_t);
+	for ( ; ii<ee; ++ii)
+	{
+#         ifndef __KERNEL__
+	    if (  (strcmp(traceNamLvls_p[ii].name,"KERNEL")==0)
+		&&(lvls&0xff000000) )
+	    {   fprintf(stderr, "not allowed to set some level bits which could "
+			"cause KERNEL issues\n");
+	    } else
+#         endif
+	    {   traceNamLvls_p[ii].S |= lvls;
+	    }
+	    traceNamLvls_p[ii].M |= lvlm;
+	    traceNamLvls_p[ii].T |= lvlt;
+	}
+    }
+    else if (strncmp(cmd,"lvlclr",6) == 0)   /* takes 3 args: M S T ((0 val ==> no-op) */
+    {   uint64_t lvlm, lvls, lvlt;
+	unsigned ee;
+	if (nargs != 3) { TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs); va_end(ap); return (-1); }
+	if (cmd[6] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
+	else               { ii=traceTID; ee=traceTID+1; }
+	lvlm=va_arg(ap,uint64_t);
+	lvls=va_arg(ap,uint64_t);
+	lvlt=va_arg(ap,uint64_t);
+	for ( ; ii<ee; ++ii)
+	{   traceNamLvls_p[ii].S &= ~lvls;
+	    traceNamLvls_p[ii].M &= ~lvlm;
+	    traceNamLvls_p[ii].T &= ~lvlt;
+	}
     }
     else if (strcmp(cmd,"mode") == 0)
     {   
@@ -551,6 +603,7 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
     if (rw_p == (void *)-1)
     {   perror( "mmap(NULL,memlen-TRACE_PAGESIZE,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d\n", memlen );
+	close( fd );
 	return (&traceControl);
     }
 
@@ -560,12 +613,20 @@ static struct traceControl_s *trace_mmap_file( const char *_file, int      memle
     if (t_p == (struct traceControl_s *)-1)
     {   perror( "mmap(rw_p-off,TRACE_PAGESIZE,PROT_READ,MAP_PRIVATE,fd,0) error" );
 	printf( "memlen=%d\n", memlen );
+	close( fd );
 	return (&traceControl);
     }
 
     if (rw_p != ((uint8_t*)t_p)+TRACE_PAGESIZE)
 	printf( "traceControl_p=%p rw_p=%p\n",(void*)t_p,rw_p );
 # endif
+    /* The POSIX mmap man page says:
+       The mmap() function shall add an extra reference to the file
+       associated with the file descriptor fildes which is not removed by a
+       subsequent  close() on that file descriptor.  This reference shall
+       be removed when there are no more mappings to the file.
+    */
+    close( fd );
     return (t_p);
 }   /* trace_mmap_file */
 

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.50 $$Date: 2014/03/07 04:24:44 $"
+#define TRACE_REV  "$Revision: 1.51 $$Date: 2014/03/07 04:55:57 $"
 
 #ifndef __KERNEL__
 
@@ -599,10 +599,12 @@ static int traceInit(void)
     tracePid = getpid();
 #   else
     const char *_name="KERNEL";
-    namtblents_   =TRACE_DFLT_NAMTBL_ENTS;
-    msgsiz_       =TRACE_DFLT_MAX_MSG_SZ;
-    numparams_    =TRACE_DFLT_MAX_PARAMS;
-    numents_      =TRACE_DFLT_NUM_ENTRIES;
+    numents_      =entries;	/* module_param */
+    msgsiz_       =fmtmax;	/* module_param */
+    numparams_    =argsmax;	/* module_param */
+    namtblents_   =namtblents;	/* module_param */
+    printk("numents_=%d msgsiz_=%d numparams_=%d namtblents_=%d\n"
+	   ,numents_,   msgsiz_,   numparams_,   namtblents );
     memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgsiz_, numparams_, numents_ );
     traceControl_p = (struct traceControl_s *)vmalloc( memlen );
     traceControl_p->trace_initialized = 0;

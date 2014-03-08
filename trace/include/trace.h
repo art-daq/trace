@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.55 $$Date: 2014-03-07 21:17:57 $"
+#define TRACE_REV  "$Revision: 1.56 $$Date: 2014-03-08 04:43:04 $"
 
 #ifndef __KERNEL__
 
@@ -37,7 +37,7 @@
 #  define TRACE_THREAD_LOCAL thread_local 
 # elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #  include <stdatomic.h>		/* atomic_compare_exchange_weak */
-#  define TRACE_ATOMIC_T          _Atomic(uint32_t)
+#  define TRACE_ATOMIC_T          /*volatile*/ _Atomic(uint32_t)
 #  define TRACE_THREAD_LOCAL      _Thread_local
 # elif defined(__x86_64__) || defined(__i686__) || defined(__i386__)
 #  define TRACE_ATOMIC_T          uint32_t
@@ -225,10 +225,10 @@ extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
 #else
 static struct traceNamLvls_s  traceNamLvls[3];
-static TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
-static TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
-static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
-static TRACE_THREAD_LOCAL const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; opperation when path is on NFS device has not been studied*/
+static /*TRACE_THREAD_LOCAL*/ struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
+static /*TRACE_THREAD_LOCAL*/ struct traceEntryHdr_s *traceEntries_p;
+static /*TRACE_THREAD_LOCAL*/ struct traceControl_s  *traceControl_p=NULL;
+static /*TRACE_THREAD_LOCAL*/ const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
 static TRACE_THREAD_LOCAL const char *traceName="TRACE";
 #endif
 

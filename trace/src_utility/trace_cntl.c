@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.61 $$Date: 2014/03/07 21:17:57 $";
+    rev="$Revision: 1.62 $$Date: 2014/03/08 04:36:02 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -169,7 +169,7 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
     if (numArgs < maxArgs) sizes_out[numArgs].push=0;
 }
 
-void traceShow( char *ospec, int do_heading )
+void traceShow( const char *ospec, int do_heading, int start, unsigned count )
 {
     uint32_t rdIdx;
     uint32_t max;
@@ -184,12 +184,22 @@ void traceShow( char *ospec, int do_heading )
     struct sizepush       * params_sizes;
     uint8_t               * ent_param_ptr;
     uint8_t               * lcl_param_ptr;
-    char                  * sp; /*spec ptr*/
+    const char            * sp; /*spec ptr*/
 
     traceInit();
-    rdIdx=traceControl_p->wrIdxCnt;
-    max=((rdIdx<=traceControl_p->num_entries)
-	 ?rdIdx:traceControl_p->num_entries);
+    if (start == -1)
+    {   rdIdx=traceControl_p->wrIdxCnt;
+	max=((rdIdx<=traceControl_p->num_entries)
+	     ?rdIdx:traceControl_p->num_entries);
+    }
+    else
+    {   rdIdx = start>=traceControl_p->num_entries
+	    ? traceControl_p->num_entries-1
+	    : start;
+	max = count<=traceControl_p->num_entries
+	    ? count
+	    : traceControl_p->num_entries;
+    }
     local_msg    =            (char*)malloc( traceControl_p->siz_msg );
     local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
@@ -324,6 +334,7 @@ extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
 	int	   do_heading=1;
+	unsigned   ii=0;
 
     while ((opt=getopt(argc,argv,"?hn:f:x:H")) != -1)
     {   switch (opt)
@@ -348,8 +359,7 @@ extern  int        optind;         /* for getopt */
 	do { TRACE( 0, "Hello. \"1 2.5 5 10 15\" should be repeated here: %d %.1f %d %d %d",1,2.5,5,10,15 ); } while (loops--);
     }
     else if (strcmp(cmd,"test") == 0)
-    {   unsigned ii;
-	float    ff[10];
+    {   float    ff[10];
 	pid_t	 tid;
 	uint32_t desired, myIdx;
 
@@ -435,8 +445,7 @@ extern  int        optind;         /* for getopt */
 #      endif
     }
     else if (strcmp(cmd,"test-compare") == 0)
-    {   unsigned ii;
-	char     buffer[200];
+    {   char     buffer[200];
 	uint64_t mark;
 	unsigned compares=1000; /* some big number */
 	if (argc == 3) compares=strtoul(argv[optind+1],NULL,0);
@@ -505,8 +514,7 @@ extern  int        optind;         /* for getopt */
     }
 #   ifdef DO_THREADS   /* requires linking with -lpthreads */
     else if (strcmp(cmd,"test-threads") == 0)
-    {   unsigned ii;
-	pthread_t threads[NUMTHREADS];
+    {   pthread_t threads[NUMTHREADS];
 	long loops=10000;
 	if ((argc-optind)==1)
 	{   loops=strtoul(argv[optind],NULL,0);
@@ -526,9 +534,14 @@ extern  int        optind;         /* for getopt */
     }
 #   endif
     else if (strcmp(cmd,"show") == 0) 
-    {   char *ospec=getenv("TRACE_SHOW");
+    {   int start=-1;
+	const char *ospec=getenv("TRACE_SHOW");
 	if (!ospec) ospec="NTtiILR";
-	traceShow(ospec,do_heading);
+	if ((argc-optind)==2)
+	{   start=strtoul(argv[optind],NULL,0);
+	    ii   =strtoul(argv[optind+1],NULL,0);
+	}
+	traceShow(ospec,do_heading,start,ii);
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {
@@ -582,8 +595,7 @@ extern  int        optind;         /* for getopt */
 	       );
     }
     else if (strcmp(cmd,"tids") == 0) 
-    {   unsigned ii;
-	traceInit();
+    {   traceInit();
 #       define UNDERLINE "----------------------------------------------"
 	printf("%*s %*s %*s %*s %*s\n"
 	       , 3, "TID"

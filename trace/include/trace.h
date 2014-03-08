@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.56 $$Date: 2014-03-08 04:43:04 $"
+#define TRACE_REV  "$Revision: 1.57 $$Date: 2014-03-08 15:10:57 $"
 
 #ifndef __KERNEL__
 
@@ -229,12 +229,12 @@ static /*TRACE_THREAD_LOCAL*/ struct traceNamLvls_s  *traceNamLvls_p=&traceNamLv
 static /*TRACE_THREAD_LOCAL*/ struct traceEntryHdr_s *traceEntries_p;
 static /*TRACE_THREAD_LOCAL*/ struct traceControl_s  *traceControl_p=NULL;
 static /*TRACE_THREAD_LOCAL*/ const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
-static TRACE_THREAD_LOCAL const char *traceName="TRACE";
+static /*TRACE_THREAD_LOCAL*/ const char *traceName="TRACE";
 #endif
 
 
 static pid_t                    tracePid=0;
-static TRACE_THREAD_LOCAL int   traceTID=0;  /* idx into lvlTbl, namTbl */
+static /*TRACE_THREAD_LOCAL*/ int   traceTID=0;  /* idx into lvlTbl, namTbl */
 static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
 
 

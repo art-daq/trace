@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.62 $$Date: 2014-03-08 04:36:02 $";
+    rev="$Revision: 1.63 $$Date: 2014-03-09 01:06:40 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -556,6 +556,7 @@ extern  int        optind;         /* for getopt */
 	       "trace_initialized =%d\n"
 	       "mode              =0x%x\n"
 	       "writeIdxCount     =0x%08x entries used: %u\n"
+	       "lock              =%u\n"
                "largestMultiple   =0x%08x\n"
 	       "trigIdxCnt        =0x%08x\n"
 	       "triggered         =%d\n"
@@ -576,6 +577,7 @@ extern  int        optind;         /* for getopt */
 	       , traceControl_p->trace_initialized
 	       , traceControl_p->mode.mode
 	       , wrSav, used
+	       , traceControl_p->spinlock
 	       , traceControl_p->largest_multiple
 	       , traceControl_p->trigIdxCnt
 	       , traceControl_p->triggered
@@ -593,6 +595,10 @@ extern  int        optind;         /* for getopt */
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
 	       , traceControl_p->memlen
 	       );
+    }
+    else if (strcmp(cmd,"unlock") == 0) 
+    {   traceInit();
+	trace_unlock();
     }
     else if (strcmp(cmd,"tids") == 0) 
     {   traceInit();

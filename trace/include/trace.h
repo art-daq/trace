@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.64 $$Date: 2014/03/10 14:21:35 $"
+#define TRACE_REV  "$Revision: 1.65 $$Date: 2014/03/10 14:55:52 $"
 
 #ifndef __KERNEL__
 
@@ -682,6 +682,13 @@ static int trace_mmap_file( const char *_file
 	if (*t_p == (struct traceControl_s *)-1)
 	{   perror( "Error: mmap(rw_p,TRACE_PAGESIZE,PROT_READ,MAP_SHARED|MAP_FIXED,fd,0)");
 	    printf( "(*memlen)=%d\n", (*memlen) );
+	    munmap( rw_p, *memlen );
+	    close( fd );
+	    *t_p=&traceControl;
+	    return (0);
+	}
+	if (*t_p != (struct traceControl_s *)rw_p)
+	{   printf( "traceInit mmap read-only returned invalid address\n" );
 	    munmap( rw_p, *memlen );
 	    close( fd );
 	    *t_p=&traceControl;

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.61 $$Date: 2014/03/10 13:01:25 $"
+#define TRACE_REV  "$Revision: 1.62 $$Date: 2014/03/10 13:07:53 $"
 
 #ifndef __KERNEL__
 
@@ -662,9 +662,9 @@ static int trace_mmap_file( const char *_file
     /* I MUST allocate/grab a contiguous vm address space! [in testing threads (where address space
        is shared (obviously)), thread creation allocates vm space which can occur between
        these two calls] */
-    rw_p = (uint8_t*)mmap( NULL, *memlen, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
+    rw_p = (uint8_t*)mmap( NULL,*memlen,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0 );
     if (rw_p == (void *)-1)
-    {   perror( "Error: mmap(NULL,*memlen,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0)." );
+    {   perror("Error:mmap(NULL,*memlen,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0)");
 	printf( "(*memlen)=%d\n", (*memlen) );
 	close( fd );
 	*t_p=&traceControl;
@@ -677,7 +677,7 @@ static int trace_mmap_file( const char *_file
 	*t_p = (struct traceControl_s *)mmap( rw_p, TRACE_PAGESIZE, PROT_READ
 					     , MAP_SHARED|MAP_FIXED, fd, 0 );
 	if (*t_p == (struct traceControl_s *)-1)
-	{   perror( "mmap(rw_p-off,TRACE_PAGESIZE,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	{   perror( "Error: mmap(rw_p,TRACE_PAGESIZE,PROT_READ,MAP_SHARED|MAP_FIXED,fd,0)");
 	    printf( "(*memlen)=%d\n", (*memlen) );
 	    close( fd );
 	    *t_p=&traceControl;

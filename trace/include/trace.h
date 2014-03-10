@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.60 $$Date: 2014/03/10 12:37:14 $"
+#define TRACE_REV  "$Revision: 1.61 $$Date: 2014/03/10 13:01:25 $"
 
 #ifndef __KERNEL__
 
@@ -589,7 +589,6 @@ static int trace_mmap_file( const char *_file
     off_t                  off;
     char                   path[PATH_MAX];
     char                  *logname=getenv("LOGNAME");
-    int                    ctrl_prot;
     int			   created=0;
     int			   sts;
 
@@ -600,7 +599,6 @@ static int trace_mmap_file( const char *_file
 	off = lseek( fd, (*memlen)-1, SEEK_SET );
 	if (off == (off_t)-1) { perror("lseek"); *t_p=&traceControl;return (0); }
 	write( fd, &one_byte, 1 );
-	ctrl_prot = PROT_READ|PROT_WRITE;
 	created = 1;
     }
     else
@@ -646,10 +644,9 @@ static int trace_mmap_file( const char *_file
 	    }
 	} while (!tmp_traceControl.trace_initialized);
 	*memlen = tmp_traceControl.memlen;
-	ctrl_prot = PROT_READ;
     }
 
-# if 1  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
+# if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
     *t_p = (struct traceControl_s *)mmap( NULL, *memlen
 					 , PROT_READ|PROT_WRITE
 					 , MAP_SHARED, fd, 0 );
@@ -661,39 +658,35 @@ static int trace_mmap_file( const char *_file
 	return (0);
     }
 # else
-    rw_p = (uint8_t*)mmap( NULL, (*memlen)/*-TRACE_PAGESIZE*/+TRACE_PAGESIZE, PROT_READ|PROT_WRITE
-			  , MAP_SHARED, fd, TRACE_PAGESIZE ); /*"offset" seems to be subtracted from "length" */
+
+    /* I MUST allocate/grab a contiguous vm address space! [in testing threads (where address space
+       is shared (obviously)), thread creation allocates vm space which can occur between
+       these two calls] */
+    rw_p = (uint8_t*)mmap( NULL, *memlen, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0 );
     if (rw_p == (void *)-1)
-    {   perror( "mmap(NULL,(*memlen)-TRACE_PAGESIZE,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0) error" );
+    {   perror( "Error: mmap(NULL,*memlen,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0)." );
 	printf( "(*memlen)=%d\n", (*memlen) );
 	close( fd );
 	*t_p=&traceControl;
 	return (0);
     }
 
-    off = (off_t)&((struct traceControl_s *)0)->wrIdxCnt;
-    if (off != TRACE_PAGESIZE)
-    {   printf( "ERROR: off(%lx)!=TRACE_PAGESIZE(%x)\n",off,TRACE_PAGESIZE );
-	close( fd );
-	*t_p=&traceControl;
-	return (0);
+    /* If I didn't create it, go back and make the first "page" read-only */
+    if (created == 0)
+    {
+	*t_p = (struct traceControl_s *)mmap( rw_p, TRACE_PAGESIZE, PROT_READ
+					     , MAP_SHARED|MAP_FIXED, fd, 0 );
+	if (*t_p == (struct traceControl_s *)-1)
+	{   perror( "mmap(rw_p-off,TRACE_PAGESIZE,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	    printf( "(*memlen)=%d\n", (*memlen) );
+	    close( fd );
+	    *t_p=&traceControl;
+	    return (0);
+	}
     }
-    *t_p = (struct traceControl_s *)mmap( rw_p-off, TRACE_PAGESIZE, ctrl_prot
-					, MAP_SHARED|MAP_FIXED, fd, 0 );
-    if (*t_p == (struct traceControl_s *)-1)
-    {   perror( "mmap(rw_p-off,TRACE_PAGESIZE,PROT_READ,MAP_PRIVATE,fd,0) error" );
-	printf( "(*memlen)=%d\n", (*memlen) );
-	close( fd );
-	*t_p=&traceControl;
-	return (0);
-    }
+    else
+	*t_p = (struct traceControl_s *)rw_p;
 
-    if (rw_p != ((uint8_t*)*t_p)+TRACE_PAGESIZE)
-    {   printf( "ERROR: traceControl_p=%p rw_p=%p\n",(void*)t_p,rw_p );
-	close( fd );
-	*t_p=&traceControl;
-	return (0);
-    }
 # endif
     /* The POSIX mmap man page says:
        The mmap() function shall add an extra reference to the file

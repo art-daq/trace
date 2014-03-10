@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.67 $$Date: 2014-03-10 17:50:18 $"
+#define TRACE_REV  "$Revision: 1.68 $$Date: 2014-03-10 22:19:40 $"
 
 #ifndef __KERNEL__
 
@@ -593,7 +593,6 @@ static int trace_mmap_file( const char *_file
     char                   path[PATH_MAX];
     char                  *logname=getenv("LOGNAME");
     int			   created=0;
-    int			   sts;
 
     snprintf( path, PATH_MAX, _file, logname?logname:"");/* in case, for some strange reason, LOGNAME does not exist */
     if ((fd=open(path,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
@@ -606,7 +605,7 @@ static int trace_mmap_file( const char *_file
     }
     else
     {   struct stat           statbuf;
-	struct traceControl_s tmp_traceControl;
+	struct traceControl_s *tmp_traceControl_p;
 	/* must verify that it already exists */
 	fd=open(path,O_RDWR);
 	if (fd == -1)
@@ -614,14 +613,14 @@ static int trace_mmap_file( const char *_file
 	    *t_p=&traceControl;
 	    return (0);
 	}
-	/* check?? - file must be at least 2 pages??? */
+	/*printf( "trace_mmap_file - fd=%d\n",fd );*/ /*interesting in multithreaded env.*/
 	if (fstat(fd,&statbuf) == -1)
 	{   perror("fstat");
 	    close( fd );
 	    *t_p=&traceControl;
 	    return (0);
 	}
-	while (statbuf.st_size < (off_t)sizeof(tmp_traceControl))
+	while (statbuf.st_size < (off_t)sizeof(struct traceControl_s))
 	{   printf("stat again\n");
 	    if (fstat(fd,&statbuf) == -1)
 	    {   perror("fstat");
@@ -630,23 +629,49 @@ static int trace_mmap_file( const char *_file
 		return (0);
 	    }
 	}
+
+#    if 0
+	/* HAVING PROBLEMS WITH READS IN MULTITHREADED ENV. */
 	do
-	{   off = lseek( fd, 0, SEEK_SET );
+	{   int	sts;
+	    /*off = lseek( fd, 0, SEEK_SET );
 	    if (off == (off_t)-1)
 	    {   printf("Error: read sizeof(struct traceControl_s)\n");
 		close( fd );
 		*t_p=&traceControl;
 		return (0);
-	    }
-	    sts = read( fd , &tmp_traceControl, sizeof(tmp_traceControl) );
+	    }*/
+	    sts = read( fd , &tmp_traceControl, sizeof(struct traceControl_s) );
 	    if (sts != sizeof(tmp_traceControl))
 	    {   printf("Error: read sizeof(struct traceControl_s)\n");
 		close( fd );
 		*t_p=&traceControl;
 		return (0);
 	    }
-	} while (!tmp_traceControl.trace_initialized);
-	*memlen = tmp_traceControl.memlen;
+	} while (0 & !tmp_traceControl.trace_initialized);
+#    endif
+	tmp_traceControl_p = (struct traceControl_s *)mmap( NULL, sizeof(struct traceControl_s)
+					 , PROT_READ
+					 , MAP_SHARED, fd, 0 );
+	if (tmp_traceControl_p == (struct traceControl_s *)-1)
+	{   perror( "mmap(NULL,sizeof(struct traceControl_s),PROT_READ,MAP_SHARED,fd,0) error" );
+	    *t_p=&traceControl;
+	    return (0);
+	}
+	if (  (tmp_traceControl_p->trace_initialized != 1)
+	    /*||(tmp_traceControl_p->siz_entry         != 256)
+	    ||(tmp_traceControl_p->num_entries       != 50000)
+	    ||(tmp_traceControl_p->num_namLvlTblEnts != 20)
+	    ||(tmp_traceControl_p->memlen            != (unsigned)*memlen)
+	    ||(tmp_traceControl_p->siz_msg           != 128)*/ )
+	{   printf("file not initialzed\n");
+	    close( fd );
+	    *t_p=&traceControl;
+	    return (0);
+	}
+	/*sleep(2);*/
+	*memlen = tmp_traceControl_p->memlen;
+	munmap( tmp_traceControl_p, sizeof(struct traceControl_s) ); /* throw this mapping out */
     }
 
 # if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
@@ -655,7 +680,7 @@ static int trace_mmap_file( const char *_file
 					 , MAP_SHARED, fd, 0 );
     if (*t_p == (struct traceControl_s *)-1)
     {   rw_p=(uint8_t*)t_p;/*just use rw_p here to allow easy switch (#if) and warngings*/
-	perror( "mmap(NULL,*memlen,PROT_READ,MAP_PRIVATE,fd,0) error" );
+	perror( "mmap(NULL,*memlen,PROT_READ,MAP_SHARED,fd,0) error" );
 	printf( "*memlen=%d t_p=%p\n", *memlen, (void*)rw_p );
 	*t_p=&traceControl;
 	return (0);

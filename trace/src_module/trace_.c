@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.19 $$Date: 2014/03/10 13:01:25 $";
+    rev="$Revision: 1.20 $$Date: 2014/03/10 16:04:27 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -75,8 +75,10 @@ static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
 				  , size_t siz, loff_t *off )
 {
     long must_check;
+    unsigned long kva;
+    kva=(unsigned long)page_address(vmalloc_to_page((void *)traceControl_p));
     if (siz > (traceControl_p->memlen-*off)) siz = traceControl_p->memlen-*off;
-    must_check = copy_to_user( dst_p, ((char*)traceControl_p)+*off, siz );
+    must_check = copy_to_user( dst_p, (void*)(kva+(unsigned long)*off), siz );
     if (must_check != 0)
 	return (-EACCES);
     *off += siz;

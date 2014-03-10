@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.16 $$Date: 2014-03-07 13:40:11 $";
+    rev="$Revision: 1.17 $$Date: 2014-03-10 04:21:22 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -57,7 +57,7 @@ static int trace_proc_buffer_mmap(  struct file              *file
     pgprot_t      prot_ro;
 
 
-# if 1
+# if 0
     // expect 2 mmap calles
     /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
     pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
@@ -83,7 +83,7 @@ static int trace_proc_buffer_mmap(  struct file              *file
     size=vma->vm_end - vma->vm_start;
     while (size > 0)
     {
-	if (off == 0)
+	if (off < TRACE_PAGESIZE)
 	{   vma->vm_page_prot=prot_ro;
 	    vma->vm_flags&=~(VM_WRITE|VM_MAYWRITE);
 	    vma->vm_flags|=VM_DENYWRITE;

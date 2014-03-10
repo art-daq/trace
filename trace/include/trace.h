@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.59 $$Date: 2014/03/10 04:08:55 $"
+#define TRACE_REV  "$Revision: 1.60 $$Date: 2014/03/10 12:37:14 $"
 
 #ifndef __KERNEL__
 
@@ -651,8 +651,8 @@ static int trace_mmap_file( const char *_file
 
 # if 1  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
     *t_p = (struct traceControl_s *)mmap( NULL, *memlen
-						   , PROT_READ|PROT_WRITE
-						   , MAP_SHARED, fd, 0 );
+					 , PROT_READ|PROT_WRITE
+					 , MAP_SHARED, fd, 0 );
     if (*t_p == (struct traceControl_s *)-1)
     {   rw_p=(uint8_t*)t_p;/*just use rw_p here to allow easy switch (#if) and warngings*/
 	perror( "mmap(NULL,*memlen,PROT_READ,MAP_PRIVATE,fd,0) error" );

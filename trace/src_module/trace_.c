@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.18 $$Date: 2014-03-10 12:37:14 $";
+    rev="$Revision: 1.19 $$Date: 2014-03-10 13:01:25 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -51,57 +51,23 @@ static int trace_proc_buffer_mmap(  struct file              *file
 {
     int           sts;
     unsigned long pfn;
-    off_t         off=vma->vm_pgoff<<PAGE_SHIFT;
-    unsigned long start = vma->vm_start;
-    long 	  size;
-    pgprot_t      prot_ro;
+    off_t         off  =vma->vm_pgoff<<PAGE_SHIFT;
+    unsigned long start=vma->vm_start;
+    long 	  size =vma->vm_end-vma->vm_start;
 
-
-# if 1
-
-    pgprot_t	  prot_rw=vma->vm_page_prot;
-    /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
-    pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
-    size=vma->vm_end - vma->vm_start;
+    /* in order to force/assure read-only for a portion of a vma,
+       I would have to use a function like mprotect_fixup which is
+       not exported :( */
     while (size > 0)
     {
-	if (off < TRACE_PAGESIZE)
-	{   vma->vm_page_prot=prot_ro;
-	    vma->vm_flags&=~(VM_WRITE|VM_MAYWRITE);
-	    vma->vm_flags|=VM_DENYWRITE;
-	}
-	else
-	{   vma->vm_page_prot=prot_rw;
-	    vma->vm_flags|=VM_WRITE;
-	}
 	pfn = vmalloc_to_pfn( ((char *)traceControl_p)+off );
-	sts = io_remap_pfn_range(  vma, start, pfn, PAGE_SIZE
-				 , vma->vm_page_prot );
+	sts = io_remap_pfn_range(  vma, start,pfn,PAGE_SIZE,vma->vm_page_prot );
 	if (sts) return -EAGAIN;
 	start += PAGE_SIZE;
 	off += PAGE_SIZE;
 	size -= PAGE_SIZE;
     }
 
-# else
-    // expect 2 mmap calles
-    /* resetting the VM_WRITE bit in vm_flags probably is all that is needed */
-    pgprot_val(prot_ro) = pgprot_val(vma->vm_page_prot) & ~_PAGE_RW;
-
-    if (off == 0) {size=0x1000;vma->vm_page_prot=prot_ro;vma->vm_flags&=~VM_WRITE;}
-    else          {size=vma->vm_end - vma->vm_start;}
-    while (size > 0)
-    {
-	pfn = vmalloc_to_pfn( ((char *)traceControl_p)+off );
-	sts = io_remap_pfn_range(  vma, start, pfn, PAGE_SIZE
-				 , vma->vm_page_prot );
-	if (sts) return -EAGAIN;
-	start += PAGE_SIZE;
-	off += PAGE_SIZE;
-	size -= PAGE_SIZE;
-    }
-
-# endif
     return (0);
 }   // trace_proc_buffer_mmap
 

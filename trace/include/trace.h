@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.63 $$Date: 2014/03/10 13:14:01 $"
+#define TRACE_REV  "$Revision: 1.64 $$Date: 2014/03/10 14:21:35 $"
 
 #ifndef __KERNEL__
 
@@ -400,15 +400,18 @@ static void trace( unsigned lvl, unsigned nargs
 
 static void trace_lock( void )
 {
-    uint32_t desired=1, expect=0;
+    uint32_t desired=1, expect=0, hung=0;
 #  if defined(__KERNEL__)
-    while (cmpxchg(&traceControl_p->spinlock,expect,desired) != expect) ;
+    while (cmpxchg(&traceControl_p->spinlock,expect,desired) != expect)
+	if (++hung >100000000) { TRACE_PRINT("trace_lock: hung?\n"); break; }
 #  elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
     while (!atomic_compare_exchange_weak(&traceControl_p->spinlock, &expect, desired))
     {   expect=0;
+	if (++hung >100000000) { TRACE_PRINT("trace_lock: hung?\n"); break; }
     }
 #  else
-    while (cmpxchg(&traceControl_p->spinlock,expect,desired) != expect) ;
+    while (cmpxchg(&traceControl_p->spinlock,expect,desired) != expect)
+	if (++hung >100000000) { TRACE_PRINT("trace_lock: hung?\n"); break; }
 #  endif
 }
 
@@ -768,6 +771,7 @@ static int traceInit(void)
 	    traceControl_p->num_namLvlTblEnts = namtblents_;
 	    traceControl_p->memlen            = memlen;
 
+	    traceControl_p->spinlock          = 0;
 	    TRACE_CNTL( "reset" );
 	    traceControl_p->mode.mode         = 0;
 	    traceControl_p->mode.bits.M       = 1;

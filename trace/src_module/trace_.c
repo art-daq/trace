@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.20 $$Date: 2014-03-10 16:04:27 $";
+    rev="$Revision: 1.21 $$Date: 2014-03-10 17:50:18 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -72,23 +72,34 @@ static int trace_proc_buffer_mmap(  struct file              *file
 }   // trace_proc_buffer_mmap
 
 static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
-				  , size_t siz, loff_t *off )
+				      , size_t siz, loff_t *off )
 {
-    long must_check;
-    unsigned long kva;
-    kva=(unsigned long)page_address(vmalloc_to_page((void *)traceControl_p));
-    if (siz > (traceControl_p->memlen-*off)) siz = traceControl_p->memlen-*off;
-    must_check = copy_to_user( dst_p, (void*)(kva+(unsigned long)*off), siz );
-    if (must_check != 0)
-	return (-EACCES);
-    *off += siz;
-    return (siz);
+    long          must_check;
+    long          dst_off =0;
+    unsigned long start   =(unsigned long)traceControl_p;
+    long          till_end=(int)traceControl_p->memlen-*off;
+    long          max_to_user;
+    size_t        initial_size=siz;
+
+    printk("trace_proc_buffer_read: siz=%lu off=%lld\n", siz, *off );
+    msleep(50);
+    while ((siz>0) && (till_end>0))
+    {
+	max_to_user = min3( (long)PAGE_SIZE, till_end, (long)siz );
+	must_check = copy_to_user( dst_p+dst_off, (void*)(start+*off), max_to_user );
+	if (must_check != 0)
+	    return (-EACCES);
+	*off    += max_to_user;
+	siz     -= max_to_user;
+	dst_off += max_to_user;
+    }
+    return (initial_size-siz);
 }
 
 static
 struct file_operations trace_proc_buffer_file_operations = {
     .owner=   THIS_MODULE,
-    .llseek=  NULL,           		/* lseek        */
+    .llseek=  generic_file_llseek,           		/* lseek        */
     .read=    trace_proc_buffer_read,	/* read         */
     .write=   NULL,           		/* write        */
     .readdir= NULL,              	/* readdir      */

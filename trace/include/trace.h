@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.65 $$Date: 2014/03/10 14:55:52 $"
+#define TRACE_REV  "$Revision: 1.66 $$Date: 2014/03/10 15:14:41 $"
 
 #ifndef __KERNEL__
 
@@ -656,7 +656,7 @@ static int trace_mmap_file( const char *_file
     if (*t_p == (struct traceControl_s *)-1)
     {   rw_p=(uint8_t*)t_p;/*just use rw_p here to allow easy switch (#if) and warngings*/
 	perror( "mmap(NULL,*memlen,PROT_READ,MAP_PRIVATE,fd,0) error" );
-	printf( "*memlen=%d t_p=%p xxx=%d\n", *memlen, (void*)rw_p, ctrl_prot );
+	printf( "*memlen=%d t_p=%p\n", *memlen, (void*)rw_p );
 	*t_p=&traceControl;
 	return (0);
     }

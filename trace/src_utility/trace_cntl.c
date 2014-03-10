@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.63 $$Date: 2014/03/09 01:06:40 $";
+    rev="$Revision: 1.64 $$Date: 2014/03/10 04:08:55 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -24,7 +24,6 @@ done
 
 #include "trace.h"
 
-#define NUMTHREADS 4
 
 #define USAGE "\
 %s [opts] <cmd> [command opt/args]\n\
@@ -60,13 +59,10 @@ tests:  (use %s show after test)\n\
 #  define LU "llu"
 #endif
 
-uint64_t get_us_timeofday()
-{   struct timeval tv;
-    gettimeofday( &tv, NULL );
-    return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
-}
-
+#define NUMTHREADS 4
 static int trace_thread_option=0;
+
+void traceInfo( void ); /* forward decl */
 
 void* thread_func(void *arg)
 {
@@ -76,8 +72,7 @@ void* thread_func(void *arg)
     if      (trace_thread_option == 1)
     {   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
 	tid = (long)syscall(SYS_GETTID);
-	snprintf( tmp, sizeof(tmp),"%s/.trace_buffer_%ld",getenv("HOME"),tid );
-	printf("%ld: traceControl_p=%p\n",tid,(void*)traceEntries_p);
+	snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tid );
 	TRACE_CNTL( "file", tmp );
     }
     else if (trace_thread_option == 2)
@@ -88,13 +83,28 @@ void* thread_func(void *arg)
 	TRACE_CNTL( "name", tmp );
     }
 
-    while(loops-- > 0)
-    {   TRACE( 0, "loops=%ld", loops );
-	TRACE( 0, "loops=%ld", --loops );
-	TRACE( 0, "loops=%ld", --loops );
-	TRACE( 0, "loops=%ld", --loops );
+    if (loops < NUMTHREADS)
+    {
+	sleep( loops+1 );
+	printf( "      traceControl_p=%p      traceEntries_p=%p\n"
+	       ,(void*)traceEntries_p, (void*)traceEntries_p );
+	traceInfo();
     }
+    else
+	while(loops-- > 0)
+	{   TRACE( 0, "loops=%ld", loops );
+	    TRACE( 0, "loops=%ld", --loops );
+	    TRACE( 0, "loops=%ld", --loops );
+	    TRACE( 0, "loops=%ld", --loops );
+	}
     pthread_exit(NULL);
+}
+
+
+uint64_t get_us_timeofday()
+{   struct timeval tv;
+    gettimeofday( &tv, NULL );
+    return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
 }
 
 
@@ -193,7 +203,7 @@ void traceShow( const char *ospec, int do_heading, int start, unsigned count )
 	     ?rdIdx:traceControl_p->num_entries);
     }
     else
-    {   rdIdx = start>=traceControl_p->num_entries
+    {   rdIdx = (unsigned)start>=traceControl_p->num_entries
 	    ? traceControl_p->num_entries-1
 	    : start;
 	max = count<=traceControl_p->num_entries
@@ -324,6 +334,63 @@ void traceShow( const char *ospec, int do_heading, int start, unsigned count )
 	printf("\n");
     }
 }   /*traceShow*/
+
+
+void traceInfo()
+{
+	uint32_t wrCopy, used;
+	uint32_t spinlockCopy;
+	spinlockCopy = traceControl_p->spinlock;
+	wrCopy = traceControl_p->wrIdxCnt;
+	used = ((wrCopy<=traceControl_p->num_entries)
+		?wrCopy
+		:traceControl_p->num_entries);
+	printf("trace.h rev       = %s\n"
+	       "revision          = %s\n"
+	       "trace_initialized =%d\n"
+	       "mode              =0x%x\n"
+	       "writeIdxCount     =0x%08x entries used: %u\n"
+	       "lock              =%u\n"
+               "largestMultiple   =0x%08x\n"
+	       "trigIdxCnt        =0x%08x\n"
+	       "triggered         =%d\n"
+	       "trigActivePost    =%u\n"
+	       "traceLevel        =0x%0*" LX " 0x%0*" LX "\n"
+	       "num_entries       =%u\n"
+	       "max_msg_sz        =%u  includes system inforced terminator\n"
+	       "max_params        =%u\n"
+	       "entry_size        =%u\n"
+	       "namLvlTbl_ents    =%u\n"
+	       "namLvlTbl_name_sz =%u\n"
+	       "wrIdxCnt offset   =%p\n"
+	       "namLvls offset    =0x%lx\n"
+	       "buffer_offset     =0x%lx\n"
+	       "memlen            =%u\n"
+	       , TRACE_REV
+	       , traceControl_p->version_string
+	       , traceControl_p->trace_initialized
+	       , traceControl_p->mode.mode
+	       , wrCopy, used
+	       , spinlockCopy
+	       , traceControl_p->largest_multiple
+	       , traceControl_p->trigIdxCnt
+	       , traceControl_p->triggered
+	       , traceControl_p->trigActivePost
+	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].M
+	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].S
+	       , traceControl_p->num_entries
+	       , traceControl_p->siz_msg
+	       , traceControl_p->num_params
+	       , traceControl_p->siz_entry
+	       , traceControl_p->num_namLvlTblEnts
+	       , (int)sizeof(traceNamLvls_p[0].name)
+	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
+	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
+	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
+	       , traceControl_p->memlen
+	       );
+}   /* traceInfo */
+
 
 
 int main(  int	argc
@@ -514,23 +581,35 @@ extern  int        optind;         /* for getopt */
     }
 #   ifdef DO_THREADS   /* requires linking with -lpthreads */
     else if (strcmp(cmd,"test-threads") == 0)
-    {   pthread_t threads[NUMTHREADS];
+    {   pthread_t *threads;
+	unsigned   num_threads=NUMTHREADS;
 	long loops=10000;
-	if ((argc-optind)==1)
+	if ((argc-optind)>=1)
 	{   loops=strtoul(argv[optind],NULL,0);
 	    printf("loops set to %ld\n", loops );
 	}
 	loops -= loops%4;	/* assuming thread does 4 TRACEs per loop */
+	if ((argc-optind)==2)
+	{   num_threads=strtoul(argv[optind+1],NULL,0);
+	    printf("num_threads set to %d\n", num_threads );
+	}
+	threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
+
 	TRACE( 0, "before pthread_create - loops=%lu (must be multiple of 4)", loops );
-	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
-	for (ii=0; ii<NUMTHREADS; ii++)
-	{   pthread_create(&threads[ii],NULL,thread_func,(void*)loops);
+	printf("test-threads - before create loop - traceControl_p=%p\n",(void*)traceControl_p);
+	for (ii=0; ii<num_threads; ii++)
+	{
+	    if (loops == NUMTHREADS)
+		pthread_create(&threads[ii],NULL,thread_func,(void*)(unsigned long)ii);
+	    else
+		pthread_create(&threads[ii],NULL,thread_func,(void*)loops);
 	}
 	for (ii=0; ii<NUMTHREADS; ii++)
 	{   pthread_join(threads[ii], NULL);
 	}
-	printf("traceEntries_p=%p\n",(void*)traceEntries_p);
+	printf("test-threads - after create loop - traceControl_p=%p\n",(void*)traceControl_p);
 	TRACE( 0, "after pthread_join" );
+	free( threads );
     }
 #   endif
     else if (strcmp(cmd,"show") == 0) 
@@ -545,56 +624,8 @@ extern  int        optind;         /* for getopt */
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {
-	uint32_t wrSav, used;
 	traceInit();
-	wrSav=traceControl_p->wrIdxCnt;
-	used=((wrSav<=traceControl_p->num_entries)
-	      ?wrSav
-	      :traceControl_p->num_entries);
-	printf("trace.h rev       = %s\n"
-	       "revision          = %s\n"
-	       "trace_initialized =%d\n"
-	       "mode              =0x%x\n"
-	       "writeIdxCount     =0x%08x entries used: %u\n"
-	       "lock              =%u\n"
-               "largestMultiple   =0x%08x\n"
-	       "trigIdxCnt        =0x%08x\n"
-	       "triggered         =%d\n"
-	       "trigActivePost    =%u\n"
-	       "traceLevel        =0x%0*" LX " 0x%0*" LX "\n"
-	       "num_entries       =%u\n"
-	       "max_msg_sz        =%u  includes system inforced terminator\n"
-	       "max_params        =%u\n"
-	       "entry_size        =%u\n"
-	       "namLvlTbl_ents    =%u\n"
-	       "namLvlTbl_name_sz =%u\n"
-	       "wrIdxCnt offset   =%p\n"
-	       "namLvls offset    =0x%lx\n"
-	       "buffer_offset     =0x%lx\n"
-	       "memlen            =%u\n"
-	       , TRACE_REV
-	       , traceControl_p->version_string
-	       , traceControl_p->trace_initialized
-	       , traceControl_p->mode.mode
-	       , wrSav, used
-	       , traceControl_p->spinlock
-	       , traceControl_p->largest_multiple
-	       , traceControl_p->trigIdxCnt
-	       , traceControl_p->triggered
-	       , traceControl_p->trigActivePost
-	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].M
-	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].S
-	       , traceControl_p->num_entries
-	       , traceControl_p->siz_msg
-	       , traceControl_p->num_params
-	       , traceControl_p->siz_entry
-	       , traceControl_p->num_namLvlTblEnts
-	       , (int)sizeof(traceNamLvls_p[0].name)
-	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
-	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
-	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
-	       , traceControl_p->memlen
-	       );
+	traceInfo();
     }
     else if (strcmp(cmd,"unlock") == 0) 
     {   traceInit();

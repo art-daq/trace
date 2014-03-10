@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.66 $$Date: 2014/03/10 15:14:41 $"
+#define TRACE_REV  "$Revision: 1.67 $$Date: 2014/03/10 17:50:18 $"
 
 #ifndef __KERNEL__
 
@@ -605,7 +605,7 @@ static int trace_mmap_file( const char *_file
 	created = 1;
     }
     else
-    {   struct stat statbuf;
+    {   struct stat           statbuf;
 	struct traceControl_s tmp_traceControl;
 	/* must verify that it already exists */
 	fd=open(path,O_RDWR);

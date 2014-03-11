@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.65 $$Date: 2014/03/10 15:15:09 $";
+    rev="$Revision: 1.66 $$Date: 2014/03/11 15:52:09 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -121,6 +121,7 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
     int      modifier=0;
     int      skip=0;
     in = fmt;
+    /* strchrnul would be nice (_GNU_SOURCE, ref. man strchr) */
     while ((in=strchr(in,'%')))
     {   percent_sav = in;       /* save in case we need to modify it (too many args) */
 	++in;  			/* point to next char */
@@ -176,8 +177,11 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
 	}
 	++numArgs;
     }
+    in = fmt+strlen(fmt);
+    while (*--in == '\n') *in='\0';
     if (numArgs < maxArgs) sizes_out[numArgs].push=0;
-}
+}   /* get_arg_sizes */
+
 
 void traceShow( const char *ospec, int do_heading, int start, unsigned count )
 {
@@ -634,6 +638,9 @@ extern  int        optind;         /* for getopt */
     else if (strcmp(cmd,"tids") == 0) 
     {   traceInit();
 #       define UNDERLINE "----------------------------------------------"
+	printf( "mode:%*s               M=%d                S=%d\n"
+	       , (int)sizeof(traceNamLvls_p[0].name), ""
+	       , traceControl_p->mode.bits.M, traceControl_p->mode.bits.S );
 	printf("%*s %*s %*s %*s %*s\n"
 	       , 3, "TID"
 	       , (int)sizeof(traceNamLvls_p[0].name), "NAME"

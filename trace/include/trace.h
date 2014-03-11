@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.68 $$Date: 2014-03-10 22:19:40 $"
+#define TRACE_REV  "$Revision: 1.69 $$Date: 2014-03-11 12:37:42 $"
 
 #ifndef __KERNEL__
 
@@ -446,12 +446,13 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	traceInit();		/* force (re)init */
 	va_end(ap); return (0);
     }
-    if (traceControl_p == NULL) traceInit();
+    /*if (traceControl_p == NULL) traceInit();*/
+    TRACE_INIT_CHECK;     /* note: allows name2tid to be called in userspace */
 #  endif
 
     if (strncmp(cmd,"name",4) == 0)/*THIS MAY/SHOULD BE MOVED DOWN W/ THE REST*/
-    {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
-	traceTID = name2tid( traceName );
+    {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit() is called; suggest testing w. TRACE_ARGSMAX=10*/
+	traceTID = name2tid( traceName );/* doing it this way allows this to be called by kernel module */
     }
     else if (strncmp(cmd,"trig",4) == 0)    /* takes 3 args: modeMsks, lvlsMsk, postEntries */
     {

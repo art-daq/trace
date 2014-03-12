@@ -1,0 +1,67 @@
+The main TRACE file is trace.h. Macro preprocessing allows it to exist in  areas:
+
+
+
+                   |                      |
+  kernel_child     |     user_static      |       user_global
+                   |                      |
+-------------------+----------------------+-------------------------
+                   |                      |
+  kernel_parent    |                      |     user_lib_define
+                   |                      |
+
+
+user_static
+        every module has all functions and variables defined static
+    
+kernel_child
+	staitc void trace()
+	static int traceCntl()
+        no traceInit
+        extern struct traceNamLvls_s  *traceNamLvls_p;
+	extern struct traceEntryHdr_s *traceEntries_p;
+	extern struct traceControl_s  *traceControl_p;
+	static pid_t                    tracePid=0;
+	static int   traceTID=0;  /* idx into lvlTbl, namTbl */
+	static pid_t traceTid=0;  /* thread id */
+
+kernel_parent
+	staitc void trace()
+	static int traceCntl()
+	static int traceInit()
+	static traceControl_p, traceEntries_p, traceNamLvls_p , traceCntl 
+	EXPORT_SYMBOL( traceControl_p );
+	EXPORT_SYMBOL( traceEntries_p );
+	EXPORT_SYMBOL( traceNamLvls_p );
+	EXPORT_SYMBOL( traceCntl );
+
+
+user_global
+	staitc void trace()
+	static int traceCntl()
+	static int traceInit()
+
+        extern struct traceNamLvls_s  *traceNamLvls_p;
+	extern struct traceEntryHdr_s *traceEntries_p;
+	extern struct traceControl_s  *traceControl_p;
+	extern const char *traceFile;
+	extern const char *traceName;
+	extern pid_t tracePid=0;
+	extern int   traceTID=0;  /* idx into lvlTbl, namTbl */
+	extern pid_t traceTid=0;  /* thread id */
+
+user_lib_define
+	TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
+	TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
+	TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
+	TRACE_THREAD_LOCAL const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
+	TRACE_THREAD_LOCAL const char *traceName="TRACE";
+	pid_t                    tracePid=0;
+	TRACE_THREAD_LOCAL int   traceTID=0;
+	TRACE_THREAD_LOCAL pid_t traceTid=0;
+
+
+#if
+
+#define TRACE_DECL( scope, type_name, initializer ) \
+	extern type_name

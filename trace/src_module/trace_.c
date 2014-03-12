@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.22 $$Date: 2014/03/10 22:19:40 $";
+    rev="$Revision: 1.23 $$Date: 2014/03/12 22:49:10 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -30,6 +30,7 @@ EXPORT_SYMBOL( traceControl_p );
 EXPORT_SYMBOL( traceEntries_p );
 EXPORT_SYMBOL( traceNamLvls_p );
 EXPORT_SYMBOL( traceCntl );
+EXPORT_SYMBOL( trace_no_printk );
 
 
 // ls /sys/module/TRACE/parameters
@@ -44,6 +45,9 @@ MODULE_PARM_DESC( numents, "The number for entries in the circular buffer" );
 
 module_param(     namtblents, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( namtblents, "Number of name table entries" );
+
+module_param(     trace_no_printk, int, 0644 ); // defined in trace.h
+MODULE_PARM_DESC( trace_no_printk, "whether or not to allow TRACEs to do printk's" );
 
 
 static int trace_proc_buffer_mmap(  struct file              *file

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.70 $$Date: 2014/03/11 15:52:33 $"
+#define TRACE_REV  "$Revision: 1.71 $$Date: 2014/03/12 22:49:10 $"
 
 #ifndef __KERNEL__
 
@@ -83,6 +83,10 @@
 
 #endif /* __KERNEL__ */
 
+#ifndef TRACE_DECL
+#define TRACE_DECL( scope, type_name, initializer ) scope type_name initializer
+#endif
+
 
 /* 88,7=192 bytes/ent   96,6=192   128,10=256*/
 #define TRACE_DFLT_MAX_MSG_SZ      128
@@ -137,7 +141,9 @@
 #if   defined(__i386__)
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-  static void trace(unsigned,unsigned,const char *,...)__attribute__((format(printf,3,4)));
+# ifndef TRACE_LIB
+   static void trace(unsigned,unsigned,const char *,...)__attribute__((format(printf,3,4)));
+# endif
 # define TRACE_VA_LIST_INIT(addr) (va_list)addr
 # define TRACE_ENT_FILLER         uint32_t x[2];
 # define TRACE_32_DOUBLE_KLUDGE   nargs*=2;    /* kludge to support potential double in msg fmt */
@@ -145,7 +151,9 @@
 #elif defined(__x86_64__)
 # define TRACE_XTRA_PASSED        ,0,0,0, .0,.0,.0,.0,.0,.0,.0,.0
 # define TRACE_XTRA_UNUSED        ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
-  static void trace(unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
+# ifndef TRACE_LIB
+   static void trace(unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
+# endif
 # define TRACE_VA_LIST_INIT(addr) {{6*8,6*8+9*16,addr,addr}}
 # define TRACE_ENT_FILLER
 # define TRACE_32_DOUBLE_KLUDGE
@@ -153,12 +161,15 @@
 #else
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-  static void trace(unsigned,unsigned,const char *,...)__attribute__((format(printf,3,4)));
+# ifndef TRACE_LIB
+   static void trace(unsigned,unsigned,const char *,...)__attribute__((format(printf,3,4)));
+# endif
 # define TRACE_VA_LIST_INIT(addr) {addr}
 # define TRACE_ENT_FILLER
 # define TRACE_32_DOUBLE_KLUDGE   if(sizeof(long)==4)nargs*=2;
 # define TRACE_TSC32( low )       low=0
 #endif
+
 
 struct traceControl_s
 {
@@ -222,25 +233,28 @@ struct traceNamLvls_s
     char          name[TRACE_DFLT_NAM_SZ];
 };
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__)
 extern struct traceNamLvls_s  *traceNamLvls_p;
 extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
+extern int                     trace_no_printk;                 /* module_param */
 static const char             *traceName="KERNEL";
 #else
-static struct traceNamLvls_s  traceNamLvls[3];
-static TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
-static TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
-static TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
-static TRACE_THREAD_LOCAL const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
-static TRACE_THREAD_LOCAL const char *traceName="TRACE";
+TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[3], );
+TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceNamLvls_s *traceNamLvls_p, =&traceNamLvls[0] );
+TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, );
+TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p, =NULL );
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_NAME );
 #endif
 
 
-static pid_t                    tracePid=0;
-static TRACE_THREAD_LOCAL int   traceTID=0;  /* idx into lvlTbl, namTbl */
-static TRACE_THREAD_LOCAL pid_t traceTid=0;  /* thread id */
+TRACE_DECL( static, pid_t                    tracePid, =0 );
+TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl, namTbl */
+TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid, =0 );  /* thread id */
 
+
+#ifndef TRACE_LIB
 
 /* forward declarations, important functions */
 static int                      traceCntl( int nargs, const char *cmd, ... );
@@ -254,6 +268,7 @@ static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
+       int                trace_no_printk=0;                 /* module_param */
 #endif
 #endif
 
@@ -285,10 +300,14 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
      :(idxCnt+add)%traceControl_p->largest_multiple\
     )
 
+
 #ifndef TRACE_LOG_FUNCTION
 # define TRACE_LOG_FUNCTION(tvp,tid,lvl,msg,ap)  trace_user( tvp,tid,lvl,msg,ap )
 static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
 {
+# ifdef __KERNEL__
+    if (trace_no_printk) return;
+# endif
     TRACE_PRINT( "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
     TRACE_VPRINT( msg, ap );
     TRACE_PRINT("\n");
@@ -751,7 +770,10 @@ static int traceInit(void)
     const char *_file;
     const char *cp;
 
-    if(traceTid==0)traceTid=syscall(SYS_GETTID);/* traceInit may be called w/ or w/o checking traceTid */
+    if(traceTid==0) /* traceInit may be called w/ or w/o checking traceTid */
+    {   traceTid=syscall(SYS_GETTID);
+	tracePid = getpid();  /* do/re-do -- it may be forked process */
+    }
 
     if (traceControl_p == NULL)
     {
@@ -765,16 +787,24 @@ static int traceInit(void)
 
 	if (!activate)
 	{   traceControl_p=&traceControl;
-	    return (0);
+	    goto init_out;
 	}
 
 	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
 
 	I_created = trace_mmap_file( _file, &memlen, &traceControl_p );
 	if (traceControl_p == &traceControl)
-	{   return (0);
+	{
+ init_out:
+	    traceControl_p->num_namLvlTblEnts = sizeof(traceNamLvls)/sizeof(traceNamLvls[0]);
+	    traceInitNames();
+	    
+	    if ((cp=getenv("TRACE_LVLS")))
+	    {   TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
+		TRACE_CNTL( "modeS", 1LL );
+	    }
+	    return (0);
 	}
-	tracePid = getpid();
 #   else
     {
 	msgmax_       =msgmax;	/* module_param */
@@ -808,6 +838,7 @@ static int traceInit(void)
 	    TRACE_CNTL( "reset" );
 	    traceControl_p->mode.mode         = 0;
 	    traceControl_p->mode.bits.M       = 1;
+
 	    traceInitNames();
 
 	    traceControl_p->trace_initialized = 1;
@@ -868,5 +899,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
     off = idx * traceControl_p->siz_entry;
     return (struct traceEntryHdr_s *)((unsigned long)traceEntries_p+off);
 }
+
+#endif /* TRACE_LIB */
 
 #endif /* TRACE_H_5216 */

@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 1.1 $$Date: 2014/03/12 22:49:10 $";
+ // rev="$Revision: 1.2 $$Date: 2014/03/12 22:54:12 $";
 
 #include <pthread.h>		/* pthread_self */
 
@@ -33,21 +33,13 @@ void* thread_func(void *arg)
     {   tid = (long)syscall(SYS_GETTID);
 	snprintf( tmp, sizeof(tmp), "T%ld", tid );
 	printf( "setting name to %s\n",tmp );
-	printf("%ld: traceControl_p=%p\n",tid,(void*)traceEntries_p);
 	TRACE_CNTL( "name", tmp );
     }
 
-    if (loops < NUMTHREADS)
-    {
-	sleep( loops+1 );
-	printf( "      traceControl_p=%p      traceEntries_p=%p\n"
-	       ,(void*)traceEntries_p, (void*)traceEntries_p );
+    while(loops-- > 0)
+    {   TRACE( 0, "loops=%ld", loops );
+	example_sub1();
     }
-    else
-	while(loops-- > 0)
-	{   TRACE( 0, "loops=%ld", loops );
-	    example_sub1();
-	}
     pthread_exit(NULL);
 }
 

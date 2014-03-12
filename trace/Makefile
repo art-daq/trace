@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.13 $$Date: 2014-03-06 00:15:40 $";
+ # rev="$Revision: 1.14 $$Date: 2014-03-12 22:49:10 $";
 
 # TOP LEVEL Makefile
 
@@ -57,15 +57,15 @@ src_module: OUT_check
 # have to do this in two parts:
 #    1) userspace - src can remain
 #    2) module (which needs src copied)
-src_example_user: OUT_check
+src_example_user: OUT_check src_lib
 	${FLAVOR_SUBDIR};\
-	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin/";\
-	test -d "$$out" || mkdir -p "$$out";\
-	$(MAKE) -C src_example userspace OUT=$$out TRACE_INC=$$PWD/include;\
+	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1";\
+	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
+	$(MAKE) -C src_example userspace OUT=$$out/bin/ TRACE_INC=$$PWD/include LIBDIR=$$out/lib/;\
 	if [ `uname -m` = x86_64 ];then\
-	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/bin/";\
-	    test -d "$$out" || mkdir -p "$$out";\
-	    $(MAKE) -C src_example userspace OUT=$$out CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32;\
+	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1";\
+	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
+	    $(MAKE) -C src_example userspace OUT=$$out/bin/ CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32 LIBDIR=$$out/lib/;\
 	fi
 src_example_module: OUT_check
 	test -n "${KDIR}"\
@@ -84,6 +84,17 @@ src_utility: OUT_check
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
 	if [ `uname -m` = x86_64 ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/bin/";\
+	    test -d "$$out" || mkdir -p "$$out";\
+	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
+	fi
+
+src_lib: OUT_check
+	${FLAVOR_SUBDIR};\
+	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/lib/";\
+	test -d "$$out" || mkdir -p "$$out";\
+	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
+	if [ `uname -m` = x86_64 ];then\
+	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/lib/";\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
 	fi

@@ -3,7 +3,7 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.5 $
+#  $Revision: 1.1 $
 #  $Date: 2014-03-12 22:49:10 $
 
 # ref. work/cswing/source/Makefile
@@ -32,7 +32,7 @@ CC       = gcc
 CXX      = g++   # a variable named "C++" is not compatible with bourne shell
 CFLAGS   = -g -Wall -DDO_THREADS
 CXXFLAGS = $(CFLAGS)
-CPPFLAGS = -I../../include
+CPPFLAGS = -I../include
 LDFLAGS  = -lpthread  # -g not needed
 
 # in case someone (SoftRelTools) sets -r (or `--no-builtin-rules') in MAKEFLAGS
@@ -43,34 +43,33 @@ LDFLAGS  = -lpthread  # -g not needed
 %.o : %.c        # cancel the built-in rule (give no recipe)
 ${OUT}%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
+% : %.c        # cancel the built-in rule (give no recipe)
+${OUT}% : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -g -o $@ $< $(LDFLAGS)
+# just use the C++ linker
 % : %.o
 	@echo 'CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" ^="$^"'
 	@echo 'LOADLIBES="$(LOADLIBES)" LDLIBS="$(LDLIBS)" @="$@"'
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
-% : %.cc        # cancel the built-in rule (give no recipe)
-${OUT}% : %.cc
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS)    -o $@ $<
-%.o : %.cc        # cancel the built-in rule (give no recipe)
+
 ${OUT}%.o : %.cc
-	echo 'rule: ${OUT}%.o : %.cc'
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 ${OUT}%.d: %.c
 	set -e; rm -f $@; \
 	$(CC) -MM $(CPPFLAGS) $< > $@; \
 	sed 's,\($*\)\.o[ :]*,${OUT}\1.o $@ : ,g' < $@ > $@.$$$$; \
 	mv -f $@.$$$$ $@
-%.d : %.cc        # cancel the built-in rule (give no recipe)
-${OUT}%.d: %.cc
-	@set -e; rm -f $@; \
-	$(CC) -MM $(CPPFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,${OUT}\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+#${OUT}%.d: %.cc
+#	@set -e; rm -f $@; \
+#	$(CC) -MM $(CPPFLAGS) $< > $@.$$$$; \
+#	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+#	rm -f $@.$$$$
 
 # ref. "The Function wildcard"
 #      http://www.delorie.com/gnu/docs/make/make_29.html
 # ref. "Functions for String Substitution and Analysis"
 #      http://www.delorie.com/gnu/docs/make/make_81.html
-mainre       = '(^| |	)main\ *\('
+mainre       = '(^| |	)main *\('
 cexesrc     := $(shell egrep -l $(mainre) *.c 2>/dev/null)
 c++exesrc   := $(shell egrep -l $(mainre) *.cc 2>/dev/null)
 executables := $(patsubst %.c,%,  $(cexesrc)) $(patsubst %.cc,%,  $(c++exesrc))
@@ -80,21 +79,14 @@ objects     := $(patsubst %.c,%.o,$(filter-out $(cexesrc),$(wildcard *.c))) \
 headers     := $(wildcard *.h)
 
 out_executables := $(patsubst %,${OUT}%,$(executables))
-out_deps        := $(patsubst %,${OUT}%.d,$(executables))
+
+#all: $(executables)
+#all: $(patsubst %,${OUT}%,$(executables))
+all: $(objects:%=${OUT}%)
+	echo done with ${OUT}example_main out_executables=$(out_executables)
 
 
-all: $(out_executables)
-	echo done with ${OUT}just out_executables=$(out_executables)
-
-${OUT}example_main: ${OUT}example_main.o ${OUT}example_sub1.o ${OUT}example_sub2.o
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< ${OUT}example_sub1.o ${OUT}example_sub2.o ${LIBDIR}tracelib.o -lpthread
-
-ifneq ($(executables),)
-include ${out_deps}
-endif
-ifneq ($(objects),)
 include $(objects:%.o=${OUT}%.d)
-endif
 
 
 # "$(executables): $(objects)" says that all executables depend on all objects.
@@ -102,7 +94,7 @@ endif
 # to handle any further dependencies
 # Note: "objects" can be controlled: make hello objects=hello.o
 #$(executables): $(objects)
-$(patsubst %,${OUT}%,$(executables)): $(patsubst %,${OUT}%,$(objects))
+$(executables:%=${OUT}%): $(objects:%=${OUT}%)
 
 .PHONY: tags
 tags:

@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.1 $
-#  $Date: 2014/03/12 22:49:10 $
+#  $Revision: 1.2 $
+#  $Date: 2014/03/13 01:48:03 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -30,7 +30,7 @@
 #endif
 CC       = gcc
 CXX      = g++   # a variable named "C++" is not compatible with bourne shell
-CFLAGS   = -g -Wall -DDO_THREADS
+CFLAGS   = -g -Wall -DDO_THREADS -fPIC
 CXXFLAGS = $(CFLAGS)
 CPPFLAGS = -I../include
 LDFLAGS  = -lpthread  # -g not needed
@@ -82,9 +82,12 @@ out_executables := $(patsubst %,${OUT}%,$(executables))
 
 #all: $(executables)
 #all: $(patsubst %,${OUT}%,$(executables))
-all: $(objects:%=${OUT}%)
+all: $(objects:%=${OUT}%) ${OUT}libtrace.so ${OUT}libtrace.a
 	echo done with ${OUT}example_main out_executables=$(out_executables)
 
+${OUT}libtrace.so ${OUT}libtrace.a: ${OUT}tracelib.o
+	$(CC) $(CPPFLAGS) -shared -o ${OUT}libtrace.so $<
+	$(AR) -r -c ${OUT}libtrace.a $<
 
 include $(objects:%.o=${OUT}%.d)
 

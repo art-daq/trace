@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.71 $$Date: 2014/03/12 22:49:10 $"
+#define TRACE_REV  "$Revision: 1.72 $$Date: 2014/03/13 01:48:03 $"
 
 #ifndef __KERNEL__
 
@@ -240,7 +240,8 @@ extern struct traceControl_s  *traceControl_p;
 extern int                     trace_no_printk;                 /* module_param */
 static const char             *traceName="KERNEL";
 #else
-TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[3], );
+#define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
+TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ], ); /* IMPORTANT - 1) this size, 2) traceInit setting of num_namLvlTblEnts, 3) traceInitNames and 4) "tids" MUST agree */
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceNamLvls_s *traceNamLvls_p, =&traceNamLvls[0] );
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, );
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p, =NULL );

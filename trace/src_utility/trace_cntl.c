@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.67 $$Date: 2014/03/12 22:54:12 $";
+    rev="$Revision: 1.68 $$Date: 2014/03/13 05:33:08 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -59,6 +59,7 @@ tests:  (use %s show after test)\n\
 #  define LU "llu"
 #endif
 
+#define DFLT_SHOW         "HNTtiILR"
 #define NUMTHREADS 4
 static int trace_thread_option=0;
 
@@ -173,7 +174,7 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
 }   /* get_arg_sizes */
 
 
-void traceShow( const char *ospec, int do_heading, int start, unsigned count )
+void traceShow( const char *ospec, int count, int start )
 {
     uint32_t rdIdx;
     uint32_t max;
@@ -192,24 +193,22 @@ void traceShow( const char *ospec, int do_heading, int start, unsigned count )
 
     traceInit();
     if (start == -1)
-    {   rdIdx=traceControl_p->wrIdxCnt;
+    {   rdIdx=traceControl_p->wrIdxCnt % traceControl_p->num_entries;
 	max=((rdIdx<=traceControl_p->num_entries)
 	     ?rdIdx:traceControl_p->num_entries);
     }
     else
-    {   rdIdx = (unsigned)start>=traceControl_p->num_entries
-	    ? traceControl_p->num_entries-1
-	    : start;
-	max = count<=traceControl_p->num_entries
-	    ? count
-	    : traceControl_p->num_entries;
+    {   rdIdx = start % traceControl_p->num_entries;
+	max = traceControl_p->num_entries;
     }
+    if ((count != -1) && (count < max)) max = count;
     local_msg    =            (char*)malloc( traceControl_p->siz_msg );
     local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
-    if (do_heading)
-    {   sp = ospec;
+    if (ospec[0] == 'H')
+    {   ++ospec; /* done with Heading flag */
+	sp = ospec;
 	for (sp=ospec; *sp; ++sp)
 	{
 	    switch (*sp)
@@ -360,6 +359,7 @@ void traceInfo()
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u\n"
+               "default TRACE_SHOW=%s other: B(parambytes) P(pid)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , traceControl_p->trace_initialized
@@ -382,6 +382,7 @@ void traceInfo()
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
 	       , traceControl_p->memlen
+	       , DFLT_SHOW
 	       );
 }   /* traceInfo */
 
@@ -390,6 +391,7 @@ void traceInfo()
 int main(  int	argc
 	 , char	*argv[] )
 {
+	int        ret=0;
 	const char *cmd;
 extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
@@ -607,14 +609,13 @@ extern  int        optind;         /* for getopt */
     }
 #   endif
     else if (strcmp(cmd,"show") == 0) 
-    {   int start=-1;
+    {   int start=-1, count=-1;
 	const char *ospec=getenv("TRACE_SHOW");
-	if (!ospec) ospec="NTtiILR";
-	if ((argc-optind)==2)
-	{   start=strtoul(argv[optind],NULL,0);
-	    ii   =strtoul(argv[optind+1],NULL,0);
-	}
-	traceShow(ospec,do_heading,start,ii);
+	if (!ospec) ospec=DFLT_SHOW;
+	if ((do_heading==0) && (ospec[0]=='H')) ++ospec;
+	if ((argc-optind)>=1) count=strtoul(argv[optind],  NULL,0);
+	if ((argc-optind)>=2) start=strtoul(argv[optind+1],NULL,0);
+	traceShow(ospec,count,start);
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {
@@ -691,6 +692,15 @@ extern  int        optind;         /* for getopt */
 	    break;
 	}
     }
+    else if (strcmp(cmd,"mode") == 0)
+    {
+	if ((argc-optind) == 0)
+	{   ret=TRACE_CNTL( cmd );
+	    printf( "%d\n",ret ); /* print the old mode */
+	}
+	else ret=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
+	if (ret == 0) ret=1; else ret=0;
+    }
     else
     {   int sts=0;
 	/*printf("argc - optind = %d\n", argc - optind );*/
@@ -709,5 +719,5 @@ extern  int        optind;         /* for getopt */
 	    printf( USAGE );
 	}
     }
-    return (0);
+    return (ret);
 }   /* main */

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.73 $$Date: 2014/03/13 05:33:08 $"
+#define TRACE_REV  "$Revision: 1.74 $$Date: 2014/03/13 13:06:58 $"
 
 #ifndef __KERNEL__
 
@@ -236,7 +236,7 @@ struct traceNamLvls_s
 extern struct traceNamLvls_s  *traceNamLvls_p;
 extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
-extern int                     trace_no_printk;                 /* module_param */
+extern int                     trace_allow_printk;                 /* module_param */
 static const char             *traceName="KERNEL";
 #else
 #define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
@@ -268,7 +268,7 @@ static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
-       int                trace_no_printk=0;                 /* module_param */
+       int                trace_allow_printk=0;                 /* module_param */
 #endif
 #endif
 
@@ -306,7 +306,7 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
 static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
 {
 # ifdef __KERNEL__
-    if (trace_no_printk) return;
+    if (!trace_allow_printk) return;
 # endif
     TRACE_PRINT( "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
     TRACE_VPRINT( msg, ap );
@@ -502,18 +502,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	uint64_t lvl=va_arg(ap,uint64_t);
 	if (cmd[7] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
 	else               { ii=traceTID; ee=traceTID+1; }
-	for ( ; ii<ee; ++ii)
-	{
-#         ifndef __KERNEL__
-	    if (  (strcmp(traceNamLvls_p[ii].name,"KERNEL")==0)
-		&&(lvl&0xff000000) )
-	    {   fprintf(stderr, "not allowed to set some level bits which could "
-			"cause KERNEL issues\n");
-	    } else
-#         endif
-	    {   traceNamLvls_p[ii].S = lvl;
-	    }
-	}
+	for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S = lvl;
     }
     else if (strncmp(cmd,"lvlmskT",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   
@@ -534,16 +523,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	lvls=va_arg(ap,uint64_t);
 	lvlt=va_arg(ap,uint64_t);
 	for ( ; ii<ee; ++ii)
-	{
-#         ifndef __KERNEL__
-	    if (  (strcmp(traceNamLvls_p[ii].name,"KERNEL")==0)
-		&&(lvls&0xff000000) )
-	    {   fprintf(stderr, "not allowed to set some level bits which could "
-			"cause KERNEL issues\n");
-	    } else
-#         endif
-	    {   traceNamLvls_p[ii].S |= lvls;
-	    }
+	{   traceNamLvls_p[ii].S |= lvls;
 	    traceNamLvls_p[ii].M |= lvlm;
 	    traceNamLvls_p[ii].T |= lvlt;
 	}
@@ -563,22 +543,33 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    traceNamLvls_p[ii].T &= ~lvlt;
 	}
     }
-    else if (strcmp(cmd,"mode") == 0)
-    {   ret=traceControl_p->mode.mode;
-	if (nargs==1)
-	{   uint32_t mode=va_arg(ap,uint64_t);
-	    traceControl_p->mode.mode = mode;
+    else if (strncmp(cmd,"mode",4) == 0)
+    {
+	switch (cmd[4])
+	{
+	case '\0':
+	    ret=traceControl_p->mode.mode;
+	    if (nargs==1)
+	    {   uint32_t mode=va_arg(ap,uint64_t);
+		traceControl_p->mode.mode = mode;
+	    }
+	    break;
+	case 'M':
+	    ret=traceControl_p->mode.bits.M;
+	    if (nargs==1)
+	    {   uint32_t mode=va_arg(ap,uint64_t);
+		traceControl_p->mode.bits.M = mode;
+	    }
+	    break;
+	case 'S':
+	    ret=traceControl_p->mode.bits.S;
+	    if (nargs==1)
+	    {   uint32_t mode=va_arg(ap,uint64_t);
+		traceControl_p->mode.bits.S = mode;
+	    }
+	default:
+	    ret=-1;
 	}
-    }
-    else if (strcmp(cmd,"modeM") == 0)
-    {   
-	uint32_t mode=va_arg(ap,uint64_t);
-	traceControl_p->mode.bits.M = mode;
-    }
-    else if (strcmp(cmd,"modeS") == 0)
-    {   
-	uint32_t mode=va_arg(ap,uint64_t);
-	traceControl_p->mode.bits.S = mode;
     }
     else if (strcmp(cmd,"reset") == 0) 
     {
@@ -589,13 +580,13 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    = 0;
 	traceControl_p->triggered = 0;
     }
-#   ifndef __KERNEL__
     else
-    {   fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
-	return (-1);
+    {   ret = -1;
     }
-#   endif /*__KERNEL__*/
     va_end(ap);
+#   ifndef __KERNEL__
+    if (ret==-1) fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
+#   endif
     return (ret);
 }   /* traceCntl */
 

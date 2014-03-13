@@ -3,13 +3,13 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: tracelib.c,v $
-    rev="$Revision: 1.1 $$Date: 2014-03-12 22:49:10 $";
+    rev="$Revision: 1.2 $$Date: 2014-03-13 01:48:03 $";
     */
 
 #define TRACE_LIB
 #include "tracelib.h"
 
-struct traceNamLvls_s  traceNamLvls[3];
+struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ];
 TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
 TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
 TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;

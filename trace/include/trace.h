@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.74 $$Date: 2014/03/13 13:06:58 $"
+#define TRACE_REV  "$Revision: 1.75 $$Date: 2014/03/13 13:15:52 $"
 
 #ifndef __KERNEL__
 
@@ -488,30 +488,18 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    traceControl_p->trigOffMode.mode = modeMsk;
 	}
     }
-    else if (strncmp(cmd,"lvlmskM",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
-    {   
-	uint64_t lvl=va_arg(ap,uint64_t);
-	if (cmd[7] == 'g')
-	{
-	    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-		traceNamLvls_p[ii].M = lvl;
-	} else 	traceNamLvls_p[traceTID].M = lvl;
-    }
-    else if (strncmp(cmd,"lvlmskS",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
+    else if (strncmp(cmd,"lvlmsk",6) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
     {   unsigned ee;
 	uint64_t lvl=va_arg(ap,uint64_t);
-	if (cmd[7] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
-	else               { ii=traceTID; ee=traceTID+1; }
-	for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S = lvl;
-    }
-    else if (strncmp(cmd,"lvlmskT",7) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
-    {   
-	uint64_t lvl=va_arg(ap,uint64_t);
-	if (cmd[7] == 'g')
+	if ((cmd[6])&&(cmd[7]=='g')){ ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
+	else                        { ii=traceTID; ee=traceTID+1; }
+	switch (cmd[6])
 	{
-	    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-		traceNamLvls_p[ii].T = lvl;
-	} else 	traceNamLvls_p[traceTID].T = lvl;
+	case 'M': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].M = lvl; break;
+	case 'S': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S = lvl; break;
+	case 'T': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].Y = lvl; break;
+	default: ret=-1;
+	}
     }
     else if (strncmp(cmd,"lvlset",6) == 0)   /* takes 3 args: M S T ((0 val ==> no-op) */
     {   uint64_t lvlm, lvls, lvlt;

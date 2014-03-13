@@ -1,0 +1,32 @@
+
+ksu products
+cd /products/TRACE
+
+: get the source...
+. ~ron/.profile
+tag=v20140313_0040
+roncvs export -r$tag -d$tag ron/work/tracePrj/TRACE3.x
+
+: setup specific compiler
+PRODUCTS=/products:~ron/p
+setup gcc git
+
+cd $tag
+make OUT=$PWD CPPFLAGS="-O2 -std=c11"   src_lib src_utility 2>&1 | egrep -iB4 'error|warn'
+make OUT=$PWD CPPFLAGS="-O2 -std=c++11" src_example_user    2>&1 | egrep -iB4 'error|warn'
+make OUT=$PWD modules                                       2>&1 | egrep -iB4 'error|warn'
+
+: ?other kernel versions?
+
+ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table -fLinux64bit+2.6 TRACE $tag
+ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table -fLinux+2.6 TRACE $tag
+
+: ?test?
+
+cd /products
+tar cjf /tmp/TRACE-`echo $tag|sed 's/v//;s/_/./g'`-slf6.tar.bz2 TRACE/$tag*
+scp /tmp/TRACE-*-slf6.tar.bz2 distro@oink:served_files/packages/TRACE
+
+: ?scp elsewhere?
+
+rm -f /tmp/TRACE-*-slf6.tar.bz2

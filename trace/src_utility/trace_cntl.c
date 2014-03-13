@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.68 $$Date: 2014-03-13 05:33:08 $";
+    rev="$Revision: 1.69 $$Date: 2014-03-13 13:06:58 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -692,7 +692,7 @@ extern  int        optind;         /* for getopt */
 	    break;
 	}
     }
-    else if (strcmp(cmd,"mode") == 0)
+    else if (strncmp(cmd,"mode",4) == 0)
     {
 	if ((argc-optind) == 0)
 	{   ret=TRACE_CNTL( cmd );

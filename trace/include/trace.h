@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.76 $$Date: 2014/03/13 13:17:18 $"
+#define TRACE_REV  "$Revision: 1.77 $$Date: 2014/03/13 17:25:59 $"
 
 #ifndef __KERNEL__
 
@@ -555,6 +555,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    {   uint32_t mode=va_arg(ap,uint64_t);
 		traceControl_p->mode.bits.S = mode;
 	    }
+	    break;
 	default:
 	    ret=-1;
 	}

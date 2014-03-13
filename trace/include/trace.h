@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.75 $$Date: 2014/03/13 13:15:52 $"
+#define TRACE_REV  "$Revision: 1.76 $$Date: 2014/03/13 13:17:18 $"
 
 #ifndef __KERNEL__
 
@@ -497,7 +497,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	{
 	case 'M': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].M = lvl; break;
 	case 'S': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S = lvl; break;
-	case 'T': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].Y = lvl; break;
+	case 'T': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].T = lvl; break;
 	default: ret=-1;
 	}
     }

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.72 $$Date: 2014-03-13 01:48:03 $"
+#define TRACE_REV  "$Revision: 1.73 $$Date: 2014-03-13 05:33:08 $"
 
 #ifndef __KERNEL__
 
@@ -86,7 +86,6 @@
 #ifndef TRACE_DECL
 #define TRACE_DECL( scope, type_name, initializer ) scope type_name initializer
 #endif
-
 
 /* 88,7=192 bytes/ent   96,6=192   128,10=256*/
 #define TRACE_DFLT_MAX_MSG_SZ      128
@@ -442,12 +441,13 @@ static void trace_unlock( void )
 
 static int traceCntl( int nargs, const char *cmd, ... )
 {
+    int      ret=0;
     va_list  ap;
     unsigned ii;
 #  if 0 && !defined(__KERNEL__)
     va_start( ap, cmd );
-    for (ii=0; ii<nargs; ++ii)
-	printf("arg%u=0x%llx\n",ii,va_arg(ap,unsigned long long));
+    for (ii=0; ii<nargs; ++ii) /* nargs is number of args AFTER cmd */
+	printf("arg%u=0x%llx\n",ii+1,va_arg(ap,unsigned long long));
     va_end( ap );
 #  endif
 
@@ -564,9 +564,11 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	}
     }
     else if (strcmp(cmd,"mode") == 0)
-    {   
-	uint32_t mode=va_arg(ap,uint64_t);
-	traceControl_p->mode.mode = mode;
+    {   ret=traceControl_p->mode.mode;
+	if (nargs==1)
+	{   uint32_t mode=va_arg(ap,uint64_t);
+	    traceControl_p->mode.mode = mode;
+	}
     }
     else if (strcmp(cmd,"modeM") == 0)
     {   
@@ -594,7 +596,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
     }
 #   endif /*__KERNEL__*/
     va_end(ap);
-    return (0);
+    return (ret);
 }   /* traceCntl */
 
 

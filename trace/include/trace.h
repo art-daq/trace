@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.77 $$Date: 2014-03-13 17:25:59 $"
+#define TRACE_REV  "$Revision: 1.78 $$Date: 2014-03-14 02:57:06 $"
 
 #ifndef __KERNEL__
 
@@ -179,9 +179,9 @@ struct traceControl_s
     uint32_t       siz_entry;
     uint32_t       num_entries;
     uint32_t       largest_multiple;
-    uint32_t       num_namLvlTblEnts;/* these and above would be read only if */
-  volatile int32_t trace_initialized;/* in kernel */
-    uint32_t       memlen;
+    uint32_t       num_namLvlTblEnts;
+  volatile int32_t trace_initialized;/* these and above would be read only if */
+    uint32_t       memlen;           /* in kernel */
     uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-25]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
@@ -314,6 +314,11 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
 }
 #endif /* TRACE_LOG_FUNCTION */
 
+#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
+#endif
+
 static void trace( unsigned lvl, unsigned nargs
                   TRACE_XTRA_UNUSED		  
 		  , const char *msg, ... )
@@ -355,6 +360,9 @@ static void trace( unsigned lvl, unsigned nargs
 	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #       endif
+
+	if (myIdxCnt == traceControl_p->num_entries)
+	    traceControl_p->full = 1; /* now we'll know if wrIdxCnt has rolled over */
 
 	TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
 
@@ -415,6 +423,10 @@ static void trace( unsigned lvl, unsigned nargs
     if (trig_reset_S) TRACE_CNTL( "modeS", 0 ); /* this is how trace references traceCntl to avoid "unused" warnings when only TRACE is used */
 }   /* trace */
 
+#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+# pragma GCC diagnostic pop
+#endif
+
 
 
 static void trace_lock( void )
@@ -467,7 +479,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	va_end(ap); return (0);
     }
     /*if (traceControl_p == NULL) traceInit();*/
-    TRACE_INIT_CHECK;     /* note: allows name2tid to be called in userspace */
+    TRACE_INIT_CHECK {};     /* note: allows name2tid to be called in userspace */
 #  endif
 
     if (strncmp(cmd,"name",4) == 0)/* THIS really only makes sense for non-thread local-name-for-module or for tracelib.h (non-static implementation) w/TLS to name-per-thread */

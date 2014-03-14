@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.69 $$Date: 2014-03-13 13:06:58 $";
+    rev="$Revision: 1.70 $$Date: 2014-03-14 02:57:06 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -192,16 +192,31 @@ void traceShow( const char *ospec, int count, int start )
     const char            * sp; /*spec ptr*/
 
     traceInit();
-    if (start == -1)
-    {   rdIdx=traceControl_p->wrIdxCnt % traceControl_p->num_entries;
-	max=((rdIdx<=traceControl_p->num_entries)
-	     ?rdIdx:traceControl_p->num_entries);
+    if (start >= 0)
+    {   
+	if (start >= traceControl_p->num_entries)
+	{   start = traceControl_p->num_entries - 1;
+	    printf("specified start index too large, adjusting to %d\n",start );
+	}
+	rdIdx=start;
     }
     else
-    {   rdIdx = start % traceControl_p->num_entries;
-	max = traceControl_p->num_entries;
+    {   rdIdx = traceControl_p->wrIdxCnt % traceControl_p->num_entries;
     }
-    if ((count != -1) && (count < max)) max = count;
+    if (count >= 0)
+    {
+	if (count > traceControl_p->num_entries)
+	{   max = traceControl_p->num_entries;
+	    printf("specified count > num_entrie, adjusting to %d\n",max);
+	}
+	else
+	    max = count;
+    }
+    else if (traceControl_p->full)
+	max = traceControl_p->num_entries;
+    else
+	max = rdIdx + 1;
+
     local_msg    =            (char*)malloc( traceControl_p->siz_msg );
     local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
@@ -335,14 +350,15 @@ void traceInfo()
 	uint32_t spinlockCopy;
 	spinlockCopy = traceControl_p->spinlock;
 	wrCopy = traceControl_p->wrIdxCnt;
-	used = ((wrCopy<=traceControl_p->num_entries)
-		?wrCopy
-		:traceControl_p->num_entries);
+	used = ((traceControl_p->full)
+		?traceControl_p->num_entries
+		:wrCopy); /* if not full this shouldn't be > traceControl_p->num_entries */
 	printf("trace.h rev       = %s\n"
 	       "revision          = %s\n"
 	       "trace_initialized =%d\n"
 	       "mode              =0x%x\n"
 	       "writeIdxCount     =0x%08x entries used: %u\n"
+	       "full              =%d\n"
 	       "lock              =%u\n"
                "largestMultiple   =0x%08x\n"
 	       "trigIdxCnt        =0x%08x\n"
@@ -365,6 +381,7 @@ void traceInfo()
 	       , traceControl_p->trace_initialized
 	       , traceControl_p->mode.mode
 	       , wrCopy, used
+	       , traceControl_p->full
 	       , spinlockCopy
 	       , traceControl_p->largest_multiple
 	       , traceControl_p->trigIdxCnt

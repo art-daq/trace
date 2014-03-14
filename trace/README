@@ -1,0 +1,3 @@
+To get started, see the doc/quick-start.txt file.
+Please note that using a version of gcc that supports the c11 and/or c++11
+standard is desirable.

@@ -7,4 +7,20 @@ Quick start for TRACE (version 3):
     - Linux+*/bin/trace_cntl show
 
 After that, just poke around and ... ?have fun? :)
+Look at the source under src_example/.
 
+If you want TRACE to behave like printf, make sure TRACE_LVLS=-1 is in
+your environment.
+
+   export TRACE_LVLS=-1
+
+If you want TRACE to create the standard file (/tmp/trace_buffer_$USER),
+it is recommended that you put TRACE_NAME=TRACE or TRACE_ARGSMAX=10 in
+your environment.
+
+
+NOTE: if there are no TRACE_* variables defined in the environment, TRACE
+will basically be disabled.
+
+
+See the doc/users_guide.txt file for further details.

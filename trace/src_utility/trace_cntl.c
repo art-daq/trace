@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.70 $$Date: 2014/03/14 02:57:06 $";
+    rev="$Revision: 1.71 $$Date: 2014/03/15 05:09:38 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -104,36 +104,47 @@ struct sizepush
     unsigned push:16;
 };
 
-void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush *sizes_out )
+void get_arg_sizes( char *ofmt, char *ifmt, int num_params, int param_bytes, struct sizepush *sizes_out )
 {   char    *in;
     char    *percent_sav;
     int      numArgs=0;
     int      maxArgs=10;
     int      modifier=0;
-    int      skip=0;
-    in = fmt;
+
+    /*strcpy( ofmt, ifmt );*/
+    in = ifmt;
     /* strchrnul would be nice (_GNU_SOURCE, ref. man strchr) */
-    while ((in=strchr(in,'%')))
-    {   percent_sav = in;       /* save in case we need to modify it (too many args) */
-	++in;  			/* point to next char */
+    /*while ((in=strchr(in,'%')))*/
+    while (*in)
+    {
+	if (*in != '%') { *ofmt++ = *in++; continue; }
+	/* found '%' - process it */
+	*ofmt = *in;
+	percent_sav = ofmt;       /* save in case we need to modify it (too many args) */
+	++in; ++ofmt; 			/* point to next char */
 	/*printf("next char=%c\n",*in);*/
-	if ((*in=='%')||(*in=='m')) { ++in; continue; }/* ingore %% which specified a % char */
+	if ((*in=='%')||(*in=='m')) { *ofmt++ = *in++; continue; }/* ingore %% which specified a % char */
 	if (numArgs == maxArgs) { *percent_sav = '*'; continue; }  /* SAFETY - no args beyond max */
-	if ((skip=strspn(in,"0123456789.-# +'I"))) in+=skip;
+	while (  ((*in>='0')&&(*in<='9'))
+	       ||(*in=='.')||(*in=='-')||(*in=='#')||(*in=='+')||(*in=='\'')||(*in=='I')||(*in=='"'))
+	    *ofmt++ = *in++;
  chkChr:
-	switch (*in++)
+	switch (*in)
 	{
 	    /* Basic conversion specifiers */
-	case 'd': case 'i': case 'o': case 'u': case 'x': case 'X':
+	case 'd': case 'i': case 'o': case 'u': case 'x': case 'X': case 'c':
 	    switch (modifier)
 	    {
 	    case -2: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4; break; /* char */
 	    case -1: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* short */
 	    case 0:  sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* int */
-	    case 1:  sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=param_bytes;break;/* long */
+	    case 1:  sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=param_bytes;/* long */
+		if ((param_bytes==8)&&(sizeof(long)==4)) *ofmt++ = 'l';
+		break;
 	    case 2:  sizes_out[numArgs].push=8;          sizes_out[numArgs].size=8;break;/* long long */
 	    default: printf("error\n");
 	    }
+	    *ofmt++ = *in++;
 	    modifier=0;
 	    break;
 	case 'e': case 'E': case 'f': case 'F': case 'g': case 'G': case 'a': case 'A':
@@ -146,30 +157,35 @@ void get_arg_sizes( char *fmt, int num_params, int param_bytes, struct sizepush 
 	    {   sizes_out[numArgs].push=8;
 		sizes_out[numArgs].size=8;
 	    } /* double */
+	    *ofmt++ = *in++;
 	    break;
 
 	    /* length modifiers */
-	case 'h':  --modifier; goto chkChr;
-	case 'l':  ++modifier; goto chkChr;
-	case 'L':  ++modifier; goto chkChr;
+	case 'h':  --modifier; *ofmt++ = *in++; goto chkChr;
+	case 'l':  ++modifier; *ofmt++ = *in++; goto chkChr;
+	case 'L':  ++modifier; *ofmt++ = *in++; goto chkChr;
 
 	case 's': case 'n': case 'p':       /* SAFETY -- CONVERT %s to %p */
-	    *(in-1)='p';
+	    *ofmt++='p'; in++;
 	    break;
 	case 'm':
+	    *ofmt++ = *in++;
 	    continue;
 	    break;
 	case '*':   /* special -- "arg" in an arg */
 	    sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;
-	    if (++numArgs == maxArgs) break;
+	    if (++numArgs == maxArgs) *ofmt++ = *in++; break;
+	    *ofmt++ = *in++;
 	    goto chkChr;
 	default:
-	    printf("unknown\n");
+	    printf("unknown %c\n",*in);
+	    *ofmt++ = *in++;
 	}
 	++numArgs;
     }
-    in = fmt+strlen(fmt);
-    while (*--in == '\n') *in='\0';
+    while (*in) *ofmt++ = *in++;
+    *ofmt--='\0';
+    while (*ofmt == '\n') *ofmt-- = '\0';
     if (numArgs < maxArgs) sizes_out[numArgs].push=0;
 }   /* get_arg_sizes */
 
@@ -215,9 +231,9 @@ void traceShow( const char *ospec, int count, int start )
     else if (traceControl_p->full)
 	max = traceControl_p->num_entries;
     else
-	max = rdIdx + 1;
+	max = rdIdx;
 
-    local_msg    =            (char*)malloc( traceControl_p->siz_msg );
+    local_msg    =            (char*)malloc( traceControl_p->siz_msg+50 );/* in case an %ld needs change to %lld */
     local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
@@ -260,21 +276,24 @@ void traceShow( const char *ospec, int count, int start )
     }
     for (printed=0; printed<max; ++printed)
     {   unsigned seconds, useconds;
+	int print_just_converted_ofmt=0;
 	rdIdx = IDXCNT_ADD( rdIdx, -1 );
 	myEnt_p = idxCnt2entPtr( rdIdx );
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 	msg_p[traceControl_p->siz_msg - 1] = '\0';
-	strcpy( local_msg, msg_p );
-	get_arg_sizes(  local_msg, traceControl_p->num_params
+
+	get_arg_sizes(  local_msg, msg_p, traceControl_p->num_params
 		      , myEnt_p->param_bytes, params_sizes );
 
+	/* determine if args need to be copied */
 	if        (  ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
 		   ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
 	{   seconds  = myEnt_p->time.tv_sec;
 	    useconds = myEnt_p->time.tv_usec;
 	    param_va_ptr = (void*)params_p;
-	} else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
+	}
+	else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
 	{   unsigned *ptr=(unsigned*)&myEnt_p->time;
 	    seconds  = *ptr++;
 	    useconds = *ptr;
@@ -293,7 +312,8 @@ void traceShow( const char *ospec, int count, int start )
 		ent_param_ptr += params_sizes[ii].push;
 	    }
 	    param_va_ptr = (void*)local_params;
-	} else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
+	}
+	else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
 	{   long long *ptr=(long long*)&myEnt_p->time;
 	    seconds  = (unsigned)*ptr++;
 	    useconds = (unsigned)*ptr;
@@ -329,17 +349,22 @@ void traceShow( const char *ospec, int count, int start )
 	    case 'R':
 		if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 		else                             printf( ". " );
+		break;
+	    case 'm': print_just_converted_ofmt=1; break;
 	    }
 	}
 
 	/*typedef unsigned long parm_array_t[1];*/
 	/*va_start( ap, params_p[-1] );*/
+	if (!print_just_converted_ofmt)
 	{   /* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
-	     */
+	       Here, I need an initializer so I must have this inside braces { } */
 	    va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
 	    vprintf( local_msg, ap );
+	    printf("\n");
 	}
-	printf("\n");
+	else
+	    printf("%s\n",local_msg);
     }
 }   /*traceShow*/
 
@@ -436,7 +461,10 @@ extern  int        optind;         /* for getopt */
     if      (strcmp(cmd,"test1") == 0)
     {   unsigned loops=0;
 	if (argc - optind == 1) loops=strtoul(argv[optind],NULL,0);
-	do { TRACE( 0, "Hello. \"1 2.5 5 10 15\" should be repeated here: %d %.1f %d %d %d",1,2.5,5,10,15 ); } while (loops--);
+	do
+	{   TRACE( 0, "Hello. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
+		  , 'c',2.5,(short)5,(long long)5000000000,15 );
+	} while (loops--);
     }
     else if (strcmp(cmd,"test") == 0)
     {   float    ff[10];

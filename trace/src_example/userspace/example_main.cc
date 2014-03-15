@@ -3,9 +3,10 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 1.2 $$Date: 2014-03-12 22:54:12 $";
+ // rev="$Revision: 1.3 $$Date: 2014-03-15 16:24:16 $";
 
 #include <pthread.h>		/* pthread_self */
+#include <sys/time.h>		/* gettimeofday */
 
 #include "tracelib.h"
 
@@ -23,6 +24,7 @@ void* thread_func(void *arg)
     long loops=(long)arg;
     char tmp[PATH_MAX];
     long tid;
+    timeval mark;
     if      (trace_thread_option == 1)
     {   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
 	tid = (long)syscall(SYS_GETTID);
@@ -36,10 +38,13 @@ void* thread_func(void *arg)
 	TRACE_CNTL( "name", tmp );
     }
 
+    gettimeofday( &mark, NULL );
     while(loops-- > 0)
     {   TRACE( 0, "loops=%ld", loops );
 	example_sub1();
     }
+    TRACE( 1, "mark: %ld%06ld", mark.tv_sec, mark.tv_usec );
+
     pthread_exit(NULL);
 }
 

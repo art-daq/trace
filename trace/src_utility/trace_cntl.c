@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.71 $$Date: 2014/03/15 05:09:38 $";
+    rev="$Revision: 1.72 $$Date: 2014/03/15 15:14:33 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -189,6 +189,11 @@ void get_arg_sizes( char *ofmt, char *ifmt, int num_params, int param_bytes, str
     if (numArgs < maxArgs) sizes_out[numArgs].push=0;
 }   /* get_arg_sizes */
 
+int countDigits(int n)
+{   return (n >= 10)
+        ? 1 + countDigits(n/10)
+        : 1;
+}
 
 void traceShow( const char *ospec, int count, int start )
 {
@@ -196,6 +201,7 @@ void traceShow( const char *ospec, int count, int start )
     uint32_t max;
     unsigned printed=0;
     unsigned ii;
+    int      buf_slot_width;
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
@@ -233,9 +239,10 @@ void traceShow( const char *ospec, int count, int start )
     else
 	max = rdIdx;
 
-    local_msg    =            (char*)malloc( traceControl_p->siz_msg+50 );/* in case an %ld needs change to %lld */
-    local_params =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
-    params_sizes = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
+    buf_slot_width= countDigits( traceControl_p->num_entries );
+    local_msg     =            (char*)malloc( traceControl_p->siz_msg+50 );/* in case an %ld needs change to %lld */
+    local_params  =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
+    params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
     if (ospec[0] == 'H')
     {   ++ospec; /* done with Heading flag */
@@ -244,7 +251,8 @@ void traceShow( const char *ospec, int count, int start )
 	{
 	    switch (*sp)
 	    {
-	    case 'N': printf("   idx "); break;
+	    case 'N': printf("%*s ", buf_slot_width, "idx" ); break;
+	    case 's': printf("%*s ", buf_slot_width, "slt" ); break;
 	    case 'T': printf("          us_tod "); break;
 	    case 't': printf("       tsc "); break;
 	    case 'i': printf("  tid "); break;
@@ -261,7 +269,8 @@ void traceShow( const char *ospec, int count, int start )
 	{
 	    switch (*sp)
 	    {
-	    case 'N': printf("------ "); break;
+	    case 'N': printf("%.*s ", buf_slot_width, "--------------"); break;
+	    case 's': printf("%.*s ", buf_slot_width, "--------------"); break;
 	    case 'T': printf("---------------- "); break;
 	    case 't': printf("---------- "); break;
 	    case 'i': printf("----- "); break;
@@ -338,7 +347,8 @@ void traceShow( const char *ospec, int count, int start )
 	{
 	    switch (*sp)
 	    {
-	    case 'N': printf("%6u ", printed ); break;
+	    case 'N': printf("%*u ", buf_slot_width, printed ); break;
+	    case 's': printf("%*u ", buf_slot_width, rdIdx ); break;
 	    case 'T': printf("%10u%06u ", seconds, useconds); break;
 	    case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 	    case 'i': printf("%5d ", myEnt_p->tid); break;
@@ -400,7 +410,7 @@ void traceInfo()
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u\n"
-               "default TRACE_SHOW=%s other: B(parambytes) P(pid)\n"
+               "default TRACE_SHOW=%s others: B(parambytes) P(pid) s(slot)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , traceControl_p->trace_initialized

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.72 $$Date: 2014/03/15 15:14:33 $";
+    rev="$Revision: 1.73 $$Date: 2014/03/17 14:18:50 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -58,6 +58,8 @@ tests:  (use %s show after test)\n\
 #  define LX "llx"
 #  define LU "llu"
 #endif
+
+#define minw(a,b) (b<a?a:b)
 
 #define DFLT_SHOW         "HNTtiILR"
 #define NUMTHREADS 4
@@ -239,7 +241,7 @@ void traceShow( const char *ospec, int count, int start )
     else
 	max = rdIdx;
 
-    buf_slot_width= countDigits( traceControl_p->num_entries );
+    buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
     local_msg     =            (char*)malloc( traceControl_p->siz_msg+50 );/* in case an %ld needs change to %lld */
     local_params  =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
@@ -251,7 +253,7 @@ void traceShow( const char *ospec, int count, int start )
 	{
 	    switch (*sp)
 	    {
-	    case 'N': printf("%*s ", buf_slot_width, "idx" ); break;
+	    case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
 	    case 's': printf("%*s ", buf_slot_width, "slt" ); break;
 	    case 'T': printf("          us_tod "); break;
 	    case 't': printf("       tsc "); break;
@@ -269,7 +271,7 @@ void traceShow( const char *ospec, int count, int start )
 	{
 	    switch (*sp)
 	    {
-	    case 'N': printf("%.*s ", buf_slot_width, "--------------"); break;
+	    case 'N': printf("%.*s ", minw(3,countDigits(max-1)), "--------------"); break;
 	    case 's': printf("%.*s ", buf_slot_width, "--------------"); break;
 	    case 'T': printf("---------------- "); break;
 	    case 't': printf("---------- "); break;
@@ -347,7 +349,7 @@ void traceShow( const char *ospec, int count, int start )
 	{
 	    switch (*sp)
 	    {
-	    case 'N': printf("%*u ", buf_slot_width, printed ); break;
+	    case 'N': printf("%*u ", minw(3,countDigits(max-1)), printed ); break;
 	    case 's': printf("%*u ", buf_slot_width, rdIdx ); break;
 	    case 'T': printf("%10u%06u ", seconds, useconds); break;
 	    case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;

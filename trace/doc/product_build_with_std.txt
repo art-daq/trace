@@ -4,8 +4,8 @@ cd /products/TRACE
 
 : get the source...
 . ~ron/.profile
-tag=v20140313_0040
-roncvs export -r$tag -d$tag ron/work/tracePrj/TRACE3.x
+tag=v3_01_04
+cvs -d :ext:p-trace@cdcvs.fnal.gov/cvs/projects/trace export -r$tag -d$tag trace
 
 : setup specific compiler
 PRODUCTS=/products:~ron/p

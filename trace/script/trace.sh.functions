@@ -3,8 +3,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.21 $
-#   $Date: 2014-03-20 17:11:26 $
+#   $Revision: 1.22 $
+#   $Date: 2014-03-20 19:17:23 $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { trace_cntl show "$@" | less; }
@@ -28,7 +28,7 @@ bitN_to_mask()
 {
     opts= args=
     op1arg='xx=`expr "x$op" : "x-.\(.*\)"`; test -n "$xx" && set -- "$xx" "$@"'
-    while [ -n "${1-}" ];do
+    while [ -n "${1+x}" ];do
         op=$1;shift
         case "$op" in
         -f*) eval $op1arg; opts="${opts:+$opts }-f$1"; shift;;

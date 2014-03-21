@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.78 $$Date: 2014/03/14 02:57:06 $"
+#define TRACE_REV  "$Revision: 1.79 $$Date: 2014/03/21 18:10:19 $"
 
 #ifndef __KERNEL__
 
@@ -60,7 +60,7 @@
 #  define cmpxchg(ptr, old, new) \
   ({ uint32_t __old = (old); old=*ptr; *ptr=new; __old;  })
 # endif
-# define TRACE_GETTIMEOFDAY( tv ) gettimeofday( tv, NULL )
+# define TRACE_GETTIMEOFDAY( tvp ) gettimeofday( tvp, NULL )
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
 /*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))*/
@@ -68,18 +68,18 @@
 
 #else  /* __KERNEL__ */
 
-# include <linux/time.h>              /* do_gettimeofday */
-/*# include <linux/printk.h>	       printk, vprintk */
-# include <linux/kernel.h>	      /* printk, vprintk */
-# include <linux/mm.h>		      /* kmalloc OR __get_free_pages */
-# include <linux/vmalloc.h>	      /* __vmalloc, vfree */
-# include <linux/spinlock.h>	      /* cmpxchg */
-# define TRACE_ATOMIC_T           uint32_t
+# include <linux/time.h>	   /* do_gettimeofday */
+/*# include <linux/printk.h>	      printk, vprintk */
+# include <linux/kernel.h>	   /* printk, vprintk */
+# include <linux/mm.h>		   /* kmalloc OR __get_free_pages */
+# include <linux/vmalloc.h>	   /* __vmalloc, vfree */
+# include <linux/spinlock.h>	   /* cmpxchg */
+# define TRACE_ATOMIC_T            uint32_t
 # define TRACE_THREAD_LOCAL 
-# define TRACE_GETTIMEOFDAY( tv ) do_gettimeofday( tv )
-# define TRACE_PRINT              printk
-# define TRACE_VPRINT             vprintk
-# define TRACE_INIT_CHECK         /* no check for kernel -- init when module loaded */
+# define TRACE_GETTIMEOFDAY( tvp ) do_gettimeofday( tvp )
+# define TRACE_PRINT               printk
+# define TRACE_VPRINT              vprintk
+# define TRACE_INIT_CHECK          /* no check for kernel -- init when module loaded */
 
 #endif /* __KERNEL__ */
 
@@ -174,6 +174,7 @@ struct traceControl_s
 {
     char           version_string[sizeof(int32_t)*16];
     uint32_t	   version;
+    uint32_t       create_tv_sec;
     uint32_t       num_params;
     uint32_t       siz_msg;
     uint32_t       siz_entry;
@@ -182,7 +183,7 @@ struct traceControl_s
     uint32_t       num_namLvlTblEnts;
   volatile int32_t trace_initialized;/* these and above would be read only if */
     uint32_t       memlen;           /* in kernel */
-    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-25]; /* allow mmap 1st page(s) (stuff above) readonly */
+    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-24]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
     uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
@@ -760,7 +761,7 @@ static int traceInit(void)
     uint32_t    msgmax_, argsmax_, numents_, namtblents_;
     int		I_created;
     const char *_name=traceName;
-#   ifndef __KERNEL__
+#  ifndef __KERNEL__
     int         activate=0;
     const char *_file;
     const char *cp;
@@ -800,18 +801,18 @@ static int traceInit(void)
 	    }
 	    return (0);
 	}
-#   else
+#  else
     {
-	msgmax_       =msgmax;	/* module_param */
-	argsmax_    =argsmax;	/* module_param */
-	numents_      =numents;	/* module_param */
-	namtblents_   =namtblents;	/* module_param */
+	msgmax_     =msgmax;	 /* module_param */
+	argsmax_    =argsmax;	 /* module_param */
+	numents_    =numents;	 /* module_param */
+	namtblents_ =namtblents; /* module_param */
 	printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
 	       ,numents_,   msgmax_,   argsmax_,   namtblents_ );
 	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
 	traceControl_p = (struct traceControl_s *)vmalloc( memlen );
 	I_created = 1;  /* KERNEL always creates  (no verification against existing needed) */
-#   endif
+#  endif
 
 	/* this is needed in order to initNames */
 	/* ADD TO ABOVE, FOR WHEN (I_created==0), VERIFICATION THAT cntlPagesSiz() == size from file */
@@ -819,8 +820,11 @@ static int traceInit(void)
 	    ((unsigned long)traceControl_p+cntlPagesSiz());
 
 	if (I_created)
-	{   strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
+	{   struct timeval tv;
+	    TRACE_GETTIMEOFDAY( &tv );
+	    strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
 	    traceControl_p->version_string[sizeof(traceControl_p->version_string)-1] = '\0';
+	    traceControl_p->create_tv_sec     = (uint32_t)tv.tv_sec;
 	    traceControl_p->num_params        = argsmax_;
 	    traceControl_p->siz_msg           = msgmax_;
 	    traceControl_p->siz_entry         = entSiz( msgmax_, argsmax_ );

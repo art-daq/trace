@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.73 $$Date: 2014/03/17 14:18:50 $";
+    rev="$Revision: 1.74 $$Date: 2014/03/21 18:10:19 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -383,8 +383,16 @@ void traceShow( const char *ospec, int count, int start )
 
 void traceInfo()
 {
-	uint32_t wrCopy, used;
-	uint32_t spinlockCopy;
+	uint32_t   wrCopy, used;
+	uint32_t   spinlockCopy;
+	char       outstr[200];
+	struct tm *tmp;
+	time_t     tt=(time_t)traceControl_p->create_tv_sec;
+	tmp = localtime( &tt );
+	if (tmp == NULL) { perror("localtime"); exit(EXIT_FAILURE); }
+	if (strftime(outstr, sizeof(outstr),"%a %b %d %H:%M:%S %Z %Y",tmp) == 0)
+	{   perror("strftime"); exit(EXIT_FAILURE);
+	}
 	spinlockCopy = traceControl_p->spinlock;
 	wrCopy = traceControl_p->wrIdxCnt;
 	used = ((traceControl_p->full)
@@ -392,6 +400,7 @@ void traceInfo()
 		:wrCopy); /* if not full this shouldn't be > traceControl_p->num_entries */
 	printf("trace.h rev       = %s\n"
 	       "revision          = %s\n"
+	       "create time       = %s\n"
 	       "trace_initialized =%d\n"
 	       "mode              =0x%x\n"
 	       "writeIdxCount     =0x%08x entries used: %u\n"
@@ -415,6 +424,7 @@ void traceInfo()
                "default TRACE_SHOW=%s others: B(parambytes) P(pid) s(slot)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
+	       , outstr
 	       , traceControl_p->trace_initialized
 	       , traceControl_p->mode.mode
 	       , wrCopy, used

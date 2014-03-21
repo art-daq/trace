@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.80 $$Date: 2014/03/21 19:04:18 $"
+#define TRACE_REV  "$Revision: 1.81 $$Date: 2014/03/21 19:26:22 $"
 
 #ifndef __KERNEL__
 
@@ -183,7 +183,7 @@ struct traceControl_s
   volatile int32_t trace_initialized;/* these and above would be read only if */
     uint32_t       memlen;           /* in kernel */
     uint32_t       create_tv_sec;
-    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-24]; /* allow mmap 1st page(s) (stuff above) readonly */
+    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-26]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
     uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.79 $$Date: 2014-03-21 18:10:19 $"
+#define TRACE_REV  "$Revision: 1.80 $$Date: 2014-03-21 19:04:18 $"
 
 #ifndef __KERNEL__
 
@@ -174,7 +174,6 @@ struct traceControl_s
 {
     char           version_string[sizeof(int32_t)*16];
     uint32_t	   version;
-    uint32_t       create_tv_sec;
     uint32_t       num_params;
     uint32_t       siz_msg;
     uint32_t       siz_entry;
@@ -183,6 +182,7 @@ struct traceControl_s
     uint32_t       num_namLvlTblEnts;
   volatile int32_t trace_initialized;/* these and above would be read only if */
     uint32_t       memlen;           /* in kernel */
+    uint32_t       create_tv_sec;
     uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-24]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */

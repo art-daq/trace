@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.4 $
-#   $Date: 2014-03-22 19:35:08 $
+#   $Revision: 1.5 $
+#   $Date: 2014-03-22 20:31:29 $
 FILE = TABLE
 GROUP:
 
@@ -88,6 +88,8 @@ COMMON:
 	if    ( test ! -d ${${UPS_PROD_NAME_UC}_MAN} )
 	    envRemove( MANPATH, ${${UPS_PROD_NAME_UC}_MAN}, :)
 	endif ( test ! -d ${${UPS_PROD_NAME_UC}_MAN} )
+
+	envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
 	execute( test $?shell \!= 1 && . ${UPS_PROD_DIR}/script/trace.sh.functions, NO_UPS_ENV )
 

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.24 $$Date: 2014-03-13 13:06:58 $";
+    rev="$Revision: 1.25 $$Date: 2014-03-23 03:47:29 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -83,32 +83,34 @@ static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
     long          must_check;
     long          lcl_off;
     long          dst_off =0;
-    unsigned long vma     =(unsigned long)traceControl_p;
     long          till_end;
     long          till_page;
     long          to_user;
     size_t        lcl_siz=siz;
-    unsigned long kva;
+    unsigned long vma;
+    /*unsigned long kva;*/
 
     /*mutex_lock(&read_mutex);*/
     lcl_off  = (long)*off;
     till_end = (int)traceControl_p->memlen - lcl_off;
     while ((lcl_siz>0) && (till_end>0))
     {
+	vma = (unsigned long)traceControl_p + lcl_off;
 	till_page = PAGE_SIZE - (vma&(PAGE_SIZE-1));
 	to_user = min3( till_page, till_end, (long)lcl_siz );
-	kva = (unsigned long) page_address(vmalloc_to_page((void *)vma));
-	/*printk("trace_proc_buffer_read: siz=%lu off=%ld vma=0x%lx kva=0x%lx to_user=%ld\n"
-	  , siz, lcl_off, vma, kva, to_user );*/
+	/*kva = (unsigned long) page_address(vmalloc_to_page((void *)vma));
+	printk("trace_proc_buffer_read: siz=%lu lclsiz=%lu lcloff=%ld "
+	  "dstoff=%ld to_user=%ld tillend=%ld vma=0x%lx kva=0x%lx\n"
+	  , siz, lcl_siz, lcl_off, dst_off, to_user, till_end, vma, kva );*/
 
-	must_check = copy_to_user( dst_p+dst_off, (void*)kva, to_user );
+	must_check = copy_to_user( dst_p+dst_off, (void*)vma/*kva*/, to_user );
 	if (must_check != 0)
 	    return (-EACCES);
 
-	vma     += to_user;
 	lcl_off += to_user;
 	lcl_siz -= to_user;
 	dst_off += to_user;
+	till_end-= to_user;
     }
     /*printk("trace_proc_buffer_read - SUCCESS ret=%ld\n", siz-lcl_siz );*/
     *off += (siz-lcl_siz);

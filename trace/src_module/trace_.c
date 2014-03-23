@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.25 $$Date: 2014-03-23 03:47:29 $";
+    rev="$Revision: 1.26 $$Date: 2014-03-23 05:23:01 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -20,6 +20,7 @@
 #include <asm-generic/uaccess.h>/* copy_to_user */
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
 #include <trace/events/irq.h>	/*  */
+#include <trace/events/syscalls.h>/* */
 #define TRACE_IMPL		// implement traceInit
 #include "trace.h"
 
@@ -199,8 +200,7 @@ static void trace_proc_remove( void )
 
 
 /* based on code in kernel/trace/trace_sched_switch.c */
-static void
-trace_sched_switch_hook(
+static void trace_sched_switch_hook(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
                         void *__rq
 # else
@@ -214,8 +214,7 @@ trace_sched_switch_hook(
         local_irq_restore(flags);
 }   // trace_sched_switch_hook
 
-static void
-trace_irq(
+static void trace_irq(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 	  void *new,
 # endif
@@ -227,6 +226,23 @@ trace_irq(
 	TRACE( 30, "irq_hander_entry: cpu=%d irq=%d",raw_smp_processor_id(),irq);
         local_irq_restore(flags);
 }   // trace_irq
+
+// Ref. kernel/trace/trace_syscalls.c:void ftrace_syscall_enter(void *ignore, struct pt_regs *regs, long id)
+static void my_trace_sys_enter(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long id )
+{
+        int syscall_nr;
+
+        syscall_nr = syscall_get_nr(current, regs);
+        if (syscall_nr < 0)
+                return;
+
+	TRACE( 29, "sys_enter: nr=%d", syscall_nr );
+
+}   // my_trace_sys_enter
 
 static int  trace_sched_switch_hook_add( void )
 {
@@ -245,12 +261,25 @@ static int  trace_sched_switch_hook_add( void )
 # endif
                                       );
     printk("trace_sched_switch_hook_add: irq returning %d (0=success)\n", err );
+    if (err) return (err);
+
+    err = register_trace_sys_enter( my_trace_sys_enter
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+                                      , NULL
+# endif
+                                      );
+    printk("trace_sched_switch_hook_add: syscall returning %d (0=success)\n", err );
 
     return (err);
 }   // trace_sched_switch_hook_add
 
 static void trace_sched_switch_hook_remove( void )
 {
+    unregister_trace_sys_enter( my_trace_sys_enter
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+                                      , NULL
+# endif
+                                      );
     unregister_trace_irq_handler_entry( trace_irq
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
                                       , NULL

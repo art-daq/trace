@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.27 $$Date: 2014-03-23 05:35:28 $";
+    rev="$Revision: 1.28 $$Date: 2014-03-23 20:36:56 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -210,7 +210,7 @@ static void trace_sched_switch_hook(
 {
         unsigned long flags;
         local_irq_save(flags);
-	TRACE( 31, "sched: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
+	TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
         local_irq_restore(flags);
 }   // trace_sched_switch_hook
 
@@ -223,7 +223,8 @@ static void trace_irq(
 {
         unsigned long flags;
         local_irq_save(flags);
-	TRACE( 30, "irq_hander_entry: cpu=%d irq=%d",raw_smp_processor_id(),irq);
+	TRACE( 30, "irqenter: cpu=%d irq=%d"
+	      , raw_smp_processor_id(), irq );
         local_irq_restore(flags);
 }   // trace_irq
 
@@ -240,7 +241,7 @@ static void my_trace_sys_enter(
         if (syscall_nr < 0)
                 return;
 
-	TRACE( 29, "sys_enter: nr=%d pid=%d", syscall_nr, current->pid );
+	TRACE( 29, "sysenter: cpu=%d syscall=%d", raw_smp_processor_id(), syscall_nr );
 
 }   // my_trace_sys_enter
 

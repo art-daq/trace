@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.26 $$Date: 2014/03/23 05:23:01 $";
+    rev="$Revision: 1.27 $$Date: 2014/03/23 05:35:28 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -240,7 +240,7 @@ static void my_trace_sys_enter(
         if (syscall_nr < 0)
                 return;
 
-	TRACE( 29, "sys_enter: nr=%d", syscall_nr );
+	TRACE( 29, "sys_enter: nr=%d pid=%d", syscall_nr, current->pid );
 
 }   // my_trace_sys_enter
 

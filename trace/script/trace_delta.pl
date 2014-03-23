@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.39 $';
-#   $Date: 2014-03-07 21:17:57 $
+$version = '$Revision: 1.40 $';
+#   $Date: 2014-03-23 20:34:53 $
 
 use Time::Local; # timelocal()
 
@@ -27,8 +27,9 @@ options:
 -r                   change \"timeStamp\" column to \"relative\" (currently
                      effects all -d columns)
 -ct   <col_spec>     make time more readable (convert time)
--syscall             attempt read of /usr/include/asm/unistd.h to convert
-                     system call numbers in string \"system call \\d+\$\" to names
+-syscall <file>      attempt read <file> (i.e /usr/include/asm/unistd.h or
+                     unistd_64.h) to convert system call numbers in string
+                     \"syscall=\\d+\$\" to names
 -show_sub            development/debug option
 
 cols_spec examples:  (Note: cols are zero indexed)
@@ -47,7 +48,7 @@ defaults:
 #
 # define options - ORDER IS IMPORTANT (see below). 2nd field == 1 if arg.
 @opts=( 'cpu,1','dw,1','dc,1','d,1','ct,1','c,1','pre,1','post,1','b,0','v,0'
-       ,'stats,0','i,0','r,0','show_sub,0','"syscall",0','xxx,0');  # syscall needs to be quoted as it is a function
+       ,'stats,0','i,0','r,0','show_sub,0','"syscall",1','xxx,0');  # syscall needs to be quoted as it is a function
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
     if (/^-[h?]/) { die "$USAGE\n"; }
@@ -87,8 +88,8 @@ sub col_spec_to_re
                                              # i.e. use col_spec_to_re( tmp )
                                              # to pass tmp_col_spec
                                              # and return re in tmp_re
-    #print STDERR "col_spec_to_re(spec=$spec)\n";
-    #print STDERR "col_spec=$col_spec\n";
+    print STDERR "col_spec_to_re(spec=$spec)\n";
+    print STDERR "col_spec=$col_spec\n";
     if ($col_spec =~ /^\d+$/)  # if col_spec is a column _number_
     {   if ($col_spec == 0)
 	{   $re = '(\s*\S+)';
@@ -114,7 +115,7 @@ sub col_spec_to_re
 
 
 #print STDERR "before if (opt_ct) opt_ct=$opt_ct\n";
-if ("$opt_ct" ne "")
+if ("$opt_ct" ne "")  # "ct" is short for "convert time"
 {   use POSIX;			# for strftime  NOTE: this is "used" at compile
     $ct_col_spec = $opt_ct;     # time, i.e. even if -ct is not specified.
     &col_spec_to_re( ct );
@@ -138,7 +139,7 @@ sub get_cpu_re
 }
 
 #print STDERR "before if (opt_dc) opt_dc=$opt_dc\n";
-if ("$opt_dc" ne "")      # if "columns for *cpu specific* deltas" where specified
+if ("$opt_dc" ne "")      # "dc" is short for "deltas - *cpu specific*" (columns)
 {   # we need a cpu spec
     if ("$opt_cpu" ne "") { $cpu_col_spec = $opt_cpu;}
     else                  { $cpu_col_spec = CPU;}
@@ -192,7 +193,7 @@ if ("$opt_d" eq "" && "$opt_ct" ne "")
     $delta_idx++;
 }
 
-if ("$opt_d" eq "" && "$opt_dc" eq "" && "$opt_ct" eq "")  # need to try default
+if ("$opt_d" eq "" && "$opt_dc" eq "" && "$opt_ct" eq "" && "$opt_syscall" eq "")  # need to try default
 {   $tmp_col_spec = "(timeStamp|us_tod)";
     &col_spec_to_re( tmp );
     $delta_cntl[$delta_idx]{do_delta} = 1;
@@ -324,14 +325,14 @@ if ("$opt_pre" ne "")
 }
 $sub .= "
         \$out_line = \"\";";
-if ("$opt_syscall" ne "" && -f "/usr/include/asm/unistd.h")
-{   open( SYSCALLFILE, "</usr/include/asm/unistd.h" );
-    #print STDERR "opened /usr/include/asm/unistd.h for syscall translation\n";
+if ("$opt_syscall" ne "" && -f "$opt_syscall")
+{   open( SYSCALLFILE, "<$opt_syscall" );
+    #print STDERR "opened $opt_syscall for syscall translation\n";
     while (<SYSCALLFILE>)
     {    if (/define\s+__NR_(\S+)\s+(\d+)/) { $syscal[$2] = $1; } #print STDOUT "$syscal[$2] = $1\n"; }
     }
     $sub .= "
-        \$line =~ s/ system call (\\d+)\$/ system call \$syscal[\$1](\$1)/;";
+        \$line =~ s/ syscall=(\\d+)\$/ syscall=\$syscal[\$1](\$1)/;";
 }
 
 for $idx (0..$#col_cntl)

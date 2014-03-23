@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.74 $$Date: 2014/03/21 18:10:19 $";
+    rev="$Revision: 1.75 $$Date: 2014/03/23 05:22:42 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -32,9 +32,11 @@ commands:\n\
  mode <mode>\n\
  modeM <mode>\n\
  modeS <mode>\n\
- lvlmskM <msk>  mask for Memory buffer\n\
- lvlmskS <msk>  mask for stdout\n\
- lvlmskT <msk>  mask for trigger\n\
+ lvlmskM[g] <msk>  mask for Memory buffer\n\
+ lvlmskS[g] <msk>  mask for stdout\n\
+ lvlmskT[g] <msk>  mask for trigger\n\
+ lvlset[g] <mskM> <mskS> <mskT>\n\
+ lvlclr[g] <mskM> <mskS> <mskT>\n\
  trig <modeMsk> <lvlmskM> <postEntries>\n\
 opts:\n\
  -f<file>\n\

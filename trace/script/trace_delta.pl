@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.40 $';
-#   $Date: 2014/03/23 20:34:53 $
+$version = '$Revision: 1.41 $';
+#   $Date: 2014/03/23 21:35:44 $
 
 use Time::Local; # timelocal()
 
@@ -88,8 +88,8 @@ sub col_spec_to_re
                                              # i.e. use col_spec_to_re( tmp )
                                              # to pass tmp_col_spec
                                              # and return re in tmp_re
-    print STDERR "col_spec_to_re(spec=$spec)\n";
-    print STDERR "col_spec=$col_spec\n";
+    #print STDERR "col_spec_to_re(spec=$spec)\n";
+    #print STDERR "col_spec=$col_spec\n";
     if ($col_spec =~ /^\d+$/)  # if col_spec is a column _number_
     {   if ($col_spec == 0)
 	{   $re = '(\s*\S+)';

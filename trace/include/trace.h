@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.81 $$Date: 2014/03/21 19:26:22 $"
+#define TRACE_REV  "$Revision: 1.82 $$Date: 2014/03/23 19:56:10 $"
 
 #ifndef __KERNEL__
 
@@ -74,6 +74,7 @@
 # include <linux/mm.h>		   /* kmalloc OR __get_free_pages */
 # include <linux/vmalloc.h>	   /* __vmalloc, vfree */
 # include <linux/spinlock.h>	   /* cmpxchg */
+# include <linux/sched.h>	   /* current (struct task_struct *) */
 # define TRACE_ATOMIC_T            uint32_t
 # define TRACE_THREAD_LOCAL 
 # define TRACE_GETTIMEOFDAY( tvp ) do_gettimeofday( tvp )
@@ -247,12 +248,12 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, )
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p, =NULL );
 TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
 TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_NAME );
+TRACE_DECL( static, pid_t                    tracePid, =0 );
+TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid, =0 );  /* thread id */
 #endif
 
 
-TRACE_DECL( static, pid_t                    tracePid, =0 );
 TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl, namTbl */
-TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid, =0 );  /* thread id */
 
 
 #ifndef TRACE_LIB
@@ -374,8 +375,13 @@ static void trace( unsigned lvl, unsigned nargs
 	TRACE_TSC32( myEnt_p->tsc );
 	myEnt_p->time = tv;
 	myEnt_p->lvl  = lvl;
+#      if defined(__KERNEL__)
+	myEnt_p->pid  = current->tgid;
+	myEnt_p->tid  = current->pid;
+#      else
 	myEnt_p->pid  = tracePid;
 	myEnt_p->tid  = traceTid;
+#      endif
 	myEnt_p->TID  = traceTID;
 	/*myEnt_p->cpu  = -1;    maybe don't need this when sched hook show tid<-->cpu */
 	myEnt_p->get_idxCnt_retries = get_idxCnt_retries;

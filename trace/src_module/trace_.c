@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.28 $$Date: 2014-03-23 20:36:56 $";
+    rev="$Revision: 1.29 $$Date: 2014-03-24 03:03:48 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -241,9 +241,27 @@ static void my_trace_sys_enter(
         if (syscall_nr < 0)
                 return;
 
-	TRACE( 29, "sysenter: cpu=%d syscall=%d", raw_smp_processor_id(), syscall_nr );
+	TRACE( 29, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
 
 }   // my_trace_sys_enter
+
+static void my_trace_sys_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+        int syscall_nr;
+	long syscall_ret;
+
+        syscall_nr = syscall_get_nr(current, regs);
+        if (syscall_nr < 0)
+                return;
+	syscall_ret=syscall_get_return_value(current, regs);
+	TRACE( 28, "sys_exit: cpu=%d syscall=%d ret=%ld/%ld"
+	      , raw_smp_processor_id(), syscall_nr, syscall_ret, ret );
+
+}   // my_trace_sys_exit
 
 static int  trace_sched_switch_hook_add( void )
 {
@@ -269,13 +287,26 @@ static int  trace_sched_switch_hook_add( void )
                                       , NULL
 # endif
                                       );
-    printk("trace_sched_switch_hook_add: syscall returning %d (0=success)\n", err );
+    printk("trace_sched_switch_hook_add: sys_enter returning %d (0=success)\n", err );
+    if (err) return (err);
+
+    err = register_trace_sys_exit( my_trace_sys_exit
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+                                      , NULL
+# endif
+                                      );
+    printk("trace_sched_switch_hook_add: sys_exit returning %d (0=success)\n", err );
 
     return (err);
 }   // trace_sched_switch_hook_add
 
 static void trace_sched_switch_hook_remove( void )
 {
+    unregister_trace_sys_exit( my_trace_sys_exit
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+                                      , NULL
+# endif
+                                      );
     unregister_trace_sys_enter( my_trace_sys_enter
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
                                       , NULL

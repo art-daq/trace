@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.41 $';
-#   $Date: 2014-03-23 21:35:44 $
+$version = '$Revision: 1.42 $';
+#   $Date: 2014-03-24 03:03:48 $
 
 use Time::Local; # timelocal()
 
@@ -29,7 +29,7 @@ options:
 -ct   <col_spec>     make time more readable (convert time)
 -syscall <file>      attempt read <file> (i.e /usr/include/asm/unistd.h or
                      unistd_64.h) to convert system call numbers in string
-                     \"syscall=\\d+\$\" to names
+                     \"syscall=\\d+\" to names
 -show_sub            development/debug option
 
 cols_spec examples:  (Note: cols are zero indexed)
@@ -332,7 +332,7 @@ if ("$opt_syscall" ne "" && -f "$opt_syscall")
     {    if (/define\s+__NR_(\S+)\s+(\d+)/) { $syscal[$2] = $1; } #print STDOUT "$syscal[$2] = $1\n"; }
     }
     $sub .= "
-        \$line =~ s/ syscall=(\\d+)\$/ syscall=\$syscal[\$1](\$1)/;";
+        \$line =~ s/ syscall=(\\d+)/ syscall=\$syscal[\$1](\$1)/;";
 }
 
 for $idx (0..$#col_cntl)

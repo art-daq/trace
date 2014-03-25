@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.75 $$Date: 2014/03/23 05:22:42 $";
+    rev="$Revision: 1.76 $$Date: 2014/03/25 21:30:25 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -218,6 +218,14 @@ void traceShow( const char *ospec, int count, int start )
     const char            * sp; /*spec ptr*/
 
     traceInit();
+
+    /* If just a count is given, it will be a way to limit the number printed;
+       a short hand version of "... | head -count". (so if there are not entries,
+       none will be printed.
+       If however, count and start are given, the count (up to numents) will be
+       printed regardless of how many entries are actually filled with real
+       data.
+     */
     if (start >= 0)
     {   
 	if (start >= traceControl_p->num_entries)
@@ -229,7 +237,7 @@ void traceShow( const char *ospec, int count, int start )
     else
     {   rdIdx = traceControl_p->wrIdxCnt % traceControl_p->num_entries;
     }
-    if (count >= 0)
+    if ((count>=0) && (start>=0))
     {
 	if (count > traceControl_p->num_entries)
 	{   max = traceControl_p->num_entries;
@@ -242,6 +250,7 @@ void traceShow( const char *ospec, int count, int start )
 	max = traceControl_p->num_entries;
     else
 	max = rdIdx;
+    if ((count>=0) && (start<0) && (count<max)) max=count;
 
     buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
     local_msg     =            (char*)malloc( traceControl_p->siz_msg+50 );/* in case an %ld needs change to %lld */
@@ -487,7 +496,7 @@ extern  int        optind;         /* for getopt */
 	if (argc - optind == 1) loops=strtoul(argv[optind],NULL,0);
 	do
 	{   TRACE( 0, "Hello. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
-		  , 'c',2.5,(short)5,(long long)5000000000,15 );
+		  , 'c',2.5,(short)5,(long long)5000000000LL,15 );
 	} while (loops--);
     }
     else if (strcmp(cmd,"test") == 0)
@@ -534,7 +543,7 @@ extern  int        optind;         /* for getopt */
 	       );
 
 	for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
-	TRACE_CNTL( "lvlmskS", 0xfL ); TRACE_CNTL( "lvlmskM", 0xfL );
+	/*TRACE_CNTL( "lvlmskS", 0xfL ); TRACE_CNTL( "lvlmskM", 0xfL );*/
 	TRACE( 0, "hello" );
 	myIdx = traceControl_p->largest_multiple - 3;
 	printf("myIdx=0x%08x\n", myIdx );

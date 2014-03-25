@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.83 $$Date: 2014-03-25 21:28:05 $"
+#define TRACE_REV  "$Revision: 1.84 $$Date: 2014-03-25 21:44:53 $"
 
 #ifndef __KERNEL__
 
@@ -106,9 +106,10 @@
 /* c++98 c99 c++0x c11 c++11 */
 
 # define TRACE( lvl, ... ) do \
-    {   TRACE_INIT_CHECK						\
-	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<(lvl)))) \
-                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<(lvl)))) ) \
+    {   unsigned __lvl=lvl;						\
+	TRACE_INIT_CHECK						\
+	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) ) \
                 trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED	\
                       , __VA_ARGS__ );					\
     } while (0)
@@ -123,9 +124,10 @@
 /* c89 */
 
 # define TRACE( lvl, msgargs... ) do		\
-    {   TRACE_INIT_CHECK						\
-	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<(lvl)))) \
-                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<(lvl)))) ) \
+    {   unsigned __lvl=lvl;					\
+	TRACE_INIT_CHECK						\
+	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) ) \
 	        trace( lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
                       , msgargs );				       \
     } while (0)

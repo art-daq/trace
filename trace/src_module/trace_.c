@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.29 $$Date: 2014-03-24 03:03:48 $";
+    rev="$Revision: 1.30 $$Date: 2014-03-25 21:29:06 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -23,6 +23,12 @@
 #include <trace/events/syscalls.h>/* */
 #define TRACE_IMPL		// implement traceInit
 #include "trace.h"
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+# define REGISTER_NULL_ARG    ,NULL
+#else
+# define REGISTER_NULL_ARG
+#endif
 
 struct traceControl_s  *traceControl_p=NULL;
 struct traceEntryHdr_s *traceEntries_p;
@@ -119,16 +125,6 @@ static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
     return (siz-lcl_siz);
 }
 
-#if 0
-static int trace_proc_buffer_open( struct inode *inode, struct file *file )
-{   printk("trace_proc_buffer_open\n");
-    return (0);
-}
-static int trace_proc_buffer_release( struct inode *inode, struct file *file )
-{   printk("trace_proc_buffer_release\n");
-    return (0);
-}
-#endif
 
 static struct file_operations trace_proc_buffer_file_operations = {
     .owner=   THIS_MODULE,
@@ -266,35 +262,20 @@ static void my_trace_sys_exit(
 static int  trace_sched_switch_hook_add( void )
 {
     int err;
-    err = register_trace_sched_switch( trace_sched_switch_hook
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
+    err = register_trace_sched_switch( trace_sched_switch_hook 
+                                      REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sched returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_irq_handler_entry( trace_irq
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
+    err = register_trace_irq_handler_entry( trace_irq REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: irq returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_sys_enter( my_trace_sys_enter
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
+    err = register_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sys_enter returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_sys_exit( my_trace_sys_exit
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
+    err = register_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sys_exit returning %d (0=success)\n", err );
 
     return (err);
@@ -302,26 +283,11 @@ static int  trace_sched_switch_hook_add( void )
 
 static void trace_sched_switch_hook_remove( void )
 {
-    unregister_trace_sys_exit( my_trace_sys_exit
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
-    unregister_trace_sys_enter( my_trace_sys_enter
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
-    unregister_trace_irq_handler_entry( trace_irq
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                      , NULL
-# endif
-                                      );
+    unregister_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
+    unregister_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
+    unregister_trace_irq_handler_entry( trace_irq REGISTER_NULL_ARG );
     unregister_trace_sched_switch( trace_sched_switch_hook
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                                  , NULL
-# endif
-                                  );
+				   REGISTER_NULL_ARG );
 }   // trace_sched_switch_hook_remove
 
 

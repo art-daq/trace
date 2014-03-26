@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.84 $$Date: 2014/03/25 21:44:53 $"
+#define TRACE_REV  "$Revision: 1.85 $$Date: 2014/03/26 02:01:55 $"
 
 #ifndef __KERNEL__
 
@@ -23,6 +23,7 @@
 # include <unistd.h>		/* lseek */
 # include <sys/stat.h>		/* fstat */
 # include <sys/syscall.h>	/* syscall */
+# include <errno.h>		/* errno */
 # include <limits.h>		/* PATH_MAX */
 # ifndef PATH_MAX
 #   define PATH_MAX 1024  /* conservative */
@@ -633,7 +634,7 @@ static int trace_mmap_file( const char *_file
 	/* must verify that it already exists */
 	fd=open(path,O_RDWR);
 	if (fd == -1)
-	{   fprintf( stderr,"open of %s returned %d\n", path, fd );
+	{   fprintf( stderr,"TRACE: open(%s)=%d errno=%d pid=%d\n", path, fd, errno, tracePid );
 	    *t_p=&traceControl;
 	    return (0);
 	}

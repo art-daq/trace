@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.42 $';
-#   $Date: 2014-03-24 03:03:48 $
+$version = '$Revision: 1.43 $';
+#   $Date: 2014-03-26 03:19:11 $
 
 use Time::Local; # timelocal()
 
@@ -103,7 +103,7 @@ sub col_spec_to_re
 	}
     }
     else          # col_spec is a column _heading_ (or header)
-    {   $re = '^((\s+\S+)*)(\s+' . $col_spec . ')';
+    {   $re = '^((\s*\S+)*)(\s+' . $col_spec . ')';
 	$line =~ /$re/; $leader = $1; $data = $3;
 	$re = '.' x length($leader) . '(' . '.' x length($data) . ')';
     }
@@ -444,8 +444,8 @@ for $idx (0..$#col_cntl)
 	$sub .= "
                 }
             }
-            elsif (\$data =~ /^-+\$/o)
-            {   \$delta = sprintf( \"%s\", '-' x $delta_width );";
+            elsif (\$data =~ /^[- ]+\$/o)
+            {   \$delta = sprintf( \" %s\", '-' x ($delta_width-1) );";
 	if ("$opt_stats")
 	{    $sub .= "
                 \$col_cntl[$idx]{stat}  = skip;";

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.85 $$Date: 2014/03/26 02:01:55 $"
+#define TRACE_REV  "$Revision: 1.86 $$Date: 2014/03/28 19:38:25 $"
 
 #ifndef __KERNEL__
 
@@ -500,7 +500,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
     {
 	uint32_t modeMsk=va_arg(ap,uint64_t);
 	uint64_t lvlsMsk=va_arg(ap,uint64_t);
-	unsigned post_entries=va_arg(ap,unsigned);
+	unsigned post_entries=va_arg(ap,uint64_t);
 	if (   (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M&lvlsMsk))
 	    && !traceControl_p->trigActivePost )
 	{   traceNamLvls_p[traceTID].T       = lvlsMsk;

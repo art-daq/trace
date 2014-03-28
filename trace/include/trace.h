@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.86 $$Date: 2014/03/28 19:38:25 $"
+#define TRACE_REV  "$Revision: 1.87 $$Date: 2014/03/28 19:45:42 $"
 
 #ifndef __KERNEL__
 
@@ -461,6 +461,12 @@ static void trace_unlock( void )
 }
 
 
+/* NOTE: because of how this is call from a macro on both 64 and 32 bit
+   systems AND THE WAY IT IS CALLED FROM THE trace_cntl programg,
+   all argument, EXCEPT for the "name" and "file" commands, should be
+   64bits -- they can either be cast (uint64_t) or "LL" constants.
+   See the trace_cntl.c tests for examples.
+ */
 static int traceCntl( int nargs, const char *cmd, ... )
 {
     int      ret=0;

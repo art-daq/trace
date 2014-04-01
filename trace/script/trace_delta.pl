@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1.43 $';
-#   $Date: 2014/03/26 03:19:11 $
+$version = '$Revision: 1.44 $';
+#   $Date: 2014/04/01 18:36:30 $
 
 use Time::Local; # timelocal()
 
@@ -215,19 +215,22 @@ sub find_delta
 
 sub get_delta_data
 {   $delta_d = shift @_;
-    if    ($delta_d =~ /^[\d.]+\s*$/o)
+    #print STDERR "delta_d = $delta_d\n";
+    if    ($delta_d =~ /^\s*[\d.]+\s*$/o)
     {   $ret = $delta_d;
     }
-    elsif ($delta_d =~ /^([0-9]+):([0-9]+):([0-9][0-9])\.(\d\d\d\d\d\d)$/o)
-    {   # convert to integer microseconds
+    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
+    {   # convert to float seconds
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	#print STDERR "time_then = $time_then\n";
 	$ret = $time_then . $4;
     }
-    elsif ($delta_d =~ /^([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}/o)
-    {   # convert to integer microseconds
+    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}/o)
+    {   # convert to: IF "." is present, float seconds, else just integer seconds
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	#print STDERR "time_then = $time_then\n";
 	$ret = $time_then . $4;
     }
     else
@@ -393,8 +396,10 @@ for $idx (0..$#col_cntl)
     {   $sub .= "
             \$delta_data = &get_delta_data(\$data);
             if (\$delta_data =~ /^\\s*[-]*[\\d.]+/o)
-            {   #print STDERR \"delta_data is \$delta_data\\n\";
-                 \$delta_data = eval( \$delta_data);";  # allow for hex (ie.0x1234) or decimal or float
+            {
+                if (\$delta_data =~ /\\.(\\d+)/) { \$fmt=\"%*.\" . length(\$1) . \"f\"; } else { \$fmt=\"%*d\"; }
+                #print STDERR \"delta_data is \$delta_data   fmt is \$fmt\\n\";
+                \$delta_data = eval( \$delta_data);";  # allow for hex (ie.0x1234) or decimal or float
 	if ($col_cntl[$idx]{delta_cpu})
 	{   $sub .= "
                 \$line =~ /$cpu_re/o;
@@ -408,13 +413,13 @@ for $idx (0..$#col_cntl)
 	{   $sub .= "
                 if (\$col_cntl[$idx]{\"prev\$cpu\"} eq \"\")
                 {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;
-                    \$delta = sprintf( \"%*d\", $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );";
+                    \$delta = sprintf( \$fmt, $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );";
         }
 	else
 	{   $sub .= "
                 if (\$col_cntl[$idx]{\"prev\$cpu\"} eq \"\")
                 {   \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;
-                    \$delta = sprintf( \"%*d\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );";
+                    \$delta = sprintf( \$fmt, $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );";
         }
 	if ("$opt_stats")
 	{    $sub .= "
@@ -426,7 +431,7 @@ for $idx (0..$#col_cntl)
                 }
                 else
                 {
-                    \$delta = sprintf( \"%*s\", $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );
+                    \$delta = sprintf( \$fmt, $delta_width, \$delta_data-\$col_cntl[$idx]{\"prev\$cpu\"} );
                     \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;";
 	}
 	else
@@ -434,7 +439,7 @@ for $idx (0..$#col_cntl)
                 }
                 else
                 {
-                    \$delta = sprintf( \"%*s\", $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );
+                    \$delta = sprintf( \$fmt, $delta_width, \$col_cntl[$idx]{\"prev\$cpu\"}-\$delta_data );
                     \$col_cntl[$idx]{\"prev\$cpu\"} = \$delta_data;";
 	}
 	if ("$opt_stats")

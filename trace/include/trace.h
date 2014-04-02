@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.87 $$Date: 2014/03/28 19:45:42 $"
+#define TRACE_REV  "$Revision: 1.88 $$Date: 2014/04/02 01:09:44 $"
 
 #ifndef __KERNEL__
 
@@ -349,12 +349,10 @@ static void trace( unsigned lvl, unsigned nargs
 	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #      elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-	if (traceControl_p->num_entries == 0) { printf("what's up before atomic_compare myIdxCnt=%u?\n",myIdxCnt);sleep(100); }
 	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
 	while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					     , &myIdxCnt, desired))
 	{   ++get_idxCnt_retries;
-	    if (traceControl_p->num_entries == 0) { printf("what's up in atomic_compare? myIdxCnt=%u retries=%u\n",myIdxCnt,get_idxCnt_retries);sleep(100); }
 	    desired = IDXCNT_ADD( myIdxCnt,1);
 	}
 #       else

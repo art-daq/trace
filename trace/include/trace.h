@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.88 $$Date: 2014/04/02 01:09:44 $"
+#define TRACE_REV  "$Revision: 1.89 $$Date: 2014/04/15 14:36:27 $"
 
 #ifndef __KERNEL__
 
@@ -102,6 +102,7 @@
 #define TRACE_PAGESIZE         0x2000
 #define TRACE_CACHELINE        64
 
+
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
 /* c++98 c99 c++0x c11 c++11 */
@@ -109,10 +110,12 @@
 # define TRACE( lvl, ... ) do \
     {   unsigned __lvl=lvl;						\
 	TRACE_INIT_CHECK						\
+	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
                 ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) ) \
-                trace( lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED	\
+                trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );					\
+        }								\
     } while (0)
 
 # define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
@@ -125,12 +128,14 @@
 /* c89 */
 
 # define TRACE( lvl, msgargs... ) do		\
-    {   unsigned __lvl=lvl;					\
+    {   unsigned __lvl=lvl;						\
 	TRACE_INIT_CHECK						\
+	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
                 ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) ) \
-	        trace( lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
+	        trace( &lclTime, lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
                       , msgargs );				       \
+	}							       \
     } while (0)
 
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
@@ -145,17 +150,17 @@
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
 # ifndef TRACE_LIB
-   static void trace(unsigned,unsigned,const char *,...)__attribute__((format(printf,3,4)));
+   static void trace(struct timeval*,unsigned,unsigned,const char *,...)__attribute__((format(printf,4,5)));
 # endif
 # define TRACE_VA_LIST_INIT(addr) (va_list)addr
 # define TRACE_ENT_FILLER         uint32_t x[2];
 # define TRACE_32_DOUBLE_KLUDGE   nargs*=2;    /* kludge to support potential double in msg fmt */
 # define TRACE_TSC32( low )       __asm__ __volatile__ ("rdtsc;movl %%eax,%0":"=m"(low)::"eax","edx")
 #elif defined(__x86_64__)
-# define TRACE_XTRA_PASSED        ,0,0,0, .0,.0,.0,.0,.0,.0,.0,.0
-# define TRACE_XTRA_UNUSED        ,long l0,long l1,long l2,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
+# define TRACE_XTRA_PASSED        ,0,0, .0,.0,.0,.0,.0,.0,.0,.0
+# define TRACE_XTRA_UNUSED        ,long l0,long l1,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
 # ifndef TRACE_LIB
-   static void trace(unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
+   static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
 # endif
 # define TRACE_VA_LIST_INIT(addr) {{6*8,6*8+9*16,addr,addr}}
 # define TRACE_ENT_FILLER
@@ -165,7 +170,7 @@
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
 # ifndef TRACE_LIB
-   static void trace(unsigned,unsigned,const char *,...)__attribute__((format(printf,3,4)));
+   static void trace(struct timeval*,unsigned,unsigned,const char *,...)__attribute__((format(printf,4,5)));
 # endif
 # define TRACE_VA_LIST_INIT(addr) {addr}
 # define TRACE_ENT_FILLER
@@ -324,14 +329,12 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
 # pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
 #endif
 
-static void trace( unsigned lvl, unsigned nargs
+static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
                   TRACE_XTRA_UNUSED		  
 		  , const char *msg, ... )
-{   struct timeval tv;
+{
     va_list ap;
     int     trig_reset_S=0;
-
-    tv.tv_sec = 0;		/* Indicate that we need to get the time. */
 
     if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl)))
     {   struct traceEntryHdr_s* myEnt_p;
@@ -367,14 +370,14 @@ static void trace( unsigned lvl, unsigned nargs
 	if (myIdxCnt == traceControl_p->num_entries)
 	    traceControl_p->full = 1; /* now we'll know if wrIdxCnt has rolled over */
 
-	TRACE_GETTIMEOFDAY( &tv );  /* hopefully NOT a system call */
+	TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
 
 	myEnt_p  = idxCnt2entPtr( myIdxCnt );
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 
 	TRACE_TSC32( myEnt_p->tsc );
-	myEnt_p->time = tv;
+	myEnt_p->time = *tvp;
 	myEnt_p->lvl  = lvl;
 #      if defined(__KERNEL__)
 	myEnt_p->pid  = current->tgid;
@@ -423,9 +426,9 @@ static void trace( unsigned lvl, unsigned nargs
 
     if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
     {
-   	if (tv.tv_sec == 0) TRACE_GETTIMEOFDAY( &tv );
+   	if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
 	va_start( ap, msg );
-	TRACE_LOG_FUNCTION( &tv,traceTID,lvl, msg, ap );
+	TRACE_LOG_FUNCTION( tvp,traceTID,lvl, msg, ap );
 	va_end( ap );
     }
     if (trig_reset_S) TRACE_CNTL( "modeS", 0 ); /* this is how trace references traceCntl to avoid "unused" warnings when only TRACE is used */

@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.89 $$Date: 2014/04/15 14:36:27 $"
+#define TRACE_REV  "$Revision: 1.90 $$Date: 2014/04/15 19:07:37 $"
 
 #ifndef __KERNEL__
 
@@ -111,10 +111,13 @@
     {   unsigned __lvl=lvl;						\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
-	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) ) \
-                trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
+	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+            {   trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );					\
+	    }								\
+	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ ); \
+	    }								\
         }								\
     } while (0)
 
@@ -131,11 +134,14 @@
     {   unsigned __lvl=lvl;						\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
-	    if (  (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-                ||(traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) ) \
-	        trace( &lclTime, lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
-                      , msgargs );				       \
-	}							       \
+	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+	    {   trace( &lclTime, lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
+                      , msgargs );					\
+	    }								\
+	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, msgargs );	\
+	    }								\
+	}								\
     } while (0)
 
 # define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
@@ -207,13 +213,6 @@ struct traceControl_s
 	}   bits;
 	uint32_t  mode;
     }             mode;
-    union
-    {   struct
-	{   uint32_t M:1; /* b0 high speed circular Memory */
-	    uint32_t S:1; /* b1 printf (formatted) to stdout */
-	}   bits;
-	uint32_t  mode;
-    }             trigOffMode;    /* can configurably cause Print to stop */
     uint32_t      trigIdxCnt;   /* BASED ON "M" mode Counts */
     int32_t       triggered;
     uint32_t	  trigActivePost;
@@ -247,7 +246,6 @@ extern struct traceNamLvls_s  *traceNamLvls_p;
 extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
 extern int                     trace_allow_printk;                 /* module_param */
-static const char             *traceName="KERNEL";
 #else
 #define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
 TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ], ); /* IMPORTANT - 1) this size, 2) traceInit setting of num_namLvlTblEnts, 3) traceInitNames and 4) "tids" MUST agree */
@@ -265,21 +263,23 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl
 
 
 #ifndef TRACE_LIB
-
 /* forward declarations, important functions */
-static int                      traceCntl( int nargs, const char *cmd, ... );
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
-static uint32_t                 name2tid( const char *name );
-#if !defined(__KERNEL__) || defined(TRACE_IMPL)
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)   /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
 static int                      traceInit( void );
 static void                     traceInitNames( void );
-#ifdef __KERNEL__         /* i.e. defined(__KERNEL__) && defined(TRACE_IMPL) */
+static int                      traceCntl( int nargs, const char *cmd, ... );
+static uint32_t                 name2tid( const char *name );
+# ifdef __KERNEL__                                /*                         K=1,IMPL=1 */
+static const char             *traceName="KERNEL";
 static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
        int                trace_allow_printk=0;                 /* module_param */
-#endif
+# endif
+#else                                            /* K=1,IMPL=0 */
+
 #endif
 
 #define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
@@ -312,14 +312,24 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
 
 
 #ifndef TRACE_LOG_FUNCTION
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,msg,ap)  trace_user( tvp,tid,lvl,msg,ap )
-static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
-{
+# if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
+/* c++98 c99 c++0x c11 c++11 */
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)  trace_user( tvp,tid,lvl,__VA_ARGS__ )
+# else
+/* c89 */
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  trace_user( tvp,tid,lvl,msgargs )
+# endif   /* __GXX_WEAK__... */
+
+static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, ... )
+{   va_list ap;
 # ifdef __KERNEL__
     if (!trace_allow_printk) return;
 # endif
+    if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
     TRACE_PRINT( "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
+    va_start( ap, msg );
     TRACE_VPRINT( msg, ap );
+    va_end( ap );
     TRACE_PRINT("\n");
 }
 #endif /* TRACE_LOG_FUNCTION */
@@ -334,104 +344,91 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 		  , const char *msg, ... )
 {
     va_list ap;
-    int     trig_reset_S=0;
 
-    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<lvl)))
-    {   struct traceEntryHdr_s* myEnt_p;
-	char                  * msg_p;
-	unsigned long         * params_p;
-	unsigned                argIdx;
-	uint16_t                get_idxCnt_retries=0;
-	uint32_t                myIdxCnt=traceControl_p->wrIdxCnt;
+    struct traceEntryHdr_s* myEnt_p;
+    char                  * msg_p;
+    unsigned long         * params_p;
+    unsigned                argIdx;
+    uint16_t                get_idxCnt_retries=0;
+    uint32_t                myIdxCnt=traceControl_p->wrIdxCnt;
 
-#      if defined(__KERNEL__)
-	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
-	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
-	{   ++get_idxCnt_retries;
-	    myIdxCnt=traceControl_p->wrIdxCnt;
-	    desired = IDXCNT_ADD( myIdxCnt,1);
-	}
-#      elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
-	while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
-					     , &myIdxCnt, desired))
-	{   ++get_idxCnt_retries;
-	    desired = IDXCNT_ADD( myIdxCnt,1);
-	}
-#       else
-	uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
-	while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
-	{   ++get_idxCnt_retries;
-	    myIdxCnt=traceControl_p->wrIdxCnt;
-	    desired = IDXCNT_ADD( myIdxCnt,1);
-	}
-#       endif
-
-	if (myIdxCnt == traceControl_p->num_entries)
-	    traceControl_p->full = 1; /* now we'll know if wrIdxCnt has rolled over */
-
-	TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
-
-	myEnt_p  = idxCnt2entPtr( myIdxCnt );
-	msg_p    = (char*)(myEnt_p+1);
-	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
-
-	TRACE_TSC32( myEnt_p->tsc );
-	myEnt_p->time = *tvp;
-	myEnt_p->lvl  = lvl;
-#      if defined(__KERNEL__)
-	myEnt_p->pid  = current->tgid;
-	myEnt_p->tid  = current->pid;
-#      else
-	myEnt_p->pid  = tracePid;
-	myEnt_p->tid  = traceTid;
-#      endif
-	myEnt_p->TID  = traceTID;
-	/*myEnt_p->cpu  = -1;    maybe don't need this when sched hook show tid<-->cpu */
-	myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
-	myEnt_p->param_bytes = sizeof(long);
-
-	strncpy(msg_p,msg,traceControl_p->siz_msg);
-	/* emulate stack push - right to left (so that arg1 end up at a lower
-	   address, arg2 ends up at the next higher address, etc. */
-	if (nargs)
-	{   TRACE_32_DOUBLE_KLUDGE
-	    if (nargs > traceControl_p->num_params) nargs=traceControl_p->num_params;
-	    va_start( ap, msg );
-	    for (argIdx=0; argIdx<nargs; ++argIdx)
-		params_p[argIdx]=va_arg(ap,unsigned long);
-	    va_end( ap );
-	}
-	if (traceControl_p->trigActivePost) /* armed, armed/trigger */
-	{
-	    if (traceControl_p->triggered) /* triggered */
-	    {
-		if ((myIdxCnt-traceControl_p->trigIdxCnt)
-		    >=traceControl_p->trigActivePost )
-		{   /* I think there should be an indication in the M buffer */
-		    traceControl_p->mode.bits.M = 0;
-		    if (traceControl_p->trigOffMode.bits.S) trig_reset_S = 1;
-		    traceControl_p->trigActivePost = 0;
-		    /* triggered and trigIdxCnt should be cleared when
-		       "armed" (when trigActivePost is set) */
-		}
-		/* else just waiting... */
-	    }
-	    else if (traceNamLvls_p[traceTID].T & (1<<lvl))
-	    {   traceControl_p->triggered = 1;
-		traceControl_p->trigIdxCnt = myIdxCnt;
-	    }
-	}
+#  if defined(__KERNEL__)
+    uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
+    while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
+    {   ++get_idxCnt_retries;
+	myIdxCnt=traceControl_p->wrIdxCnt;
+	desired = IDXCNT_ADD( myIdxCnt,1);
     }
+#  elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+    uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
+    while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
+					 , &myIdxCnt, desired))
+    {   ++get_idxCnt_retries;
+	desired = IDXCNT_ADD( myIdxCnt,1);
+    }
+#  else
+    uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
+    while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
+    {   ++get_idxCnt_retries;
+	myIdxCnt=traceControl_p->wrIdxCnt;
+	desired = IDXCNT_ADD( myIdxCnt,1);
+    }
+#  endif
 
-    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<lvl)))
-    {
-   	if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
+    if (myIdxCnt == traceControl_p->num_entries)
+	traceControl_p->full = 1; /* now we'll know if wrIdxCnt has rolled over */
+
+    TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
+
+    myEnt_p  = idxCnt2entPtr( myIdxCnt );
+    msg_p    = (char*)(myEnt_p+1);
+    params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
+
+    TRACE_TSC32( myEnt_p->tsc );
+    myEnt_p->time = *tvp;
+    myEnt_p->lvl  = lvl;
+#  if defined(__KERNEL__)
+    myEnt_p->pid  = current->tgid;
+    myEnt_p->tid  = current->pid;
+#  else
+    myEnt_p->pid  = tracePid;
+    myEnt_p->tid  = traceTid;
+#  endif
+    myEnt_p->TID  = traceTID;
+    /*myEnt_p->cpu  = -1;    maybe don't need this when sched hook show tid<-->cpu */
+    myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
+    myEnt_p->param_bytes = sizeof(long);
+
+    strncpy(msg_p,msg,traceControl_p->siz_msg);
+    /* emulate stack push - right to left (so that arg1 end up at a lower
+       address, arg2 ends up at the next higher address, etc. */
+    if (nargs)
+    {   TRACE_32_DOUBLE_KLUDGE
+	    if (nargs > traceControl_p->num_params) nargs=traceControl_p->num_params;
 	va_start( ap, msg );
-	TRACE_LOG_FUNCTION( tvp,traceTID,lvl, msg, ap );
+	for (argIdx=0; argIdx<nargs; ++argIdx)
+	    params_p[argIdx]=va_arg(ap,unsigned long);
 	va_end( ap );
     }
-    if (trig_reset_S) TRACE_CNTL( "modeS", 0 ); /* this is how trace references traceCntl to avoid "unused" warnings when only TRACE is used */
+    if (traceControl_p->trigActivePost) /* armed, armed/trigger */
+    {
+	if (traceControl_p->triggered) /* triggered */
+	{
+	    if ((myIdxCnt-traceControl_p->trigIdxCnt)
+		>=traceControl_p->trigActivePost )
+	    {   /* I think there should be an indication in the M buffer */
+		traceControl_p->mode.bits.M = 0;
+		traceControl_p->trigActivePost = 0;
+		/* triggered and trigIdxCnt should be cleared when
+		   "armed" (when trigActivePost is set) */
+	    }
+	    /* else just waiting... */
+	}
+	else if (traceNamLvls_p[traceTID].T & (1<<lvl))
+	{   traceControl_p->triggered = 1;
+	    traceControl_p->trigIdxCnt = myIdxCnt;
+	}
+    }
 }   /* trace */
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
@@ -439,6 +436,7 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 #endif
 
 
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
 static void trace_lock( void )
 {
@@ -503,9 +501,8 @@ static int traceCntl( int nargs, const char *cmd, ... )
     {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit() is called; suggest testing w. TRACE_ARGSMAX=10*/
 	traceTID = name2tid( traceName );/* doing it this way allows this to be called by kernel module */
     }
-    else if (strncmp(cmd,"trig",4) == 0)    /* takes 3 args: modeMsks, lvlsMsk, postEntries */
+    else if (strncmp(cmd,"trig",4) == 0)    /* takes 2 args: lvlsMsk, postEntries */
     {
-	uint32_t modeMsk=va_arg(ap,uint64_t);
 	uint64_t lvlsMsk=va_arg(ap,uint64_t);
 	unsigned post_entries=va_arg(ap,uint64_t);
 	if (   (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M&lvlsMsk))
@@ -514,7 +511,6 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    traceControl_p->trigActivePost   = post_entries?post_entries:1; /* must be at least 1 */
 	    traceControl_p->triggered        = 0;
 	    traceControl_p->trigIdxCnt       = 0;
-	    traceControl_p->trigOffMode.mode = modeMsk;
 	}
     }
     else if (strncmp(cmd,"lvlmsk",6) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
@@ -608,6 +604,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
     return (ret);
 }   /* traceCntl */
 
+#endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
 
 #ifndef __KERNEL__
 
@@ -885,8 +882,6 @@ static void traceInitNames( void )
     strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"_TRACE_" );
 }
 
-#endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
-
 
 static uint32_t name2tid( const char *name )
 {
@@ -905,6 +900,7 @@ static uint32_t name2tid( const char *name )
     return (traceControl_p->num_namLvlTblEnts-1);
 }
 
+#endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
 
 static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 {   uint32_t idx;

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.78 $$Date: 2014-04-15 14:36:20 $";
+    rev="$Revision: 1.79 $$Date: 2014-04-15 19:07:37 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -520,8 +520,7 @@ extern  int        optind;         /* for getopt */
 	       , (int)sizeof(pthread_t), (int)sizeof(struct timeval)
 	       , (int)sizeof(double), (int)sizeof(struct traceControl_s)
 	       , (int)sizeof(struct traceEntryHdr_s));
-	printf("offset: trigOffMode    =%p\n"
-	       "        trigIdxCount   =%p\n"
+	printf("offset: trigIdxCount   =%p\n"
 	       "        trigActivePost =%p\n"
 	       "        full           =%p\n"
 	       "        lvl            =%p\n"
@@ -530,7 +529,6 @@ extern  int        optind;         /* for getopt */
 	       "        get_retries    =%p\n"
 	       "        param_bytes    =%p\n"
 	       "        tsc            =%p\n"
-	       , (void*)&((struct traceControl_s*)0)->trigOffMode
 	       , (void*)&((struct traceControl_s*)0)->trigIdxCnt
 	       , (void*)&((struct traceControl_s*)0)->trigActivePost
 	       , (void*)&((struct traceControl_s*)0)->full
@@ -573,7 +571,7 @@ extern  int        optind;         /* for getopt */
 	      ,           1, 2,3.3,4, 5, 6.6, 7, 8 );
 
 #      ifndef TEST_UNUSED_FUNCTION
-	TRACE_CNTL( "trig", 3LL, (uint64_t)-1, 5LL );
+	TRACE_CNTL( "trig", (uint64_t)-1, 5LL );
 #      endif
 	for (ii=0; ii<20; ++ii)
 	    TRACE( 0, "ii=%u", ii );

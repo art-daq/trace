@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.77 $$Date: 2014/03/28 19:38:25 $";
+    rev="$Revision: 1.78 $$Date: 2014/04/15 14:36:20 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -773,6 +773,13 @@ extern  int        optind;         /* for getopt */
 		      ,strtoull(argv[optind+5],NULL,0) );
 	    break;
 	}
+    }
+    else if (strncmp(cmd,"sleep",4) == 0) /* this allows time to look at /proc/fd/ and /proc/maps */
+    {   TRACE( 0, "starting sleep" );
+	if ((argc-optind) == 1)
+	    sleep( strtoul(argv[optind],NULL,0) );
+	else sleep( 10 );
+	TRACE( 0, "done sleeping" );
     }
     else if (strncmp(cmd,"mode",4) == 0)
     {

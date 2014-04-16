@@ -16,8 +16,7 @@ user_static
     
 kernel_child
 	staitc void trace()
-	static int traceCntl()
-        no traceInit
+        no traceInit nor traceCntl   <----<<<***  this probably should change to allow different traceTID (in kernel) and possibly serveral of the "controls" (mode,reset,lvl???)
         extern struct traceNamLvls_s  *traceNamLvls_p;
 	extern struct traceEntryHdr_s *traceEntries_p;
 	extern struct traceControl_s  *traceControl_p;

@@ -4,27 +4,62 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_feature_test.sh,v $
- # rev='$Revision: 1.3 $$Date: 2014/03/05 23:05:15 $'
+ # rev='$Revision: 1.4 $$Date: 2014/04/16 16:55:14 $'
 
 USAGE="\
-`basename $0` <file>
+  usage: `basename $0` <\"check\">...
+example: `basename $0` -f \`which trace_cntl\`
+checks:
+-f | --file=<file> check for features in a specific executable
 "
-if [ $# -ne 1 ];then echo "$USAGE"; exit 1;fi
+VUSAGE=
 
-file=$1
+# Process script arguments and options
+eval env_opts=\${$env_opts_var-} # can be args too
+eval "set -- $env_opts \"\$@\""
+op1chr='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set -- "-$rest" "$@"'
+op1arg='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set --  "$rest" "$@"'
+reqarg="$op1arg;"'test -z "${1+1}" &&echo opt -$op requires arg. &&echo "$USAGE" &&exit'
+args= do_help= opt_v=0
+while [ -n "${1-}" ];do
+    if expr "x${1-}" : 'x-' >/dev/null;then
+        op=`expr "x$1" : 'x-\(.*\)'`; shift   # done with $1
+        leq=`expr "x$op" : 'x[^=]*\(=\)'` lev=`expr "x$op" : 'x[^=]*=\(.*\)'`
+        test "x$leq" != x &&eval "set -- \"\$lev\" \"\$@\""&&op=`expr "x$op" : 'x\([^=]*\)'`
+        case "$op" in
+        \?*|h*)     eval $op1chr; do_help=1;;
+        v*)         eval $op1chr; opt_v=`expr $opt_v + 1`;;
+        x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
+        f*)         eval $op1chr; file=$1; have_check=1; shift;;
+        -file)      eval $reqarg; file=$1; have_check=1; shift;;
+        *)          echo "Unknown option -$op"; do_help=1;;
+        esac
+    else
+        aa=`echo "$1" | sed -e"s/'/'\"'\"'/g"` args="$args '$aa'"; shift
+    fi
+done
+eval "set -- $args \"\$@\""; unset args aa
+help() { echo "$USAGE";test $opt_v -ge 1 && echo "$VUSAGE" || true for pipeline; }
+test -n "${do_help-}" && help && exit
 
-if objdump --disassemble $file | grep -m1 lock;then
-    echo "This file seems to have the basic multi-process locked memory
+
+if [ -z "${have_check-}" ];then echo "$USAGE"; exit 1;fi
+
+
+if [ -n "${file-}" ];then
+    if objdump --disassemble $file | grep -m1 lock;then
+        echo "This file seems to have the basic multi-process locked memory
 access functionality."
-else
-    echo "This file does not seem to have the basic multi-process locked
+    else
+        echo "This file does not seem to have the basic multi-process locked
 memory access functionality."
-fi
+    fi
 
-if objdump --disassemble $file | grep -m1 '%[fg]s:0xf';then
-    echo "This file seems to have basic thread local storage functionality"
-else
-    echo "This file does not seem to have basic thread local storage functionality"
+    if objdump --disassemble $file | grep -m1 '%[fg]s:0xf';then
+        echo "This file seems to have basic thread local storage functionality"
+    else
+        echo "This file does not seem to have basic thread local storage functionality"
+    fi
 fi
 
 exit

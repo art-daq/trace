@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_feature_test.sh,v $
- # rev='$Revision: 1.5 $$Date: 2014-04-16 17:05:38 $'
+ # rev='$Revision: 1.6 $$Date: 2014-04-16 17:50:59 $'
 
 USAGE="\
   usage: `basename $0` <\"check\">...
@@ -32,8 +32,10 @@ while [ -n "${1-}" ];do
         x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
         f*)         eval $op1arg; file=$1;    have_check=1; shift;;
         -file)      eval $reqarg; file=$1;    have_check=1; shift;;
-        c*)         eval $op1chr; compiler=1; have_check=1; shift;;
-        -compiler)                compiler=1; have_check=1; shift;;
+        c*)         eval $op1chr; compiler=1; have_check=1;;
+        -compiler)                compiler=1; have_check=1;;
+        -std)       eval $reqarg; standard=$1;              shift;;
+        std)                      standard=$1;              shift;;
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -67,6 +69,10 @@ if [ -n "${compiler-}" ];then
     if [ -z "${TRACE_INC-}" ];then
         echo "env var TRACE_INC must be set"
     else
+        if [ -n "${standard-}" ];then
+            expr "$standard" : 'c++' >/dev/null && xc=-xc++ ||  xc=-xc
+            standard=-std=$standard
+        fi
         tmpfile=/tmp/trace_feature.$$.c
         cat >$tmpfile <<EOF
 #include <stdio.h>              /* printf */
@@ -75,7 +81,7 @@ int main( int argc, char *argv[] )
 {   return (0);
 }   /* main */
 EOF
-        gcc -pedantic -Wall -Winline -I$TRACE_INC -o/dev/null $tmpfile
+        gcc -pedantic -Wall -Winline $xc $standard -I$TRACE_INC -o/dev/null $tmpfile
         rm -f $tmpfile
     fi
 fi

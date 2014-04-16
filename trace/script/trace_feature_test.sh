@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_feature_test.sh,v $
- # rev='$Revision: 1.4 $$Date: 2014/04/16 16:55:14 $'
+ # rev='$Revision: 1.5 $$Date: 2014/04/16 17:05:38 $'
 
 USAGE="\
   usage: `basename $0` <\"check\">...
@@ -30,8 +30,10 @@ while [ -n "${1-}" ];do
         \?*|h*)     eval $op1chr; do_help=1;;
         v*)         eval $op1chr; opt_v=`expr $opt_v + 1`;;
         x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
-        f*)         eval $op1chr; file=$1; have_check=1; shift;;
-        -file)      eval $reqarg; file=$1; have_check=1; shift;;
+        f*)         eval $op1arg; file=$1;    have_check=1; shift;;
+        -file)      eval $reqarg; file=$1;    have_check=1; shift;;
+        c*)         eval $op1chr; compiler=1; have_check=1; shift;;
+        -compiler)                compiler=1; have_check=1; shift;;
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -54,11 +56,27 @@ access functionality."
         echo "This file does not seem to have the basic multi-process locked
 memory access functionality."
     fi
-
     if objdump --disassemble $file | grep -m1 '%[fg]s:0xf';then
         echo "This file seems to have basic thread local storage functionality"
     else
         echo "This file does not seem to have basic thread local storage functionality"
+    fi
+fi
+
+if [ -n "${compiler-}" ];then
+    if [ -z "${TRACE_INC-}" ];then
+        echo "env var TRACE_INC must be set"
+    else
+        tmpfile=/tmp/trace_feature.$$.c
+        cat >$tmpfile <<EOF
+#include <stdio.h>              /* printf */
+#include "trace.h"
+int main( int argc, char *argv[] )
+{   return (0);
+}   /* main */
+EOF
+        gcc -pedantic -Wall -Winline -I$TRACE_INC -o/dev/null $tmpfile
+        rm -f $tmpfile
     fi
 fi
 

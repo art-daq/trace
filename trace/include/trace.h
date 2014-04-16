@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.93 $$Date: 2014-04-16 20:49:50 $"
+#define TRACE_REV  "$Revision: 1.94 $$Date: 2014-04-16 21:25:49 $"
 
 #ifndef __KERNEL__
 
@@ -44,10 +44,10 @@
 # elif defined(__x86_64__) || defined(__i686__) || defined(__i386__)
 #  define TRACE_ATOMIC_T          uint32_t
 #  define TRACE_THREAD_LOCAL
-static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new) \
+static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
     { uint32_t __ret;							\
     uint32_t __old = (old);						\
-    uint32_t __new = (new);						\
+    uint32_t __new = (new_);						\
     volatile uint32_t *__ptr = (volatile uint32_t *)(ptr);		\
     __asm__ volatile("lock cmpxchgl %2,%1"				\
 		 : "=a" (__ret), "+m" (*__ptr)				\

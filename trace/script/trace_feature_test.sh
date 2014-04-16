@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_feature_test.sh,v $
- # rev='$Revision: 1.7 $$Date: 2014/04/16 20:39:04 $'
+ # rev='$Revision: 1.8 $$Date: 2014/04/16 20:49:50 $'
 
 USAGE="\
   usage: `basename $0` <\"check\">...
@@ -97,7 +97,9 @@ static int traceCntl( int nargs, const char *cmd, ... )
 static int traceInit(void) { if (traceTid==0){traceTid=1;traceCntl(1,"modeS",1LL);}return (0); }
 #endif
 int main( int argc, char *argv[] )
-{   return (0);
+{
+    TRACE( 0, "hello" );
+    return (0);
 }   /* main */
 EOF
         gcc -pedantic -Wall -Winline $xc $standard -I$TRACE_INC -o/dev/null $tmpfile

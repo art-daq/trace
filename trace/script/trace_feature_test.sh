@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_feature_test.sh,v $
- # rev='$Revision: 1.6 $$Date: 2014-04-16 17:50:59 $'
+ # rev='$Revision: 1.7 $$Date: 2014-04-16 20:39:04 $'
 
 USAGE="\
   usage: `basename $0` <\"check\">...
@@ -76,7 +76,26 @@ if [ -n "${compiler-}" ];then
         tmpfile=/tmp/trace_feature.$$.c
         cat >$tmpfile <<EOF
 #include <stdio.h>              /* printf */
-#include "trace.h"
+#include <stdarg.h>
+# include <sys/time.h>           /* timeval */
+#if 1
+# include "trace.h"
+#else
+static int traceTid=0;
+static void trace(struct timeval*,unsigned,unsigned,const char *,...)__attribute__((format(printf,4,5)));
+static int                      traceInit( void );
+static int                      traceCntl( int nargs, const char *cmd, ... );
+static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
+		  , const char *msg, ... )
+{
+}
+static int traceCntl( int nargs, const char *cmd, ... )
+{ va_list  ap; va_start( ap, cmd ); printf("%d %s\n",nargs,cmd);
+  traceInit();
+  return (0);
+}
+static int traceInit(void) { if (traceTid==0){traceTid=1;traceCntl(1,"modeS",1LL);}return (0); }
+#endif
 int main( int argc, char *argv[] )
 {   return (0);
 }   /* main */

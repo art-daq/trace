@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.91 $$Date: 2014-04-16 04:04:00 $"
+#define TRACE_REV  "$Revision: 1.92 $$Date: 2014-04-16 20:39:04 $"
 
 #ifndef __KERNEL__
 
@@ -817,7 +817,13 @@ static int traceInit(void)
 	    traceInitNames();
 	    
 	    if ((cp=getenv("TRACE_LVLS")))
-	    {   TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
+	    {   /* Calling traceCntl here causes general circular dependency
+		   (b/c traceCntl calls traceInit) (but never infinite
+		   loop). But mainly, calling traceCntl here redemiats the
+		   "warning: 'traceCntl' defined but not used" that would happen
+		   in the user space use case (currently no traceInit/traceCntl
+		   for modules) */
+		TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
 		TRACE_CNTL( "modeS", 1LL );
 	    }
 	    return (0);

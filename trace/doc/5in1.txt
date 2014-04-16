@@ -1,5 +1,5 @@
-The main TRACE file is trace.h. Macro preprocessing allows it to exist in  areas:
-
+The main TRACE file is trace.h. Macro preprocessing allows it to exist in
+the following areas:
 
 
                    |                      |
@@ -61,7 +61,61 @@ user_lib_define
 	TRACE_THREAD_LOCAL pid_t traceTid=0;
 
 
-#if
 
 #define TRACE_DECL( scope, type_name, initializer ) \
 	extern type_name
+
+
+
+
+  use cases:                      aka      key defines           distinguishing characteristics
+  ----------------------------   ------  -------------------- -----------------------------------------
+  userspace all static           static
+  userspace "library" definer    libdef  TRACE_LIB TRACE_DECL variables declared extern in trace.h, defined in src_lib/tracelib.c
+  userspace library user         libuse  TRACE_DECL           variables declared extern in trace.h
+  kernel main                    kmain   TRACE_IMPL KERNEL    variables defined in src_module/trace_.c
+  kernel subordinate             ksub    KERNEL               no 
+
+
+
+
+key functions/macros and dependencies
+(for following "key preprocessor defines" section):
+   TRACE() macro
+      libdef:                   n/a
+      static,libuse,kmain,ksub: TRACE_INIT_CHECK
+                                    static,libuse: refs - traceTid, traceInit()
+                                    kmain,ksub:    n/a
+                                refs - traceControl_p, traceTID, traceNamLvls_p
+                                calls trace()
+                                    calls idxCnt2entPtr()
+				calls TRACE_LOG_FUNCTION() macro
+     
+
+   TRACE_CNTL() macro
+      libdef:                   n/a
+
+
+
+
+key preprocessor defines:
+
+KERNEL TRACE_IMPL TRACE_LIB TRACE_DECL  Description
+ 0       0           0          0       Normal "static" userspace implementation
+                                          all functions defined
+ 0       0           0          1       libuse
+ 0       0           1          0       n/a
+ 0       0           1          1       libdef
+ 0       1           0          0       n/a
+ 0       1           0          1       n/a
+ 0       1           1          0       n/a
+ 0       1           1          1       n/a
+ 1       0           0          0       ksub
+ 1       0           0          1       n/a
+ 1       0           1          0       n/a
+ 1       0           1          1       n/a
+ 1       1           0          0       kmain
+ 1       1           0          1       n/a
+ 1       1           1          0       n/a
+ 1       1           1          1       n/a
+

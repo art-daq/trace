@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.90 $$Date: 2014-04-15 19:07:37 $"
+#define TRACE_REV  "$Revision: 1.91 $$Date: 2014-04-16 04:04:00 $"
 
 #ifndef __KERNEL__
 
@@ -85,9 +85,6 @@
 
 #endif /* __KERNEL__ */
 
-#ifndef TRACE_DECL
-#define TRACE_DECL( scope, type_name, initializer ) scope type_name initializer
-#endif
 
 /* 88,7=192 bytes/ent   96,6=192   128,10=256*/
 #define TRACE_DFLT_MAX_MSG_SZ      128
@@ -233,7 +230,6 @@ struct traceEntryHdr_s
     uint64_t       tsc;               /*t*/
 };                                    /*mM -- NO, ALWAY PRINTED LAST! formated Message */
                                       /*nN  index */
-
 struct traceNamLvls_s
 {   uint64_t      M;
     uint64_t      S;
@@ -241,13 +237,23 @@ struct traceNamLvls_s
     char          name[TRACE_DFLT_NAM_SZ];
 };
 
+
+
+/*--------------------------------------------------------------------------*/
+/* enter the 5 use case "areas" -- see doc/5in1.txt                         */
+
+
+#ifndef TRACE_DECL
+#define TRACE_DECL( scope, type_name, initializer ) scope type_name initializer
+#endif
+
 #if defined(__KERNEL__)
 extern struct traceNamLvls_s  *traceNamLvls_p;
 extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
 extern int                     trace_allow_printk;                 /* module_param */
 #else
-#define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
+# define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
 TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ], ); /* IMPORTANT - 1) this size, 2) traceInit setting of num_namLvlTblEnts, 3) traceInitNames and 4) "tids" MUST agree */
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceNamLvls_s *traceNamLvls_p, =&traceNamLvls[0] );
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, );
@@ -263,6 +269,7 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl
 
 
 #ifndef TRACE_LIB
+
 /* forward declarations, important functions */
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
 #if !defined(__KERNEL__) || defined(TRACE_IMPL)   /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
@@ -276,11 +283,11 @@ static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
-       int                trace_allow_printk=0;                 /* module_param */
+       int                trace_allow_printk=0;              /* module_param */
 # endif
-#else                                            /* K=1,IMPL=0 */
+#else  /*                                           K=1,IMPL=0 */
 
-#endif
+#endif /* __KERNEL__  TRACE_IMPL */
 
 #define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
 #define namtblSiz( ents )       (((uint32_t)sizeof(struct traceNamLvls_s)*ents+TRACE_CACHELINE)&~(TRACE_CACHELINE-1))
@@ -302,19 +309,19 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
    code which calls inline idxCnt_add (the c11/c++11 optimizer seem to do what
    this macro does). */
 #define IDXCNT_ADD( idxCnt, add ) \
-    ((add<0)							\
+    ((add<0)								\
      ?(((uint32_t)-add>idxCnt)						\
        ?(traceControl_p->largest_multiple-(-add-idxCnt))%traceControl_p->largest_multiple \
-       :(idxCnt-(-add))%traceControl_p->largest_multiple\
-      )						\
-     :(idxCnt+add)%traceControl_p->largest_multiple\
+       :(idxCnt-(-add))%traceControl_p->largest_multiple		\
+       )								\
+     :(idxCnt+add)%traceControl_p->largest_multiple			\
     )
 
 
 #ifndef TRACE_LOG_FUNCTION
 # if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* c++98 c99 c++0x c11 c++11 */
-#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)  trace_user( tvp,tid,lvl,__VA_ARGS__ )
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)          trace_user( tvp,tid,lvl,__VA_ARGS__ )
 # else
 /* c89 */
 #  define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  trace_user( tvp,tid,lvl,msgargs )
@@ -333,6 +340,7 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
     TRACE_PRINT("\n");
 }
 #endif /* TRACE_LOG_FUNCTION */
+
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 # pragma GCC diagnostic push

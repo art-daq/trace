@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.94 $$Date: 2014-04-16 21:25:49 $"
+#define TRACE_REV  "$Revision: 1.95 $$Date: 2014-04-16 21:36:14 $"
 
 #ifndef __KERNEL__
 
@@ -210,6 +210,7 @@ struct traceControl_s
 	}   bits;
 	uint32_t  mode;
     }             mode;
+    uint32_t      reserved0;    /* use to be trigOffMode */
     uint32_t      trigIdxCnt;   /* BASED ON "M" mode Counts */
     int32_t       triggered;
     uint32_t	  trigActivePost;

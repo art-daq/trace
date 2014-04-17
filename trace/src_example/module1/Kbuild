@@ -1,0 +1,16 @@
+ # This file (Kbuild) was created by Ron Rechenmacher <ron@fnal.gov> on
+ # Jan  3, 2013. "TERMS AND CONDITIONS" governing this file are in the README
+ # or COPYING file. If you do not have such a file, one can be obtained by
+ # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+ # $RCSfile: Kbuild,v $
+ # rev="$Revision: 1.1 $$Date: 2014-04-17 19:40:18 $";
+
+
+#obj-m := other_module.o  Just using the one-liner is too simple; If I change to 
+#                        the two-liner (where the generated module must have a 
+#                    different name than the single source file) I can then
+#                    build both this example and the parent TRACE module in
+#                    the same (install) directory).
+
+obj-m := other_mod.o
+other_mod-y := other_module.o

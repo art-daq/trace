@@ -8,7 +8,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.95 $$Date: 2014-04-16 21:36:14 $"
+#define TRACE_REV  "$Revision: 1.96 $$Date: 2014-04-17 19:40:18 $"
 
 #ifndef __KERNEL__
 
@@ -195,7 +195,8 @@ struct traceControl_s
   volatile int32_t trace_initialized;/* these and above would be read only if */
     uint32_t       memlen;           /* in kernel */
     uint32_t       create_tv_sec;
-    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-26]; /* allow mmap 1st page(s) (stuff above) readonly */
+    uint32_t       largest_zero_offset;
+    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-27]; /* allow mmap 1st page(s) (stuff above) readonly */
 
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
     uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
@@ -225,7 +226,7 @@ struct traceEntryHdr_s
     pid_t          pid; /*pP system info */
     pid_t          tid; /*i system info - "thread id" */
     uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
-    /* int32_t       cpu; -- kernel sched switch will indicat this info */
+    /* int32_t       cpu; -- kernel sched switch will indicate this info */
     uint32_t       get_idxCnt_retries;/*rR*/
     uint32_t       param_bytes;       /*bB*/
     uint64_t       tsc;               /*t*/
@@ -253,6 +254,7 @@ extern struct traceNamLvls_s  *traceNamLvls_p;
 extern struct traceEntryHdr_s *traceEntries_p;
 extern struct traceControl_s  *traceControl_p;
 extern int                     trace_allow_printk;                 /* module_param */
+static const char             *traceName="KERNEL";
 #else
 # define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
 TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ], ); /* IMPORTANT - 1) this size, 2) traceInit setting of num_namLvlTblEnts, 3) traceInitNames and 4) "tids" MUST agree */
@@ -273,23 +275,22 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl
 
 /* forward declarations, important functions */
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
-#if !defined(__KERNEL__) || defined(TRACE_IMPL)   /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)  /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
 static int                      traceInit( void );
 static void                     traceInitNames( void );
-static int                      traceCntl( int nargs, const char *cmd, ... );
-static uint32_t                 name2tid( const char *name );
-# ifdef __KERNEL__                                /*                         K=1,IMPL=1 */
-static const char             *traceName="KERNEL";
+# ifdef __KERNEL__                               /*                         K=1,IMPL=1 */
 static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
        int                trace_allow_printk=0;              /* module_param */
 # endif
-#else  /*                                           K=1,IMPL=0 */
+#else    /*                                         K=1,IMPL=0  */
 
-#endif /* __KERNEL__  TRACE_IMPL */
+#endif   /*  __KERNEL__             TRACE_IMPL  */
 
+static int                      traceCntl( int nargs, const char *cmd, ... );
+static uint32_t                 name2tid( const char *name );
 #define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
 #define namtblSiz( ents )       (((uint32_t)sizeof(struct traceNamLvls_s)*ents+TRACE_CACHELINE)&~(TRACE_CACHELINE-1))
 #define entSiz( siz_msg, num_params ) ( sizeof(struct traceEntryHdr_s)\
@@ -309,13 +310,18 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
    Use of the following seems to produce the same code as the optimized
    code which calls inline idxCnt_add (the c11/c++11 optimizer seem to do what
    this macro does). */
-#define IDXCNT_ADD( idxCnt, add ) \
+#define IDXCNT_ADD( idxCnt, add )					\
     ((add<0)								\
      ?(((uint32_t)-add>idxCnt)						\
        ?(traceControl_p->largest_multiple-(-add-idxCnt))%traceControl_p->largest_multiple \
        :(idxCnt-(-add))%traceControl_p->largest_multiple		\
        )								\
      :(idxCnt+add)%traceControl_p->largest_multiple			\
+    )
+#define IDXCNT_DELTA( cur, prv )			\
+    ((cur>=prv)						\
+     ? cur-prv						\
+     : cur-prv-traceControl_p->largest_zero_offset	\
     )
 
 
@@ -332,9 +338,10 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
 {   va_list ap;
 # ifdef __KERNEL__
     if (!trace_allow_printk) return;
-# endif
+# else
     if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
     TRACE_PRINT( "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
+# endif
     va_start( ap, msg );
     TRACE_VPRINT( msg, ap );
     va_end( ap );
@@ -423,10 +430,10 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
     {
 	if (traceControl_p->triggered) /* triggered */
 	{
-	    if ((myIdxCnt-traceControl_p->trigIdxCnt)
+	    if (IDXCNT_DELTA(myIdxCnt,traceControl_p->trigIdxCnt)
 		>=traceControl_p->trigActivePost )
 	    {   /* I think there should be an indication in the M buffer */
-		traceControl_p->mode.bits.M = 0;
+		TRACE_CNTL( "modeM", (uint64_t)0 );   /* calling traceCntl here eliminates the "defined but not used" warning for modules which do not use TRACE_CNTL */
 		traceControl_p->trigActivePost = 0;
 		/* triggered and trigIdxCnt should be cleared when
 		   "armed" (when trigActivePost is set) */
@@ -444,8 +451,6 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 # pragma GCC diagnostic pop
 #endif
 
-
-#if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
 static void trace_lock( void )
 {
@@ -466,6 +471,23 @@ static void trace_lock( void )
 
 static void trace_unlock( void )
 {   traceControl_p->spinlock=0;
+}
+
+static uint32_t name2tid( const char *name )
+{
+    uint32_t ii;
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) return (ii);
+    trace_lock();
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	if (traceNamLvls_p[ii].name[0] == '\0')
+	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
+	    traceNamLvls_p[ii].M = 0x1;
+	    trace_unlock();
+	    return (ii);
+	}
+    trace_unlock();
+    return (traceControl_p->num_namLvlTblEnts-1);
 }
 
 
@@ -607,13 +629,15 @@ static int traceCntl( int nargs, const char *cmd, ... )
     {   ret = -1;
     }
     va_end(ap);
-#   ifndef __KERNEL__
+#   ifdef __KERNEL__
+    if (ret==-1) printk(  KERN_ERR "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
+#   else
     if (ret==-1) fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
 #   endif
     return (ret);
 }   /* traceCntl */
 
-#endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
+
 
 #ifndef __KERNEL__
 
@@ -852,19 +876,20 @@ static int traceInit(void)
 	    TRACE_GETTIMEOFDAY( &tv );
 	    strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
 	    traceControl_p->version_string[sizeof(traceControl_p->version_string)-1] = '\0';
-	    traceControl_p->create_tv_sec     = (uint32_t)tv.tv_sec;
-	    traceControl_p->num_params        = argsmax_;
-	    traceControl_p->siz_msg           = msgmax_;
-	    traceControl_p->siz_entry         = entSiz( msgmax_, argsmax_ );
-	    traceControl_p->num_entries       = numents_;
-	    traceControl_p->largest_multiple  = (uint32_t)-1 - ((uint32_t)-1 % numents_);
-	    traceControl_p->num_namLvlTblEnts = namtblents_;
-	    traceControl_p->memlen            = memlen;
+	    traceControl_p->create_tv_sec       = (uint32_t)tv.tv_sec;
+	    traceControl_p->num_params          = argsmax_;
+	    traceControl_p->siz_msg             = msgmax_;
+	    traceControl_p->siz_entry           = entSiz( msgmax_, argsmax_ );
+	    traceControl_p->num_entries         = numents_;
+	    traceControl_p->largest_multiple    = (uint32_t)-1 - ((uint32_t)-1 % numents_);
+	    traceControl_p->largest_zero_offset = ((uint32_t)-1 % numents_) +1;
+	    traceControl_p->num_namLvlTblEnts   = namtblents_;
+	    traceControl_p->memlen              = memlen;
 
-	    traceControl_p->spinlock          = 0;
+	    traceControl_p->spinlock            = 0;
 	    TRACE_CNTL( "reset" );
-	    traceControl_p->mode.mode         = 0;
-	    traceControl_p->mode.bits.M       = 1;
+	    traceControl_p->mode.mode           = 0;
+	    traceControl_p->mode.bits.M         = 1;
 
 	    traceInitNames();
 
@@ -897,25 +922,8 @@ static void traceInitNames( void )
     strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"_TRACE_" );
 }
 
-
-static uint32_t name2tid( const char *name )
-{
-    uint32_t ii;
-    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) return (ii);
-    trace_lock();
-    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	if (traceNamLvls_p[ii].name[0] == '\0')
-	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
-	    traceNamLvls_p[ii].M = 0x1;
-	    trace_unlock();
-	    return (ii);
-	}
-    trace_unlock();
-    return (traceControl_p->num_namLvlTblEnts-1);
-}
-
 #endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
+
 
 static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 {   uint32_t idx;

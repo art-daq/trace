@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: some_module.c,v $
-    rev="$Revision: 1.4 $$Date: 2014/02/19 17:43:37 $";
+    rev="$Revision: 1.5 $$Date: 2014/04/17 19:40:18 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -20,13 +20,19 @@
 
 static struct workqueue_struct *wq=0; 
 static int                      stop_requested=0;
+static int			count=0;
 
 static void my_work_function( struct work_struct *w );
 static DECLARE_WORK(my_work, my_work_function);
 static void my_work_function( struct work_struct *w )
 {
-    TRACE( 0,"hello from my_work_function jiffies: %ld", jiffies );
+    TRACE( 2,"hello from my_work_function jiffies: %ld", jiffies );
     msleep( 1500 );
+    if (count < 20) count++;
+    else if (count == 20)
+    {   count++;
+	TRACE_CNTL( "modeM", (uint64_t)0 );
+    }
     if (!stop_requested)
 	queue_work( wq, &my_work );    
 }
@@ -36,9 +42,11 @@ static int __init init_some_module(void)
 {
     int  ret=0;          /* SUCCESS */
 
-    printk(  KERN_INFO "init_some_module called\n" );
-
-    TRACE( 2, "init_some_module trace" );
+    TRACE_CNTL( "name", "johnson" );
+    TRACE_CNTL( "lvlmskM", (uint64_t)0xf );
+    TRACE_CNTL( "lvlmskS", (uint64_t)1 );
+    TRACE_CNTL( "modeS",   (uint64_t)1 );
+    TRACE( 0, "init_some_module trace" );
 
     wq = create_singlethread_workqueue("mywork");
     if (wq)
@@ -49,13 +57,13 @@ static int __init init_some_module(void)
 
 static void __exit exit_some_module(void)
 {
-    printk(KERN_INFO "exit_some_module() called\n");
+    TRACE( 0, "exit_some_module() called" );
 
     if (wq)
     {   printk("requesting stop\n");
 	stop_requested = 1;
 	flush_workqueue(wq);
-	printk("workqueue stopped/flushed\n");
+	TRACE( 0, "workqueue stopped/flushed" );
 	destroy_workqueue(wq);
     }
 }   // exit_some_module

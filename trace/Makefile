@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.14 $$Date: 2014/03/12 22:49:10 $";
+ # rev="$Revision: 1.15 $$Date: 2014/04/17 19:40:18 $";
 
 # TOP LEVEL Makefile
 
@@ -71,10 +71,12 @@ src_example_module: OUT_check
 	test -n "${KDIR}"\
 	  && modsubdir=module/`cat ${KDIR}/include/config/kernel.release`\
 	  || modsubdir=module/`uname -r`;\
-	cp -a src_example/module/*.c "${OUT}/$$modsubdir/.";\
-	grep some_module.o "${OUT}/$$modsubdir/Kbuild" || \
-	sed -i -e '/TRACE.o$$/s/$$/ some_mod.o/;$$a\
-	some_mod-y := some_module.o' "${OUT}/$$modsubdir/Kbuild";\
+	cp -a src_example/module*/*.c "${OUT}/$$modsubdir/.";\
+	for mod in `grep -ho ^.*_mod-y src_example/module*/Kbuild | sed 's/-y//'`;do \
+	  grep $${mod}ule.o "${OUT}/$$modsubdir/Kbuild" || \
+	  sed -i -e '/TRACE.o/s/$$/ '$$mod'.o/;$$a\
+	'$$mod'-y := '$$mod'ule.o' "${OUT}/$$modsubdir/Kbuild";\
+	done;\
 	$(MAKE) -e -C "${OUT}/$$modsubdir" TRACE_INC=$$PWD/include
 
 src_utility: OUT_check

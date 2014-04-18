@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracelibmf.hh,v $
- // rev="$Revision: 1.1 $$Date: 2014/04/18 16:00:41 $";
+ // rev="$Revision: 1.2 $$Date: 2014/04/18 19:25:57 $";
  */
 #ifndef TRACELIBMF_H
 #define TRACELIBMF_H
@@ -14,16 +14,21 @@
 
 #include <string>
 
-/* TRACE_MF_LOGGER is a macro because Log* output the file and line number.
+/* TRACE_MF_LOGGER is a macro because LOG_* output the file and line number.
+   Example (__FILE__=some/path/V1495Driver_generator.cc): TRACE( 3, "V1495Driver::resume_" );
+   becomes:
+Fri Apr 18 11:55:38 -0500 2014: %MSG-i V1495Driver_generator:  BoardReader-dsfr6-5440 MF-online 
+Fri Apr 18 11:55:38 -0500 2014: V1495Driver::resume_
+Fri Apr 18 11:55:38 -0500 2014: %MSG
 */
-#define TRACE_MF_LOGGER( lvl, ... ) do \
-    {					       \
-	char	        obuf[8192];\
-	snprintf( obuf, sizeof(obuf), __VA_ARGS__ );\
-	std::string category( __FILE__ "Lvl" # lvl );	\
-	int offset=category.rfind('/');                 \
-        category.replace(category.rfind('.'),1,"_");    \
-        char const *cat=category.c_str()+offset+1;      \
+#define TRACE_MF_LOGGER( lvl, ... ) do			\
+    {							\
+	char	        obuf[8192];			\
+	snprintf( obuf, sizeof(obuf), __VA_ARGS__ );	\
+	std::string category( __FILE__ );		\
+	int off=category.rfind('/')+1;			\
+	int len=category.rfind('.')-off;		\
+	std::string cat( category.substr(off,len) );	\
 	switch (lvl)					\
 	{						\
 	case 0:    ::mf::LogError(   cat ) << obuf; break;	\

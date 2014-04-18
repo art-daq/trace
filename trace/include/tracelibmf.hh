@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracelibmf.hh,v $
- // rev="$Revision: 1.3 $$Date: 2014/04/18 19:29:37 $";
+ // rev="$Revision: 1.4 $$Date: 2014/04/18 19:37:16 $";
  */
 #ifndef TRACELIBMF_H
 #define TRACELIBMF_H
@@ -34,11 +34,11 @@ Fri Apr 18 11:55:38 -0500 2014: %MSG
 	case 0: ::mf::LogError(   cat ) << obuf; break;	\
 	case 1: ::mf::LogWarning( cat ) << obuf; break;	\
 	case 2: ::mf::LogWarning( cat ) << obuf; break;	\
-	case 3: ::mf::LogInfo(    cat ) << obuf; break;	\
+	case 3: ::mf::LogWarning( cat ) << obuf; break;	\
 	case 4: ::mf::LogInfo(    cat ) << obuf; break;	\
 	case 5: ::mf::LogInfo(    cat ) << obuf; break;	\
-	case 6:     LOG_DEBUG(    cat ) << obuf; break;	\
-	case 7:     LOG_DEBUG(    cat ) << obuf; break;	\
+	case 6: ::mf::LogInfo(    cat ) << obuf; break;	\
+	case 7: ::mf::LogInfo(    cat ) << obuf; break;	\
 	case 8:     LOG_TRACE(    cat ) << obuf; break;	\
 	case 9:     LOG_DEBUG(    cat ) << obuf; break;	\
 	case 10:    LOG_DEBUG(    cat ) << obuf; break;	\

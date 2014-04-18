@@ -4,11 +4,10 @@
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
  */
-
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.96 $$Date: 2014-04-17 19:40:18 $"
+#define TRACE_REV  "$Revision: 1.97 $$Date: 2014-04-18 16:20:32 $"
 
 #ifndef __KERNEL__
 

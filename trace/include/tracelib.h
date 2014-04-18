@@ -1,9 +1,10 @@
- // This file (tracelib.h) was created by Ron Rechenmacher <ron@fnal.gov> on
+/* This file (tracelib.h) was created by Ron Rechenmacher <ron@fnal.gov> on
  // Mar 11, 2014. "TERMS AND CONDITIONS" governing this file are in the README
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracelib.h,v $
- // rev="$Revision: 1.1 $$Date: 2014/03/12 22:49:10 $";
+ // rev="$Revision: 1.2 $$Date: 2014/04/18 16:00:41 $";
+ */
 #ifndef TRACELIB_H
 #define TRACELIB_H
 

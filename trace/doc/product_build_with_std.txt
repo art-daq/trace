@@ -20,6 +20,7 @@ make OUT=$PWD modules                                       2>&1 | egrep -iB4 'e
 
 : ?other kernel versions?
 
+# rm -fr /products/TRACE/current.chain
 ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table -fLinux64bit+2.6 TRACE $tag
 ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table -fLinux+2.6 TRACE $tag
 

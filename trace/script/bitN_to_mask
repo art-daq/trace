@@ -1,0 +1,41 @@
+#!/bin/sh
+# This file (bitN_to_mask) was created by Ron Rechenmacher <ron@fnal.gov> on
+# May  1, 2014. "TERMS AND CONDITIONS" governing this file are in the README
+# or COPYING file. If you do not have such a file, one can be obtained by
+# contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+# $RCSfile: bitN_to_mask,v $
+# rev="$Revision: 1.1 $$Date: 2014/05/01 13:06:34 $";
+
+bitN_to_mask()
+{
+    opts= args=
+    op1arg='xx=`expr "x$op" : "x-.\(.*\)"`; test -n "$xx" && set -- "$xx" "$@"'
+    while [ -n "${1+x}" ];do
+        op=$1;shift
+        case "$op" in
+        -f*) eval $op1arg; opts="${opts:+$opts }-f$1"; shift;;
+        -n*) eval $op1arg; opts="${opts:+$opts }-n$1"; shift;;
+        *)  xx=`echo "$op" | sed -e "s/'/'\"'\"'/g"`; args="${args-} '$xx'";;
+        esac
+    done
+    eval set -- ${args-} \"\$@\"; unset op args xx
+
+    spec=$*
+    prev=
+    while [ "x$spec" != "x$prev" ];do
+        prev=$spec
+        spec=`echo $spec | sed 's/\([0-9]\) \([0-9]\)/\1,\2/g'` # put , between spaced nums
+    done
+    spec=`echo $spec | sed 's/ //g'`  # git rid of spaces (ie. "4- 7" -> "4-7"
+    rr=
+    for xx in `echo $spec | sed 's/,/ /g'`;do
+        start=`expr "$xx" : '\([^-]*\)'`
+        end=`expr "$xx" : '[^-]*-\(.*\)'`; test -z "$end" && end=$start
+        test $start -le $end && inc=1 || inc=-1
+        for ii in `seq $start $inc $end`; do rr="${rr:+$rr }$ii"; done
+    done
+    echo $opts
+    echo $rr|awk '{for(i=1;i<NF+1;++i)m=or(m,lshift(1,$i));printf"0x%x\n",m;}'
+}
+
+bitN_to_mask "$@"

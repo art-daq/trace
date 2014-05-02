@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.98 $$Date: 2014-05-02 19:17:15 $"
+#define TRACE_REV  "$Revision: 1.99 $$Date: 2014-05-02 21:18:31 $"
 
 #ifndef __KERNEL__
 
@@ -287,6 +287,9 @@ static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
 #else    /*                                         K=1,IMPL=0  */
 
 #endif   /*  __KERNEL__             TRACE_IMPL  */
+#ifndef __KERNEL__
+static struct traceControl_s    traceControl;
+#endif
 
 static int                      traceCntl( int nargs, const char *cmd, ... );
 static uint32_t                 name2tid( const char *name );
@@ -599,6 +602,9 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    break;
 	case 'M':
 	    ret=traceControl_p->mode.bits.M;
+#          ifndef __KERNEL__
+	    if (traceControl_p == &traceControl) break;
+#          endif
 	    if (nargs==1)
 	    {   uint32_t mode=va_arg(ap,uint64_t);
 		traceControl_p->mode.bits.M = mode;
@@ -639,8 +645,6 @@ static int traceCntl( int nargs, const char *cmd, ... )
 
 
 #ifndef __KERNEL__
-
-static struct traceControl_s  traceControl;
 
 
 /* RETURN "created" status */
@@ -798,6 +802,7 @@ static int traceInit(void)
 	    goto init_out;
 	}
 
+	if (namtblents_ == 1) namtblents_ = 2; /* If it has been specified in the env. it should be at least 2 */
 	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
 
 	I_created = trace_mmap_file( _file, &memlen, &traceControl_p );
@@ -806,7 +811,11 @@ static int traceInit(void)
  init_out:
 	    traceControl_p->num_namLvlTblEnts = sizeof(traceNamLvls)/sizeof(traceNamLvls[0]);
 	    traceInitNames();
-	    
+
+	    /* now, to allow test in trace_cntl.c to proceed */
+	    traceControl_p->num_entries      = 1;
+	    traceControl_p->largest_multiple = (uint32_t)-1 - ((uint32_t)-1 % 1);
+
 	    if ((cp=getenv("TRACE_LVLS")))
 	    {   /* Calling traceCntl here causes general circular dependency
 		   (b/c traceCntl calls traceInit) (but never infinite

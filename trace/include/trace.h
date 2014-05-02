@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.97 $$Date: 2014/04/18 16:20:32 $"
+#define TRACE_REV  "$Revision: 1.98 $$Date: 2014/05/02 19:17:15 $"
 
 #ifndef __KERNEL__
 
@@ -691,26 +691,6 @@ static int trace_mmap_file( const char *_file
 	    }
 	}
 
-#    if 0
-	/* HAVING PROBLEMS WITH READS IN MULTITHREADED ENV. */
-	do
-	{   int	sts;
-	    /*off = lseek( fd, 0, SEEK_SET );
-	    if (off == (off_t)-1)
-	    {   printf("Error: read sizeof(struct traceControl_s)\n");
-		close( fd );
-		*t_p=&traceControl;
-		return (0);
-	    }*/
-	    sts = read( fd , &tmp_traceControl, sizeof(struct traceControl_s) );
-	    if (sts != sizeof(tmp_traceControl))
-	    {   printf("Error: read sizeof(struct traceControl_s)\n");
-		close( fd );
-		*t_p=&traceControl;
-		return (0);
-	    }
-	} while (0 & !tmp_traceControl.trace_initialized);
-#    endif
 	tmp_traceControl_p = (struct traceControl_s *)mmap( NULL, sizeof(struct traceControl_s)
 					 , PROT_READ
 					 , MAP_SHARED, fd, 0 );
@@ -735,18 +715,6 @@ static int trace_mmap_file( const char *_file
 	munmap( tmp_traceControl_p, sizeof(struct traceControl_s) ); /* throw this mapping out */
     }
 
-# if 0  /* currently can't get 1st page of kernel memory read-only with single mmap call :( */
-    *t_p = (struct traceControl_s *)mmap( NULL, *memlen
-					 , PROT_READ|PROT_WRITE
-					 , MAP_SHARED, fd, 0 );
-    if (*t_p == (struct traceControl_s *)-1)
-    {   rw_p=(uint8_t*)t_p;/*just use rw_p here to allow easy switch (#if) and warngings*/
-	perror( "mmap(NULL,*memlen,PROT_READ,MAP_SHARED,fd,0) error" );
-	printf( "*memlen=%d t_p=%p\n", *memlen, (void*)rw_p );
-	*t_p=&traceControl;
-	return (0);
-    }
-# else
 
     /* I MUST allocate/grab a contiguous vm address space! [in testing threads (where address space
        is shared (obviously)), thread creation allocates vm space which can occur between
@@ -784,7 +752,6 @@ static int trace_mmap_file( const char *_file
     else
 	*t_p = (struct traceControl_s *)rw_p;
 
-# endif
     /* The POSIX mmap man page says:
        The mmap() function shall add an extra reference to the file
        associated with the file descriptor fildes which is not removed by a

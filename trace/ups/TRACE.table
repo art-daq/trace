@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.5 $
-#   $Date: 2014/03/22 20:31:29 $
+#   $Revision: 1.6 $
+#   $Date: 2014/05/02 15:14:30 $
 FILE = TABLE
 GROUP:
 
@@ -91,7 +91,37 @@ COMMON:
 
 	envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
-	execute( test $?shell \!= 1 && . ${UPS_PROD_DIR}/script/trace.sh.functions, NO_UPS_ENV )
+	#execute( test $?shell \!= 1 && . ${UPS_PROD_DIR}/script/trace.sh.functions, NO_UPS_ENV )
+
+	addAlias( tcntl,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl %s )
+	addAlias( tshow,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl show %s | less )
+	addAlias( tinfo,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl info %s )
+	addAlias( ttids,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl tids %s )
+	addAlias( tlvls,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl tids %s )
+	addAlias( tlvlM,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlmskM %s )
+	addAlias( tlvlS,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlmskS %s )
+	addAlias( tlvlT,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlmskT %s )
+	addAlias( tlvlMg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlmskMg %s )
+	addAlias( tlvlSg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlmskSg %s )
+	addAlias( tlvlTg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlmskTg %s )
+	addAlias( tmode,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl mode %s )
+	addAlias( tmodeM,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM %s )
+	addAlias( tmodeS,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS %s )
+	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 )
+	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset )
+	addAlias( tdelta,  ${UPS_PROD_DIR}/script/trace_delta.pl %s | less )
+	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; trace_cntl modeM 1 )
+	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; trace_cntl modeS 1 )
+	addAlias( tonT,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 0 `bitN_to_mask %s` )
+	addAlias( toffM,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclr  `bitN_to_mask %s` 0 0 )
+	addAlias( toffS,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclr  0 `bitN_to_mask %s` 0 )
+	addAlias( toffT,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclr  0 0 `bitN_to_mask %s` )
+	addAlias( tonMg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg `bitN_to_mask %s` 0 0; trace_cntl modeM 1 )
+	addAlias( tonSg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg 0 `bitN_to_mask %s` 0; trace_cntl modeS 1 )
+	addAlias( tonTg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg 0 0 `bitN_to_mask %s` )
+	addAlias( toffMg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg `bitN_to_mask %s` 0 0 )
+	addAlias( toffSg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 `bitN_to_mask %s` 0 )
+	addAlias( toffTg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 0 `bitN_to_mask %s` )
 
 	# It seems that at sometime prior to AD2014.03.22 setenv (and maybe
 	# unsetenv) became a standard part of ups -- so do not unset them

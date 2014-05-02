@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.80 $$Date: 2014/04/16 21:14:59 $";
+    rev="$Revision: 1.81 $$Date: 2014/05/02 15:14:30 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -65,7 +65,7 @@ tests:  (use %s show after test)\n\
 
 #define minw(a,b) (b<a?a:b)
 
-#define DFLT_SHOW         "HNTtiILR"
+#define DFLT_SHOW         "HxNTtiILR"
 #define NUMTHREADS 4
 static int trace_thread_option=0;
 
@@ -110,7 +110,12 @@ struct sizepush
     unsigned push:16;
 };
 
-void get_arg_sizes( char *ofmt, char *ifmt, int num_params, int param_bytes, struct sizepush *sizes_out )
+void get_arg_sizes(  char            *ofmt
+		   , char            *ifmt
+		   , int              filter_newline
+		   , int              num_params
+		   , int              param_bytes
+		   , struct sizepush *sizes_out )
 {   char    *in;
     char    *percent_sav;
     int      numArgs=0;
@@ -123,7 +128,14 @@ void get_arg_sizes( char *ofmt, char *ifmt, int num_params, int param_bytes, str
     /*while ((in=strchr(in,'%')))*/
     while (*in)
     {
-	if (*in != '%') { *ofmt++ = *in++; continue; }
+	if (*in != '%')
+	{   if (*in != '\n') *ofmt++ = *in++;
+	    else
+	    {   if (filter_newline) { *ofmt++ = ';'; in++; }
+		else                { *ofmt++ = *in++; }
+	    }
+	    continue;
+	}
 	/* found '%' - process it */
 	*ofmt = *in;
 	percent_sav = ofmt;       /* save in case we need to modify it (too many args) */
@@ -208,6 +220,7 @@ void traceShow( const char *ospec, int count, int start )
     unsigned printed=0;
     unsigned ii;
     int      buf_slot_width;
+    int      filter_newline=(strchr(ospec,'x')?1:0);
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
@@ -255,7 +268,7 @@ void traceShow( const char *ospec, int count, int start )
     if ((count>=0) && (start<0) && (count<max)) max=count;
 
     buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
-    local_msg     =            (char*)malloc( traceControl_p->siz_msg+50 );/* in case an %ld needs change to %lld */
+    local_msg     =            (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
     local_params  =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
     params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
@@ -276,6 +289,7 @@ void traceShow( const char *ospec, int count, int start )
 	    case 'B': printf("B "); break;
 	    case 'P': printf("  pid "); break;
 	    case 'R': printf("r "); break;
+		/* ignore other unknown chars in ospec */
 	    }
 	}
 	printf("msg\n");
@@ -294,6 +308,7 @@ void traceShow( const char *ospec, int count, int start )
 	    case 'B': printf("-- "); break;
 	    case 'P': printf("------ "); break;
 	    case 'R': printf("- "); break;
+		/* ignore other unknown chars in ospec */
 	    }
 	}
 	printf("-----------------------------\n");
@@ -307,7 +322,8 @@ void traceShow( const char *ospec, int count, int start )
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 	msg_p[traceControl_p->siz_msg - 1] = '\0';
 
-	get_arg_sizes(  local_msg, msg_p, traceControl_p->num_params
+	get_arg_sizes(  local_msg, msg_p, filter_newline
+		      , traceControl_p->num_params
 		      , myEnt_p->param_bytes, params_sizes );
 
 	/* determine if args need to be copied */
@@ -546,7 +562,7 @@ extern  int        optind;         /* for getopt */
 
 	/* at least set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
 	   bit -- this is what is on by default when the file is created */
-	TRACE_CNTL( "lvlset", 0x1LL, 0LL, 0LL ); TRACE_CNTL( "modeM", 1LL );
+	TRACE_CNTL( "lvlset", 0xfLL, 0LL, 0LL ); TRACE_CNTL( "modeM", 1LL );
 
 	TRACE( 0, "hello" );
 	myIdx = traceControl_p->largest_multiple - 3;
@@ -562,7 +578,7 @@ extern  int        optind;         /* for getopt */
 	    myIdx = desired;
 	}
 	printf("myIdx=0x%08x\n", myIdx );
-	TRACE( 1, "hello %d", 1 );
+	TRACE( 1, "hello %d\nthere\n", 1 );
 	TRACE( 2, "hello %d %d", 1, 2 );
 	TRACE( 3, "hello %d %d %d", 1,2,3 );
 	TRACE( 3, "hello %d %d %d %d %d %d %d %d %d %d %d"

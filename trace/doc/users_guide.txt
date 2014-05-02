@@ -112,7 +112,9 @@ tmodeM [opt] <0|1> -- disable (0) or enable (1) the memory destination
 tmodeS [opt] <0|1> -- disable (0) or enable (1) the stdout destination
 tfreeze [opt]      -- turns memory destination off -- "freezes" contents
 treset [opt]       -- clears the memory buffer and trigger parameters
-ton [opt]          -- turns just the memory destination on (use "ton;tmodeS 1" for both
-toff [opt]         -- turns both the stdout and memory desinations off
+tonM [opt] <lvls>  -- turns levels on (and also the mode) for the S destination
+tonS [opt] <lvls>  -- turns levels on (and also the mode) for the M destination
+toffS [opt]<lvls>  -- turns both the stdout and memory desinations off
+toffM [opt]<lvls>  -- turns both the stdout and memory desinations off
 tdelta [opts]      -- trace_delta.pl "$@" | less
 tcntl [opt]        -- general -- give cmd to trace_cntl i.e: tcntl TRACE 0 "hi"

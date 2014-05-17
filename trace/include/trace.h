@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.99 $$Date: 2014/05/02 21:18:31 $"
+#define TRACE_REV  "$Revision: 1.100 $$Date: 2014/05/17 19:41:03 $"
 
 #ifndef __KERNEL__
 
@@ -63,6 +63,7 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_GETTIMEOFDAY( tvp ) gettimeofday( tvp, NULL )
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
+# define TRACE_PRINT_FD           1
 /*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))*/
 # define TRACE_INIT_CHECK         if((traceTid!=0)||(traceInit()==0))
 
@@ -262,8 +263,9 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, )
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p, =NULL );
 TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
 TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_NAME );
-TRACE_DECL( static, pid_t                    tracePid, =0 );
-TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid, =0 );  /* thread id */
+TRACE_DECL( static, int                      tracePrintFd, =1 );
+TRACE_DECL( static, pid_t                    tracePid,     =0 );
+TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid,     =0 );  /* thread id */
 #endif
 
 
@@ -340,14 +342,42 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
 {   va_list ap;
 # ifdef __KERNEL__
     if (!trace_allow_printk) return;
-# else
-    if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
-    TRACE_PRINT( "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
-# endif
     va_start( ap, msg );
     TRACE_VPRINT( msg, ap );
     va_end( ap );
     TRACE_PRINT("\n");
+# else
+    char   obuf[0x1000]; int printed=0;
+    if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
+    printed += snprintf( &(obuf[printed])
+			, (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
+			, "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
+    va_start( ap, msg );
+    printed += vsnprintf( &(obuf[printed])
+			 , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
+			 , msg, ap );
+    va_end( ap );
+    if (printed < (int)sizeof(obuf))
+    {   /* there is room for the \n */
+	/* buf first see if it is needed */
+	if (obuf[printed-1] != '\n')
+	{   obuf[printed++] = '\n'; /* overwriting \0 is OK as we will specify the amount to write */
+	    /*printf("added \\n printed=%d\n",printed);*/
+	}
+	/*else printf("already there printed=%d\n",printed);*/
+	write( tracePrintFd, obuf, printed );
+    }
+    else
+    {  /* obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n */
+	if (obuf[sizeof(obuf)-2] == '\n')
+	    write( tracePrintFd, obuf, sizeof(obuf)-1 );
+	else
+	{   obuf[sizeof(obuf)-1] = '\n';
+	    write( tracePrintFd, obuf, sizeof(obuf) );
+	    /*printf("changed \\0 to \\n printed=%d\n",);*/
+	}
+    }
+# endif
 }
 #endif /* TRACE_LOG_FUNCTION */
 
@@ -793,9 +823,10 @@ static int traceInit(void)
 	if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
 	if (!((_name=getenv("TRACE_NAME"))&&(activate=1))) _name=traceName;
 	((cp=getenv("TRACE_MSGMAX"))    &&(msgmax_    =strtoul(cp,NULL,0))&&(activate=1))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
-	((cp=getenv("TRACE_ARGSMAX"))   &&(argsmax_   =strtoul(cp,NULL,0))&&(activate=1))||(argsmax_ =TRACE_DFLT_MAX_PARAMS);
+	((cp=getenv("TRACE_ARGSMAX"))   &&(argsmax_   =strtoul(cp,NULL,0))&&(activate=1))||(argsmax_   =TRACE_DFLT_MAX_PARAMS);
 	((cp=getenv("TRACE_NUMENTS"))   &&(numents_   =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
 	((cp=getenv("TRACE_NAMTBLENTS"))&&(namtblents_=strtoul(cp,NULL,0))&&(activate=1))||(namtblents_=TRACE_DFLT_NAMTBL_ENTS);
+	((cp=getenv("TRACE_PRINT_FD"))  &&(tracePrintFd=strtoul(cp,NULL,0))&&(activate=1));
 
 	if (!activate)
 	{   traceControl_p=&traceControl;

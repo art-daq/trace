@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.6 $
-#   $Date: 2014/05/02 15:14:30 $
+#   $Revision: 1.7 $
+#   $Date: 2014/05/17 19:41:03 $
 FILE = TABLE
 GROUP:
 
@@ -110,6 +110,7 @@ COMMON:
 	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 )
 	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset )
 	addAlias( tdelta,  ${UPS_PROD_DIR}/script/trace_delta.pl %s | less )
+	addAlias( tenv,    ${UPS_PROD_DIR}/script/trace_envvars.sh %s )
 	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; trace_cntl modeM 1 )
 	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; trace_cntl modeS 1 )
 	addAlias( tonT,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 0 `bitN_to_mask %s` )

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.100 $$Date: 2014/05/17 19:41:03 $"
+#define TRACE_REV  "$Revision: 1.101 $$Date: 2014/06/05 21:56:01 $"
 
 #ifndef __KERNEL__
 
@@ -204,7 +204,7 @@ struct traceControl_s
     TRACE_ATOMIC_T spinlock;	/* 32 bit */
     uint32_t       cacheline2[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
 
-    union
+    union trace_mode_u
     {   struct
 	{   uint32_t M:1; /* b0 high speed circular Memory */
 	    uint32_t S:1; /* b1 printf (formatted) to Screen/Stdout */
@@ -627,7 +627,12 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    ret=traceControl_p->mode.mode;
 	    if (nargs==1)
 	    {   uint32_t mode=va_arg(ap,uint64_t);
-		traceControl_p->mode.mode = mode;
+		union trace_mode_u tmp;
+		tmp.mode = mode;
+#              ifndef __KERNEL__
+	        if (traceControl_p == &traceControl) tmp.bits.M=0;
+#              endif
+		traceControl_p->mode = tmp;
 	    }
 	    break;
 	case 'M':
@@ -688,6 +693,7 @@ static int trace_mmap_file( const char *_file
     char                   path[PATH_MAX];
     char                  *logname=getenv("LOGNAME");
     int			   created=0;
+    int			   stat_try=0;
 
     snprintf( path, PATH_MAX, _file, logname?logname:"");/* in case, for some strange reason, LOGNAME does not exist */
     if ((fd=open(path,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
@@ -716,10 +722,10 @@ static int trace_mmap_file( const char *_file
 	    return (0);
 	}
 	while (statbuf.st_size < (off_t)sizeof(struct traceControl_s))
-	{   printf("stat again\n");
-	    if (fstat(fd,&statbuf) == -1)
-	    {   perror("fstat");
-		close( fd );
+	{   fprintf(stderr,"stat again\n");
+	    if (   ((stat_try++ >= 30)         && (fprintf(stderr,"too many stat tries\n"),1))
+		|| ((fstat(fd,&statbuf) == -1) && (perror("fstat"),1)) )
+	    {   close( fd );
 		*t_p=&traceControl;
 		return (0);
 	    }
@@ -806,7 +812,7 @@ static int traceInit(void)
     int         memlen;
     uint32_t    msgmax_, argsmax_, numents_, namtblents_;
     int		I_created;
-    const char *_name=traceName;
+    const char *_name=traceName; /* for when naming a thread */
 #  ifndef __KERNEL__
     int         activate=0;
     const char *_file;
@@ -820,8 +826,8 @@ static int traceInit(void)
     if (traceControl_p == NULL)
     {
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
-	if (!((_file=getenv("TRACE_FILE"))&&(activate=1))) _file=traceFile;
-	if (!((_name=getenv("TRACE_NAME"))&&(activate=1))) _name=traceName;
+	if (!((_file=getenv("TRACE_FILE"))&&(_file[0]!='\0')&&(activate=1))) _file=traceFile;
+	if (!((_name=getenv("TRACE_NAME"))&&(_name[0]!='\0')&&(activate=1))) _name=traceName;
 	((cp=getenv("TRACE_MSGMAX"))    &&(msgmax_    =strtoul(cp,NULL,0))&&(activate=1))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
 	((cp=getenv("TRACE_ARGSMAX"))   &&(argsmax_   =strtoul(cp,NULL,0))&&(activate=1))||(argsmax_   =TRACE_DFLT_MAX_PARAMS);
 	((cp=getenv("TRACE_NUMENTS"))   &&(numents_   =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
@@ -909,6 +915,7 @@ static int traceInit(void)
 	    ((unsigned long)traceNamLvls_p+namtblSiz(traceControl_p->num_namLvlTblEnts));
     }   /* if KERNEL - end "{"; else end "if (traceControl_p==NULL)" */
     traceTID = name2tid( _name );
+    printf("traceTID=%d\n",traceTID);
     return (0);
 }   /* traceInit */
 

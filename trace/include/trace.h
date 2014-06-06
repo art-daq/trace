@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.101 $$Date: 2014-06-05 21:56:01 $"
+#define TRACE_REV  "$Revision: 1.102 $$Date: 2014-06-06 00:48:16 $"
 
 #ifndef __KERNEL__
 
@@ -826,8 +826,8 @@ static int traceInit(void)
     if (traceControl_p == NULL)
     {
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
-	if (!((_file=getenv("TRACE_FILE"))&&(_file[0]!='\0')&&(activate=1))) _file=traceFile;
-	if (!((_name=getenv("TRACE_NAME"))&&(_name[0]!='\0')&&(activate=1))) _name=traceName;
+	if (!((_file=getenv("TRACE_FILE"))&&(*_file!='\0')&&(activate=1))) _file=traceFile;
+	if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0')&&(activate=1))) _name=traceName;
 	((cp=getenv("TRACE_MSGMAX"))    &&(msgmax_    =strtoul(cp,NULL,0))&&(activate=1))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
 	((cp=getenv("TRACE_ARGSMAX"))   &&(argsmax_   =strtoul(cp,NULL,0))&&(activate=1))||(argsmax_   =TRACE_DFLT_MAX_PARAMS);
 	((cp=getenv("TRACE_NUMENTS"))   &&(numents_   =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);

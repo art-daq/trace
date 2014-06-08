@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.102 $$Date: 2014/06/06 00:48:16 $"
+#define TRACE_REV  "$Revision: 1.103 $$Date: 2014/06/08 02:39:42 $"
 
 #ifndef __KERNEL__
 
@@ -828,11 +828,12 @@ static int traceInit(void)
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
 	if (!((_file=getenv("TRACE_FILE"))&&(*_file!='\0')&&(activate=1))) _file=traceFile;
 	if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0')&&(activate=1))) _name=traceName;
-	((cp=getenv("TRACE_MSGMAX"))    &&(msgmax_    =strtoul(cp,NULL,0))&&(activate=1))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
-	((cp=getenv("TRACE_ARGSMAX"))   &&(argsmax_   =strtoul(cp,NULL,0))&&(activate=1))||(argsmax_   =TRACE_DFLT_MAX_PARAMS);
-	((cp=getenv("TRACE_NUMENTS"))   &&(numents_   =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
-	((cp=getenv("TRACE_NAMTBLENTS"))&&(namtblents_=strtoul(cp,NULL,0))&&(activate=1))||(namtblents_=TRACE_DFLT_NAMTBL_ENTS);
-	((cp=getenv("TRACE_PRINT_FD"))  &&(tracePrintFd=strtoul(cp,NULL,0))&&(activate=1));
+	if ((cp=getenv("TRACE_PRINT_FD")) &&(*cp)&&(activate=1)) tracePrintFd=strtoul(cp,NULL,0);
+	if ((cp=getenv("TRACE_ARGSMAX"))  &&(*cp)&&(activate=1)) argsmax_=strtoul(cp,NULL,0);else argsmax_   =TRACE_DFLT_MAX_PARAMS;
+	/* use _MSGMAX= so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG */
+	((cp=getenv("TRACE_MSGMAX"))    &&(*cp)&&(activate=1)&&(msgmax_     =strtoul(cp,NULL,0)))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
+	((cp=getenv("TRACE_NUMENTS"))   &&       (numents_    =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
+	((cp=getenv("TRACE_NAMTBLENTS"))&&       (namtblents_ =strtoul(cp,NULL,0))&&(activate=1))||(namtblents_=TRACE_DFLT_NAMTBL_ENTS);
 
 	if (!activate)
 	{   traceControl_p=&traceControl;

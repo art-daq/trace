@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.81 $$Date: 2014-05-02 15:14:30 $";
+    rev="$Revision: 1.82 $$Date: 2014-06-18 19:41:53 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -510,12 +510,12 @@ extern  int        optind;         /* for getopt */
 
 
     if      (strcmp(cmd,"test1") == 0)
-    {   unsigned loops=0;
+    {   int loops=1;
 	if (argc - optind == 1) loops=strtoul(argv[optind],NULL,0);
-	do
-	{   TRACE( 0, "Hello. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
-		  , 'c',2.5,(short)5,(long long)5000000000LL,15 );
-	} while (loops--);
+	for (; loops; --loops)
+	{   TRACE( 0, "Hello %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
+		  , loops, 'c',2.5,(short)5,(long long)5000000000LL,15 );
+	}
     }
     else if (strcmp(cmd,"test") == 0)
     {   float    ff[10];

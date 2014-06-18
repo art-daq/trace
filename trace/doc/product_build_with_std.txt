@@ -1,3 +1,7 @@
+*  updated doc/RELEASE.NOTES: doc/cvs_rel_notes.sh --update_REL_NOTES <next_rev>
+*  edit/massage the release notes file (note: fmt of next_rev="vX_YY_ZZ" (ie v3_02_03)
+*  cvs ci -m'next rev (rev <next_rev>)' # for release notes
+*  cvs tag <next_rev>
 
 ksu products
 cd /products/TRACE

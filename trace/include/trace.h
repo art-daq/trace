@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.103 $$Date: 2014/06/08 02:39:42 $"
+#define TRACE_REV  "$Revision: 1.104 $$Date: 2014/06/18 19:48:55 $"
 
 #ifndef __KERNEL__
 
@@ -182,6 +182,14 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 #endif
 
 
+union trace_mode_u
+{   struct
+    {   uint32_t M:1; /* b0 high speed circular Memory */
+	uint32_t S:1; /* b1 printf (formatted) to Screen/Stdout */
+    }   bits;
+    uint32_t  mode;
+};
+
 struct traceControl_s
 {
     char           version_string[sizeof(int32_t)*16];
@@ -204,13 +212,7 @@ struct traceControl_s
     TRACE_ATOMIC_T spinlock;	/* 32 bit */
     uint32_t       cacheline2[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
 
-    union trace_mode_u
-    {   struct
-	{   uint32_t M:1; /* b0 high speed circular Memory */
-	    uint32_t S:1; /* b1 printf (formatted) to Screen/Stdout */
-	}   bits;
-	uint32_t  mode;
-    }             mode;
+    union trace_mode_u mode;
     uint32_t      reserved0;    /* use to be trigOffMode */
     uint32_t      trigIdxCnt;   /* BASED ON "M" mode Counts */
     int32_t       triggered;
@@ -745,7 +747,7 @@ static int trace_mmap_file( const char *_file
 	    ||(tmp_traceControl_p->num_namLvlTblEnts != 20)
 	    ||(tmp_traceControl_p->memlen            != (unsigned)*memlen)
 	    ||(tmp_traceControl_p->siz_msg           != 128)*/ )
-	{   printf("file not initialzed\n");
+	{   printf("Trace file not initialzed; consider (re)moving it.\n");
 	    close( fd );
 	    *t_p=&traceControl;
 	    return (0);
@@ -811,7 +813,7 @@ static int traceInit(void)
 {
     int         memlen;
     uint32_t    msgmax_, argsmax_, numents_, namtblents_;
-    int		I_created;
+    int		I_created=0;
     const char *_name=traceName; /* for when naming a thread */
 #  ifndef __KERNEL__
     int         activate=0;
@@ -828,25 +830,26 @@ static int traceInit(void)
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
 	if (!((_file=getenv("TRACE_FILE"))&&(*_file!='\0')&&(activate=1))) _file=traceFile;
 	if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0')&&(activate=1))) _name=traceName;
-	if ((cp=getenv("TRACE_PRINT_FD")) &&(*cp)&&(activate=1)) tracePrintFd=strtoul(cp,NULL,0);
 	if ((cp=getenv("TRACE_ARGSMAX"))  &&(*cp)&&(activate=1)) argsmax_=strtoul(cp,NULL,0);else argsmax_   =TRACE_DFLT_MAX_PARAMS;
 	/* use _MSGMAX= so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG */
 	((cp=getenv("TRACE_MSGMAX"))    &&(*cp)&&(activate=1)&&(msgmax_     =strtoul(cp,NULL,0)))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
 	((cp=getenv("TRACE_NUMENTS"))   &&       (numents_    =strtoul(cp,NULL,0))&&(activate=1))||(numents_   =TRACE_DFLT_NUM_ENTRIES);
 	((cp=getenv("TRACE_NAMTBLENTS"))&&       (namtblents_ =strtoul(cp,NULL,0))&&(activate=1))||(namtblents_=TRACE_DFLT_NAMTBL_ENTS);
 
+	/* TRACE_LVLS and TRACE_PRINT_FD can be used when active or inactive */
+	if ((cp=getenv("TRACE_PRINT_FD")) && (*cp)) tracePrintFd=strtoul(cp,NULL,0);
+
 	if (!activate)
 	{   traceControl_p=&traceControl;
-	    goto init_out;
 	}
-
-	if (namtblents_ == 1) namtblents_ = 2; /* If it has been specified in the env. it should be at least 2 */
-	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
-
-	I_created = trace_mmap_file( _file, &memlen, &traceControl_p );
+	else
+	{
+	    if (namtblents_ == 1) namtblents_ = 2; /* If it has been specified in the env. it should be at least 2 */
+	    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
+	    I_created = trace_mmap_file( _file, &memlen, &traceControl_p );
+	}
 	if (traceControl_p == &traceControl)
 	{
- init_out:
 	    traceControl_p->num_namLvlTblEnts = sizeof(traceNamLvls)/sizeof(traceNamLvls[0]);
 	    traceInitNames();
 
@@ -854,7 +857,7 @@ static int traceInit(void)
 	    traceControl_p->num_entries      = 1;
 	    traceControl_p->largest_multiple = (uint32_t)-1 - ((uint32_t)-1 % 1);
 
-	    if ((cp=getenv("TRACE_LVLS")))
+	    if ((cp=getenv("TRACE_LVLS"))     && (*cp))
 	    {   /* Calling traceCntl here causes general circular dependency
 		   (b/c traceCntl calls traceInit) (but never infinite
 		   loop). But mainly, calling traceCntl here redemiats the
@@ -916,7 +919,13 @@ static int traceInit(void)
 	    ((unsigned long)traceNamLvls_p+namtblSiz(traceControl_p->num_namLvlTblEnts));
     }   /* if KERNEL - end "{"; else end "if (traceControl_p==NULL)" */
     traceTID = name2tid( _name );
-    printf("traceTID=%d\n",traceTID);
+    /*printf("traceTID=%d\n",traceTID);*/
+#  ifndef __KERNEL__
+    if ((cp=getenv("TRACE_LVLS"))     && (*cp))
+    {   TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
+	TRACE_CNTL( "modeS", 1LL );
+    }
+#  endif
     return (0);
 }   /* traceInit */
 

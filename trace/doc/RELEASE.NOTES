@@ -1,0 +1,37 @@
+
+CHANGE(S) FOR VERSION v3_03_03
+
+  The number of files changed: 8
+
+  prvTagRev curTagRev     File
+  --------- --------- --------------------------------------------
+           :          doc/RELEASE.NOTES
+           :1.1       doc/cvs_list_changed_files.sh
+           :1.1       doc/cvs_rel_notes.sh
+        1.4:1.5       doc/product_build_with_std.txt
+       1.99:1.104     include/trace.h
+        1.2:1.3       src_lib/tracelib.c
+       1.81:1.82      src_utility/trace_cntl.c
+        1.6:1.7       ups/TRACE.table
+
+
+  File: doc/product_build_with_std.txt:
+  RELEASE.NOTES info
+  ----------------------------------------------------
+  File: include/trace.h:
+  remove debug printf inserted in r1.101, adjust _LVLS,_PRINT_FD processing, move union for c++
+  use _MSGMAX= so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG
+  preferred *_name over _name[0] syntax
+  close hole allowing modeM with inactive TRACE; null TRACE_NAME/FILE does not activate -- so exes setting these can be "overridden" (assuming they use setenv w/ override-false) (no easy way to force activate w/ defaults; set TRACE_FILE=/junk to force inactive???(w/ error msg))
+  tenv alias/function, TRACE_PRINT_FD to allow slow print to a differ file descriptor
+  ----------------------------------------------------
+  File: src_lib/tracelib.c:
+  tenv alias/function, TRACE_PRINT_FD to allow slow print to a differ file descriptor
+  ----------------------------------------------------
+  File: src_utility/trace_cntl.c:
+  adjust so param (to "test1") is number of TRACEs
+  ----------------------------------------------------
+  File: ups/TRACE.table:
+  tenv alias/function, TRACE_PRINT_FD to allow slow print to a differ file descriptor
+  ----------------------------------------------------
+==========================================================================

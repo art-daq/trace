@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.104 $$Date: 2014-06-18 19:48:55 $"
+#define TRACE_REV  "$Revision: 1.105 $$Date: 2014-07-11 21:28:13 $"
 
 #ifndef __KERNEL__
 
@@ -63,7 +63,6 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_GETTIMEOFDAY( tvp ) gettimeofday( tvp, NULL )
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
-# define TRACE_PRINT_FD           1
 /*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))*/
 # define TRACE_INIT_CHECK         if((traceTid!=0)||(traceInit()==0))
 
@@ -94,6 +93,9 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 #define TRACE_DFLT_NAM_SZ           16
 #ifndef  TRACE_NAME
 # define TRACE_NAME "TRACE"
+#endif
+#ifndef  TRACE_PRINT_FD
+# define TRACE_PRINT_FD           1
 #endif
 
 #define TRACE_PAGESIZE         0x2000

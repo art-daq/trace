@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.31 $$Date: 2014/04/17 19:40:18 $";
+    rev="$Revision: 1.32 $$Date: 2014/08/02 20:08:38 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -13,6 +13,7 @@
 #include <linux/init.h>		// module_init,_exit
 #include <linux/kernel.h>	// KERN_INFO, printk
 #include <linux/version.h>      /* KERNEL_VERSION */
+//#include <linux/interrupt.h>	// struct softirq_action  PROBLEM: many "redefined" and "conflicting type"
 #include <linux/mm.h>           /* do_mmap, vm_area_struct */
 #include <linux/io.h>		/* ioremap_page_range */
 #include <linux/proc_fs.h>      /* create_proc_entry, struct proc_dir_entry */
@@ -194,34 +195,78 @@ static void trace_proc_remove( void )
 }   // trace_proc_remove
 
 
+// =========================================================================
+
 /* based on code in kernel/trace/trace_sched_switch.c */
-static void trace_sched_switch_hook(
+static void my_trace_sched_switch_hook(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-                        void *__rq
+				       void *__rq
 # else
-                        struct rq *__rq
+				       struct rq *__rq
 # endif
-                        , struct task_struct *prev, struct task_struct *next )
+				       , struct task_struct *prev
+				       , struct task_struct *next )
 {
         unsigned long flags;
         local_irq_save(flags);
 	TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
         local_irq_restore(flags);
-}   // trace_sched_switch_hook
+}   // my_trace_sched_switch_hook
 
-static void trace_irq(
+static void my_trace_hirq_enter(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-	  void *new,
+				void *new,
 # endif
-	  int irq
-	  , struct irqaction *action )
+				int irq
+				, struct irqaction *action )
 {
-        unsigned long flags;
-        local_irq_save(flags);
-	TRACE( 30, "irqenter: cpu=%d irq=%d"
+        // comment out since I don't use action ptr. unsigned long flags;
+        //local_irq_save(flags);
+	TRACE( 30, "hirqenter: cpu=%d irq=%d"
 	      , raw_smp_processor_id(), irq );
-        local_irq_restore(flags);
-}   // trace_irq
+        //local_irq_restore(flags);
+}   // my_trace_irq_enter
+
+static void my_trace_hirq_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *new,
+# endif
+			       int irq,
+			       struct irqaction *action, int ret )
+{
+	// comment out since I don't use action ptr. unsigned long flags;
+	//local_irq_save(flags);
+	TRACE( 29, "hirqexit: cpu=%d irq=%d ret=%d"
+	      , raw_smp_processor_id(), irq, ret );
+        //local_irq_restore(flags);
+}   // my_trace_irq_exit
+
+struct softirq_action { void (*action)(struct softirq_action *); };
+static void my_trace_sirq_enter(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+				void *new,
+				unsigned int vec_nr )
+{
+# else
+				struct softirq_action *x,
+				struct softirq_action *y )
+{	unsigned int vec_nr = x - y;
+# endif
+	TRACE( 28,"sirqenter: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
+}   // my_trace_sirq_enter
+
+static void my_trace_sirq_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *new,
+				unsigned int vec_nr )
+{
+# else
+			       struct softirq_action *x,
+			       struct softirq_action *y )
+{	unsigned int vec_nr = x - y;
+# endif
+	TRACE( 27,"sirqexit: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
+}   // my_trace_sirq_exit
 
 // Ref. kernel/trace/trace_syscalls.c:void ftrace_syscall_enter(void *ignore, struct pt_regs *regs, long id)
 static void my_trace_sys_enter(
@@ -236,7 +281,7 @@ static void my_trace_sys_enter(
         if (syscall_nr < 0)
                 return;
 
-	TRACE( 29, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
+	TRACE( 26, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
 
 }   // my_trace_sys_enter
 
@@ -253,21 +298,36 @@ static void my_trace_sys_exit(
         if (syscall_nr < 0)
                 return;
 	syscall_ret=syscall_get_return_value(current, regs);
-	TRACE( 28, "sys_exit: cpu=%d syscall=%d ret=%ld/%ld"
+	TRACE( 25, "sys_exit: cpu=%d syscall=%d ret=%ld/%ld"
 	      , raw_smp_processor_id(), syscall_nr, syscall_ret, ret );
 
 }   // my_trace_sys_exit
 
+
+// ---------------------------------------------------------------------------
+
 static int  trace_sched_switch_hook_add( void )
 {
     int err;
-    err = register_trace_sched_switch( trace_sched_switch_hook 
+    err = register_trace_sched_switch( my_trace_sched_switch_hook 
                                       REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sched returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_irq_handler_entry( trace_irq REGISTER_NULL_ARG );
-    printk("trace_sched_switch_hook_add: irq returning %d (0=success)\n", err );
+    err = register_trace_irq_handler_entry( my_trace_hirq_enter REGISTER_NULL_ARG );
+    printk("trace_sched_switch_hook_add: hirq_entry returning %d (0=success)\n", err );
+    if (err) return (err);
+
+    err = register_trace_irq_handler_exit( my_trace_hirq_exit REGISTER_NULL_ARG );
+    printk("trace_sched_switch_hook_add: hirq_exit returning %d (0=success)\n", err );
+    if (err) return (err);
+
+    err = register_trace_softirq_entry( my_trace_sirq_enter REGISTER_NULL_ARG );
+    printk("trace_sched_switch_hook_add: sirq_entry returning %d (0=success)\n", err );
+    if (err) return (err);
+
+    err = register_trace_softirq_exit( my_trace_sirq_exit REGISTER_NULL_ARG );
+    printk("trace_sched_switch_hook_add: sirq_exit returning %d (0=success)\n", err );
     if (err) return (err);
 
     err = register_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
@@ -284,8 +344,11 @@ static void trace_sched_switch_hook_remove( void )
 {
     unregister_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
     unregister_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
-    unregister_trace_irq_handler_entry( trace_irq REGISTER_NULL_ARG );
-    unregister_trace_sched_switch( trace_sched_switch_hook
+    unregister_trace_softirq_exit( my_trace_sirq_exit REGISTER_NULL_ARG );
+    unregister_trace_softirq_entry( my_trace_sirq_enter REGISTER_NULL_ARG );
+    unregister_trace_irq_handler_exit( my_trace_hirq_exit REGISTER_NULL_ARG );
+    unregister_trace_irq_handler_entry( my_trace_hirq_enter REGISTER_NULL_ARG );
+    unregister_trace_sched_switch( my_trace_sched_switch_hook
 				   REGISTER_NULL_ARG );
 }   // trace_sched_switch_hook_remove
 

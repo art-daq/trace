@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.32 $$Date: 2014-08-02 20:08:38 $";
+    rev="$Revision: 1.33 $$Date: 2014-08-04 16:02:27 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -222,7 +222,7 @@ static void my_trace_hirq_enter(
 {
         // comment out since I don't use action ptr. unsigned long flags;
         //local_irq_save(flags);
-	TRACE( 30, "hirqenter: cpu=%d irq=%d"
+	TRACE( 29, "hirqenter: cpu=%d irq=%d"
 	      , raw_smp_processor_id(), irq );
         //local_irq_restore(flags);
 }   // my_trace_irq_enter
@@ -236,7 +236,7 @@ static void my_trace_hirq_exit(
 {
 	// comment out since I don't use action ptr. unsigned long flags;
 	//local_irq_save(flags);
-	TRACE( 29, "hirqexit: cpu=%d irq=%d ret=%d"
+	TRACE( 30, "hirqexit: cpu=%d irq=%d ret=%d"
 	      , raw_smp_processor_id(), irq, ret );
         //local_irq_restore(flags);
 }   // my_trace_irq_exit
@@ -252,7 +252,7 @@ static void my_trace_sirq_enter(
 				struct softirq_action *y )
 {	unsigned int vec_nr = x - y;
 # endif
-	TRACE( 28,"sirqenter: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
+	TRACE( 27,"sirqenter: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
 }   // my_trace_sirq_enter
 
 static void my_trace_sirq_exit(
@@ -265,7 +265,7 @@ static void my_trace_sirq_exit(
 			       struct softirq_action *y )
 {	unsigned int vec_nr = x - y;
 # endif
-	TRACE( 27,"sirqexit: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
+	TRACE( 28,"sirqexit: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
 }   // my_trace_sirq_exit
 
 // Ref. kernel/trace/trace_syscalls.c:void ftrace_syscall_enter(void *ignore, struct pt_regs *regs, long id)
@@ -281,7 +281,7 @@ static void my_trace_sys_enter(
         if (syscall_nr < 0)
                 return;
 
-	TRACE( 26, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
+	TRACE( 25, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
 
 }   // my_trace_sys_enter
 
@@ -298,7 +298,7 @@ static void my_trace_sys_exit(
         if (syscall_nr < 0)
                 return;
 	syscall_ret=syscall_get_return_value(current, regs);
-	TRACE( 25, "sys_exit: cpu=%d syscall=%d ret=%ld/%ld"
+	TRACE( 26, "sys_exit: cpu=%d syscall=%d ret=%ld/%ld"
 	      , raw_smp_processor_id(), syscall_nr, syscall_ret, ret );
 
 }   // my_trace_sys_exit

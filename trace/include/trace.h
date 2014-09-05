@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.105 $$Date: 2014/07/11 21:28:13 $"
+#define TRACE_REV  "$Revision: 1.106 $$Date: 2014/09/05 15:42:29 $"
 
 #ifndef __KERNEL__
 
@@ -163,7 +163,11 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_TSC32( low )       __asm__ __volatile__ ("rdtsc;movl %%eax,%0":"=m"(low)::"eax","edx")
 #elif defined(__x86_64__)
 # define TRACE_XTRA_PASSED        ,0,0, .0,.0,.0,.0,.0,.0,.0,.0
-# define TRACE_XTRA_UNUSED        ,long l0,long l1,double d0,double d1,double d2,double d3,double d4,double d5,double d6,double d7
+# define TRACE_XTRA_UNUSED        ,long l0 __attribute__((__unused__)),long l1 __attribute__((__unused__))\
+	,double d0 __attribute__((__unused__)),double d1 __attribute__((__unused__)) \
+	,double d2 __attribute__((__unused__)),double d3 __attribute__((__unused__)) \
+	,double d4 __attribute__((__unused__)),double d5 __attribute__((__unused__)) \
+	,double d6 __attribute__((__unused__)),double d7 __attribute__((__unused__))
 # ifndef TRACE_LIB
    static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
 # endif

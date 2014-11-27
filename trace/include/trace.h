@@ -7,25 +7,28 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.106 $$Date: 2014/09/05 15:42:29 $"
+#define TRACE_REV  "$Revision: 1.107 $$Date: 2014/11/27 06:04:39 $"
 
 #ifndef __KERNEL__
 
 # include <stdio.h>		/* printf */
 # include <stdarg.h>		/* va_list */
-# include <stdlib.h>		/* getenv, strtoul */
 # include <stdint.h>		/* uint64_t */
-# include <sys/time.h>           /* timeval */
+# include <sys/time.h>          /* timeval */
 # include <string.h>		/* strncmp */
 # include <fcntl.h>		/* open, O_RDWR */
 # include <sys/mman.h>		/* mmap */
 # include <unistd.h>		/* lseek */
 # include <sys/stat.h>		/* fstat */
-# include <sys/syscall.h>	/* syscall */
 # include <errno.h>		/* errno */
 # include <limits.h>		/* PATH_MAX */
+# include <stdlib.h>		/* getenv, setenv, strtoul */
+# include <sys/syscall.h>	/* syscall */
+# ifdef __linux__
+#  include <sched.h>		/* sched_getcpu - does vsyscall getcpu */
+# endif
 # ifndef PATH_MAX
-#   define PATH_MAX 1024  /* conservative */
+#  define PATH_MAX 1024  /* conservative */
 # endif
 # ifdef __sun__
 #  define SYS_GETTID SYS_lwp_self
@@ -230,16 +233,16 @@ struct traceControl_s
 struct traceEntryHdr_s
 {   struct timeval time;/*T*/
     TRACE_ENT_FILLER	     /* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
-    int32_t        lvl; /*lL*/
-    pid_t          pid; /*pP system info */
+    int32_t        lvl; /*L*/
+    pid_t          pid; /*P system info */
     pid_t          tid; /*i system info - "thread id" */
     uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
-    /* int32_t       cpu; -- kernel sched switch will indicate this info */
-    uint32_t       get_idxCnt_retries;/*rR*/
-    uint32_t       param_bytes;       /*bB*/
+    int32_t        cpu; /*C -- kernel sched switch will indicate this info? */
+    uint32_t       get_idxCnt_retries;/*R*/
+    uint32_t       param_bytes;       /*B*/
     uint64_t       tsc;               /*t*/
-};                                    /*mM -- NO, ALWAY PRINTED LAST! formated Message */
-                                      /*nN  index */
+};                                    /*M -- NO, ALWAY PRINTED LAST! formated Message */
+                                      /*N  index */
 struct traceNamLvls_s
 {   uint64_t      M;
     uint64_t      S;
@@ -446,12 +449,15 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 #  if defined(__KERNEL__)
     myEnt_p->pid  = current->tgid;
     myEnt_p->tid  = current->pid;
+    myEnt_p->cpu  = raw_smp_processor_id();
 #  else
     myEnt_p->pid  = tracePid;
     myEnt_p->tid  = traceTid;
+#   ifdef __linux__
+    myEnt_p->cpu  = sched_getcpu();
+#   endif
 #  endif
     myEnt_p->TID  = traceTID;
-    /*myEnt_p->cpu  = -1;    maybe don't need this when sched hook show tid<-->cpu */
     myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
     myEnt_p->param_bytes = sizeof(long);
 

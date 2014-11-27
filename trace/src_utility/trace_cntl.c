@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.82 $$Date: 2014-06-18 19:41:53 $";
+    rev="$Revision: 1.83 $$Date: 2014-11-27 06:04:39 $";
     */
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
@@ -15,9 +15,16 @@ done
    
 */
 #include <stdio.h>		/* printf */
+#ifndef __USE_MISC
+# define __USE_MISC
+#endif
+#include <sched.h>
+#ifndef __USE_BSD
+# define __USE_BSD
+#endif
+#include <stdlib.h>		/* setenv */
 #include <stdint.h>		/* uint64_t */
 #include <libgen.h>		/* basename */
-#include <stdlib.h>		/* setenv */
 #include <unistd.h>		/* getopt */
 #include <getopt.h>		/* getopt */
 #include <sys/time.h>           /* gettimeofday, struct timeval */
@@ -65,7 +72,11 @@ tests:  (use %s show after test)\n\
 
 #define minw(a,b) (b<a?a:b)
 
-#define DFLT_SHOW         "HxNTtiILR"
+#ifdef __linux__
+# define DFLT_SHOW         "HxNTtiICLR"
+#else
+# define DFLT_SHOW         "HxNTtiILR"
+#endif
 #define NUMTHREADS 4
 static int trace_thread_option=0;
 
@@ -285,6 +296,7 @@ void traceShow( const char *ospec, int count, int start )
 	    case 't': printf("       tsc "); break;
 	    case 'i': printf("  tid "); break;
 	    case 'I': printf("TID "); break;
+	    case 'C': printf("cpu "); break;
 	    case 'L': printf("lv "); break;
 	    case 'B': printf("B "); break;
 	    case 'P': printf("  pid "); break;
@@ -304,6 +316,7 @@ void traceShow( const char *ospec, int count, int start )
 	    case 't': printf("---------- "); break;
 	    case 'i': printf("----- "); break;
 	    case 'I': printf("--- "); break;
+	    case 'C': printf("--- "); break;
 	    case 'L': printf("-- "); break;
 	    case 'B': printf("-- "); break;
 	    case 'P': printf("------ "); break;
@@ -384,6 +397,7 @@ void traceShow( const char *ospec, int count, int start )
 	    case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 	    case 'i': printf("%5d ", myEnt_p->tid); break;
 	    case 'I': printf("%3u ", myEnt_p->TID); break;
+	    case 'C': printf("%3u ", myEnt_p->cpu); break;
 	    case 'L': printf("%2d ", myEnt_p->lvl); break;
 	    case 'B': printf("%u ", myEnt_p->param_bytes); break;
 	    case 'P': printf("%6d ", myEnt_p->pid); break;

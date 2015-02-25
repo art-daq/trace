@@ -1,93 +1,69 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.7 $
-#   $Date: 2014-05-17 19:41:03 $
+#   $Revision: 1.8 $
+#   $Date: 2015-02-25 19:53:24 $
 FILE = TABLE
+Product=TRACE
+
 GROUP:
 
-FLAVOR = Linux64bit+2.6
-QUALIFIERS = ""
-    ACTION = setup
-        envSet( TRACE_FQ, Linux64bit+2.6-2.12 )
-        exeActionRequired("setup__")
-        envPrepend( PATH, ${UPS_PROD_DIR}/script )
+Flavor=ANY
+Qualifiers=
 
-FLAVOR = Linux+2.6
-QUALIFIERS = ""
-    ACTION = setup
-        envSet( TRACE_FQ, Linux+2.6-2.12 )
-        exeActionRequired("setup__")
-        envPrepend( PATH, ${UPS_PROD_DIR}/script )
+  Action=DefineFQ
+    envSet (${UPS_PROD_NAME_UC}_FQ, ${UPS_PROD_FLAVOR})
+
+  Action = ExtraSetup
+
+# non-conforming e5 configuration
+Flavor=ANY
+Qualifiers=e5
+
+  Action=DefineFQ
+    envSet (${UPS_PROD_NAME_UC}_FQ, ${UPS_PROD_FLAVOR})
+
+  Action = ExtraSetup
 
 Flavor=ANY
-Qualifiers=""
-    ACTION = setup
-        exeActionRequired("setup__")
-        envPrepend( PATH, ${UPS_PROD_DIR}/script )
+Qualifiers=e6
 
-# ADD qualified instances here. For example:
-#Flavor=Linux+2.6
-#Qualifiers="debug"
-#    ACTION = setup
-#        setupRequired( test_boost -j v1_0 )
-#        envSet( XX, yy )
-#        exeActionRequired("setup__")
+  Action=DefineFQ
+    envSet (${UPS_PROD_NAME_UC}_FQ, ${UPS_PROD_FLAVOR}-e6)
+
+  Action = ExtraSetup
+    setupRequired( gcc v4_9_1 )
 
 COMMON:
+   ACTION = setup
+      # setupEnv puts SETUP_${UPS_PROD_NAME_UC} env var in env so product can be unsetup
+      setupenv()
+      proddir()
+      ExeActionRequired(DefineFQ)
+      envSet (${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/${${UPS_PROD_NAME_UC}_FQ})
+      exeActionRequired("setup__")
+      envPrepend( PATH, ${UPS_PROD_DIR}/script )
+      # requirements
+      exeActionRequired(ExtraSetup)
+      # cleanup
+      envUnSet( ${UPS_PROD_NAME_UC}_FQ )
+
    ACTION = setup__
-        # setupEnv puts SETUP_${UPS_PROD_NAME_UC} env var in env so product can be unsetup
-        setupEnv()
-        proddir()
 
-	# For unsetup, "if(cmd)" and "unless(cmd)" cmd's happen and pathAppend is the reverse of pathRemove
-        #   -- the "if" and "unless" status check is reverse between setup and unsetup.
-	# For unsetup, the "execute" and "envRemove" statements do not happen; they are not reversible
-        # b/c "execute" statements only happen upon "setup" (not "unsetup") and any statement with "UPS_ENV" causes UPS_UPS_DIR env.var
-        #   to be set, this (the presence of UPS_UPS_DIR in env.) could possible be used to distinguish between setup and unsetup???
-	execute( test $?shell = 1 || eval 'setenv() { sts=$?; export $1; eval "$1=\"\${2-}\""; return $sts; };unsetenv() { unset "$@"; }', NO_UPS_ENV )
-	# Note: the next line relies on having the UPS_ENV set
-	execute( setenv _FQ `sh -c 'expr "$${UPS_PROD_NAME_UC}_FQ" : "\(..*\)" || for dd in ${UPS_PROD_DIR} $UPS_DIR;do ff=$dd/ups/ups_FQ;if [ -x $ff ];then $ff UPS_ENV;exit $?;fi;done'`, UPS_ENV )
-	envSet( ${UPS_PROD_NAME_UC}_FQ, $_FQ )
-
-	# These are use by other products' build system
-	# double(2) double-quotes(") is a bit of a trick - ups is enclosing things inside of double quotes so it thinks it can strip off the first and last...
-	# double(2) double-quotes(") is needed to be shell independent - to work on cshell or bourne shell
-	prodDir( _INC, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/ "";do for ii in include ${UPS_PROD_NAME} inc h;do [ -d ${UPS_PROD_DIR}/${dd}$ii ] && echo ${dd}$ii && exit;done;done'`"" )
-	prodDir( _LIB, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/lib lib/$${UPS_PROD_NAME_UC}_FQ lib.$${UPS_PROD_NAME_UC}_FQ;do [ -d ${UPS_PROD_DIR}/$dd ] && echo $dd && exit;done;echo .'`"" )
-
-	prodDir( _BIN, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/bin bin/$${UPS_PROD_NAME_UC}_FQ bin.$${UPS_PROD_NAME_UC}_FQ;do [ -d ${UPS_PROD_DIR}/$dd ] && echo $dd && exit;done;echo .'`"" )
-	prodDir( _SBIN, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/sbin sbin/$${UPS_PROD_NAME_UC}_FQ sbin.$${UPS_PROD_NAME_UC}_FQ;do [ -d ${UPS_PROD_DIR}/$dd ] && echo $dd && exit;done;echo .'`"" )
-
-	prodDir( _MAN, ""`sh -c 'for dd in $${UPS_PROD_NAME_UC}_FQ/ "";do for ii in man share/man;do [ -d ${UPS_PROD_DIR}/${dd}$ii ] && echo ${dd}$ii && exit;done;done'`"" )
+	prodDir( _INC, include )
+	prodDir( _LIB, ${${UPS_PROD_NAME_UC}_FQ}/lib )
+	prodDir( _BIN, ${${UPS_PROD_NAME_UC}_FQ}/bin )
 
         if    ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
-            pathPrepend(PATH, ${${UPS_PROD_NAME_UC}_BIN}, :)
+            pathPrepend(PATH, ${${UPS_PROD_NAME_UC}_BIN} )
             # older versions of ups (v4_7_4a) have bug that requires else() clause
 	else  ()
             execute( true, NO_UPS_ENV )
         endif ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
-        if    ( test `expr "${${UPS_PROD_NAME_UC}_SBIN}" : '.*\.$'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_SBIN}" )
-            pathPrepend(PATH, ${${UPS_PROD_NAME_UC}_SBIN}, :)
-	else  ()
-            execute( true, NO_UPS_ENV )
-        endif ( test `expr "${${UPS_PROD_NAME_UC}_SBIN}" : '.*\.$'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_SBIN}" )
-        if    ( test -d ${UPS_PROD_DIR}/bin )
-            pathPrepend(PATH, ${UPS_PROD_DIR}/bin, :)
-	else  ()
-            execute( true, NO_UPS_ENV )
-        endif ( test -d ${UPS_PROD_DIR}/bin )
 
-	envPrepend( LD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB}, :)
-
-	envSetIfNotSet( MANPATH, "`man -w`" )
-	envPrepend( MANPATH, ${${UPS_PROD_NAME_UC}_MAN}, :)
-
-	if    ( test ! -d ${${UPS_PROD_NAME_UC}_LIB} )
-	    envRemove( LD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB}, :)
-	endif ( test ! -d ${${UPS_PROD_NAME_UC}_LIB} )
-
-	if    ( test ! -d ${${UPS_PROD_NAME_UC}_MAN} )
-	    envRemove( MANPATH, ${${UPS_PROD_NAME_UC}_MAN}, :)
-	endif ( test ! -d ${${UPS_PROD_NAME_UC}_MAN} )
+	if ( test `uname` = "Darwin" )
+          envPrepend(DYLD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
+	else()
+          envPrepend(LD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
+	endif ( test `uname` = "Darwin" )
 
 	envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
@@ -123,11 +99,6 @@ COMMON:
 	addAlias( toffMg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg `bitN_to_mask %s` 0 0 )
 	addAlias( toffSg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 `bitN_to_mask %s` 0 )
 	addAlias( toffTg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 0 `bitN_to_mask %s` )
-
-	# It seems that at sometime prior to AD2014.03.22 setenv (and maybe
-	# unsetenv) became a standard part of ups -- so do not unset them
-	#execute( unsetenv _FQ && unset setenv unsetenv, NO_UPS_ENV )
-	execute( unsetenv _FQ, NO_UPS_ENV )
 
 	# ADD common env vars here
 END:

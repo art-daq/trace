@@ -1,6 +1,8 @@
-updated doc/RELEASE.NOTES: doc/cvs_rel_notes.sh --update_REL_NOTES <next_rev>
+updated doc/RELEASE.NOTES:
+  doc/cvs_rel_notes.sh --update_REL_NOTES <next_rev>
 note: fmt of next_rev=vX_YY_ZZ
 message/edit the release notes file
-cvs ci -m'next rev (rev <next_rev>)' # for release notes
-cvs tag <next_rev>
-And the <version>s specified match the version in the README.
+  edew doc/RELEASE.NOTES
+  cvs ci -m'next rev (rev <next_rev>)' # for release notes
+  cvs tag <next_rev>
+

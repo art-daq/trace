@@ -4,7 +4,7 @@ CHAIN = current
 
 #*************************************************
 #
-FLAVOR = Linux64bit+2.6
+FLAVOR = Linux64bit+2.6-2.12
 VERSION = v3_x
 QUALIFIERS = ""
   DECLARER = ron
@@ -14,7 +14,7 @@ QUALIFIERS = ""
 
 #*************************************************
 #
-FLAVOR = Linux+2.6
+FLAVOR = Linux+2.6-2.12
 VERSION = v3_x
 QUALIFIERS = ""
   DECLARER = ron

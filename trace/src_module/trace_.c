@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.33 $$Date: 2014/08/04 16:02:27 $";
+    rev="$Revision: 1.34 $$Date: 2015/02/27 17:27:54 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -126,7 +126,7 @@ static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
 }
 
 
-static struct file_operations trace_proc_buffer_file_operations = {
+static struct file_operations trace_proc_buffer_file_ops = {
     .owner=   THIS_MODULE,
     .llseek=  NULL,           		/* lseek        */
     .read=    trace_proc_buffer_read,	/* read         */
@@ -156,8 +156,9 @@ static struct proc_dir_entry *trace_proc_root=NULL;
 
 static int  trace_proc_add( int len )
 {
-        struct proc_dir_entry *child;
 
+# if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+    struct proc_dir_entry *child;
     /*  Note: struct proc_dir_entry (include/linux/proc_fs.h) has pointer
         to struct inode_operations which has pointer to struct
         file_operations (see include/linux/fs.h). This will allow for mmap
@@ -182,15 +183,32 @@ static int  trace_proc_add( int len )
         set in fs/proc/root.c:proc_register
     */
     //child->proc_iops = &trace_proc_buffer_inode_operations;
-    child->proc_fops = &trace_proc_buffer_file_operations;
+    child->proc_fops = &trace_proc_buffer_file_ops;
     child->size = len;
+# else
+    if (!proc_mkdir("trace", NULL))
+    {   printk( "proc_trace_create: error creating proc_entry\n" );
+        return (1);
+    }
+
+    trace_proc_root = proc_create("trace/buffer",0644,NULL,&trace_proc_buffer_file_ops);
+    if (trace_proc_root == NULL)
+    {	printk( "proc_trace_create: error creating proc_entry\n" );
+        return (1);
+    }
+    proc_set_size( trace_proc_root, len );
+# endif
     return (0);
 }   // trace_proc_add
 
 static void trace_proc_remove( void )
 {
     printk( "trace module cleanup - removing /proc/trace directory tree\n" );
+# if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
     remove_proc_entry( "buffer",  trace_proc_root );
+# else
+    remove_proc_entry( "trace/buffer",  0 );
+# endif
     remove_proc_entry( "trace",   0 );
 }   // trace_proc_remove
 

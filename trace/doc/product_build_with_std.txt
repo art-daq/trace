@@ -15,7 +15,9 @@ cvs -d:ext:p-trace@cdcvs.fnal.gov:/cvs/projects/trace export -r$tag -d$tag trace
 
 : setup specific compiler
 PRODUCTS=/products:~ron/p
-setup gcc git
+
+============================ different compilers ============================
+setup gcc git; qual=
 
 cd $tag
 make OUT=$PWD CPPFLAGS="-O2 -std=c11"   src_lib src_utility 2>&1 | egrep -iB4 'error|warn'
@@ -23,17 +25,25 @@ make OUT=$PWD CPPFLAGS="-O2 -std=c++11" src_example_user    2>&1 | egrep -iB4 'e
 make OUT=$PWD modules                                       2>&1 | egrep -iB4 'error|warn'
 
 : ?other kernel versions?
+: make OUT=$PWD modules KDIR=/usr/local/src/build-3.10.18-x86_64
 
-# rm -fr /products/TRACE/current.chain
-ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table -fLinux64bit+2.6 TRACE $tag
-ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table -fLinux+2.6 TRACE $tag
+: rm -fr /products/TRACE/current.chain
+ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table ${qual:+-q$qual} -f`ups flavor` TRACE $tag
+ups declare -c -z/products -rTRACE/$tag -Mups -mTRACE.table ${qual:+-q$qual} -f`setarch i386 ups flavor` TRACE $tag
 
 : ?test?
 
 cd /products
-tar cjf /tmp/TRACE-`echo $tag|sed 's/v//;s/_/./g'`-slf6.tar.bz2 TRACE/$tag*
-scp /tmp/TRACE-*-slf6.tar.bz2 distro@oink:served_files/packages/TRACE
+tar cjf /tmp/TRACE-`echo $tag|sed 's/v//;s/_/./g'`-slf6-`uname -m`${qual:+-$qual}.tar.bz2 TRACE/$tag*
+
+======================================================================
+
+ssh scisoft@cluck "test -d SciSoft/packages/TRACE/$tag || mkdir -p SciSoft/packages/TRACE/$tag"
+scp -p /tmp/TRACE-*-slf6*.tar.bz2 scisoft@cluck:SciSoft/packages/TRACE/$tag
 
 : ?scp elsewhere?
 
-rm -f /tmp/TRACE-*-slf6.tar.bz2
+
+
+
+rm -f /tmp/TRACE-*-slf6*.tar.bz2

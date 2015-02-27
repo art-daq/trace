@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.8 $
-#   $Date: 2015-02-25 19:53:24 $
+#   $Revision: 1.9 $
+#   $Date: 2015-02-27 17:27:28 $
 FILE = TABLE
 Product=TRACE
 
@@ -10,16 +10,16 @@ Flavor=ANY
 Qualifiers=
 
   Action=DefineFQ
-    envSet (${UPS_PROD_NAME_UC}_FQ, ${UPS_PROD_FLAVOR})
+    envSet (${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/${UPS_PROD_FLAVOR})
 
   Action = ExtraSetup
 
-# non-conforming e5 configuration
+# non-conforming e5 configuration     <-----------------------<<<*************
 Flavor=ANY
 Qualifiers=e5
 
   Action=DefineFQ
-    envSet (${UPS_PROD_NAME_UC}_FQ, ${UPS_PROD_FLAVOR})
+    envSet (${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/${UPS_PROD_FLAVOR})
 
   Action = ExtraSetup
 
@@ -27,30 +27,36 @@ Flavor=ANY
 Qualifiers=e6
 
   Action=DefineFQ
-    envSet (${UPS_PROD_NAME_UC}_FQ, ${UPS_PROD_FLAVOR}-e6)
+    envSet (${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/${UPS_PROD_FLAVOR}-e6)
 
   Action = ExtraSetup
     setupRequired( gcc v4_9_1 )
+
+Flavor=ANY
+Qualifiers=e7
+
+  Action=DefineFQ
+    envSet (${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/${UPS_PROD_FLAVOR}-e7)
+
+  Action = ExtraSetup
+    setupRequired( gcc v4_9_2 )
 
 COMMON:
    ACTION = setup
       # setupEnv puts SETUP_${UPS_PROD_NAME_UC} env var in env so product can be unsetup
       setupenv()
       proddir()
-      ExeActionRequired(DefineFQ)
-      envSet (${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/${${UPS_PROD_NAME_UC}_FQ})
+      exeActionRequired(DefineFQ)
       exeActionRequired("setup__")
       envPrepend( PATH, ${UPS_PROD_DIR}/script )
       # requirements
       exeActionRequired(ExtraSetup)
-      # cleanup
-      envUnSet( ${UPS_PROD_NAME_UC}_FQ )
 
    ACTION = setup__
 
 	prodDir( _INC, include )
-	prodDir( _LIB, ${${UPS_PROD_NAME_UC}_FQ}/lib )
-	prodDir( _BIN, ${${UPS_PROD_NAME_UC}_FQ}/bin )
+        envSet( ${UPS_PROD_NAME_UC}_LIB, ${${UPS_PROD_NAME_UC}_FQ_DIR}/lib ) 
+        envSet( ${UPS_PROD_NAME_UC}_BIN, ${${UPS_PROD_NAME_UC}_FQ_DIR}/bin ) 
 
         if    ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
             pathPrepend(PATH, ${${UPS_PROD_NAME_UC}_BIN} )

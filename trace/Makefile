@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.15 $$Date: 2014-04-17 19:40:18 $";
+ # rev="$Revision: 1.16 $$Date: 2015-02-27 22:08:08 $";
 
 # TOP LEVEL Makefile
 
@@ -15,7 +15,7 @@ echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
 echo "  make OUT=\$$PWD src_module";\
 echo "  make OUT=\$$PWD modules";\
 echo "  make OUT=\$$PWD modules KDIR=<path_to_built_kernel>";\
-echo "  make OUT=\$$PWD CPPFLAGS=-std=c++11 src_example_user";\
+echo "  make OUT=\$$PWD XTRA_CXXFLAGS=-std=c++11 src_example_user";\
 echo "If \"ups\" is available and OUT is set to \$$PWD, you should be able to:";\
 echo "  setup -r\$$PWD -z\$$PWD TRACE";\
 echo "to get env.var. TRACE_INC set and env.var. PATH adjusted."

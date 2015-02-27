@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.7 $
-#  $Date: 2014-03-06 15:43:57 $
+#  $Revision: 1.8 $
+#  $Date: 2015-02-27 22:08:08 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -30,8 +30,8 @@
 #endif
 CC       = gcc
 CXX      = g++   # a variable named "C++" is not compatible with bourne shell
-CFLAGS   = -g -Wall -DDO_THREADS
-CXXFLAGS = $(CFLAGS)
+CFLAGS   = -g -Wall -DDO_THREADS -O2 $(XTRA_CFLAGS)
+CXXFLAGS = -g -Wall -DDO_THREADS -O2 $(XTRA_CXXFLAGS)
 CPPFLAGS = -I../include
 LDFLAGS  = -lpthread  # -g not needed
 

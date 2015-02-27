@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: cvs_rel_notes.sh,v $
-#   $Revision: 1.1 $
-#   $Date: 2014-06-18 19:57:10 $
+#   $Revision: 1.2 $
+#   $Date: 2015-02-27 17:57:50 $
 
 set -u
 USAGE="usage: `basename $0` [--update_REL_NOTES] <nextVersion>
@@ -80,11 +80,11 @@ fi
 echo
 echo "CHANGE(S) FOR VERSION $NEXT_VERSION"
 echo
-echo The number of files changed: `echo "$cvs_rev_change_list" | wc -l`
+echo "  The number of files changed: "`echo "$cvs_rev_change_list" | wc -l`
 echo
-echo "prvTagRev curTagRev     File"
-echo "--------- --------- --------------------------------------------"
-echo "$cvs_rev_change_list"
+echo "  prvTagRev curTagRev     File"
+echo "  --------- --------- --------------------------------------------"
+echo "$cvs_rev_change_list" | sed -e 's/^/  /'
 echo
 echo
 
@@ -112,17 +112,17 @@ while (<>)
 	while (!(($_=<>)=~/^revision (\S+)/)) { ; } # get to first description
 	$first_rev=$1;
 	if ($first_rev ne $tag_rev)
-	{   print "File: $work_file:\n";
+	{   print "  File: $work_file:\n";
 	    $prev_line=$_;
 	    while (!(($_=<>)=~/^revision $tag_rev/)&&!/^=========/)
 	    {   if (  !($prev_line=~/^revision/)&&!($prev_line=~/^date:/)
                     &&!($prev_line=~/^----/)    &&!($prev_line=~/^branches:/))
-                {   print "$prev_line";
+                {   print "  $prev_line";
                 }
 	        $prev_line=$_;
 	    }
 	    if (/^=========/) { print "$prev_line"; } # added file
-	    print "----------------------------------------------------\n";
+	    print "  ----------------------------------------------------\n";
 	}
 	#else
 	#{   print "skip file $work_file because no changes since tag\n";

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.34 $$Date: 2015-02-27 17:27:54 $";
+    rev="$Revision: 1.35 $$Date: 2015-03-27 21:33:47 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -131,7 +131,7 @@ static struct file_operations trace_proc_buffer_file_ops = {
     .llseek=  NULL,           		/* lseek        */
     .read=    trace_proc_buffer_read,	/* read         */
     .write=   NULL,           		/* write        */
-    .readdir= NULL,              	/* readdir      */
+    /*.readdir= NULL,             readdir -- comment out as unknown in 3.16.1 */
     .poll=    NULL,              	/* poll         */
 # if 0
 #  if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
@@ -141,7 +141,7 @@ static struct file_operations trace_proc_buffer_file_ops = {
 #  endif
 # endif
     .mmap=    trace_proc_buffer_mmap,   /* mmap         */
-    .open=    NULL/*trace_proc_buffer_open generic_file_open*/,   /* open         */
+    .open=    NULL/*trace_proc_buffer_open generic_file_open*/,   /* open     */
     NULL,                       	/* flush        */
     .release= NULL/*trace_proc_buffer_release*/,/* release (close) */
     NULL,                       	/* fsync        */

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.35 $$Date: 2015/03/27 21:33:47 $";
+    rev="$Revision: 1.36 $$Date: 2015/04/02 18:01:51 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -191,7 +191,7 @@ static int  trace_proc_add( int len )
         return (1);
     }
 
-    trace_proc_root = proc_create("trace/buffer",0644,NULL,&trace_proc_buffer_file_ops);
+    trace_proc_root = proc_create("trace/buffer",0666,NULL,&trace_proc_buffer_file_ops);
     if (trace_proc_root == NULL)
     {	printk( "proc_trace_create: error creating proc_entry\n" );
         return (1);

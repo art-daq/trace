@@ -3,8 +3,8 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
-    rev="$Revision: 1.83 $$Date: 2014/11/27 06:04:39 $";
     */
+char *rev="$Revision: 1.84 $$Date: 2015/04/13 18:54:20 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -463,7 +463,7 @@ void traceInfo()
 	       "wrIdxCnt offset   =%p\n"
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
-	       "memlen            =%u\n"
+	       "memlen            =%u          %s\n"
                "default TRACE_SHOW=%s others: B(parambytes) P(pid) s(slot)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
@@ -489,6 +489,11 @@ void traceInfo()
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
 	       , traceControl_p->memlen
+	       , (traceControl_p->memlen == traceMemLen( cntlPagesSiz()
+							,traceControl_p->num_namLvlTblEnts
+							,traceControl_p->siz_msg
+							,traceControl_p->num_params
+							,traceControl_p->num_entries))?"":"check fails"
 	       , DFLT_SHOW
 	       );
 }   /* traceInfo */
@@ -506,7 +511,7 @@ extern  int        optind;         /* for getopt */
 	int	   do_heading=1;
 	unsigned   ii=0;
 
-    while ((opt=getopt(argc,argv,"?hn:f:x:H")) != -1)
+    while ((opt=getopt(argc,argv,"?hn:f:x:HV")) != -1)
     {   switch (opt)
         { /* '?' is also what you get w/ "invalid option -- -" */
         case '?': case 'h': printf(USAGE);exit(0);           break;
@@ -514,6 +519,7 @@ extern  int        optind;         /* for getopt */
 	case 'f': setenv("TRACE_FILE",optarg,1);             break;
 	case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
 	case 'H': do_heading=0;                              break;
+	case 'V': printf( rev ); exit(0);                    break;
         }
     }
     if (argc - optind < 1)

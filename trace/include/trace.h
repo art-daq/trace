@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.107 $$Date: 2014/11/27 06:04:39 $"
+#define TRACE_REV  "$Revision: 1.108 $$Date: 2015/04/13 18:54:20 $"
 
 #ifndef __KERNEL__
 
@@ -315,7 +315,7 @@ static uint32_t                 name2tid( const char *name );
     (( siz_cntl_pages							\
       + namtblSiz( num_namLvlTblEnts )					\
       + entSiz(siz_msg,num_params)*num_entries				\
-      + TRACE_PAGESIZE )								\
+      + TRACE_PAGESIZE )						\
      & ~(TRACE_PAGESIZE-1) )
 
 /* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"

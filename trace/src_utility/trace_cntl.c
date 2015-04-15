@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.85 $$Date: 2015/04/15 20:41:19 $";
+char *rev="$Revision: 1.86 $$Date: 2015/04/15 23:08:37 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -47,7 +47,7 @@ commands:\n\
  lvlmskT[g] <msk>  mask for trigger\n\
  lvlset[g] <mskM> <mskS> <mskT>\n\
  lvlclr[g] <mskM> <mskS> <mskT>\n\
- trig <modeMsk> <lvlmskM> <postEntries>\n\
+ trig <lvlmskM> <postEntries>\n\
 opts:\n\
  -f<file>\n\
  -n<name>\n\
@@ -122,17 +122,23 @@ struct sizepush
     unsigned push:16;
 };
 
+enum show_opts_e {
+    filter_newline_=0x1,
+    quiet_         =0x2
+};
+
 void get_arg_sizes(  char            *ofmt
 		   , char            *ifmt
-		   , int              filter_newline
+		   , int              opts
 		   , int              num_params
 		   , int              param_bytes
-		   , struct sizepush *sizes_out )
+		   , struct sizepush *sizes_out)
 {   char    *in;
     char    *percent_sav;
     int      numArgs=0;
     int      maxArgs=10;
     int      modifier=0;
+    int      filter_newline=opts&filter_newline_;
 
     /*strcpy( ofmt, ifmt );*/
     in = ifmt;
@@ -208,7 +214,7 @@ void get_arg_sizes(  char            *ofmt
 	    *ofmt++ = *in++;
 	    goto chkChr;
 	default:
-	    printf("unknown %c\n",*in);
+	    if( !(opts&quiet_)) printf("unknown %c\n",*in);
 	    *ofmt++ = *in++;
 	}
 	++numArgs;
@@ -225,14 +231,14 @@ int countDigits(int n)
         : 1;
 }
 
-void traceShow( const char *ospec, int count, int start )
+void traceShow( const char *ospec, int count, int start, int quiet )
 {
     uint32_t rdIdx;
     uint32_t max;
     unsigned printed=0;
     unsigned ii;
     int      buf_slot_width;
-    int      filter_newline=(strchr(ospec,'x')?1:0);
+    int      opts=(strchr(ospec,'x')?filter_newline_:0);
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
@@ -243,6 +249,8 @@ void traceShow( const char *ospec, int count, int start )
     uint8_t               * ent_param_ptr;
     uint8_t               * lcl_param_ptr;
     const char            * sp; /*spec ptr*/
+
+    opts |= quiet?quiet_:0;
 
     traceInit();
 
@@ -336,7 +344,7 @@ void traceShow( const char *ospec, int count, int start )
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 	msg_p[traceControl_p->siz_msg - 1] = '\0';
 
-	get_arg_sizes(  local_msg, msg_p, filter_newline
+	get_arg_sizes(  local_msg, msg_p, opts
 		      , traceControl_p->num_params
 		      , myEnt_p->param_bytes, params_sizes );
 
@@ -510,9 +518,10 @@ extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
 	int	   do_heading=1;
+	int	   opt_quiet=0;
 	unsigned   ii=0;
 
-    while ((opt=getopt(argc,argv,"?hn:f:x:HV")) != -1)
+    while ((opt=getopt(argc,argv,"?hn:f:x:HqV")) != -1)
     {   switch (opt)
         { /* '?' is also what you get w/ "invalid option -- -" */
         case '?': case 'h': printf(USAGE);exit(0);           break;
@@ -520,6 +529,7 @@ extern  int        optind;         /* for getopt */
 	case 'f': setenv("TRACE_FILE",optarg,1);             break;
 	case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
 	case 'H': do_heading=0;                              break;
+	case 'q': opt_quiet=1;                               break;
 	case 'V': printf( rev ); exit(0);                    break;
         }
     }
@@ -734,7 +744,7 @@ extern  int        optind;         /* for getopt */
 	if ((do_heading==0) && (ospec[0]=='H')) ++ospec;
 	if ((argc-optind)>=1) count=strtoul(argv[optind],  NULL,0);
 	if ((argc-optind)>=2) start=strtoul(argv[optind+1],NULL,0);
-	traceShow(ospec,count,start);
+	traceShow(ospec,count,start,opt_quiet);
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {

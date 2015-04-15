@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.108 $$Date: 2015/04/13 18:54:20 $"
+#define TRACE_REV  "$Revision: 1.109 $$Date: 2015/04/15 13:09:24 $"
 
 #ifndef __KERNEL__
 
@@ -238,8 +238,8 @@ struct traceEntryHdr_s
     pid_t          tid; /*i system info - "thread id" */
     uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
     int32_t        cpu; /*C -- kernel sched switch will indicate this info? */
-    uint32_t       get_idxCnt_retries;/*R*/
-    uint32_t       param_bytes;       /*B*/
+    uint16_t       get_idxCnt_retries;/*R*/
+    uint16_t       param_bytes;       /*B*/
     uint64_t       tsc;               /*t*/
 };                                    /*M -- NO, ALWAY PRINTED LAST! formated Message */
                                       /*N  index */
@@ -604,33 +604,61 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	}
     }
     else if (strncmp(cmd,"lvlset",6) == 0)   /* takes 3 args: M S T ((0 val ==> no-op) */
-    {   uint64_t lvlm, lvls, lvlt;
+    {   uint64_t lvl, lvlm, lvls, lvlt;
 	unsigned ee;
-	if (nargs != 3) { TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs); va_end(ap); return (-1); }
-	if (cmd[6] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
-	else               { ii=traceTID; ee=traceTID+1; }
-	lvlm=va_arg(ap,uint64_t);
-	lvls=va_arg(ap,uint64_t);
-	lvlt=va_arg(ap,uint64_t);
-	for ( ; ii<ee; ++ii)
-	{   traceNamLvls_p[ii].S |= lvls;
-	    traceNamLvls_p[ii].M |= lvlm;
-	    traceNamLvls_p[ii].T |= lvlt;
+	if ((cmd[6]=='g')||((cmd[6])&&(cmd[7]=='g')))
+	{   ii=0;        ee=traceControl_p->num_namLvlTblEnts;
+	}
+	else
+	{   ii=traceTID; ee=traceTID+1;
+	}
+	lvl=va_arg(ap,uint64_t); /* "FIRST" ARG SHOULD ALWAYS BE THERE */
+	switch (cmd[6])
+	{
+	case 'M': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].M |= lvl; break;
+	case 'S': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S |= lvl; break;
+	case 'T': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].T |= lvl; break;
+	default:
+	    if (nargs != 3)
+	    {   TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs);va_end(ap); return (-1);
+	    }
+	    lvlm=lvl; /* "FIRST" arg from above */
+	    lvls=va_arg(ap,uint64_t);
+	    lvlt=va_arg(ap,uint64_t);
+	    for ( ; ii<ee; ++ii)
+	    {   traceNamLvls_p[ii].M |= lvlm;
+		traceNamLvls_p[ii].S |= lvls;
+		traceNamLvls_p[ii].T |= lvlt;
+	    }
 	}
     }
     else if (strncmp(cmd,"lvlclr",6) == 0)   /* takes 3 args: M S T ((0 val ==> no-op) */
-    {   uint64_t lvlm, lvls, lvlt;
+    {   uint64_t lvl, lvlm, lvls, lvlt;
 	unsigned ee;
-	if (nargs != 3) { TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs); va_end(ap); return (-1); }
-	if (cmd[6] == 'g') { ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
-	else               { ii=traceTID; ee=traceTID+1; }
-	lvlm=va_arg(ap,uint64_t);
-	lvls=va_arg(ap,uint64_t);
-	lvlt=va_arg(ap,uint64_t);
-	for ( ; ii<ee; ++ii)
-	{   traceNamLvls_p[ii].S &= ~lvls;
-	    traceNamLvls_p[ii].M &= ~lvlm;
-	    traceNamLvls_p[ii].T &= ~lvlt;
+	if ((cmd[6]=='g')||((cmd[6])&&(cmd[7]=='g')))
+	{   ii=0;        ee=traceControl_p->num_namLvlTblEnts;
+	}
+	else
+	{   ii=traceTID; ee=traceTID+1;
+	}
+	lvl=va_arg(ap,uint64_t); /* "FIRST" ARG SHOULD ALWAYS BE THERE */
+	switch (cmd[6])
+	{
+	case 'M': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].M &= ~lvl; break;
+	case 'S': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S &= ~lvl; break;
+	case 'T': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].T &= ~lvl; break;
+	default:
+	    if (nargs != 3)
+	    {   TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs);va_end(ap); return (-1);
+	    }
+	    lvlm=lvl; /* "FIRST" arg from above */
+	    lvls=va_arg(ap,uint64_t);
+	    lvlt=va_arg(ap,uint64_t);
+	    for ( ; ii<ee; ++ii)
+	    {   traceNamLvls_p[ii].M &= ~lvlm;
+		traceNamLvls_p[ii].S &= ~lvls;
+		traceNamLvls_p[ii].T &= ~lvlt;
+	    }
 	}
     }
     else if (strncmp(cmd,"mode",4) == 0)

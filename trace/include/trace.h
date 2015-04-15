@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.109 $$Date: 2015/04/15 13:09:24 $"
+#define TRACE_REV  "$Revision: 1.110 $$Date: 2015/04/15 23:08:37 $"
 
 #ifndef __KERNEL__
 
@@ -233,14 +233,14 @@ struct traceControl_s
 struct traceEntryHdr_s
 {   struct timeval time;/*T*/
     TRACE_ENT_FILLER	     /* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
+    uint64_t       tsc;               /*t*/
     int32_t        lvl; /*L*/
     pid_t          pid; /*P system info */
     pid_t          tid; /*i system info - "thread id" */
-    uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
     int32_t        cpu; /*C -- kernel sched switch will indicate this info? */
+    uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
     uint16_t       get_idxCnt_retries;/*R*/
     uint16_t       param_bytes;       /*B*/
-    uint64_t       tsc;               /*t*/
 };                                    /*M -- NO, ALWAY PRINTED LAST! formated Message */
                                       /*N  index */
 struct traceNamLvls_s
@@ -443,8 +443,8 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
     msg_p    = (char*)(myEnt_p+1);
     params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 
-    TRACE_TSC32( myEnt_p->tsc );
     myEnt_p->time = *tvp;
+    TRACE_TSC32( myEnt_p->tsc );
     myEnt_p->lvl  = lvl;
 #  if defined(__KERNEL__)
     myEnt_p->pid  = current->tgid;
@@ -582,7 +582,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
     {
 	uint64_t lvlsMsk=va_arg(ap,uint64_t);
 	unsigned post_entries=va_arg(ap,uint64_t);
-	if (   (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M&lvlsMsk))
+	if (   (traceNamLvls_p[traceTID].M&lvlsMsk)
 	    && !traceControl_p->trigActivePost )
 	{   traceNamLvls_p[traceTID].T       = lvlsMsk;
 	    traceControl_p->trigActivePost   = post_entries?post_entries:1; /* must be at least 1 */

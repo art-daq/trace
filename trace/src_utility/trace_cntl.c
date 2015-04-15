@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.84 $$Date: 2015-04-13 18:54:20 $";
+char *rev="$Revision: 1.85 $$Date: 2015-04-15 20:41:19 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -37,7 +37,8 @@ done
 #define USAGE "\
 %s [opts] <cmd> [command opt/args]\n\
 commands:\n\
- info, tids, reset, show\n\
+ info, tids, reset\n\
+ show [count [startSlotIndex]]\n\
  mode <mode>\n\
  modeM <mode>\n\
  modeS <mode>\n\
@@ -250,12 +251,12 @@ void traceShow( const char *ospec, int count, int start )
        none will be printed.
        If however, count and start are given, the count (up to numents) will be
        printed regardless of how many entries are actually filled with real
-       data.
+       data. This gives a way to look at data after a "treset".
      */
     if (start >= 0)
-    {   
-	if (start >= traceControl_p->num_entries)
-	{   start = traceControl_p->num_entries - 1;
+    {   start++; /* start slot index needs to be turned into a "count" */
+	if (start > traceControl_p->num_entries)
+	{   start = traceControl_p->num_entries;
 	    printf("specified start index too large, adjusting to %d\n",start );
 	}
 	rdIdx=start;
@@ -329,7 +330,7 @@ void traceShow( const char *ospec, int count, int start )
     for (printed=0; printed<max; ++printed)
     {   unsigned seconds, useconds;
 	int print_just_converted_ofmt=0;
-	rdIdx = IDXCNT_ADD( rdIdx, -1 );
+	rdIdx = IDXCNT_ADD( rdIdx, -1 ) % traceControl_p->num_entries;
 	myEnt_p = idxCnt2entPtr( rdIdx );
 	msg_p    = (char*)(myEnt_p+1);
 	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.36 $$Date: 2015-04-02 18:01:51 $";
+    rev="$Revision: 1.37 $$Date: 2015-04-21 13:59:05 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -34,10 +34,10 @@
 struct traceControl_s  *traceControl_p=NULL;
 struct traceEntryHdr_s *traceEntries_p;
 struct traceNamLvls_s  *traceNamLvls_p;
-EXPORT_SYMBOL( traceControl_p );
-EXPORT_SYMBOL( traceEntries_p );
-EXPORT_SYMBOL( traceNamLvls_p );
-EXPORT_SYMBOL( trace_allow_printk );
+EXPORT_SYMBOL_GPL( traceControl_p );
+EXPORT_SYMBOL_GPL( traceEntries_p );
+EXPORT_SYMBOL_GPL( traceNamLvls_p );
+EXPORT_SYMBOL_GPL( trace_allow_printk );
 
 
 // ls /sys/module/TRACE/parameters

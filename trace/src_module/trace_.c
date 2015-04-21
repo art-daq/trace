@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.37 $$Date: 2015-04-21 13:59:05 $";
+    rev="$Revision: 1.38 $$Date: 2015-04-21 14:06:34 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -424,4 +424,4 @@ module_exit(exit_trace_3);
 
 MODULE_AUTHOR("Ron Rechenmacher");
 MODULE_DESCRIPTION("Third TRACE");
-MODULE_LICENSE("GPL"); /* Get rid of taint message by declaring code as GPL */
+MODULE_LICENSE("GPL"); /* It is for anyone/everyone, I don't care, and besides I won't want to taint the kernel */

@@ -1,4 +1,4 @@
-/* This file (Trace.h) was created by Ron Rechenmacher <ron@fnal.gov> on
+/* This file (trace.h) was created by Ron Rechenmacher <ron@fnal.gov> on
  // Jan 15, 2014. "TERMS AND CONDITIONS" governing this file are in the README
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.110 $$Date: 2015-04-15 23:08:37 $"
+#define TRACE_REV  "$Revision: 1.111 $$Date: 2015-04-24 02:24:42 $"
 
 #ifndef __KERNEL__
 
@@ -66,8 +66,8 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_GETTIMEOFDAY( tvp ) gettimeofday( tvp, NULL )
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
-/*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit()==0))*/
-# define TRACE_INIT_CHECK         if((traceTid!=0)||(traceInit()==0))
+/*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit(TRACE_NAME)==0))*/
+# define TRACE_INIT_CHECK         if((traceTid!=0)||(traceInit(TRACE_NAME)==0))
 
 #else  /* __KERNEL__ */
 
@@ -94,8 +94,11 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   50000
 #define TRACE_DFLT_NAM_SZ           16
+#define TRACE_DFLT_NAME        "TRACE"
 #ifndef  TRACE_NAME
-# define TRACE_NAME "TRACE"
+# if !defined(__KERNEL__) && !defined(TRACE_LIB)
+static const char *  TRACE_NAME=NULL;
+# endif
 #endif
 #ifndef  TRACE_PRINT_FD
 # define TRACE_PRINT_FD           1
@@ -273,7 +276,7 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceNamLvls_s *traceNamLvls_p, =&
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, );
 TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p, =NULL );
 TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
-TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_NAME );
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
 TRACE_DECL( static, int                      tracePrintFd, =1 );
 TRACE_DECL( static, pid_t                    tracePid,     =0 );
 TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid,     =0 );  /* thread id */
@@ -288,7 +291,7 @@ TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl
 /* forward declarations, important functions */
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
 #if !defined(__KERNEL__) || defined(TRACE_IMPL)  /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
-static int                      traceInit( void );
+static int                      traceInit( const char *name );
 static void                     traceInitNames( void );
 # ifdef __KERNEL__                               /*                         K=1,IMPL=1 */
 static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
@@ -522,9 +525,12 @@ static void trace_unlock( void )
 static uint32_t name2tid( const char *name )
 {
     uint32_t ii;
-    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) return (ii);
     trace_lock();
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0)
+	{   trace_unlock();
+	    return (ii);
+	}
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	if (traceNamLvls_p[ii].name[0] == '\0')
 	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
@@ -567,15 +573,15 @@ static int traceCntl( int nargs, const char *cmd, ... )
 #  ifndef __KERNEL__
     if (strncmp(cmd,"file",4) == 0)/* THIS really only makes sense for non-thread local-file-for-module or for tracelib.h (non-static implementation) w/TLS to file-per-thread */
     {	traceFile = va_arg(ap,char*);/* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
-	traceInit();		/* force (re)init */
+	traceInit(TRACE_NAME);		/* force (re)init */
 	va_end(ap); return (0);
     }
-    /*if (traceControl_p == NULL) traceInit();*/
+    /*if (traceControl_p == NULL) traceInit(TRACE_NAME);*/
     TRACE_INIT_CHECK {};     /* note: allows name2tid to be called in userspace */
 #  endif
 
     if (strncmp(cmd,"name",4) == 0)/* THIS really only makes sense for non-thread local-name-for-module or for tracelib.h (non-static implementation) w/TLS to name-per-thread */
-    {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit() is called; suggest testing w. TRACE_ARGSMAX=10*/
+    {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit(TRACE_NAME) is called; suggest testing w. TRACE_ARGSMAX=10*/
 	traceTID = name2tid( traceName );/* doing it this way allows this to be called by kernel module */
     }
     else if (strncmp(cmd,"trig",4) == 0)    /* takes 2 args: lvlsMsk, postEntries */
@@ -733,7 +739,7 @@ static int trace_mmap_file( const char *_file
     uint8_t               *rw_p;
     off_t                  off;
     char                   path[PATH_MAX];
-    char                  *logname=getenv("LOGNAME");
+    char                  *logname=getenv("LOGNAME"); /* login/user name */
     int			   created=0;
     int			   stat_try=0;
 
@@ -849,12 +855,11 @@ static int trace_mmap_file( const char *_file
 
 #if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
-static int traceInit(void)
+static int traceInit( const char *_name )
 {
     int         memlen;
     uint32_t    msgmax_, argsmax_, numents_, namtblents_;
     int		I_created=0;
-    const char *_name=traceName; /* for when naming a thread */
 #  ifndef __KERNEL__
     int         activate=0;
     const char *_file;
@@ -868,8 +873,9 @@ static int traceInit(void)
     if (traceControl_p == NULL)
     {
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
+	if (_name != NULL){if(getenv("TRACE_NAME")) activate=1;}
+	else if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0')&&(activate=1))) _name=traceName;
 	if (!((_file=getenv("TRACE_FILE"))&&(*_file!='\0')&&(activate=1))) _file=traceFile;
-	if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0')&&(activate=1))) _name=traceName;
 	if ((cp=getenv("TRACE_ARGSMAX"))  &&(*cp)&&(activate=1)) argsmax_=strtoul(cp,NULL,0);else argsmax_   =TRACE_DFLT_MAX_PARAMS;
 	/* use _MSGMAX= so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG */
 	((cp=getenv("TRACE_MSGMAX"))    &&(*cp)&&(activate=1)&&(msgmax_     =strtoul(cp,NULL,0)))||(msgmax_    =TRACE_DFLT_MAX_MSG_SZ);
@@ -958,6 +964,7 @@ static int traceInit(void)
 	traceEntries_p = (struct traceEntryHdr_s *)	\
 	    ((unsigned long)traceNamLvls_p+namtblSiz(traceControl_p->num_namLvlTblEnts));
     }   /* if KERNEL - end "{"; else end "if (traceControl_p==NULL)" */
+    if (_name == NULL) _name=traceName; /* for when naming a thread */
     traceTID = name2tid( _name );
     /*printf("traceTID=%d\n",traceTID);*/
 #  ifndef __KERNEL__

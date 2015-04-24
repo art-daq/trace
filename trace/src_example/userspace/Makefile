@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1.6 $
-#  $Date: 2015/02/27 22:08:08 $
+#  $Revision: 1.7 $
+#  $Date: 2015/04/24 17:05:47 $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -86,8 +86,8 @@ out_deps        := $(patsubst %,${OUT}%.d,$(executables))
 all: $(out_executables)
 	echo done with ${OUT}just out_executables=$(out_executables)
 
-${OUT}example_main: ${OUT}example_main.o ${OUT}example_sub1.o ${OUT}example_sub2.o
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< ${OUT}example_sub1.o ${OUT}example_sub2.o ${LIBDIR}tracelib.o -lpthread
+${OUT}example_main: ${OUT}example_main.o ${OUT}example_sub1.o ${OUT}example_sub2.o ${OUT}example_sub3.o ${OUT}example_sub4.o
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< ${OUT}example_sub1.o ${OUT}example_sub2.o ${OUT}example_sub3.o ${OUT}example_sub4.o ${LIBDIR}tracelib.o -lpthread
 
 ifneq ($(executables),)
 include ${out_deps}

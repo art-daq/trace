@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.87 $$Date: 2015/04/24 17:05:47 $";
+char *rev="$Revision: 1.88 $$Date: 2015/04/24 21:06:32 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -357,7 +357,8 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	    param_va_ptr = (void*)params_p;
 	}
 	else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
-	{   unsigned *ptr=(unsigned*)&myEnt_p->time;
+	{   void *xx = &(myEnt_p->time);
+	    unsigned *ptr=(unsigned*)xx;
 	    seconds  = *ptr++;
 	    useconds = *ptr;
 	    ent_param_ptr = (uint8_t*)params_p;
@@ -377,7 +378,8 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	    param_va_ptr = (void*)local_params;
 	}
 	else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
-	{   long long *ptr=(long long*)&myEnt_p->time;
+	{   void *xx=&myEnt_p->time;
+	    long long *ptr=(long long*)xx;
 	    seconds  = (unsigned)*ptr++;
 	    useconds = (unsigned)*ptr;
 	    ent_param_ptr = (uint8_t*)params_p;

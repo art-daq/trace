@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.112 $$Date: 2015/04/24 17:02:39 $"
+#define TRACE_REV  "$Revision: 1.113 $$Date: 2015/04/24 21:06:32 $"
 
 #ifndef __KERNEL__
 
@@ -456,7 +456,7 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 #  else
     myEnt_p->pid  = tracePid;
     myEnt_p->tid  = traceTid;
-#   ifdef __linux__
+#   if defined(__linux__) && !defined(NO_SCHED_GETCPU)
     myEnt_p->cpu  = sched_getcpu();
 #   endif
 #  endif

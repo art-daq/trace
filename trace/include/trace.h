@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.111 $$Date: 2015-04-24 02:24:42 $"
+#define TRACE_REV  "$Revision: 1.112 $$Date: 2015-04-24 17:02:39 $"
 
 #ifndef __KERNEL__
 
@@ -67,7 +67,7 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_PRINT              printf
 # define TRACE_VPRINT             vprintf
 /*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit(TRACE_NAME)==0))*/
-# define TRACE_INIT_CHECK         if((traceTid!=0)||(traceInit(TRACE_NAME)==0))
+# define TRACE_INIT_CHECK         if(((traceTid!=0)&&(traceControl_p!=0))||(traceInit(TRACE_NAME)==0))
 
 #else  /* __KERNEL__ */
 
@@ -798,7 +798,7 @@ static int trace_mmap_file( const char *_file
 	    *t_p=&traceControl;
 	    return (0);
 	}
-	/*sleep(2);*/
+	/*sleep(1);*/
 	*memlen = tmp_traceControl_p->memlen;
 	munmap( tmp_traceControl_p, sizeof(struct traceControl_s) ); /* throw this mapping out */
     }
@@ -868,7 +868,10 @@ static int traceInit( const char *_name )
     if(traceTid==0) /* traceInit may be called w/ or w/o checking traceTid */
     {   traceTid=syscall(SYS_GETTID);
 	tracePid = getpid();  /* do/re-do -- it may be forked process */
+	/*if (traceControl_p == NULL) printf("init both\n");
+	  else                        printf("init just traceTid\n");*/
     }
+    /*else if (traceControl_p == NULL) printf("init just traceControl_p\n");*/
 
     if (traceControl_p == NULL)
     {

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.16 $$Date: 2015-02-27 22:08:08 $";
+ # rev="$Revision: 1.17 $$Date: 2015-04-24 21:06:32 $";
 
 # TOP LEVEL Makefile
 
@@ -28,7 +28,11 @@ FLAVOR_SUBDIR = os=`uname -s`;\
 	mach=`sh -c "case $$mach in *86*|sun*) :;; *) echo $mach;;esac"`;\
 	os_rev1=`uname -r |cut -d. -f1-2`;\
 	libc1=-`/bin/ls /lib*/libc-* /lib/*/libc-* 2>/dev/null|sed '{s/.*libc-//;s/[^0-9]*$$//;q;}'`;\
+	libc_upper=`echo $$libc1 | cut -d. -f1` libc_lower=`echo $$libc1 | cut -d. -f2`;\
+	libc_version=`expr $$libc_upper \* 100 + $$libc_lower`;\
 	echo os=$$os mach=$$mach b64=$$b64 os_rev1=$$os_rev1 libc1=$$libc1
+
+CPPFLAGS += $(shell test -f /lib/libc-2.5.so -o -f /lib64/libc-2.5.so && echo -DNO_SCHED_GETCPU)
 
 
 default: src_utility src_example_user script ups
@@ -61,7 +65,7 @@ src_example_user: OUT_check src_lib
 	${FLAVOR_SUBDIR};\
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1";\
 	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
-	$(MAKE) -C src_example userspace OUT=$$out/bin/ TRACE_INC=$$PWD/include LIBDIR=$$out/lib/;\
+	$(MAKE) -C src_example userspace OUT=$$out/bin/ CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include LIBDIR=$$out/lib/;\
 	if [ `uname -m` = x86_64 ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1";\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.86 $$Date: 2015-04-15 23:08:37 $";
+char *rev="$Revision: 1.87 $$Date: 2015-04-24 17:05:47 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -102,6 +102,7 @@ void* thread_func(void *arg)
 
     while(loops-- > 0)
     {   TRACE( 0, "loops=%ld", loops );
+	TRACE( 1, "loops=%ld - extra, if enabled", loops );
 	TRACE( 0, "loops=%ld", --loops );
 	TRACE( 0, "loops=%ld", --loops );
 	TRACE( 0, "loops=%ld", --loops );
@@ -252,7 +253,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 
     opts |= quiet?quiet_:0;
 
-    traceInit();
+    traceInit(NULL);
 
     /* If just a count is given, it will be a way to limit the number printed;
        a short hand version of "... | head -count". (so if there are not entries,
@@ -628,7 +629,7 @@ extern  int        optind;         /* for getopt */
     else if (strcmp(cmd,"test-ro") == 0)
     {
 	setenv("TRACE_FILE","/proc/trace/buffer",1);
-	traceInit();
+	traceInit(NULL);
 	printf("try write to (presumably kernel memory) write-protected 1st page...\n");
 	traceControl_p->trace_initialized = 2;
 	printf("write succeeded.\n");
@@ -748,15 +749,15 @@ extern  int        optind;         /* for getopt */
     }
     else if (strncmp(cmd,"info",4) == 0) 
     {
-	traceInit();
+	traceInit(NULL);
 	traceInfo();
     }
     else if (strcmp(cmd,"unlock") == 0) 
-    {   traceInit();
+    {   traceInit(NULL);
 	trace_unlock();
     }
     else if (strcmp(cmd,"tids") == 0) 
-    {   traceInit();
+    {   traceInit(NULL);
 #       define UNDERLINE "----------------------------------------------"
 	printf( "mode:%*s               M=%d                S=%d\n"
 	       , (int)sizeof(traceNamLvls_p[0].name), ""

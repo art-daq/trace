@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.39 $$Date: 2015/04/21 14:07:15 $";
+    rev="$Revision: 1.40 $$Date: 2015/04/24 17:03:44 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -376,7 +376,7 @@ static int __init init_trace_3(void)
 {
     int  ret=0;          /* SUCCESS */
 
-    if ((ret=traceInit()) != 0) return (ret);
+    if ((ret=traceInit(NULL)) != 0) return (ret);
 
     traceTID = 0;
 

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.17 $$Date: 2015/04/24 21:06:32 $";
+ # rev="$Revision: 1.18 $$Date: 2015/04/24 22:19:12 $";
 
 # TOP LEVEL Makefile
 
@@ -66,7 +66,7 @@ src_example_user: OUT_check src_lib
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1";\
 	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	$(MAKE) -C src_example userspace OUT=$$out/bin/ CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include LIBDIR=$$out/lib/;\
-	if [ `uname -m` = x86_64 ];then\
+	if [ `uname -m` = x86_64 -a -z '${NO32}' ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1";\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	    $(MAKE) -C src_example userspace OUT=$$out/bin/ CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32 LIBDIR=$$out/lib/;\
@@ -88,7 +88,7 @@ src_utility: OUT_check
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
-	if [ `uname -m` = x86_64 ];then\
+	if [ `uname -m` = x86_64 -a -z '${NO32}' ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/bin/";\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
@@ -99,7 +99,7 @@ src_lib: OUT_check
 	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/lib/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
-	if [ `uname -m` = x86_64 ];then\
+	if [ `uname -m` = x86_64 -a -z '${NO32}' ];then\
 	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/lib/";\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\

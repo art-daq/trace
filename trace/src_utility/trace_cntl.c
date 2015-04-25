@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.88 $$Date: 2015-04-24 21:06:32 $";
+char *rev="$Revision: 1.89 $$Date: 2015-04-25 21:18:44 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -465,7 +465,7 @@ void traceInfo()
 	       "trigIdxCnt        =0x%08x\n"
 	       "triggered         =%d\n"
 	       "trigActivePost    =%u\n"
-	       "traceLevel        =0x%0*" LX " 0x%0*" LX "\n"
+	       "traceLevel        =0x%0*llx 0x%0*llx\n"
 	       "num_entries       =%u\n"
 	       "max_msg_sz        =%u  includes system inforced terminator\n"
 	       "max_params        =%u\n"
@@ -489,8 +489,8 @@ void traceInfo()
 	       , traceControl_p->trigIdxCnt
 	       , traceControl_p->triggered
 	       , traceControl_p->trigActivePost
-	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].M
-	       , (int)sizeof(uint64_t)*2, traceNamLvls_p[traceTID].S
+	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M
+	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].S
 	       , traceControl_p->num_entries
 	       , traceControl_p->siz_msg
 	       , traceControl_p->num_params
@@ -645,13 +645,13 @@ extern  int        optind;         /* for getopt */
 	unsigned compares=1000; /* some big number */
 	if (argc == 3) compares=strtoul(argv[optind+1],NULL,0);
 
-#      define END_FMT "end   in mode 1 delta=%" LU
+#      define END_FMT "end   in mode 1 delta=%llu"
 	TRACE_CNTL("reset");
 	TRACE_CNTL("mode",2LL);TRACE(0,"start no snprintf in mode 1");TRACE_CNTL("mode",1LL);
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   TRACE( 0, "any msg" );
-	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
 
 	TRACE_CNTL("reset");
@@ -660,7 +660,7 @@ extern  int        optind;         /* for getopt */
 	for (ii=0; ii<1000000; ++ii)
 	{   snprintf( buffer, sizeof(buffer), "this is one small param: %u", 12345678 );
 	    TRACE( 0, buffer );
-	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -670,7 +670,7 @@ extern  int        optind;         /* for getopt */
 	for (ii=0; ii<1000000; ++ii)
 	{   snprintf( buffer, sizeof(buffer), "this is 2 params: %u %u", 12345678, ii );
 	    TRACE( 0, buffer );
-	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -684,7 +684,7 @@ extern  int        optind;         /* for getopt */
 		     , 12345679, ii, ii-7, (float)ii*1.5
 		     );
 	    TRACE( 0, buffer );
-	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -696,7 +696,7 @@ extern  int        optind;         /* for getopt */
 		     , 12345678, ii, ii*2, ii+6
 		     , 12345679, ii, ii-7, (float)ii*1.5
 		     );
-	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
 	if (--compares == 0) return (0);
 
@@ -705,7 +705,7 @@ extern  int        optind;         /* for getopt */
 	mark = get_us_timeofday();
 	for (ii=0; ii<1000000; ++ii)
 	{   TRACE( 0, "any msg" );
-	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,get_us_timeofday()-mark );
+	} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
     }
 #   ifdef DO_THREADS   /* requires linking with -lpthreads */
     else if (strcmp(cmd,"test-threads") == 0)
@@ -784,9 +784,9 @@ extern  int        optind;         /* for getopt */
 	    {   printf("%3d %*s 0x%016" LX " 0x%016" LX " 0x%016" LX "\n"
 		       , ii, (int)sizeof(traceNamLvls_p->name)
 		       , traceNamLvls_p[ii].name
-		       , traceNamLvls_p[ii].M
-		       , traceNamLvls_p[ii].S
-		       , traceNamLvls_p[ii].T
+		       , (unsigned long long)traceNamLvls_p[ii].M
+		       , (unsigned long long)traceNamLvls_p[ii].S
+		       , (unsigned long long)traceNamLvls_p[ii].T
 		       );
 	    }
 	}

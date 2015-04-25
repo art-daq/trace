@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.42 $$Date: 2015-04-25 17:11:16 $";
+    rev="$Revision: 1.43 $$Date: 2015-04-25 18:09:33 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -296,7 +296,10 @@ static void my_trace_sys_enter(
         if (syscall_nr < 0)
                 return;
 
-	TRACE( 25, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
+	if (syscall_nr == id)
+	    TRACE( 25, "sysenter: cpu=%d syscall=%ld", raw_smp_processor_id(), id );
+	else
+	    TRACE( 25, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
 
 }   // my_trace_sys_enter
 
@@ -312,6 +315,7 @@ static void my_trace_sys_exit(
         syscall_nr = syscall_get_nr(current, regs);
         if (syscall_nr < 0)
                 return;
+
 	syscall_ret=syscall_get_return_value(current, regs);
 	if (syscall_ret == ret)
 	    TRACE( 26, "sys_exit: cpu=%d syscall=%d ret=0x%lx (%ld)"

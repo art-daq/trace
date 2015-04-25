@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.89 $$Date: 2015-04-25 21:18:44 $";
+char *rev="$Revision: 1.90 $$Date: 2015-04-25 21:22:05 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -62,14 +62,6 @@ tests:  (use %s show after test)\n\
  test-threads   threading\n\
  TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
 "
-
-#if __SIZEOF_LONG__ == 8
-#  define LX "lx"
-#  define LU "lu"
-#else
-#  define LX "llx"
-#  define LU "llu"
-#endif
 
 #define minw(a,b) (b<a?a:b)
 
@@ -781,7 +773,7 @@ extern  int        optind;         /* for getopt */
 	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	{
 	    if (traceNamLvls_p[ii].name[0] != '\0')
-	    {   printf("%3d %*s 0x%016" LX " 0x%016" LX " 0x%016" LX "\n"
+	    {   printf("%3d %*s 0x%016llx 0x%016llx 0x%016llx\n"
 		       , ii, (int)sizeof(traceNamLvls_p->name)
 		       , traceNamLvls_p[ii].name
 		       , (unsigned long long)traceNamLvls_p[ii].M

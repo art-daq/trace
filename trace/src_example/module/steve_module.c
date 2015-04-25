@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: steve_module.c,v $
-    rev="$Revision: 1.1 $$Date: 2015-04-24 22:15:23 $";
+    rev="$Revision: 1.2 $$Date: 2015-04-25 16:52:48 $";
     */
 
 #include <linux/module.h>
@@ -11,21 +11,116 @@
 #include <linux/ftrace.h>
 #include <linux/tracepoint.h>
 
-static func(struct tracepoint *tp, void *ignore)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+static int prt_num=0;
+/* based on code in kernel/trace/trace_sched_switch.c */
+static void my_trace_sched_switch_hook(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+				       void *__rq
+# else
+				       struct rq *__rq
+# endif
+				       , struct task_struct *prev
+				       , struct task_struct *next )
 {
-	printk("tracepoint: %s\n", tp->name);
+	if (prt_num < 10)
+	{   prt_num++;
+	    printk("schedule: cpu=%d prev=%d next=%d\n"
+		   , raw_smp_processor_id(),prev->pid,next->pid );
+	}
+}   // my_trace_sched_switch_hook
+
+static void regfunc(struct tracepoint *tp, void *priv)
+{
+        int *ret = priv;
+	if      (strcmp(tp->name,"sched_switch") == 0)
+	{   printk("tracepoint: %s key.enabled=%d regfunc=%p %p %p\n"
+		   , tp->name, tp->key.enabled.counter
+		   , tp->regfunc
+		   , tp->unregfunc
+		   , tp->funcs
+		   );
+	    if (tp->funcs)
+	    {   printk("  funcs[0].func=%p data=%p\n"
+		       ,tp->funcs[0].func,tp->funcs[0].data);
+	    }
+	    *ret = tracepoint_probe_register( tp, my_trace_sched_switch_hook, NULL );
+	}
+	else if (strcmp(tp->name,"softirq_entry") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"softirq_exit") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"irq_handler_entry") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"irq_handler_exit") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"sys_enter") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"sys_exit") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
 }
+static void unregfunc(struct tracepoint *tp, void *ignore)
+{
+	if      (strcmp(tp->name,"sched_switch") == 0)
+	{   printk("tracepoint: %s key.enabled=%d regfunc=%p %p %p\n"
+		   , tp->name, tp->key.enabled.counter
+		   , tp->regfunc
+		   , tp->unregfunc
+		   , tp->funcs
+		   );
+	    if (tp->funcs)
+	    {   printk("  funcs[0].func=%p data=%p\n"
+		       ,tp->funcs[0].func,tp->funcs[0].data);
+	    }
+	    tracepoint_probe_unregister( tp, my_trace_sched_switch_hook, NULL );
+	}
+	else if (strcmp(tp->name,"softirq_entry") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"softirq_exit") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"irq_handler_entry") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"irq_handler_exit") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"sys_enter") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+	else if (strcmp(tp->name,"sys_exit") == 0)
+	{   printk("tracepoint: %s\n", tp->name);
+	}
+}
+#endif
 
 static int __init my_tp_init(void)
 {
-# if LINUX_VERSION_CODE > KERNEL_VERSION(3, 15, 0)
-	for_each_kernel_tracepoint(func, NULL);
-# endif
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+	int err=0;
+	for_each_kernel_tracepoint(regfunc, &err);
+	if (err)
+	{   for_each_kernel_tracepoint(unregfunc, NULL);
+	    return (err);
+	}
 	return 0;
+# else
+	return 0;
+# endif
 }
 
 static void __exit my_tp_exit(void)
 {
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+	for_each_kernel_tracepoint(unregfunc, NULL);
+# endif
 }
 
 module_init(my_tp_init);

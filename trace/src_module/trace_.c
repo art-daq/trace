@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.40 $$Date: 2015-04-24 17:03:44 $";
+    rev="$Revision: 1.41 $$Date: 2015-04-25 16:52:48 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -225,10 +225,7 @@ static void my_trace_sched_switch_hook(
 				       , struct task_struct *prev
 				       , struct task_struct *next )
 {
-        unsigned long flags;
-        local_irq_save(flags);
 	TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
-        local_irq_restore(flags);
 }   // my_trace_sched_switch_hook
 
 static void my_trace_hirq_enter(
@@ -323,10 +320,51 @@ static void my_trace_sys_exit(
 
 
 // ---------------------------------------------------------------------------
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+static void regfunc(struct tracepoint *tp, void *priv)
+{
+        int *ret = priv;
+	*ret=0;
+	if      (strcmp(tp->name,"sched_switch") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_sched_switch_hook, NULL );
+	else if (strcmp(tp->name,"irq_handler_entry") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_hirq_enter, NULL );
+	else if (strcmp(tp->name,"irq_handler_exit") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_hirq_exit, NULL );
+	else if (strcmp(tp->name,"softirq_entry") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_sirq_enter, NULL );
+	else if (strcmp(tp->name,"softirq_exit") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_sirq_exit, NULL );
+	else if (strcmp(tp->name,"sys_enter") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_sys_enter, NULL );
+	else if (strcmp(tp->name,"sys_exit") == 0)
+	    *ret = tracepoint_probe_register( tp, my_trace_sys_exit, NULL );
+}
+static void unregfunc(struct tracepoint *tp, void *ignore)
+{
+	if      (strcmp(tp->name,"sched_switch") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_sched_switch_hook, NULL );
+	else if (strcmp(tp->name,"irq_handler_entry") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_hirq_enter, NULL );
+	else if (strcmp(tp->name,"irq_handler_exit") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_hirq_exit, NULL );
+	else if (strcmp(tp->name,"softirq_entry") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_sirq_enter, NULL );
+	else if (strcmp(tp->name,"softirq_exit") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_sirq_exit, NULL );
+	else if (strcmp(tp->name,"sys_enter") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_sys_enter, NULL );
+	else if (strcmp(tp->name,"sys_exit") == 0)
+	    tracepoint_probe_unregister( tp, my_trace_sys_exit, NULL );
+}
+#endif
 
 static int  trace_sched_switch_hook_add( void )
 {
-    int err;
+    int err=0;
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+	for_each_kernel_tracepoint(regfunc, &err);
+# else
     err = register_trace_sched_switch( my_trace_sched_switch_hook 
                                       REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sched returning %d (0=success)\n", err );
@@ -354,12 +392,15 @@ static int  trace_sched_switch_hook_add( void )
 
     err = register_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sys_exit returning %d (0=success)\n", err );
-
+# endif
     return (err);
 }   // trace_sched_switch_hook_add
 
 static void trace_sched_switch_hook_remove( void )
 {
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+	for_each_kernel_tracepoint(unregfunc, NULL);
+# else
     unregister_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
     unregister_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
     unregister_trace_softirq_exit( my_trace_sirq_exit REGISTER_NULL_ARG );
@@ -368,6 +409,7 @@ static void trace_sched_switch_hook_remove( void )
     unregister_trace_irq_handler_entry( my_trace_hirq_enter REGISTER_NULL_ARG );
     unregister_trace_sched_switch( my_trace_sched_switch_hook
 				   REGISTER_NULL_ARG );
+# endif
 }   // trace_sched_switch_hook_remove
 
 

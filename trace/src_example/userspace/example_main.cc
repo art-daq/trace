@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 1.4 $$Date: 2015/04/24 21:44:34 $";
+ // rev="$Revision: 1.5 $$Date: 2015/04/26 08:40:37 $";
 
 #include <pthread.h>		/* pthread_self */
 #include <sys/time.h>		/* gettimeofday */
@@ -44,7 +44,7 @@ void* thread_func(void *arg)
     {   TRACE( 0, "loops=%ld", loops );
 	example_sub1();
     }
-    TRACE( 1, "mark: %ld%06ld", mark.tv_sec, mark.tv_usec );
+    TRACE( 1, "mark: %ld%06ld", mark.tv_sec, (long)mark.tv_usec );
 
     pthread_exit(NULL);
 }

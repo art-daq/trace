@@ -41,3 +41,16 @@ QUALIFIERS = ""
   TABLE_DIR = ups
   TABLE_FILE = TRACE.table
 
+#*************************************************
+#
+FLAVOR = Darwin64bit+13
+QUALIFIERS = ""
+  DECLARER = ron
+  DECLARED = 2014-02-05 19.33.02 GMT
+  MODIFIER = ron
+  MODIFIED = 2014-02-05 19.33.02 GMT
+  PROD_DIR = TRACE/..
+  UPS_DIR = ups
+  TABLE_DIR = ups
+  TABLE_FILE = TRACE.table
+

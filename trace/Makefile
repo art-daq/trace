@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.18 $$Date: 2015/04/24 22:19:12 $";
+ # rev="$Revision: 1.19 $$Date: 2015/04/26 14:07:29 $";
 
 # TOP LEVEL Makefile
 
@@ -26,8 +26,9 @@ FLAVOR_SUBDIR = os=`uname -s`;\
         mach=`uname -m`;\
 	b64=`sh -c "case $$mach in x86_64|sun*) echo 64bit;;*) :;;esac"`;\
 	mach=`sh -c "case $$mach in *86*|sun*) :;; *) echo $mach;;esac"`;\
-	os_rev1=`uname -r |cut -d. -f1-2`;\
-	libc1=-`/bin/ls /lib*/libc-* /lib/*/libc-* 2>/dev/null|sed '{s/.*libc-//;s/[^0-9]*$$//;q;}'`;\
+	os_rev_fields=`sh -c "case $$os in Darwin) echo 1;; *) echo 2;;esac"`;\
+	os_rev1=`uname -r |cut -d. -f1-$$os_rev_fields`;\
+	libc1=`/bin/ls /lib*/libc-* /lib/*/libc-* 2>/dev/null|sed '{s/.*libc-//;s/[^0-9]*$$//;q;}'`;\
 	libc_upper=`echo $$libc1 | cut -d. -f1` libc_lower=`echo $$libc1 | cut -d. -f2`;\
 	libc_version=`expr $$libc_upper \* 100 + $$libc_lower`;\
 	echo os=$$os mach=$$mach b64=$$b64 os_rev1=$$os_rev1 libc1=$$libc1
@@ -37,7 +38,7 @@ CPPFLAGS += $(shell test -f /lib/libc-2.5.so -o -f /lib64/libc-2.5.so && echo -D
 
 default: src_utility src_example_user script ups
 	@${FLAVOR_SUBDIR};\
-	echo add to PATH: PATH=${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin:${OUT}/script:\$$PATH
+	echo add to PATH: PATH=${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin:${OUT}/script:\$$PATH
 	@echo Possibly: setup -r\$$PWD -z\$$PWD TRACE
 
 .PHONY: src_utility src_module src_example_user src_example_module script ups module default
@@ -63,11 +64,11 @@ src_module: OUT_check
 #    2) module (which needs src copied)
 src_example_user: OUT_check src_lib
 	${FLAVOR_SUBDIR};\
-	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1";\
+	out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}";\
 	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	$(MAKE) -C src_example userspace OUT=$$out/bin/ CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include LIBDIR=$$out/lib/;\
 	if [ `uname -m` = x86_64 -a -z '${NO32}' ];then\
-	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1";\
+	    out="${OUT}/$$os$$mach+$$os_rev1$${libc1:+-$$libc1}";\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	    $(MAKE) -C src_example userspace OUT=$$out/bin/ CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32 LIBDIR=$$out/lib/;\
 	fi
@@ -85,22 +86,22 @@ src_example_module: OUT_check
 
 src_utility: OUT_check
 	${FLAVOR_SUBDIR};\
-	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/bin/";\
+	out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
 	if [ `uname -m` = x86_64 -a -z '${NO32}' ];then\
-	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/bin/";\
+	    out="${OUT}/$$os$$mach+$$os_rev1$${libc1:+-$$libc1}/bin/";\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
 	fi
 
 src_lib: OUT_check
 	${FLAVOR_SUBDIR};\
-	out="${OUT}/$$os$$mach$$b64+$$os_rev1$$libc1/lib/";\
+	out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/lib/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
 	if [ `uname -m` = x86_64 -a -z '${NO32}' ];then\
-	    out="${OUT}/$$os$$mach+$$os_rev1$$libc1/lib/";\
+	    out="${OUT}/$$os$$mach+$$os_rev1$${libc1:+-$$libc1}/lib/";\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
 	fi

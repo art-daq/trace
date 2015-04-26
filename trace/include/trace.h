@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.113 $$Date: 2015-04-24 21:06:32 $"
+#define TRACE_REV  "$Revision: 1.114 $$Date: 2015-04-26 08:41:30 $"
 
 #ifndef __KERNEL__
 
@@ -365,7 +365,8 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
     if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
     printed += snprintf( &(obuf[printed])
 			, (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
-			, "%10ld%06ld %2d %2d ",tvp->tv_sec,tvp->tv_usec,TID,lvl );
+			, "%10ld%06ld %2d %2d ",tvp->tv_sec,(long)tvp->tv_usec
+			, TID,lvl );
     va_start( ap, msg );
     printed += vsnprintf( &(obuf[printed])
 			 , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0

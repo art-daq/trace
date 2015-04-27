@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.19 $$Date: 2015/04/26 14:07:29 $";
+ # rev="$Revision: 1.20 $$Date: 2015/04/27 03:26:19 $";
 
 # TOP LEVEL Makefile
 
@@ -29,8 +29,6 @@ FLAVOR_SUBDIR = os=`uname -s`;\
 	os_rev_fields=`sh -c "case $$os in Darwin) echo 1;; *) echo 2;;esac"`;\
 	os_rev1=`uname -r |cut -d. -f1-$$os_rev_fields`;\
 	libc1=`/bin/ls /lib*/libc-* /lib/*/libc-* 2>/dev/null|sed '{s/.*libc-//;s/[^0-9]*$$//;q;}'`;\
-	libc_upper=`echo $$libc1 | cut -d. -f1` libc_lower=`echo $$libc1 | cut -d. -f2`;\
-	libc_version=`expr $$libc_upper \* 100 + $$libc_lower`;\
 	echo os=$$os mach=$$mach b64=$$b64 os_rev1=$$os_rev1 libc1=$$libc1
 
 CPPFLAGS += $(shell test -f /lib/libc-2.5.so -o -f /lib64/libc-2.5.so && echo -DNO_SCHED_GETCPU)

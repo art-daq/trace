@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.90 $$Date: 2015-04-25 21:22:05 $";
+char *rev="$Revision: 1.91 $$Date: 2015-04-27 03:27:25 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -59,7 +59,7 @@ tests:  (use %s show after test)\n\
  test           various\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
  test-compare   compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
- test-threads   threading\n\
+ [-x2] test-threads   threading\n\
  TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
 "
 
@@ -76,18 +76,16 @@ static int trace_thread_option=0;
 
 void* thread_func(void *arg)
 {
-    long loops=(long)arg;
+    long tidx =(long)arg&0xfff;    /* lower 12 bits have thread index */
+    long loops=(long)arg>>12;      /* bits 12-31 have loops */
     char tmp[PATH_MAX];
-    long tid;
     if      (trace_thread_option == 1)
     {   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
-	tid = (long)syscall(SYS_GETTID);
-	snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tid );
+	snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tidx );
 	TRACE_CNTL( "file", tmp );
     }
     else if (trace_thread_option == 2)
-    {   tid = (long)syscall(SYS_GETTID);
-	snprintf( tmp, sizeof(tmp), "T%ld", tid );
+    {   snprintf( tmp, sizeof(tmp), "T%ld", tidx );
 	printf( "setting name to %s\n",tmp );
 	TRACE_CNTL( "name", tmp );
     }
@@ -706,11 +704,13 @@ extern  int        optind;         /* for getopt */
 	long loops=10000;
 	if ((argc-optind)>=1)
 	{   loops=strtoul(argv[optind],NULL,0);
+	    if (loops > 1048575) loops=1048575;
 	    printf("loops set to %ld\n", loops );
 	}
 	loops -= loops%4;	/* assuming thread does 4 TRACEs per loop */
 	if ((argc-optind)==2)
 	{   num_threads=strtoul(argv[optind+1],NULL,0);
+	    if (num_threads > 4095) num_threads=4095;
 	    printf("num_threads set to %d\n", num_threads );
 	}
 	threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
@@ -719,10 +719,7 @@ extern  int        optind;         /* for getopt */
 	printf("test-threads - before create loop - traceControl_p=%p\n",(void*)traceControl_p);
 	for (ii=0; ii<num_threads; ii++)
 	{
-	    if (loops == num_threads)
-		pthread_create(&(threads[ii]),NULL,thread_func,(void*)(unsigned long)ii);
-	    else
-		pthread_create(&(threads[ii]),NULL,thread_func,(void*)loops);
+	  pthread_create(&(threads[ii]),NULL,thread_func,(void*)((loops<<12)|ii) );
 	}
 	for (ii=0; ii<num_threads; ii++)
 	{   pthread_join(threads[ii], NULL);

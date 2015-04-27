@@ -41,3 +41,13 @@ QUALIFIERS = ""
   DECLARED = 2014-03-04 18.03.56 GMT
   MODIFIER = ron
   MODIFIED = 2014-03-04 18.03.56 GMT
+
+#*************************************************
+#
+FLAVOR = Darwin64bit+14
+VERSION = v3_x
+QUALIFIERS = ""
+  DECLARER = ron
+  DECLARED = 2014-03-04 18.03.56 GMT
+  MODIFIER = ron
+  MODIFIED = 2014-03-04 18.03.56 GMT

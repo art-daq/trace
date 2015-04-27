@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.115 $$Date: 2015/04/27 03:59:29 $"
+#define TRACE_REV  "$Revision: 1.116 $$Date: 2015/04/27 23:34:26 $"
 
 #ifndef __KERNEL__
 
@@ -1005,7 +1005,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
     uint32_t num_entries=traceControl_p->num_entries;
     idx = idxCnt % num_entries;
     off = idx * traceControl_p->siz_entry;
-    return (struct traceEntryHdr_s *)(long)((unsigned long)traceEntries_p+off);
+    return (struct traceEntryHdr_s *)((char*)traceEntries_p+off);
 }
 
 #endif /* TRACE_LIB */

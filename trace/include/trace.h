@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.116 $$Date: 2015-04-27 23:34:26 $"
+#define TRACE_REV  "$Revision: 1.117 $$Date: 2015-04-28 00:46:20 $"
 
 #ifndef __KERNEL__
 
@@ -869,10 +869,14 @@ static int traceInit( const char *_name )
     if(traceTid==0) /* traceInit may be called w/ or w/o checking traceTid */
     {   traceTid=syscall(SYS_GETTID);
 	tracePid = getpid();  /* do/re-do -- it may be forked process */
-	/*if (traceControl_p == NULL) printf("init both\n");
-	  else                        printf("init just traceTid\n");*/
+# ifdef TRACE_DEBUG_INIT
+	if (traceControl_p == NULL) printf("init both\n");
+	  else                        printf("init just traceTid\n");
+# endif
     }
-    /*else if (traceControl_p == NULL) printf("init just traceControl_p\n");*/
+# ifdef TRACE_DEBUG_INIT
+    else if (traceControl_p == NULL) printf("init just traceControl_p\n");
+# endif
 
     if (traceControl_p == NULL)
     {

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.43 $$Date: 2015-04-25 18:09:33 $";
+    rev="$Revision: 1.44 $$Date: 2015-08-29 09:36:08 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -40,6 +40,7 @@ EXPORT_SYMBOL_GPL( traceNamLvls_p );
 EXPORT_SYMBOL_GPL( trace_allow_printk );
 
 
+#ifdef MODULE
 // ls /sys/module/TRACE/parameters
 module_param(     msgmax,  int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( msgmax,  "Character beyond this length will be discarded" );
@@ -55,7 +56,7 @@ MODULE_PARM_DESC( namtblents, "Number of name table entries" );
 
 module_param(     trace_allow_printk, int, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_allow_printk, "whether or not to allow TRACEs to do printk's" );
-
+#endif
 
 static int trace_proc_buffer_mmap(  struct file              *file
 				  , struct vm_area_struct    *vma )
@@ -423,7 +424,12 @@ static void trace_sched_switch_hook_remove( void )
 
 
  
-static int __init init_trace_3(void)
+#ifdef MODULE
+static int __init 
+#else
+int
+#endif
+init_trace_3(void)
 {
     int  ret=0;          /* SUCCESS */
 
@@ -450,6 +456,7 @@ static int __init init_trace_3(void)
 }   // init_trace_3
 
 
+#ifdef MODULE
 static void __exit exit_trace_3(void)
 {
 
@@ -476,3 +483,4 @@ module_exit(exit_trace_3);
 MODULE_AUTHOR("Ron Rechenmacher");
 MODULE_DESCRIPTION("Third TRACE");
 MODULE_LICENSE("GPL"); /* It is for anyone/everyone, I don't care as long as it works for me, and besides I won't want to taint the kernel */
+#endif

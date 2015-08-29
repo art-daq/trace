@@ -3,11 +3,11 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1.23 $
-#   $Date: 2014/05/02 15:14:30 $
+#   $Revision: 1.24 $
+#   $Date: 2015/08/29 09:34:18 $
 
 tcntl()   { trace_cntl "$@"; }
-tshow()   { trace_cntl show "$@" | less; }
+tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
 tinfo()   { trace_cntl info "$@"; }   # the linux getopt by default will process all
 ttids()   { trace_cntl tids "$@"; }   #    args so -f<file> can be used. (Darwin's getopt
 tlvls()   { trace_cntl tids "$@"; }   #    args so -f<file> can be used. (Darwin's getopt
@@ -22,7 +22,7 @@ tmodeM()  { trace_cntl modeM "$@"; }
 tmodeS()  { trace_cntl modeS "$@"; }
 tfreeze() { trace_cntl modeM 0; }
 treset()  { trace_cntl reset; }
-tdelta()  { trace_delta.pl "$@" | less; }  # ex. tshow | grep xxx | tdelta
+tdelta()  { test -n "${PAGER-}" && trace_delta.pl "$@" | $PAGER || trace_delta.pl "$@"; }  # ex. tshow | grep xxx | tdelta
 
 bitN_to_mask()
 {

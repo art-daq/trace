@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 1.9 $
-#   $Date: 2015/02/27 17:27:28 $
+#   $Revision: 1.10 $
+#   $Date: 2015/08/29 09:34:18 $
 FILE = TABLE
 Product=TRACE
 
@@ -73,10 +73,18 @@ COMMON:
 
 	envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
+	#doing the following would not get undone upon unsetup
 	#execute( test $?shell \!= 1 && . ${UPS_PROD_DIR}/script/trace.sh.functions, NO_UPS_ENV )
 
+	if    ( test $?shell = 1 )
+	    addAlias( tnotnull, set vv=%s && eval test \$\?$vv -eq 1 && eval test -n \"\$$vv\" )
+	    addAlias( set_,     set )
+	else()
+	    addAlias( tnotnull, eval test -n \"\${%s-}\" )
+	    addAlias( set_,     sts=$?;xx=%s;var=`expr "$xx" : "\([^=]*\)"`; val=`/bin/echo "$xx" | sed -e "1s/^[^=]*=//;s/'/'\"'\"'/g"`;eval "$var='$val'"; return $sts )
+	endif ( test $?shell = 1 )
 	addAlias( tcntl,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl %s )
-	addAlias( tshow,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl show %s | less )
+	addAlias( tshow,   set_ opts=%s;tnotnull PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl show $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl show $opts )
 	addAlias( tinfo,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl info %s )
 	addAlias( ttids,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl tids %s )
 	addAlias( tlvls,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl tids %s )
@@ -91,7 +99,7 @@ COMMON:
 	addAlias( tmodeS,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS %s )
 	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 )
 	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset )
-	addAlias( tdelta,  ${UPS_PROD_DIR}/script/trace_delta.pl %s | less )
+	addAlias( tdelta,  set_ opts=%s;tnotnull PAGER && ${UPS_PROD_DIR}/script/trace_delta.pl $opts | $PAGER || ${UPS_PROD_DIR}/script/trace_delta.pl $opts )
 	addAlias( tenv,    ${UPS_PROD_DIR}/script/trace_envvars.sh %s )
 	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; trace_cntl modeM 1 )
 	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; trace_cntl modeS 1 )

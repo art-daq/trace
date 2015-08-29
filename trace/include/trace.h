@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.118 $$Date: 2015/05/09 12:18:00 $"
+#define TRACE_REV  "$Revision: 1.119 $$Date: 2015/08/29 06:59:41 $"
 
 #ifndef __KERNEL__
 
@@ -96,7 +96,7 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 #define TRACE_DFLT_NAM_SZ           16
 #define TRACE_DFLT_NAME        "TRACE"
 #ifndef  TRACE_NAME
-# if !defined(TRACE_LIB)
+# if !defined(TRACE_LIB) && !defined(TRACE_IMPL)
 static const char *  TRACE_NAME=NULL;
 # endif
 #endif

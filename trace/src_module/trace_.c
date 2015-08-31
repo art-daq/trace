@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.44 $$Date: 2015-08-29 09:36:08 $";
+    rev="$Revision: 1.45 $$Date: 2015-08-31 16:03:40 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -350,6 +350,7 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	else if (strcmp(tp->name,"sys_exit") == 0)
 	    *ret = tracepoint_probe_register( tp, my_trace_sys_exit, NULL );
 }
+# ifdef MODULE
 static void unregfunc(struct tracepoint *tp, void *ignore)
 {
 	if      (strcmp(tp->name,"sched_switch") == 0)
@@ -367,6 +368,7 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	else if (strcmp(tp->name,"sys_exit") == 0)
 	    tracepoint_probe_unregister( tp, my_trace_sys_exit, NULL );
 }
+# endif
 #endif
 
 static int  trace_sched_switch_hook_add( void )
@@ -406,6 +408,10 @@ static int  trace_sched_switch_hook_add( void )
     return (err);
 }   // trace_sched_switch_hook_add
 
+
+
+#ifdef MODULE
+
 static void trace_sched_switch_hook_remove( void )
 {
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
@@ -423,13 +429,11 @@ static void trace_sched_switch_hook_remove( void )
 }   // trace_sched_switch_hook_remove
 
 
- 
-#ifdef MODULE
 static int __init 
 #else
 int
 #endif
-init_trace_3(void)
+trace_3_init(void)
 {
     int  ret=0;          /* SUCCESS */
 
@@ -453,11 +457,11 @@ init_trace_3(void)
  undo1:
     vfree( traceControl_p );
     return (ret);
-}   // init_trace_3
+}   // trace_3_init
 
 
 #ifdef MODULE
-static void __exit exit_trace_3(void)
+static void __exit trace_3_exit(void)
 {
 
         printk(KERN_INFO "exit_trace_3() called\n");
@@ -475,12 +479,12 @@ static void __exit exit_trace_3(void)
 	{   printk("exit_trace_3 vfree(%p)\n", traceControl_p );
 	    vfree( traceControl_p );
 	}
-}   // exit_trace_3
+}   // trace_3_exit
 
-module_init(init_trace_3);
-module_exit(exit_trace_3);
+module_init(trace_3_init);
+module_exit(trace_3_exit);
 
 MODULE_AUTHOR("Ron Rechenmacher");
 MODULE_DESCRIPTION("Third TRACE");
-MODULE_LICENSE("GPL"); /* It is for anyone/everyone, I don't care as long as it works for me, and besides I won't want to taint the kernel */
-#endif
+MODULE_LICENSE("GPL"); /* It is for anyone/everyone, I don't care as long as it works for me, and besides I don't want to taint the kernel */
+#endif  // MODULE */

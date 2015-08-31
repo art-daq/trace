@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.119 $$Date: 2015-08-29 06:59:41 $"
+#define TRACE_REV  "$Revision: 1.120 $$Date: 2015-08-31 16:02:47 $"
 
 #ifndef __KERNEL__
 
@@ -84,6 +84,9 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_PRINT               printk
 # define TRACE_VPRINT              vprintk
 # define TRACE_INIT_CHECK          /* no check for kernel -- init when module loaded */
+# ifndef MODULE
+int trace_3_init(void);
+# endif
 
 #endif /* __KERNEL__ */
 
@@ -95,15 +98,20 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 #define TRACE_DFLT_NUM_ENTRIES   50000
 #define TRACE_DFLT_NAM_SZ           16
 #define TRACE_DFLT_NAME        "TRACE"
+
 #ifndef  TRACE_NAME
-# if !defined(TRACE_LIB) && !defined(TRACE_IMPL)
+# if !defined(TRACE_LIB) && !defined(__KERNEL__)
 static const char *  TRACE_NAME=NULL;
 # endif
 #endif
+
 #ifndef  TRACE_PRINT_FD
 # define TRACE_PRINT_FD           1
 #endif
 
+/* 64bit sparc (nova.fnal.gov) has 8K pages (ref. ~/src/sysconf.c). This
+   (double) is no big deal on systems with 4K pages; more important (effects
+   userspace mapping) when actual 8K pages */
 #define TRACE_PAGESIZE         0x2000
 #define TRACE_CACHELINE        64
 

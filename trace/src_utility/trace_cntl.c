@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.93 $$Date: 2015/09/11 20:52:38 $";
+char *rev="$Revision: 1.94 $$Date: 2015/09/11 20:55:28 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -794,36 +794,36 @@ extern  int        optind;         /* for getopt */
 		case 0: printf("\"trace\" cmd rquires at least lvl and fmt arguments."); break;
 		case 1: printf("\"trace\" cmd rquires at least lvl and fmt arguments."); break;
 		case 2: TRACE( strtoull(argv[optind+0],NULL,0)
-			          ,            argv[optind+1] );
+		              ,            argv[optind+1] );
 			break;
 		case 3: TRACE( strtoull(argv[optind+0],NULL,0)
-			          ,         argv[optind+1]
-			          ,strtoull(argv[optind+2],NULL,0) );
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0) );
 			break;
 		case 4: TRACE( strtoull(argv[optind+0],NULL,0)
-			          ,         argv[optind+1]
-			          ,strtoull(argv[optind+2],NULL,0)
-			          ,strtoull(argv[optind+3],NULL,0) );
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0)
+		              ,strtoull(argv[optind+3],NULL,0) );
 			break;
 		case 5: TRACE( strtoull(argv[optind+0],NULL,0)
-			          ,         argv[optind+1]
-			          ,strtoull(argv[optind+2],NULL,0)
-			          ,strtoull(argv[optind+3],NULL,0)
-			          ,strtoull(argv[optind+4],NULL,0) );
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0)
+		              ,strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0) );
 			break;
 		case 6: TRACE( strtoull(argv[optind+0],NULL,0)
-			          ,         argv[optind+1]
-			          ,strtoull(argv[optind+2],NULL,0)
-			          ,strtoull(argv[optind+3],NULL,0)
-			          ,strtoull(argv[optind+4],NULL,0)
-			          ,strtoull(argv[optind+5],NULL,0) );
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0)
+		              ,strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0)
+		              ,strtoull(argv[optind+5],NULL,0) );
 			break;
 		}
 	}
 	else if (strncmp(cmd,"sleep",4) == 0) /* this allows time to look at /proc/fd/ and /proc/maps */
 	{	TRACE( 0, "starting sleep" );
 		if ((argc-optind) == 1)
-		    sleep( strtoul(argv[optind],NULL,0) );
+			sleep( strtoul(argv[optind],NULL,0) );
 		else sleep( 10 );
 		TRACE( 0, "done sleeping" );
 	}

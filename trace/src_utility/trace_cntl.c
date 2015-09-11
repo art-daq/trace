@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 1.91 $$Date: 2015/04/27 03:27:25 $";
+char *rev="$Revision: 1.92 $$Date: 2015/09/11 20:21:41 $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -115,7 +115,8 @@ struct sizepush
 
 enum show_opts_e {
     filter_newline_=0x1,
-    quiet_         =0x2
+    quiet_         =0x2,
+	indent_        =0x4
 };
 
 void get_arg_sizes(  char            *ofmt
@@ -224,206 +225,212 @@ int countDigits(int n)
 
 void traceShow( const char *ospec, int count, int start, int quiet )
 {
-    uint32_t rdIdx;
-    uint32_t max;
-    unsigned printed=0;
-    unsigned ii;
-    int      buf_slot_width;
-    int      opts=(strchr(ospec,'x')?filter_newline_:0);
-    struct traceEntryHdr_s* myEnt_p;
-    char                  * msg_p;
-    unsigned long         * params_p;
-    uint8_t               * local_params;
-    char                  * local_msg;
-    void                  * param_va_ptr;
-    struct sizepush       * params_sizes;
-    uint8_t               * ent_param_ptr;
-    uint8_t               * lcl_param_ptr;
-    const char            * sp; /*spec ptr*/
+	uint32_t rdIdx;
+	uint32_t max;
+	unsigned printed=0;
+	unsigned ii;
+	int		 buf_slot_width;
+	int		 opts=(strchr(ospec,'x')?filter_newline_:0);
+	struct traceEntryHdr_s* myEnt_p;
+	char				  * msg_p;
+	unsigned long		  * params_p;
+	uint8_t				  * local_params;
+	char				  * local_msg;
+	void				  * param_va_ptr;
+	struct sizepush		  * params_sizes;
+	uint8_t				  * ent_param_ptr;
+	uint8_t				  * lcl_param_ptr;
+	const char			  * sp; /*spec ptr*/
+	char                  * indent="                                                                ";
 
-    opts |= quiet?quiet_:0;
+	opts |= quiet?quiet_:0;
+	opts |= (strchr(ospec,'D')?indent_:0);
 
-    traceInit(NULL);
+	traceInit(NULL);
 
-    /* If just a count is given, it will be a way to limit the number printed;
-       a short hand version of "... | head -count". (so if there are not entries,
-       none will be printed.
-       If however, count and start are given, the count (up to numents) will be
-       printed regardless of how many entries are actually filled with real
-       data. This gives a way to look at data after a "treset".
-     */
-    if (start >= 0)
-    {   start++; /* start slot index needs to be turned into a "count" */
-	if (start > traceControl_p->num_entries)
-	{   start = traceControl_p->num_entries;
-	    printf("specified start index too large, adjusting to %d\n",start );
-	}
-	rdIdx=start;
-    }
-    else
-    {   rdIdx = traceControl_p->wrIdxCnt % traceControl_p->num_entries;
-    }
-    if ((count>=0) && (start>=0))
-    {
-	if (count > traceControl_p->num_entries)
-	{   max = traceControl_p->num_entries;
-	    printf("specified count > num_entrie, adjusting to %d\n",max);
+	/* If just a count is given, it will be a way to limit the number printed;
+	   a short hand version of "... | head -count". (so if there are not entries,
+	   none will be printed.
+	   If however, count and start are given, the count (up to numents) will be
+	   printed regardless of how many entries are actually filled with real
+	   data. This gives a way to look at data after a "treset".
+	*/
+	if (start >= 0)
+	{	start++; /* start slot index needs to be turned into a "count" */
+		if (start > traceControl_p->num_entries)
+		{	start = traceControl_p->num_entries;
+			printf("specified start index too large, adjusting to %d\n",start );
+		}
+		rdIdx=start;
 	}
 	else
-	    max = count;
-    }
-    else if (traceControl_p->full)
-	max = traceControl_p->num_entries;
-    else
-	max = rdIdx;
-    if ((count>=0) && (start<0) && (count<max)) max=count;
-
-    buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
-    local_msg     =            (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
-    local_params  =         (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
-    params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
-
-    if (ospec[0] == 'H')
-    {   ++ospec; /* done with Heading flag */
-	sp = ospec;
-	for (sp=ospec; *sp; ++sp)
+	{	rdIdx = traceControl_p->wrIdxCnt % traceControl_p->num_entries;
+	}
+	if ((count>=0) && (start>=0))
 	{
-	    switch (*sp)
-	    {
-	    case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
-	    case 's': printf("%*s ", buf_slot_width, "slt" ); break;
-	    case 'T': printf("          us_tod "); break;
-	    case 't': printf("       tsc "); break;
-	    case 'i': printf("  tid "); break;
-	    case 'I': printf("TID "); break;
-	    case 'C': printf("cpu "); break;
-	    case 'L': printf("lv "); break;
-	    case 'B': printf("B "); break;
-	    case 'P': printf("  pid "); break;
-	    case 'R': printf("r "); break;
-		/* ignore other unknown chars in ospec */
-	    }
-	}
-	printf("msg\n");
-	sp = ospec;
-	for (sp=ospec; *sp; ++sp)
-	{
-	    switch (*sp)
-	    {
-	    case 'N': printf("%.*s ", minw(3,countDigits(max-1)), "--------------"); break;
-	    case 's': printf("%.*s ", buf_slot_width, "--------------"); break;
-	    case 'T': printf("---------------- "); break;
-	    case 't': printf("---------- "); break;
-	    case 'i': printf("----- "); break;
-	    case 'I': printf("--- "); break;
-	    case 'C': printf("--- "); break;
-	    case 'L': printf("-- "); break;
-	    case 'B': printf("-- "); break;
-	    case 'P': printf("------ "); break;
-	    case 'R': printf("- "); break;
-		/* ignore other unknown chars in ospec */
-	    }
-	}
-	printf("-----------------------------\n");
-    }
-    for (printed=0; printed<max; ++printed)
-    {   unsigned seconds, useconds;
-	int print_just_converted_ofmt=0;
-	rdIdx = IDXCNT_ADD( rdIdx, -1 ) % traceControl_p->num_entries;
-	myEnt_p = idxCnt2entPtr( rdIdx );
-	msg_p    = (char*)(myEnt_p+1);
-	params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
-	msg_p[traceControl_p->siz_msg - 1] = '\0';
-
-	get_arg_sizes(  local_msg, msg_p, opts
-		      , traceControl_p->num_params
-		      , myEnt_p->param_bytes, params_sizes );
-
-	/* determine if args need to be copied */
-	if        (  ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
-		   ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
-	{   seconds  = myEnt_p->time.tv_sec;
-	    useconds = myEnt_p->time.tv_usec;
-	    param_va_ptr = (void*)params_p;
-	}
-	else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
-	{   void *xx = &(myEnt_p->time);
-	    unsigned *ptr=(unsigned*)xx;
-	    seconds  = *ptr++;
-	    useconds = *ptr;
-	    ent_param_ptr = (uint8_t*)params_p;
-	    lcl_param_ptr = local_params;
-	    for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
-	    {
-		if      (params_sizes[ii].push == 4)
-		{   *(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
-		    lcl_param_ptr += sizeof(long);
+		if (count > traceControl_p->num_entries)
+		{	max = traceControl_p->num_entries;
+			printf("specified count > num_entrie, adjusting to %d\n",max);
 		}
-		else /* (params_sizes[ii].push == 8) */
-		{   *(long*)lcl_param_ptr =      *(long*)ent_param_ptr;
-		    lcl_param_ptr += sizeof(long);
-		}
-		ent_param_ptr += params_sizes[ii].push;
-	    }
-	    param_va_ptr = (void*)local_params;
+		else
+			max = count;
 	}
-	else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
-	{   void *xx=&myEnt_p->time;
-	    long long *ptr=(long long*)xx;
-	    seconds  = (unsigned)*ptr++;
-	    useconds = (unsigned)*ptr;
-	    ent_param_ptr = (uint8_t*)params_p;
-	    lcl_param_ptr = local_params;
-	    for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
-	    {
-		if      (params_sizes[ii].size == 4)
-		{   *(unsigned*)lcl_param_ptr = (unsigned)*(unsigned long long*)ent_param_ptr;
-		    lcl_param_ptr += sizeof(long);
-		}
-		else /* (params_sizes[ii].size == 8) */
-		{   *(unsigned long long*)lcl_param_ptr = *(unsigned long long*)ent_param_ptr;
-		    lcl_param_ptr += sizeof(long long);		    
-		}
-		ent_param_ptr += params_sizes[ii].push;
-	    }
-	    param_va_ptr = (void*)local_params;
-	}
-	sp = ospec;
-	for (sp=ospec; *sp; ++sp)
-	{
-	    switch (*sp)
-	    {
-	    case 'N': printf("%*u ", minw(3,countDigits(max-1)), printed ); break;
-	    case 's': printf("%*u ", buf_slot_width, rdIdx ); break;
-	    case 'T': printf("%10u%06u ", seconds, useconds); break;
-	    case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
-	    case 'i': printf("%5d ", myEnt_p->tid); break;
-	    case 'I': printf("%3u ", myEnt_p->TID); break;
-	    case 'C': printf("%3u ", myEnt_p->cpu); break;
-	    case 'L': printf("%2d ", myEnt_p->lvl); break;
-	    case 'B': printf("%u ", myEnt_p->param_bytes); break;
-	    case 'P': printf("%6d ", myEnt_p->pid); break;
-	    case 'R':
-		if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
-		else                             printf( ". " );
-		break;
-	    case 'm': print_just_converted_ofmt=1; break;
-	    }
-	}
-
-	/*typedef unsigned long parm_array_t[1];*/
-	/*va_start( ap, params_p[-1] );*/
-	if (!print_just_converted_ofmt)
-	{   /* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
-	       Here, I need an initializer so I must have this inside braces { } */
-	    va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
-	    vprintf( local_msg, ap );
-	    printf("\n");
-	}
+	else if (traceControl_p->full)
+		max = traceControl_p->num_entries;
 	else
-	    printf("%s\n",local_msg);
-    }
-}   /*traceShow*/
+		max = rdIdx;
+	if ((count>=0) && (start<0) && (count<max)) max=count;
+
+	buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
+	local_msg	  =			   (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
+	local_params  =			(uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
+	params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
+
+	if (ospec[0] == 'H')
+	{	++ospec; /* done with Heading flag */
+		sp = ospec;
+		for (sp=ospec; *sp; ++sp)
+		{
+			switch (*sp)
+			{
+			case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
+			case 's': printf("%*s ", buf_slot_width, "slt" ); break;
+			case 'T': printf("			us_tod "); break;
+			case 't': printf("		 tsc "); break;
+			case 'i': printf("	tid "); break;
+			case 'I': printf("TID "); break;
+			case 'C': printf("cpu "); break;
+			case 'L': printf("lv "); break;
+			case 'B': printf("B "); break;
+			case 'P': printf("	pid "); break;
+			case 'R': printf("r "); break;
+				/* ignore other unknown chars in ospec */
+			}
+		}
+		printf("msg\n");
+		sp = ospec;
+		for (sp=ospec; *sp; ++sp)
+		{
+			switch (*sp)
+			{
+			case 'N': printf("%.*s ", minw(3,countDigits(max-1)), "--------------"); break;
+			case 's': printf("%.*s ", buf_slot_width, "--------------"); break;
+			case 'T': printf("---------------- "); break;
+			case 't': printf("---------- "); break;
+			case 'i': printf("----- "); break;
+			case 'I': printf("--- "); break;
+			case 'C': printf("--- "); break;
+			case 'L': printf("-- "); break;
+			case 'B': printf("-- "); break;
+			case 'P': printf("------ "); break;
+			case 'R': printf("- "); break;
+				/* ignore other unknown chars in ospec */
+			}
+		}
+		printf("-----------------------------\n");
+	}
+	for (printed=0; printed<max; ++printed)
+	{	unsigned seconds, useconds;
+		int print_just_converted_ofmt=0;
+		rdIdx = IDXCNT_ADD( rdIdx, -1 ) % traceControl_p->num_entries;
+		myEnt_p = idxCnt2entPtr( rdIdx );
+		msg_p	 = (char*)(myEnt_p+1);
+		params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
+		msg_p[traceControl_p->siz_msg - 1] = '\0';
+
+		get_arg_sizes(	local_msg, msg_p, opts
+					  , traceControl_p->num_params
+					  , myEnt_p->param_bytes, params_sizes );
+
+		/* determine if args need to be copied */
+		if		  (	 ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
+				   ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
+		{	seconds	 = myEnt_p->time.tv_sec;
+			useconds = myEnt_p->time.tv_usec;
+			param_va_ptr = (void*)params_p;
+		}
+		else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
+		{	void *xx = &(myEnt_p->time);
+			unsigned *ptr=(unsigned*)xx;
+			seconds	 = *ptr++;
+			useconds = *ptr;
+			ent_param_ptr = (uint8_t*)params_p;
+			lcl_param_ptr = local_params;
+			for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
+			{
+				if		(params_sizes[ii].push == 4)
+				{	*(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
+					lcl_param_ptr += sizeof(long);
+				}
+				else /* (params_sizes[ii].push == 8) */
+				{	*(long*)lcl_param_ptr =		 *(long*)ent_param_ptr;
+					lcl_param_ptr += sizeof(long);
+				}
+				ent_param_ptr += params_sizes[ii].push;
+			}
+			param_va_ptr = (void*)local_params;
+		}
+		else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
+		{	void *xx=&myEnt_p->time;
+			long long *ptr=(long long*)xx;
+			seconds	 = (unsigned)*ptr++;
+			useconds = (unsigned)*ptr;
+			ent_param_ptr = (uint8_t*)params_p;
+			lcl_param_ptr = local_params;
+			for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
+			{
+				if		(params_sizes[ii].size == 4)
+				{	*(unsigned*)lcl_param_ptr = (unsigned)*(unsigned long long*)ent_param_ptr;
+					lcl_param_ptr += sizeof(long);
+				}
+				else /* (params_sizes[ii].size == 8) */
+				{	*(unsigned long long*)lcl_param_ptr = *(unsigned long long*)ent_param_ptr;
+					lcl_param_ptr += sizeof(long long);			
+				}
+				ent_param_ptr += params_sizes[ii].push;
+			}
+			param_va_ptr = (void*)local_params;
+		}
+		sp = ospec;
+		for (sp=ospec; *sp; ++sp)
+		{
+			switch (*sp)
+			{
+			case 'N': printf("%*u ", minw(3,countDigits(max-1)), printed ); break;
+			case 's': printf("%*u ", buf_slot_width, rdIdx ); break;
+			case 'T': printf("%10u%06u ", seconds, useconds); break;
+			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
+			case 'i': printf("%5d ", myEnt_p->tid); break;
+			case 'I': printf("%3u ", myEnt_p->TID); break;
+			case 'C': printf("%3u ", myEnt_p->cpu); break;
+			case 'L': printf("%2d ", myEnt_p->lvl); break;
+			case 'B': printf("%u ", myEnt_p->param_bytes); break;
+			case 'P': printf("%6d ", myEnt_p->pid); break;
+			case 'R':
+				if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
+				else							 printf( ". " );
+				break;
+			case 'm': print_just_converted_ofmt=1; break;
+			}
+		}
+
+		/*typedef unsigned long parm_array_t[1];*/
+		/*va_start( ap, params_p[-1] );*/
+		if (!print_just_converted_ofmt)
+		{	/* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
+			   Here, I need an initializer so I must have this inside braces { } */
+			va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
+			if (opts&indent_) {
+				int ii=(myEnt_p->lvl>63)?63:myEnt_p->lvl;
+				printf("%s",&indent[63-ii]);
+			}
+			vprintf( local_msg, ap );
+			printf("\n");
+		}
+		else
+			printf("%s\n",local_msg);
+	}
+}	/*traceShow*/
 
 
 void traceInfo()
@@ -466,7 +473,7 @@ void traceInfo()
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u          %s\n"
-               "default TRACE_SHOW=%s others: B(parambytes) P(pid) s(slot)\n"
+               "default TRACE_SHOW=%s others: B(paramBytes) P(pid) s(slot) m(convertedMsgfmt_only) D(inDent)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr

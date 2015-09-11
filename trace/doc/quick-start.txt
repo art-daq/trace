@@ -14,9 +14,9 @@ your environment.
 
    export TRACE_LVLS=-1
 
-If you want TRACE to create the standard file (/tmp/trace_buffer_$USER),
-it is recommended that you put TRACE_NAME=TRACE or TRACE_ARGSMAX=10 in
-your environment.
+If you want TRACE to create the standard file (/tmp/trace_buffer_$USER), it is
+recommended that you put TRACE_NAME=TRACE, TRACE_MSGMAX=0 or TRACE_ARGSMAX=10
+in your environment. TRACE_MSGMAX=0 will give default of 128.
 
 
 NOTE: if there are no TRACE_* variables defined in the environment, TRACE

@@ -1,0 +1,78 @@
+ This file (compile_into_kernel.howto) was created by Ron Rechenmacher <ron@fnal.gov> on
+ Aug 29, 2015. "TERMS AND CONDITIONS" governing this file are in the README
+ or COPYING file. If you do not have such a file, one can be obtained by
+ contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+ $RCSfile: compile_into_kernel.howto,v $
+ rev="$Revision: 1.1 $$Date: 2015/09/13 15:25:13 $";
+
+
+
+1. edit or patch init/Makfile  (see below)
+2. copy or link src_modules/trace_.c into init/
+3. copy or link include/trace.h into include/
+4. edit or patch init/main.c
+5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
+5b. external modules can just include trace.h and insert TRACEs
+    as opposed to using EXTRA_CFLAGS or CFLAGS_EXTRA, and KBUILD_EXTRA_SYMBOLS
+
+
+
+diff -u init/Makefile{.~1~,}
+--- init/Makefile.~1~   2009-12-02 21:51:21.000000000 -0600
++++ init/Makefile       2015-08-29 10:32:45.956138974 -0500
+@@ -2,7 +2,7 @@
+ # Makefile for the linux kernel.
+ #
+ 
+-obj-y                          := main.o version.o mounts.o
++obj-y                          := main.o version.o mounts.o trace_.o
+ ifneq ($(CONFIG_BLK_DEV_INITRD),y)
+ obj-y                          += noinitramfs.o
+ else
+
+
+
+diff -u init/main.c{.~1~,}
+--- init/main.c.~1~     2015-07-09 13:33:44.000000000 -0500
++++ init/main.c 2015-08-29 13:35:02.147435431 -0500
+@@ -71,6 +71,7 @@
+ #include <linux/shmem_fs.h>
+ #include <linux/perf_event.h>
+ #include <trace/boot.h>
++#include <trace.h>             /* trace_3_init() */
+ 
+ #include <asm/io.h>
+ #include <asm/bugs.h>
+@@ -737,6 +738,8 @@
+        sfi_init_late();
+ 
+        ftrace_init();
++       trace_3_init();
++       TRACE( 0, "main.c: trace initialize" );
+ 
+        /* Do the rest non-__init'ed, we're now alive */
+        rest_init();
+
+
+
+diff -u net/socket.c{.~1~,}
+--- net/socket.c.~1~    2015-07-09 13:33:55.000000000 -0500
++++ net/socket.c        2015-08-29 13:52:55.448929180 -0500
+@@ -100,6 +100,7 @@
+ #ifndef __GENKSYMS__
+ #include <net/busy_poll.h>
+ #endif
++#include <trace.h>             /* TRACE */
+ 
+ #ifdef CONFIG_NET_RX_BUSY_POLL
+ unsigned int sysctl_net_busy_read __read_mostly;
+@@ -874,6 +875,7 @@
+        size_t size = 0;
+        int i;
+ 
++       TRACE( 20, "net/socket.c:do_sock_write" );
+        for (i = 0; i < nr_segs; i++)
+                size += iov[i].iov_len;
+ 
+
+

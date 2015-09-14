@@ -3,19 +3,22 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 1.1 $$Date: 2015/09/13 15:25:13 $";
+ rev="$Revision: 1.2 $$Date: 2015/09/14 15:24:09 $";
 
 
 
-1. edit or patch init/Makfile  (see below)
-2. copy or link src_modules/trace_.c into init/
-3. copy or link include/trace.h into include/
-4. edit or patch init/main.c
+1.  edit or patch init/Makfile  (see below)
+2.  copy or link include/trace.h into include/linux
+3a. copy or link src_modules/trace_.c into init/
+3b. sym link ../include/linux/trace.h init/trace.h to avoid
+    having to change trace_.c.  Note: putting trace.h into just include
+    messes with the kernels tracing.
+4.  edit or patch init/main.c
 5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
 5b. external modules can just include trace.h and insert TRACEs
     as opposed to using EXTRA_CFLAGS or CFLAGS_EXTRA, and KBUILD_EXTRA_SYMBOLS
 
-
+==================================================
 
 diff -u init/Makefile{.~1~,}
 --- init/Makefile.~1~   2009-12-02 21:51:21.000000000 -0600

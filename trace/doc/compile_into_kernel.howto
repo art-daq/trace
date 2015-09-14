@@ -3,7 +3,7 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 1.2 $$Date: 2015/09/14 15:24:09 $";
+ rev="$Revision: 1.3 $$Date: 2015/09/14 15:25:39 $";
 
 
 
@@ -42,7 +42,7 @@ diff -u init/main.c{.~1~,}
  #include <linux/shmem_fs.h>
  #include <linux/perf_event.h>
  #include <trace/boot.h>
-+#include <trace.h>             /* trace_3_init() */
++#include <linux/trace.h>             /* trace_3_init() */
  
  #include <asm/io.h>
  #include <asm/bugs.h>
@@ -65,7 +65,7 @@ diff -u net/socket.c{.~1~,}
  #ifndef __GENKSYMS__
  #include <net/busy_poll.h>
  #endif
-+#include <trace.h>             /* TRACE */
++#include <linux/trace.h>             /* TRACE */
  
  #ifdef CONFIG_NET_RX_BUSY_POLL
  unsigned int sysctl_net_busy_read __read_mostly;

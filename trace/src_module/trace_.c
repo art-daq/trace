@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.45 $$Date: 2015-08-31 16:03:40 $";
+    rev="$Revision: 1.46 $$Date: 2015-09-15 14:25:33 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -202,17 +202,18 @@ static int  trace_proc_add( int len )
     return (0);
 }   // trace_proc_add
 
+# ifdef MODULE
 static void trace_proc_remove( void )
 {
     printk( "trace module cleanup - removing /proc/trace directory tree\n" );
-# if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+#  if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
     remove_proc_entry( "buffer",  trace_proc_root );
-# else
+#  else
     remove_proc_entry( "trace/buffer",  0 );
-# endif
+#  endif
     remove_proc_entry( "trace",   0 );
 }   // trace_proc_remove
-
+# endif
 
 // =========================================================================
 
@@ -335,20 +336,38 @@ static void regfunc(struct tracepoint *tp, void *priv)
 {
         int *ret = priv;
 	*ret=0;
-	if      (strcmp(tp->name,"sched_switch") == 0)
+	if      (strcmp(tp->name,"sched_switch") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_sched_switch_hook, NULL );
-	else if (strcmp(tp->name,"irq_handler_entry") == 0)
+		printk("TRACE tracepoint_probe_register sched_switch returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"irq_handler_entry") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_hirq_enter, NULL );
-	else if (strcmp(tp->name,"irq_handler_exit") == 0)
+		printk("TRACE tracepoint_probe_register irq_handler_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"irq_handler_exit") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_hirq_exit, NULL );
-	else if (strcmp(tp->name,"softirq_entry") == 0)
+		printk("TRACE tracepoint_probe_register irq_handler_exit returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"softirq_entry") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_sirq_enter, NULL );
-	else if (strcmp(tp->name,"softirq_exit") == 0)
+		printk("TRACE tracepoint_probe_register softirq_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"softirq_exit") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_sirq_exit, NULL );
-	else if (strcmp(tp->name,"sys_enter") == 0)
+		printk("TRACE tracepoint_probe_register softirq_exit returned %d\n", *ret );
+	}
+    /* for some reason, registering these early in boot (at the end of
+	   init/main.c:start_kernel) causes the syscall tracing to stop working
+	   (doesn't do any syscall tracing even when apparently enabled).
+	   Solution - call later - at the beginning of init/main.c:kernel_init */
+	else if (strcmp(tp->name,"sys_enter") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_sys_enter, NULL );
-	else if (strcmp(tp->name,"sys_exit") == 0)
+		printk("TRACE tracepoint_probe_register sys_enter returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"sys_exit") == 0) {
 	    *ret = tracepoint_probe_register( tp, my_trace_sys_exit, NULL );
+		printk("TRACE tracepoint_probe_register sys_exit returned %d\n", *ret );
+	}
 }
 # ifdef MODULE
 static void unregfunc(struct tracepoint *tp, void *ignore)
@@ -371,7 +390,8 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 # endif
 #endif
 
-static int  trace_sched_switch_hook_add( void )
+//static
+int  trace_sched_switch_hook_add( void )
 {
     int err=0;
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
@@ -450,10 +470,14 @@ trace_3_init(void)
        4) setup userspace interrupt (sw)
     */
     if ((ret=trace_proc_add(traceControl_p->memlen))) goto undo1;
+# ifndef MODULE
+	return (ret);
+# else
     if ((ret=trace_sched_switch_hook_add()))          goto undo2;
     return (ret);               /* success */
  undo2:
     trace_proc_remove();
+# endif
  undo1:
     vfree( traceControl_p );
     return (ret);

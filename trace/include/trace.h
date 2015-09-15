@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.120 $$Date: 2015-08-31 16:02:47 $"
+#define TRACE_REV  "$Revision: 1.121 $$Date: 2015-09-15 14:25:33 $"
 
 #ifndef __KERNEL__
 
@@ -86,6 +86,7 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_INIT_CHECK          /* no check for kernel -- init when module loaded */
 # ifndef MODULE
 int trace_3_init(void);
+int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 # endif
 
 #endif /* __KERNEL__ */

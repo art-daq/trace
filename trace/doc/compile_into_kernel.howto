@@ -3,7 +3,7 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 1.3 $$Date: 2015-09-14 15:25:39 $";
+ rev="$Revision: 1.4 $$Date: 2015-09-16 19:54:42 $";
 
 
 
@@ -36,25 +36,33 @@ diff -u init/Makefile{.~1~,}
 
 
 diff -u init/main.c{.~1~,}
---- init/main.c.~1~     2015-07-09 13:33:44.000000000 -0500
-+++ init/main.c 2015-08-29 13:35:02.147435431 -0500
-@@ -71,6 +71,7 @@
- #include <linux/shmem_fs.h>
- #include <linux/perf_event.h>
- #include <trace/boot.h>
-+#include <linux/trace.h>             /* trace_3_init() */
+--- init/main.c.~1~     2014-08-13 21:36:35.000000000 -0500
++++ init/main.c 2015-09-15 14:15:36.198627790 -0500
+@@ -78,6 +78,7 @@
+ #include <linux/context_tracking.h>
+ #include <linux/random.h>
+ #include <linux/list.h>
++#include <linux/trace.h>  /* trace_3_init(), trace_sched_switch_hook_add */
  
  #include <asm/io.h>
  #include <asm/bugs.h>
-@@ -737,6 +738,8 @@
-        sfi_init_late();
- 
-        ftrace_init();
+@@ -587,6 +588,8 @@
+        hrtimers_init();
+        softirq_init();
+        timekeeping_init();
 +       trace_3_init();
 +       TRACE( 0, "main.c: trace initialize" );
+        time_init();
+        sched_clock_postinit();
+        perf_event_init();
+@@ -932,6 +935,7 @@
+        int ret;
  
-        /* Do the rest non-__init'ed, we're now alive */
-        rest_init();
+        kernel_init_freeable();
++       trace_sched_switch_hook_add();
+        /* need to finish all async __init code before freeing the memory */
+        async_synchronize_full();
+        free_initmem();
 
 
 

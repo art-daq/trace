@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 1.121 $$Date: 2015-09-15 14:25:33 $"
+#define TRACE_REV  "$Revision: 1.122 $$Date: 2015-09-16 19:51:18 $"
 
 #ifndef __KERNEL__
 
@@ -116,20 +116,20 @@ static const char *  TRACE_NAME=NULL;
 #define TRACE_PAGESIZE         0x2000
 #define TRACE_CACHELINE        64
 
-
+#define LVLBITSMSK ((sizeof(uint64_t)*8)-1)
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
 /* c++98 c99 c++0x c11 c++11 */
 
 # define TRACE( lvl, ... ) do \
-    {   unsigned __lvl=lvl;						\
+    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
-	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
             {   trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );					\
 	    }								\
-	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
 	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ ); \
 	    }								\
         }								\
@@ -145,7 +145,7 @@ static const char *  TRACE_NAME=NULL;
 /* c89 */
 
 # define TRACE( lvl, msgargs... ) do		\
-    {   unsigned __lvl=lvl;						\
+    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
@@ -450,7 +450,11 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
     if (myIdxCnt == traceControl_p->num_entries)
 	traceControl_p->full = 1; /* now we'll know if wrIdxCnt has rolled over */
 
-    TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
+	/* There are some places in the kernel where the gettimeofday routine
+	   cannot be called (i.e. kernel/notifier.c routines). For these routines,
+	   add 64 for the level (i.e. 22+64) */
+    if(lvl<64)TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
+	else {tvp->tv_sec=tvp->tv_usec=0;}
 
     myEnt_p  = idxCnt2entPtr( myIdxCnt );
     msg_p    = (char*)(myEnt_p+1);

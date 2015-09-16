@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1.46 $$Date: 2015-09-15 14:25:33 $";
+    rev="$Revision: 1.47 $$Date: 2015-09-16 19:51:18 $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -56,6 +56,91 @@ MODULE_PARM_DESC( namtblents, "Number of name table entries" );
 
 module_param(     trace_allow_printk, int, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_allow_printk, "whether or not to allow TRACEs to do printk's" );
+#else
+static int __init trace_msgmax_setup(char *str)
+{
+	unsigned long val;
+	if (kstrtoul(str, 0, &val)) {
+		pr_warn("invalid trace_msgmax parameter '%s'\n", str);
+		return 0;
+	}
+	msgmax = val;
+	pr_info("setting trace_msgmax to %d\n", msgmax);
+	return 1;
+}
+__setup("trace_msgmax=", trace_msgmax_setup);
+static int __init trace_argsmax_setup(char *str)
+{
+	unsigned long val;
+	if (kstrtoul(str, 0, &val)) {
+		pr_warn("invalid trace_argsmax parameter '%s'\n", str);
+		return 0;
+	}
+	argsmax = val;
+	pr_info("setting trace_argsmax to %d\n", argsmax);
+	return 1;
+}
+__setup("trace_argsmax=", trace_argsmax_setup);
+static int __init trace_numents_setup(char *str)
+{
+	unsigned long val;
+	if (kstrtoul(str, 0, &val)) {
+		pr_warn("invalid trace_numents parameter '%s'\n", str);
+		return 0;
+	}
+	numents = val;
+	pr_info("setting trace_numents to %d\n", numents);
+	return 1;
+}
+__setup("trace_numents=", trace_numents_setup);
+static int __init trace_namtblents_setup(char *str)
+{
+	unsigned long val;
+	if (kstrtoul(str, 0, &val)) {
+		pr_warn("invalid trace_namtblents parameter '%s'\n", str);
+		return 0;
+	}
+	namtblents = val;
+	pr_info("setting trace_namtblents to %d\n", namtblents);
+	return 1;
+}
+__setup("trace_namtblents=", trace_namtblents_setup);
+static int __init trace_allow_printk_setup(char *str)
+{
+	unsigned long val;
+	if (kstrtoul(str, 0, &val)) {
+		pr_warn("invalid trace_allow_printk parameter '%s'\n", str);
+		return 0;
+	}
+	trace_allow_printk = val;
+	pr_info("setting trace_allow_printk to %d\n", trace_allow_printk);
+	return 1;
+}
+__setup("trace_allow_printk=", trace_allow_printk_setup);
+
+static ssize_t trace_proc_control_write( struct file *fil, const char __user *src_p
+				      , size_t siz, loff_t *off )
+{
+        char    kernelBuffer[1024];
+        char    *sptr;
+        int     cc;
+	cc = (siz<(sizeof(kernelBuffer)-1))? siz: (sizeof(kernelBuffer)-1);
+    copy_from_user(  kernelBuffer, src_p, cc );
+    kernelBuffer[cc] = '\0'; /* terminate our copy of the string */
+
+    for (sptr=kernelBuffer; *sptr; sptr++)
+    {
+        if      (strncmp("trace_allow_printk=",sptr,sizeof("trace_allow_printk=")-1)==0)
+        {   sptr+=sizeof("trace_allow_printk=")-1;
+            trace_allow_printk = simple_strtoul(sptr,&sptr,0);
+        }
+	}
+	return siz;
+}
+static struct file_operations trace_proc_control_file_ops = {
+    .owner=   THIS_MODULE,
+    .write=   trace_proc_control_write,	   /* write        */
+};
 #endif
 
 static int trace_proc_buffer_mmap(  struct file              *file
@@ -194,10 +279,16 @@ static int  trace_proc_add( int len )
 
     trace_proc_root = proc_create("trace/buffer",0666,NULL,&trace_proc_buffer_file_ops);
     if (trace_proc_root == NULL)
-    {	printk( "proc_trace_create: error creating proc_entry\n" );
+    {	printk( "proc_trace_create: error creating buffer proc_entry\n" );
         return (1);
     }
     proc_set_size( trace_proc_root, len );
+#  ifndef MODULE
+    if (proc_create("trace/control",0666,NULL,&trace_proc_control_file_ops) == NULL)
+    {	printk( "proc_trace_create: error creating control proc_entry\n" );
+        return (1);
+    }
+#  endif
 # endif
     return (0);
 }   // trace_proc_add

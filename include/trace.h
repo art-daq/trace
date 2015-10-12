@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Format:%h$$Format:%ci$"
+#define TRACE_REV  "$Id$"
 
 #ifndef __KERNEL__
 

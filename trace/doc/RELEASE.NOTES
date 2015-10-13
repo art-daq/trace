@@ -1,0 +1,208 @@
+
+CHANGE(S) FOR VERSION v3_05_00
+
+  Changed traceEntryHdr_s once again -- so minor rev increments from 04 to 05.
+
+  The number of files changed: 15
+
+  prvTagRev curTagRev     File
+  --------- --------- --------------------------------------------
+       1.16:1.22      Makefile
+        1.3:1.6       TRACE/current.chain
+        1.2:1.5       TRACE/v3_x.version
+        1.7:1.8       doc/product_build_with_std.txt
+        1.9:1.10      doc/trace.pptx
+      1.107:1.117     include/trace.h
+        1.2:1.3       src_example/module/Kbuild
+           :1.2       src_example/module/steve_module.c
+        1.6:1.7       src_example/userspace/Makefile
+        1.3:1.5       src_example/userspace/example_main.cc
+        1.1:1.2       src_example/userspace/example_sub2.cc
+           :1.1       src_example/userspace/example_sub3.cc
+           :1.1       src_example/userspace/example_sub4.cc
+       1.34:1.43      src_module/trace_.c
+       1.83:1.91      src_utility/trace_cntl.c
+
+
+  File: Makefile:
+  fix bug introduced in last commit
+  better ups env compat
+  take out unused lines recently added
+  Darwin ups
+  allow "NO32=1" to disable 32bit-on-64bit
+  userspace works, with warnings, on SLF5
+  ----------------------------------------------------
+  File: TRACE/current.chain:
+  ups Darwin+14
+  Darwin ups
+  Linux64bit+2.6-2.5
+  ----------------------------------------------------
+  File: TRACE/v3_x.version:
+  ups Darwin+14
+  Darwin ups
+  Linux64bit+2.6-2.5
+  ----------------------------------------------------
+  File: doc/product_build_with_std.txt:
+  next rev (rev v3_05_00)
+  ----------------------------------------------------
+  File: doc/trace.pptx:
+  tweak
+  ----------------------------------------------------
+  File: include/trace.h:
+  allow compile time TRACE_DEBUG_INIT
+  go with more direct casting
+  try quieting complier
+  cast (long)tvp->tv_usec for Darwin
+  userspace works, with warnings, on SLF5
+  strange, don't understand -- with native gcc (non-c/c++11), empirically, need to check both (traceTid!=0)&&(traceControl_p!=0) -- see 04/24/2015 notes
+  change TRACE_NAME processing -- Ref. src_example/userspace/example_sub*.cc, fix trace_lock
+  adjust structure (traceEntryHdr_s) -- better performance??? -- new version!!!; add quiet option for traceShow (truncated message)
+  traceEntryHdr_s members get_idxCnt_retries and param_bytes go from 4 bytes to 2 bytes each so default entry size with 10 params is 256 bytes; better lvlset/clr traceCntl
+  add memlen check
+  ----------------------------------------------------
+  File: src_example/module/Kbuild:
+  investigating work-a-round from Steve
+  ----------------------------------------------------
+  File: src_example/userspace/Makefile:
+  added more modules/sub-routines in userspace example
+  ----------------------------------------------------
+  File: src_example/userspace/example_main.cc:
+  cast (long)mark.tv_usec for Darwin
+  move to work on Darwin
+  ----------------------------------------------------
+  File: src_example/userspace/example_sub2.cc:
+  added more modules/sub-routines in userspace example
+  ----------------------------------------------------
+  File: src_module/trace_.c:
+  new sysenter format
+  new sys_exit format
+  module works on 3.16++ (no patching :)
+  traceInit takes an argument
+  change comment
+  change comment
+  export GPL
+  change initial buffer file permissions from 644 to 666
+  comment out NULL readdir struct member as unknown field in 3.16.1
+  ----------------------------------------------------
+  File: src_utility/trace_cntl.c:
+  combine loops and thread idx
+  llx/u goes with (unsigned long long)
+  (unsigned long long) for 64bit values
+  userspace works, with warnings, on SLF5
+  added more modules/sub-routines in userspace example
+  adjust structure -- better performance??? -- new version!!!; add quiet option for traceShow (truncated message)
+  document count and "start" (as startSlotIndex) add mod operator to rdIdx for when it is printed as slot index
+  add memlen check
+  ----------------------------------------------------
+==========================================================================
+
+
+CHANGE(S) FOR VERSION v3_04_00
+
+  The number of files changed: 16
+
+  prvTagRev curTagRev     File
+  --------- --------- --------------------------------------------
+       1.15:1.16      Makefile
+        1.1:1.3       TRACE/current.chain
+           :1.2       TRACE/v3_x.version
+           :1.5       doc/create_release_notes.txt
+        1.1:1.2       doc/cvs_rel_notes.sh
+        1.5:1.7       doc/product_build_with_std.txt
+      1.104:1.107     include/trace.h
+        1.1:1.2       script/trace_envvars.sh
+        1.5:1.6       src_example/userspace/Makefile
+           :1.1       src_example/userspace/no_std.cc
+        1.2:1.3       src_lib/Makefile
+        1.5:1.6       src_module/Makefile
+       1.31:1.34      src_module/trace_.c
+        1.7:1.8       src_utility/Makefile
+       1.82:1.83      src_utility/trace_cntl.c
+        1.7:1.9       ups/TRACE.table
+
+
+  File: Makefile:
+  separate variables: XTRA_CFLAGS, XTRA_CXXFLAGS to allow both at same time
+  ----------------------------------------------------
+  File: TRACE/current.chain:
+  use full flavor to be compatible with CET table file
+  rename v3_1 to v3_x
+  ----------------------------------------------------
+  File: doc/cvs_rel_notes.sh:
+  tweak formatting
+  ----------------------------------------------------
+  File: doc/product_build_with_std.txt:
+  separate variables: XTRA_CFLAGS, XTRA_CXXFLAGS to allow both at same time
+  example other kernel versions, qualifier support, scisoft
+  ----------------------------------------------------
+  File: include/trace.h:
+  adding cpu in as getcpu is a virtual system call in linux, try to quiet compiler (in c/c++11 mode at least)
+  add __attribute__((__unused__)) to x86_64 TRACE_XTRA_UNUSED
+  allow default TRACE_PRINT_FD to be changed at compile
+  ----------------------------------------------------
+  File: script/trace_envvars.sh:
+  print usage
+  ----------------------------------------------------
+  File: src_example/userspace/Makefile:
+  separate variables: XTRA_CFLAGS, XTRA_CXXFLAGS to allow both at same time
+  ----------------------------------------------------
+  File: src_lib/Makefile:
+  separate variables: XTRA_CFLAGS, XTRA_CXXFLAGS to allow both at same time
+  ----------------------------------------------------
+  File: src_module/Makefile:
+  example alternate kernel out-of-src build dir
+  ----------------------------------------------------
+  File: src_module/trace_.c:
+  3.10+ kernels
+  change trace levels -- "enter" comes numerically/ascendingly before "exit"
+  add softirq tracing, adjust trace levels
+  ----------------------------------------------------
+  File: src_utility/Makefile:
+  separate variables: XTRA_CFLAGS, XTRA_CXXFLAGS to allow both at same time
+  ----------------------------------------------------
+  File: src_utility/trace_cntl.c:
+  adding cpu in as getcpu is a virtual system call in linux, try to quiet compiler (in c/c++11 mode at least)
+  ----------------------------------------------------
+  File: ups/TRACE.table:
+  qual e7 and streamline _FQ_DIR
+  use CET TRACE.table
+  ----------------------------------------------------
+==========================================================================
+
+
+CHANGE(S) FOR VERSION v3_03_03
+
+  The number of files changed: 8
+
+  prvTagRev curTagRev     File
+  --------- --------- --------------------------------------------
+           :          doc/RELEASE.NOTES
+           :1.1       doc/cvs_list_changed_files.sh
+           :1.1       doc/cvs_rel_notes.sh
+        1.4:1.5       doc/product_build_with_std.txt
+       1.99:1.104     include/trace.h
+        1.2:1.3       src_lib/tracelib.c
+       1.81:1.82      src_utility/trace_cntl.c
+        1.6:1.7       ups/TRACE.table
+
+
+  File: doc/product_build_with_std.txt:
+  RELEASE.NOTES info
+  ----------------------------------------------------
+  File: include/trace.h:
+  remove debug printf inserted in r1.101, adjust _LVLS,_PRINT_FD processing, move union for c++
+  use _MSGMAX= so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG
+  preferred *_name over _name[0] syntax
+  close hole allowing modeM with inactive TRACE; null TRACE_NAME/FILE does not activate -- so exes setting these can be "overridden" (assuming they use setenv w/ override-false) (no easy way to force activate w/ defaults; set TRACE_FILE=/junk to force inactive???(w/ error msg))
+  tenv alias/function, TRACE_PRINT_FD to allow slow print to a differ file descriptor
+  ----------------------------------------------------
+  File: src_lib/tracelib.c:
+  tenv alias/function, TRACE_PRINT_FD to allow slow print to a differ file descriptor
+  ----------------------------------------------------
+  File: src_utility/trace_cntl.c:
+  adjust so param (to "test1") is number of TRACEs
+  ----------------------------------------------------
+  File: ups/TRACE.table:
+  tenv alias/function, TRACE_PRINT_FD to allow slow print to a differ file descriptor
+  ----------------------------------------------------
+==========================================================================

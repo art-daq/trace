@@ -1,0 +1,27 @@
+The c11 and c++11 standards give:
+  a)  thread local storage capability
+      -- this can be used to allow a file-per-thread and general thread-id
+         storage capability
+      -- a work-around would be to have the thread-id as one of the parameters
+         to the TRACE macro
+  b)  cmpxchg -- compare and xchange functionality
+      -- this is a system level atomic "spin-lock" mechanism.
+      -- a work-around can be to write an assembly language macro which does
+         the same thing.  If this cannot be done because the hardware (i.e
+         processor cannot do it) and the only choice would be to do a system
+         call to get the OS involved then I would not implement trace on
+         this platform.
+  c)* {name,anonymous} variadic macros (varargs macros)
+  d)* braced-groups within expressions
+  e)* long long with printf "ll"
+
+* may have been in previous standard
+
+
+Additionally, modern versions of UNIX allow gettimeofday to get the
+time without a system call.
+
+
+All this means that full multi-process multi-threaded tracing can
+be done without doing a system call.
+

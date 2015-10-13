@@ -1,0 +1,7 @@
+updated doc/RELEASE.NOTES:
+  next_rev=vX_YY_ZZ
+  doc/cvs_rel_notes.sh --update_REL_NOTES $next_rev
+  : message/edit the release notes file -- edew doc/RELEASE.NOTES -- should no longer be needed
+  cvs ci -m"next rev (rev $next_rev)" # for release notes
+  cvs tag $next_rev
+

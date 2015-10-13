@@ -1,0 +1,62 @@
+Main Goals:
+  * timing info  ( microsecond timeofday timestamp ) - to look for anomolies
+    o  delta time between application specific points.
+       - points (locations) with key information -- the presense of TRACE will help
+         identify/document these locations.
+    o  real time (high speed/efficient) samples -- store every one (several
+          thousand to maybe a few million). (basic stats)
+       -  low performance impact
+Other Goals
+  * multiple application specific points at the same time
+    - selectable (names,masks) -- min-to-no impact, (recompile -DNO_TRACE?)
+  * multi-threaded (multiple buffers?)
+  * system info - tid
+  * system info - task switch, interrupts  -- module
+  * application parameters  (avoid most "formatting")
+  * configurable  - msgSz,numParams,numEntries,names
+  * trigger
+  * subset to stdout (console log)  - should this (default) to human readable?
+      - correlate console log (error) output with high-speed details.
+  * user "logger" function
+
+Companion utility - trace_delta.pl
+   delta time
+   use with grep -- standard filtering "unix philosophy"
+   "post filter" to help get basic stats on sub-operations.
+
+Macro
+   a macro allows a function call to be wrappered by a test.
+
+Trace vs. other utilities:
+
+   Debugger -- one could get simply print-output info via examine from with
+       debugger.  TRACE allows the "print-output" while the program is executing
+       in the production environment.
+   The most basic trace example would, on the surface, look like something
+   a profiling utility would do:
+     sample points near the beginning and end of some function.
+   -- profile the function: min max ave.
+   But, maybe you really want only a sub part of the funtion (and it's unnatural
+   to restructure the code).
+
+   Yes, TRACE is _like_ "instrumenting" your code and this takes compiling it.
+   But its also significantly different then instrumenting you code.
+   The goal is that you would _not_ recompile after your done:
+       - the instrumenting is only at (relatively, i.e. not every function call
+         entry/exit) a few key/significant locations
+       - tracing is low impact and masked of is much lower (near, but
+         admittedly not zero).
+       - some of the location you would want console output
+       - (just) in case you want to enable and check trace details in the
+         future.
+
+   With parameters, you can easily filter... (i.e. function part only when
+   parameter is within some range).
+
+   Profiling will just give basic stats (and likely sparse sampling) vs.
+      every sample for a particular (snapshot) timeperiod.
+
+   What (else) was happening at a specific time...
+
+Running "under" a profiler...
+   Does a profile effect operation???

@@ -1,0 +1,13 @@
+The kernel can have a virtual file which can be mmapped. This
+file would map to just memory and would not be associated with
+any device.  Switching between this file and any user created
+file is easy.  The problem with a userspace file (file on a device)
+is that eventually the system will want to flush data to disk.
+This is a way for the buffer to be saved/archived but this _may_
+be an issue when flushes happen at inopportune times.
+These are not issues when the kernel virutal file is used.
+It is not recommended that the user file be on an NFS device (which is
+often the case for home areas -- which is why the default trace_buffer
+file is in /tmp)
+Shared mem is just memory but it is harder to manage and I currently
+don't know an easy way to get the kernel to create a shared memory region.

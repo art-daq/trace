@@ -1,0 +1,120 @@
+Prerequisite assumptions:
+   trace software is at $TRACE_DIR, shell is bash,
+   the approriate bin dir (ie. $TRACE_DIR/Linux+2.6-2.12/bin) has
+   been added to PATH along with $TRACE_DIR/script.
+   $TRACE_DIR/script/trace.sh.functions has been source to put
+   "convenience" functions in the environment.
+
+
+TRACING capability is added to an executable by including the
+$TRACE_DIR/include/trace.h file and sprinkling TRACE() macros
+at significant/interesting or otherwise appropriate locations
+in the code.
+The macro takes a _level_ (integer from 0-63),
+a _format_spec_ (or message) and arguments as specified by the
+format_spec.
+
+
+When the executable is run, trace will attempt to initialize.
+in order for trace to be "activated" within the executable,
+one or more of the 6 TRACE environment variables must be defined.
+They can be defined in the environment or by the program itself (before
+the first TRACE or TRACE_CNTRL macro is encountered. Actually, there
+are two TRACE_CNTRL's which can cause a re-initialization, but more on
+that later.
+The env.vars. are:
+TRACE_FILE  -- location of the trace file to be used (created if it does
+               not exist) -- the default is /tmp/trace_buffer_$USER
+TRACE_NAME  -- "TRACE NAME" for the program (more on this later) --
+               the default is "TRACE"
+TRACE_MSGMAX     -- the max bytes of _format_spec_ that will be saved --
+                    default 128.
+TRACE_ARGSMAX    -- the max number of parameter that will be saved --
+                    default 10.
+TRACE_NUMENTS    -- the number of entries in the buffer -- default 50000
+TRACE_NAMTBLENTS -- the number of different possible trace names (including
+                    a special one which is used if all the other entries are
+                    used) -- default 20.
+
+The last four are used when a file is created.  Once the file is create,
+the parameters cannot be changed -- delete the file or use a different one.
+
+Note: I have only tested what I believe are reasonable values for the last
+      env.vars.
+
+The trace_cntl program can be used to create the file. For example, one could
+do:
+
+rm -f /tmp/trace_buffer_$USER; TRACE_NAMTBLENTS=200 tinfo
+
+The following should be printed:
+trace_initialized =1
+mode              =0x1
+writeIdxCount     =0x00000000 entries used: 0
+largestMultiple   =0xffffbc70
+trigIdxCnt        =0x00000000
+triggered         =0
+trigActivePost    =0
+traceLevel        =0x0000000000000001 0x0000000000000000
+num_entries       =50000
+max_msg_sz        =128  includes system inforced terminator
+max_params        =10
+entry_size        =256
+namLvlTbl_ents    =200
+namLvlTbl_name_sz =16
+wrIdxCnt offset   =0x2000
+namLvls offset    =0x2080
+buffer_offset     =0x4000
+memlen            =12820480
+
+
+Notice "namLvlTbl_ents    =200"
+
+When the file is first created, the default for all the "level masks" is
+0x0000000000000001 for the M (mmap file entries), and 0x0 for both
+the S (stdout) and T (trigger) masks.
+
+LEVELMASKS:
+
+There are basically to main set of masks: one to cause a trace to
+be saved into the circulare memory buffer (file) and one to cause a 
+trace to be printed to stdout.
+
+The masks can be view via the "ttids" function which will cause, for
+example the following to be printed:
+
+TID             NAME              maskM              maskS              maskT
+--- ---------------- ------------------ ------------------ ------------------
+198            TRACE 0x0000000000000001 0x0000000000000000 0x0000000000000000
+199          _TRACE_ 0x0000000000000001 0x0000000000000000 0x0000000000000000
+
+In order for a TRACE to reach it's desination, the bit in the
+mask which corresponds to the _level_ (0-63) specified in TRACE must be
+set in the mask for the specified TID (which will correspond to the
+TRACE_NAME unless all the entries have been used by other names).
+
+With the above printout, only trace level 0 TRACEs with some up only
+in the trace file -- shown via the "tshow" function.
+
+
+CONVENIENCE FUNCTIONS
+
+In general, the functions support a -f<file> and/or -n<name> option.
+tdelta, however, has different options.
+
+tinfo [opt]        -- print info
+tshow [opt]        -- show the buffer (pipe to pager, head or tail)
+ttids [opt]        -- show the TID, names, masks
+tlvlM [opt] <msk>  -- set the mask -- often -n<name> is helpful
+tlvlS [opt] <msk>  -- set the mask -- often -n<name> is helpful
+tlvlT [opt] <msk>  -- set the mask -- often -n<name> is helpful
+tmodeM [opt] <0|1> -- disable (0) or enable (1) the memory destination
+tmodeS [opt] <0|1> -- disable (0) or enable (1) the stdout destination
+tfreeze [opt]      -- turns memory destination off -- "freezes" contents
+treset [opt]       -- clears the memory buffer and trigger parameters
+tonM [opt] <lvls>  -- turns levels on (and also the mode) for the S destination
+tonS [opt] <lvls>  -- turns levels on (and also the mode) for the M destination
+toffS [opt]<lvls>  -- turns both the stdout and memory desinations off
+toffM [opt]<lvls>  -- turns both the stdout and memory desinations off
+tdelta [opts]      -- trace_delta.pl "$@" | less
+tcntl [opt]        -- general -- give cmd to trace_cntl i.e: tcntl TRACE 0 "hi"

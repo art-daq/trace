@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.3 $$Date: 2014-03-03 05:34:19 $";
+ # rev="$Revision$$Date$";
 
 #
 # src_module/Makefile   -- NOTE: top level make file calls this make file

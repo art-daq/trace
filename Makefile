@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.23 $$Date: 2015-08-31 16:01:24 $";
+ # rev="$Revision$$Date$";
 
 # TOP LEVEL Makefile
 

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1.6 $$Date: 2014-03-05 23:05:00 $";
+ # rev="$Revision$$Date$";
 
 
 SUBDIRS=module userspace

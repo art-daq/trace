@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracelib.h,v $
- // rev="$Revision: 1.2 $$Date: 2014-04-18 16:00:41 $";
+ // rev="$Revision$$Date$";
  */
 #ifndef TRACELIB_H
 #define TRACELIB_H

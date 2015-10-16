@@ -213,7 +213,7 @@ union trace_mode_u
 
 struct traceControl_s
 {
-    char           version_string[sizeof(int32_t)*16];
+    char           version_string[sizeof(int64_t)*16];
     uint32_t	   version;
     uint32_t       num_params;
     uint32_t       siz_msg;

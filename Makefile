@@ -12,7 +12,8 @@ echo "OUT=<dir> must be specified and <dir> must exist.";\
 echo "Examples:";\
 echo "  make OUT=\$$PWD -j4     \# the default is to build the 2 userspace programs";\
 echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
-echo "  make OUT=\$$PWD NO32ON64=1 src_lib src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+echo "  make OUT=\$$PWD NO32ON64=1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+echo "  make OUT=\$$PWD NO32ON64=1 KDIR=/home/ron/work/WireCapPrj/linux-3.16.1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
 echo "  make OUT=\$$PWD src_module";\
 echo "  make OUT=\$$PWD modules";\
 echo "  make OUT=\$$PWD modules KDIR=<path_to_built_kernel>";\

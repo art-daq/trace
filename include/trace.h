@@ -308,6 +308,7 @@ static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
        int                trace_allow_printk=0;              /* module_param */
+static int                trace_buffer_numa_node=-1;		 /* module_param */
 #  endif
 # else    /*                                         K=1,IMPL=0  */
 
@@ -945,7 +946,7 @@ static int traceInit( const char *_name )
 	printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
 	       ,numents_,   msgmax_,   argsmax_,   namtblents_ );
 	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
-	traceControl_p = (struct traceControl_s *)vmalloc( memlen );
+	traceControl_p = (struct traceControl_s *)vmalloc_node( memlen, trace_buffer_numa_node );
 	I_created = 1;  /* KERNEL always creates  (no verification against existing needed) */
 #  endif
 

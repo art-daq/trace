@@ -21,6 +21,6 @@ add_custom_command(
 
 add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/Module.symvers DESTINATION ${${product}_inc_dir}/../module/${KVERS})
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION ${${product}_inc_dir}/../module)
 
 install_source()

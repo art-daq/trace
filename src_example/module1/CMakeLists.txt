@@ -20,6 +20,4 @@ add_custom_command(
 
 add_custom_target(module1 ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../../module/${KVERS}/other_mod.ko src_module)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../../module/${KVERS}/other_mod.ko DESTINATION ${${product}_inc_dir}/../module/${KVERS})
-
 install_source()

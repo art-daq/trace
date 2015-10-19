@@ -21,5 +21,5 @@ add_custom_command(
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/some_module.c ${CMAKE_CURRENT_SOURCE_DIR}/steve_module.c
 )
 add_custom_target(some_mod ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../../module/${KVERS}/some_mod.ko src_module)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../../module/${KVERS}/some_mod.ko ${CMAKE_CURRENT_BINARY_DIR}/../../module/${KVERS}/steve_mod.ko 
-	    DESTINATION ${${product}_inc_dir}/../module/${KVERS})
+
+install_source()

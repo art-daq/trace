@@ -1,4 +1,10 @@
-execute_process(COMMAND uname -r OUTPUT_VARIABLE KVERS OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (DEFINED ENV{KDIR})
+  set(KDIR "$ENV{KDIR}")
+  execute_process(COMMAND cat ${KDIR}/include/config/kernel.release OUTPUT_VARIABLE KVERS OUTPUT_STRIP_TRAILING_WHITESPACE)
+else()
+  execute_process(COMMAND uname -r OUTPUT_VARIABLE KVERS OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
 message("KVERS is ${KVERS}")
 
 add_custom_command(

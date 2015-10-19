@@ -10,8 +10,9 @@
 #include "trace.h"		/* TRACE */
 
 int
-main(  int	argc
-     , char	*argv[] )
+//main(  int	argc
+//     , char	*argv[] )
+main()
 {
     TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
     TRACE( 0, (std::string("hi %d")+" there").c_str(), 2 );

@@ -35,6 +35,12 @@ add_subdirectory(src_lib)
 # The trace utility
 add_subdirectory(src_utility)
 
+# Example Programs
+add_subdirectory(src_example)
+
+# Kernel Module
+add_subdirectory(src_module)
+
 # The include directory (aka the core of TRACE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
 INSTALL(DIRECTORY include DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
@@ -46,6 +52,8 @@ add_subdirectory(script)
 add_subdirectory(ups)
 
 # doc - Some documentation...There should be a cet_ function for this...
+FILE(COPY README DESTINATION .)
+INSTALL(FILES README DESTINATION ${product}/${version})
 FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
 INSTALL(DIRECTORY doc DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 

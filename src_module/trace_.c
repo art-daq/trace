@@ -94,7 +94,7 @@ static int __init trace_buffer_numa_node_setup(char *str)
 {
 	KSTRVAL( str, trace_buffer_numa_node, trace_buffer_numa_node );
 }
-__setup("trace__buffer_numa_node=", trace_buffer_numa_node_setup);
+__setup("trace_buffer_numa_node=", trace_buffer_numa_node_setup);
 static int __init trace_allow_printk_setup(char *str)
 {
 	KSTRVAL( str, trace_allow_printk, trace_allow_printk );

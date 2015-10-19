@@ -11,7 +11,7 @@ defaultqual e7
 # The only recognized values of the second field are product_dir, fq_dir, and -
 # The third field is not constrained.
 # Defaults:
-incdir  product_dir
+#incdir  product_dir
 bindir  fq_dir       bin
 libdir  fq_dir       lib
 

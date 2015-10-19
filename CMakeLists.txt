@@ -36,7 +36,8 @@ add_subdirectory(src_lib)
 add_subdirectory(src_utility)
 
 # The include directory (aka the core of TRACE)
-add_subdirectory(include)
+FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY include DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 
 # scripts, including the trace_delta.pl script used for tdelta
 add_subdirectory(script)

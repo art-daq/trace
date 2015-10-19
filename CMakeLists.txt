@@ -23,13 +23,30 @@ set(CMAKE_MODULE_PATH $ENV{CETBUILDTOOLS_DIR}/Modules
 include(CetCMakeEnv)
 cet_cmake_env()
 
-cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -pedantic)
+cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros
+                       EXTRA_C_FLAGS -std=c11)
 cet_report_compiler_flags()
 
-# these are minimum required versions, not the actual product versions
+include_directories(include)
+
+# The trace library
+add_subdirectory(src_lib)
+
+# The trace utility
+add_subdirectory(src_utility)
+
+# The include directory (aka the core of TRACE)
+add_subdirectory(include)
+
+# scripts, including the trace_delta.pl script used for tdelta
+add_subdirectory(script)
 
 # ups - table and config files
 add_subdirectory(ups)
+
+# doc - Some documentation...There should be a cet_ function for this...
+FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY doc DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 
 # packaging utility - enable building a package tarball
 include(UseCPack)

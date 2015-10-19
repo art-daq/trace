@@ -25,6 +25,10 @@ test "$ss" = csh && alias return exit
 set_ msg1='ERROR: You MUST setup ups'
 test -z $UPS_DIR && ( echo ""; echo "$msg1"; echo "" ) && return
 
+set_ msg3='ERROR: You MUST specify either -o, -p, or -d'
+set_ msg4='Usage: setup_for_development <-d|-o|-p> <qualifier list>'
+test -z "$1" && ( echo ""; echo "$msg4"; echo "$msg3"; echo "" ) && return
+
 # make sure we know where this script lives
 # now if we were passed a path or if not, we can figure it out (maybe if we are interactive)
 #   bash, zsh, ksh and tcsh pass params to a source file, csh does not. but someone will be writing csh scripts
@@ -60,7 +64,7 @@ set_ cetv=` grep -e '^[ \t]*cetbuildtools' $CETPKG_SOURCE/ups/product_deps | gre
 setup -B $cetb $cetv
 test "$?" = 0 || set_ setup_fail="true"
 # now get the rest of the products
-set_ cmd="$CETBUILDTOOLS_DIR/bin/set_dev_products $CETPKG_SOURCE $CETPKG_BUILD simple"
+set_ cmd="$CETBUILDTOOLS_DIR/bin/set_dev_products $CETPKG_SOURCE $CETPKG_BUILD $*"
 #echo Ready to run $cmd
 source `$cmd`
 test "$?" = 0 || set_ setup_fail="true"
@@ -74,11 +78,15 @@ test "${exit_now}" = "true" && test "$ss" = csh && unalias tnotnull nullout set_
 test "${exit_now}" = "true" && unset ss db me thisdir msg1 msg2 msg3 msg4 msg5 setup_fail set_ setenv unsetenv_ tnotnull nullout vecho_
 test "${exit_now}" = "true" && return 1
 
+# add lib to LD_LIBRARY_PATH
+source $CETBUILDTOOLS_DIR/bin/set_dev_lib
 # add bin to path
 source $CETBUILDTOOLS_DIR/bin/set_dev_bin
+# set FHICL_FILE_PATH
+source $CETBUILDTOOLS_DIR/bin/set_dev_fhicl
 
 # final sanity check and report
-source $CETBUILDTOOLS_DIR/bin/set_dev_check_report simple
+source $CETBUILDTOOLS_DIR/bin/set_dev_check_report
 
 # cleanup before exiting
 test "$ss" = csh && unalias tnotnull nullout set_ vecho_ return

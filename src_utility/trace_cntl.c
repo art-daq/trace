@@ -122,7 +122,6 @@ enum show_opts_e {
 void get_arg_sizes(	 char            *ofmt
 				   , char            *ifmt
 				   , int              opts
-				   , int              num_params
 				   , int              param_bytes
 				   , struct sizepush *sizes_out)
 {	char    *in;
@@ -257,7 +256,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	*/
 	if (start >= 0)
 	{	start++; /* start slot index needs to be turned into a "count" */
-		if (start > traceControl_p->num_entries)
+	  if ((unsigned)start > traceControl_p->num_entries)
 		{	start = traceControl_p->num_entries;
 			printf("specified start index too large, adjusting to %d\n",start );
 		}
@@ -268,7 +267,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	}
 	if ((count>=0) && (start>=0))
 	{
-		if (count > traceControl_p->num_entries)
+	  if ((unsigned)count > traceControl_p->num_entries)
 		{	max = traceControl_p->num_entries;
 			printf("specified count > num_entrie, adjusting to %d\n",max);
 		}
@@ -279,7 +278,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		max = traceControl_p->num_entries;
 	else
 		max = rdIdx;
-	if ((count>=0) && (start<0) && (count<max)) max=count;
+	if ((count>=0) && (start<0) && ((unsigned)count<max)) max=count;
 
 	buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
 	local_msg     =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
@@ -339,7 +338,6 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		msg_p[traceControl_p->siz_msg - 1] = '\0';
 
 		get_arg_sizes(	local_msg, msg_p, opts
-					  , traceControl_p->num_params
 					  , myEnt_p->param_bytes, params_sizes );
 
 		/* determine if args need to be copied */

@@ -17,6 +17,9 @@
 5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
 5b. external modules can just include trace.h and insert TRACEs
     as opposed to using EXTRA_CFLAGS or CFLAGS_EXTRA, and KBUILD_EXTRA_SYMBOLS
+5c. build userspace programs with include path (-I):
+       lib/modules/`uname -r`/build/include/linux   (if installed)
+    or <path_to_source>/include/linux
 
 ==================================================
 
@@ -65,6 +68,24 @@ diff -u init/main.c{.~1~,}
         free_initmem();
 
 
+
+# assuming you want to have trace.h installed into INSTALL_HDR_PATH/include/linux:
+
+diff -u include/uapi/linux/Kbuild{.~1~,}
+--- include/uapi/linux/Kbuild.~1~       2015-10-26 19:53:59.000000000 -0500
++++ include/uapi/linux/Kbuild   2015-10-30 11:01:10.494873620 -0500
+@@ -401,6 +401,7 @@
+ header-y += tipc_netlink.h
+ header-y += tipc.h
+ header-y += toshiba.h
++header-y += trace.h
+ header-y += tty_flags.h
+ header-y += tty.h
+ header-y += types.h
+
+
+
+# example:
 
 diff -u net/socket.c{.~1~,}
 --- net/socket.c.~1~    2015-07-09 13:33:55.000000000 -0500

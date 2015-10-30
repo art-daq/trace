@@ -83,7 +83,8 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_GETTIMEOFDAY( tvp ) do_gettimeofday( tvp )
 # define TRACE_PRINT               printk
 # define TRACE_VPRINT              vprintk
-# define TRACE_INIT_CHECK          /* no check for kernel -- init when module loaded */
+//static int trace_no_init_cnt=0;
+# define TRACE_INIT_CHECK          if(traceEntries_p!=0)
 # ifndef MODULE
 int trace_3_init(void);
 int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */

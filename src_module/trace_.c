@@ -119,9 +119,22 @@ static ssize_t trace_proc_control_write( struct file *fil, const char __user *sr
 	}
 	return siz;
 }
+static ssize_t trace_proc_control_read( struct file *fil, char __user *dst_p
+				      , size_t siz, loff_t *off )
+{
+	char    kernelBuffer[1024];
+	int     cc;
+	cc = snprintf( kernelBuffer,siz,"trace_allow_printk=%d\n", trace_allow_printk );
+	if (*off >= cc) return 0;
+	copy_to_user( dst_p, &kernelBuffer[*off], cc-*off );
+	cc = cc-*off;
+	*off += cc;
+	return cc;
+}
 static struct file_operations trace_proc_control_file_ops = {
     .owner=   THIS_MODULE,
     .write=   trace_proc_control_write,	   /* write        */
+	.read=    trace_proc_control_read,	   /* read         */
 };
 #endif
 

@@ -589,9 +589,12 @@ extern  int        optind;         /* for getopt */
 
 		for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 
-		/* at least set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
+		setenv("TRACE_LVLS","0xff",0);/*does TRACE_CNTL("lvlsetS",0xffLL);TRACE_CNTL("modeS",1LL);*/
+		/* NOTE/Recall - _LVLS does not "activate" like TRACE_{FILE,NAME,MSGMAX,NUMENTS,NAMTBLENTS} */
+
+		/* _at_least_ set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
 		   bit -- this is what is on by default when the file is created */
-		TRACE_CNTL( "lvlsetS", 0xffLL );
+		/*                    Mem    Slow Trig */
 		TRACE_CNTL( "lvlset", 0xfLL, 0LL, 0LL ); TRACE_CNTL( "modeM", 1LL );
 
 		TRACE( 0, "hello" );

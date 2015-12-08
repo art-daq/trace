@@ -9,6 +9,9 @@
 #define TRACELIBMF_H
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
+// Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
+// The TRACE macro will then use the TRACE_MF_LOGGER macro defined below for the "slow"
+// tracing function (if appropriate mask bit is set :)
 # define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)  TRACE_MF_LOGGER( lvl,__VA_ARGS__ )
 #include "tracelib.h"		/* TRACE */
 

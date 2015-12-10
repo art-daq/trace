@@ -589,6 +589,9 @@ extern  int        optind;         /* for getopt */
 
 		for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 
+		/* NOTE: using setenv method works in threading env where as additional
+		   threads initializing via TRACE will disable/undo the levels
+		   set by the initialization via TRACE_CNTL("lvlsetS",0xffLL) */
 		setenv("TRACE_LVLS","0xff",0);/*does TRACE_CNTL("lvlsetS",0xffLL);TRACE_CNTL("modeS",1LL);*/
 		/* NOTE/Recall - _LVLS does not "activate" like TRACE_{FILE,NAME,MSGMAX,NUMENTS,NAMTBLENTS} */
 

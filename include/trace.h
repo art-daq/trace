@@ -149,7 +149,7 @@ static const char *  TRACE_NAME=NULL;
                       , ostr.str().c_str() );							\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
-	    {   if (lclTime.tv_sec == 0) ostr __VA_ARGS__;\
+	    {   if (lclTime.tv_sec == 0) { ostr __VA_ARGS__; }				\
             TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr.str().c_str() );	\
 	    }								\
         }								\

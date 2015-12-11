@@ -35,8 +35,9 @@
 # else
 #  define SYS_GETTID SYS_gettid
 # endif
+# pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
 # ifdef __cplusplus
-#  include <sstream>
+#  include <sstream> /* std::ostringstream */
 # endif
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */

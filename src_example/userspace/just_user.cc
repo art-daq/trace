@@ -9,6 +9,7 @@
 
 #include <string>
 #include <sstream>
+#include <ios>
 
 # if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* c++98 c99 c++0x c11 c++11 */
@@ -26,6 +27,7 @@ main ()
 {
 	std::string stdstr("hello my name is");
 	std::ostringstream ostr;
+	char const *filename="some/path";
 	ostr << "<< stdstr (just to confuse %d" << stdstr;
 
     TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
@@ -37,8 +39,8 @@ main ()
 	// now with args
 	TRACE_( 1, stdstr << " ron %d", 1 );
 	TRACE_( 1, "ron is my name." );
-    TRACE_( 1, "hello - hopefully no compile warnings %d %.1f %d",1,1.6,2 );
-    TRACE_( 1, "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<3 );
+    TRACE_( 1, "hello - nice for strings: file="<<filename<<" %d %.1f %d",1,1.6,2 );
+    TRACE_( 1, "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<std::hex<<15 );
 	TRACE_( 1, ostr, 1 ); // an address  (also the 1 param is extra
 	TRACE_( 1, ostr.str(), 1 );
 	TRACE_( 1, ostr.str()<<"xx", 1 );

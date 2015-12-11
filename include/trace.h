@@ -35,6 +35,9 @@
 # else
 #  define SYS_GETTID SYS_gettid
 # endif
+# ifdef __cplusplus
+#  include <sstream>
+# endif
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
 #  define TRACE_ATOMIC_T     std::atomic<uint32_t>
@@ -132,6 +135,22 @@ static const char *  TRACE_NAME=NULL;
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
 	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ ); \
+	    }								\
+        }								\
+    } while (0)
+# define TRACE_( lvl, ... ) do \
+    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
+	TRACE_INIT_CHECK						\
+	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
+		std::ostringstream ostr;										\
+		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+        {   ostr __VA_ARGS__;											\
+			trace( &lclTime, lvl, 0 TRACE_XTRA_PASSED					\
+                      , ostr.str().c_str() );							\
+	    }								\
+		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+	    {   if (lclTime.tv_sec == 0) ostr __VA_ARGS__;\
+            TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr.str().c_str() );	\
 	    }								\
         }								\
     } while (0)

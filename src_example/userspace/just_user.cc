@@ -41,7 +41,7 @@ main ()
 	TRACE_( 1, "ron is my name." );
     TRACE_( 1, "hello - nice for strings: file="<<filename<<" %d %.1f %d",1,1.6,2 );
     TRACE_( 1, "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<std::hex<<15 );
-	TRACE_( 1, ostr, 1 ); // an address  (also the 1 param is extra
+	//TRACE_( 1, ostr, 1 ); // an address  (also the 1 param is extra)
 	TRACE_( 1, ostr.str(), 1 );
 	TRACE_( 1, ostr.str()<<"xx", 1 );
 	//TRACE_( 1, (ostr<<"xx").str(), 2 ); these shenanigans don't compile

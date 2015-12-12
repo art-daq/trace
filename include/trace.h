@@ -35,7 +35,6 @@
 # else
 #  define SYS_GETTID SYS_gettid
 # endif
-# pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
 # ifdef __cplusplus
 #  include <sstream> /* std::ostringstream */
 # endif
@@ -126,35 +125,21 @@ static const char *  TRACE_NAME=NULL;
 
 /* c++98 c99 c++0x c11 c++11 */
 
-# define TRACE( lvl, fmt, ... ) do			\
+# define TRACE( lvl, ... ) do			\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-		{   trace( &lclTime, lvl, TRACE_ARGS( fmt , ##__VA_ARGS__)-1 TRACE_XTRA_PASSED \
-                      , fmt , ##__VA_ARGS__ );					\
+		{   trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
+                      , __VA_ARGS__ );					\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
-	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, fmt , ##__VA_ARGS__ ); \
+	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ ); \
 	    }								\
         }								\
     } while (0)
-# define TRACE_( lvl, fmt, ... ) do			\
-    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
-	TRACE_INIT_CHECK						\
-	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
-		std::ostringstream ostr__;										\
-		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-        {   ostr__ << fmt;\
-			trace( &lclTime, lvl, TRACE_ARGS( fmt , ##__VA_ARGS__)-1 TRACE_XTRA_PASSED					\
-                      , ostr__.str().c_str() , ##__VA_ARGS__ );							\
-	    }								\
-		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
-	    {   if (lclTime.tv_sec == 0) { ostr__ << fmt; }					\
-            TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr__.str().c_str() , ##__VA_ARGS__ );	\
-	    }								\
-        }								\
-    } while (0)
+
+//#define TRACE_( lvl, fmt, ... )   MOVED TO END OF FILE AND AFTER # pragma GCC system_header
 
 # define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 # define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
@@ -1048,5 +1033,25 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 }
 
 #endif /* TRACE_LIB */
+
+#if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) )
+# pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
+# define TRACE_( lvl, fmt, ... ) do			\
+    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
+	TRACE_INIT_CHECK						\
+	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
+		std::ostringstream ostr__;										\
+		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+        {   ostr__ << fmt;\
+			trace( &lclTime, lvl, TRACE_ARGS( fmt , ##__VA_ARGS__)-1 TRACE_XTRA_PASSED					\
+                      , ostr__.str().c_str() , ##__VA_ARGS__ );							\
+	    }								\
+		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+	    {   if (lclTime.tv_sec == 0) { ostr__ << fmt; }					\
+            TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr__.str().c_str() , ##__VA_ARGS__ );	\
+	    }								\
+        }								\
+    } while (0)
+#endif
 
 #endif /* TRACE_H_5216 */

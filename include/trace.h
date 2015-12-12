@@ -1056,8 +1056,11 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 //#  pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
 #  define TRACE_ARGS_ARGS( first, ... ) , ##__VA_ARGS__
 # else
+	// The trick is: the number of args in __VA_ARGS__ "shifts" the appropriate XX*(__VA_ARGS__) macro
+    // to the DO_THIS postition in the DO_XX macro. Then only that appropriate XX*(__VA_ARGS__) macro is
+    // evalutated; the others are ignored.
 #  define TRACE_ARGS_ARGS(...) \
-	XXX_X(__VA_ARGS__,XX_35(__VA_ARGS__),								\
+	DO_XX(__VA_ARGS__,XX_35(__VA_ARGS__),								\
 		  XX_34(__VA_ARGS__), XX_33(__VA_ARGS__), XX_32(__VA_ARGS__),	\
 		  XX_31(__VA_ARGS__), XX_30(__VA_ARGS__), XX_29(__VA_ARGS__),	\
 		  XX_28(__VA_ARGS__), XX_27(__VA_ARGS__), XX_26(__VA_ARGS__),	\
@@ -1070,7 +1073,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		  XXX_7(__VA_ARGS__), XXX_6(__VA_ARGS__), XXX_5(__VA_ARGS__),	\
 		  XXX_4(__VA_ARGS__), XXX_3(__VA_ARGS__), XXX_2(__VA_ARGS__),	\
 		  XXX_1(__VA_ARGS__), XXX_0(__VA_ARGS__), xx )
-#  define XXX_X(x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,DO_THIS,...) DO_THIS
+#  define DO_XX(x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,DO_THIS,...) DO_THIS
 #  define XXX_0(A)                    
 #  define XXX_1(A,B)                                                                     ,B
 #  define XXX_2(A,B,C)                                                                   ,B,C

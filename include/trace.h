@@ -1035,23 +1035,79 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 #endif /* TRACE_LIB */
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) )
-# pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
-# define TRACE_( lvl, fmt, ... ) do			\
+# define TRACE_( lvl, ... ) do			\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		std::ostringstream ostr__;										\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-        {   ostr__ << fmt;\
-			trace( &lclTime, lvl, TRACE_ARGS( fmt , ##__VA_ARGS__)-1 TRACE_XTRA_PASSED					\
-                      , ostr__.str().c_str() , ##__VA_ARGS__ );							\
+        {   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
+			trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED					\
+				  , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
-	    {   if (lclTime.tv_sec == 0) { ostr__ << fmt; }					\
-            TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr__.str().c_str() , ##__VA_ARGS__ );	\
+	    {   if (lclTime.tv_sec == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); }					\
+            TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
 	    }								\
         }								\
     } while (0)
+# define TRACE_ARGS_FMT( first, ... ) first
+# if 0
+//#  pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
+#  define TRACE_ARGS_ARGS( first, ... ) , ##__VA_ARGS__
+# else
+#  define TRACE_ARGS_ARGS(...) \
+	XXX_X(__VA_ARGS__,XX_35(__VA_ARGS__),								\
+		  XX_34(__VA_ARGS__), XX_33(__VA_ARGS__), XX_32(__VA_ARGS__),	\
+		  XX_31(__VA_ARGS__), XX_30(__VA_ARGS__), XX_29(__VA_ARGS__),	\
+		  XX_28(__VA_ARGS__), XX_27(__VA_ARGS__), XX_26(__VA_ARGS__),	\
+		  XX_25(__VA_ARGS__), XX_24(__VA_ARGS__), XX_23(__VA_ARGS__),	\
+		  XX_22(__VA_ARGS__), XX_21(__VA_ARGS__), XX_20(__VA_ARGS__),	\
+		  XX_19(__VA_ARGS__), XX_18(__VA_ARGS__), XX_17(__VA_ARGS__),	\
+		  XX_16(__VA_ARGS__), XX_15(__VA_ARGS__), XX_14(__VA_ARGS__),	\
+		  XX_13(__VA_ARGS__), XX_12(__VA_ARGS__), XX_11(__VA_ARGS__),	\
+		  XX_10(__VA_ARGS__), XXX_9(__VA_ARGS__), XXX_8(__VA_ARGS__),	\
+		  XXX_7(__VA_ARGS__), XXX_6(__VA_ARGS__), XXX_5(__VA_ARGS__),	\
+		  XXX_4(__VA_ARGS__), XXX_3(__VA_ARGS__), XXX_2(__VA_ARGS__),	\
+		  XXX_1(__VA_ARGS__), XXX_0(__VA_ARGS__), xx )
+#  define XXX_X(x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,DO_THIS,...) DO_THIS
+#  define XXX_0(A)                    
+#  define XXX_1(A,B)                                                                     ,B
+#  define XXX_2(A,B,C)                                                                   ,B,C
+#  define XXX_3(A,B,C,D)                                                                 ,B,C,D
+#  define XXX_4(A,B,C,D,E)                                                               ,B,C,D,E
+#  define XXX_5(A,B,C,D,E,F)                                                             ,B,C,D,E,F
+#  define XXX_6(A,B,C,D,E,F,G)                                                           ,B,C,D,E,F,G
+#  define XXX_7(A,B,C,D,E,F,G,H)                                                         ,B,C,D,E,F,G,H
+#  define XXX_8(A,B,C,D,E,F,G,H,I)                                                       ,B,C,D,E,F,G,H,I
+#  define XXX_9(A,B,C,D,E,F,G,H,I,J)                                                     ,B,C,D,E,F,G,H,I,J
+#  define XX_10(A,B,C,D,E,F,G,H,I,J,K)                                                   ,B,C,D,E,F,G,H,I,J,K
+#  define XX_11(A,B,C,D,E,F,G,H,I,J,K,L)                                                 ,B,C,D,E,F,G,H,I,J,K,L
+#  define XX_12(A,B,C,D,E,F,G,H,I,J,K,L,M)                                               ,B,C,D,E,F,G,H,I,J,K,L,M
+#  define XX_13(A,B,C,D,E,F,G,H,I,J,K,L,M,N)                                             ,B,C,D,E,F,G,H,I,J,K,L,M,N
+#  define XX_14(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O)                                           ,B,C,D,E,F,G,H,I,J,K,L,M,N,O
+#  define XX_15(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P)                                         ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P
+#  define XX_16(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q)                                       ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q
+#  define XX_17(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R)                                     ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R
+#  define XX_18(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S)                                   ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S
+#  define XX_19(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T)                                 ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T
+#  define XX_20(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U)                               ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U
+#  define XX_21(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V)                             ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V
+#  define XX_22(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W)                           ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W
+#  define XX_23(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X)                         ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X
+#  define XX_24(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y)                       ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y
+#  define XX_25(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z)                     ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z
+#  define XX_26(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a)                   ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a
+#  define XX_27(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b)                 ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b
+#  define XX_28(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c)               ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c
+#  define XX_29(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d)             ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d
+#  define XX_30(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e)           ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e
+#  define XX_31(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f)         ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f
+#  define XX_32(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g)       ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g
+#  define XX_33(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h)     ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h
+#  define XX_34(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i)   ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i
+#  define XX_35(A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i,j) ,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i,j
+# endif
 #endif
 
 #endif /* TRACE_H_5216 */

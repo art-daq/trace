@@ -28,6 +28,7 @@ main ()
 	std::string stdstr("hello my name is");
 	std::ostringstream ostr;
 	char const *filename="some/path";
+	std::string fname("some/path2");
 	ostr << "<< stdstr (just to confuse %d" << stdstr;
 
     TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
@@ -40,6 +41,7 @@ main ()
 	TRACE_( 1, stdstr << " ron %d", 1 );
 	TRACE_( 1, "ron is my name." );
     TRACE_( 1, "hello - nice for strings: file="<<filename<<" %d %.1f %d",1,1.6,2 );
+    TRACE_( 1, "hello - nice for strings: file="+fname+" %d %.1f %d",1,1.6,2 );
     TRACE_( 1, "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<std::hex<<15 );
 	//TRACE_( 1, ostr, 1 ); // an address  (also the 1 param is extra)
 	TRACE_( 1, ostr.str(), 1 );

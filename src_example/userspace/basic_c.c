@@ -6,10 +6,11 @@
 	rev="$Revision: 1.26 $$Date: 2015/08/02 00:03:01 $";
 	*/
 
+#define _GNU_SOURCE
 #include <stdio.h>		/* printf */
 #include "trace.h"		/* TRACE */
 
-int main( int argc, char *argv[] )
+int main(  )
 {
 	printf("printf - main start\n");
 	TRACE( 0,"TRACE - 0 args");

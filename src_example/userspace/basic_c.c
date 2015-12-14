@@ -10,7 +10,7 @@
 #include <stdio.h>		/* printf */
 #include "trace.h"		/* TRACE */
 
-int main(  )
+int main( )
 {
 	printf("printf - main start\n");
 	TRACE( 0,"TRACE - 0 args");

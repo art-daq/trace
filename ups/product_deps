@@ -24,11 +24,8 @@ end_product_list
 
 qualifier	gcc	notes
 e9:debug        -nq-    --std=c++14
-e9:prof         -nq-    --std=c++14
 e7:debug        -nq-    --std=c++1y
-e7:prof         -nq-    --std=c++1y
 e6:debug        -nq-    --std=c++1y
-e6:prof         -nq-    --std=c++1y
 end_qualifier_list
 
 table_fragment_begin

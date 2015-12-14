@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision$$Date$";
+    rev="$Revision: 429 $$Date: 2015-11-15 19:13:07 -0600 (Sun, 15 Nov 2015) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case

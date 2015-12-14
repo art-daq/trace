@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just.cc,v $
-// rev="$Revision$$Date$";
+// rev="$Revision: 424 $$Date: 2015-10-19 13:08:36 -0500 (Mon, 19 Oct 2015) $";
 */
 
 #include <string>

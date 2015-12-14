@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision$$Date$"
+#define TRACE_REV  "$Revision: 445 $$Date: 2015-12-14 09:59:32 -0600 (Mon, 14 Dec 2015) $"
 
 #ifndef __KERNEL__
 
@@ -123,9 +123,16 @@ static const char *  TRACE_NAME=NULL;
 #define LVLBITSMSK ((sizeof(uint64_t)*8)-1)
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
-/* c++98 c99 c++0x c11 c++11 */
+# ifdef __cplusplus
+/* c++0x c11 c++11 */
+#  define TRACE TRACE_
+# else
+/* c++98 c99 */
+#  define TRACE TRACEC
+# endif
 
-# define TRACE( lvl, ... ) do			\
+//#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
+# define TRACEC( lvl, ... ) do			\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
@@ -139,7 +146,6 @@ static const char *  TRACE_NAME=NULL;
         }								\
     } while (0)
 
-//#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
 /* TRACE_NARGS configured to support 0 - 35 args */
 # define TRACE_NARGS(...) TRACE_NARGS_HELP1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 # define TRACE_NARGS_HELP1(...) TRACE_NARGS_HELP2(__VA_ARGS__,unused) /* "unused" to avoid warning "requires at least one argument for the "..." in a variadic macro" */
@@ -1034,7 +1040,8 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 #endif /* TRACE_LIB */
 
-#if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) )
+#if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
+/* used in c++0x c11 c++11 environment */
 # define TRACE_( lvl, ... ) do			\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\

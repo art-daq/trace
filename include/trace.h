@@ -130,7 +130,7 @@ static const char *  TRACE_NAME=NULL;
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-		{   trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
+		{   trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );					\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
@@ -139,12 +139,12 @@ static const char *  TRACE_NAME=NULL;
         }								\
     } while (0)
 
-//#define TRACE_( lvl, fmt, ... )   MOVED TO END OF FILE AND AFTER # pragma GCC system_header
-
-# define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
-# define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
-# define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
-# define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__) - 1, __VA_ARGS__ )
+//#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
+/* TRACE_NARGS configured to support 0 - 35 args */
+# define TRACE_NARGS(...) TRACE_NARGS_HELP1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
+# define TRACE_NARGS_HELP1(...) TRACE_NARGS_HELP2(__VA_ARGS__,unused) /* "unused" to avoid warning "requires at least one argument for the "..." in a variadic macro" */
+# define TRACE_NARGS_HELP2(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
+# define TRACE_CNTL( ... ) traceCntl( TRACE_NARGS(__VA_ARGS__), __VA_ARGS__ )
 
 #else    /* __GXX_WEAK__... */
 
@@ -155,7 +155,7 @@ static const char *  TRACE_NAME=NULL;
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-	    {   trace( &lclTime, lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
+	    {   trace( &lclTime, lvl, TRACE_NARGS(msgargs) TRACE_XTRA_PASSED \
                       , msgargs );					\
 	    }								\
 	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
@@ -164,10 +164,10 @@ static const char *  TRACE_NAME=NULL;
 	}								\
     } while (0)
 
-# define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
-# define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
-# define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
-# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS( 0, cmdargs ) - 2 , cmdargs )
+# define TRACE_NARGS(args...) TRACE_NARGS_HELP1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
+# define TRACE_NARGS_HELP1(args...) TRACE_NARGS_HELP2(args,unused)
+# define TRACE_NARGS_HELP2(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
+# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_NARGS( cmdargs ), cmdargs )
 
 #endif   /* __GXX_WEAK__... */
 
@@ -1042,7 +1042,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		std::ostringstream ostr__;										\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
         {   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
-			trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED					\
+			trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED					\
 				  , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
@@ -1060,7 +1060,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
     // to the DO_THIS postition in the DO_XX macro. Then only that appropriate XX*(__VA_ARGS__) macro is
     // evalutated; the others are ignored.
 #  define TRACE_ARGS_ARGS(...) \
-	DO_XX(__VA_ARGS__,XXX_X(__VA_ARGS__),								\
+	DO_XX(__VA_ARGS__,\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
@@ -1072,8 +1072,8 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
-		  XXX_X(__VA_ARGS__), XXX_0(__VA_ARGS__), xx )
-#  define DO_XX(x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,DO_THIS,...) DO_THIS
+		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_0(__VA_ARGS__), unused ) /* "unused" to avoid warning "requires at least one argument for the "..." in a variadic macro" */
+#  define DO_XX(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,do_this,...) do_this
 #  define XXX_0(A)
 #  define XXX_X(A,...) ,__VA_ARGS__
 # endif

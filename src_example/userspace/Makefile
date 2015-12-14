@@ -40,10 +40,12 @@ LDFLAGS  = -lpthread  # -g not needed
 #       http://www.delorie.com/gnu/docs/make/make_101.html
 #   and 10.7 Old-Fashioned Suffix Rules
 #       http://www.delorie.com/gnu/docs/make/make_112.html
+% : %.c        # cancel the built-in rule (give no recipe)
+${OUT}% : %.c  # cancel the built-in rule (give no recipe)
 %.o : %.c        # cancel the built-in rule (give no recipe)
 ${OUT}%.o : %.c
 	$(CC) $(CFLAGS) $(XTRA_CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
-% : %.o
+${OUT}% : ${OUT}%.o
 	@echo 'CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" ^="$^"'
 	@echo 'LOADLIBES="$(LOADLIBES)" LDLIBS="$(LDLIBS)" @="$@"'
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
@@ -102,7 +104,7 @@ endif
 # to handle any further dependencies
 # Note: "objects" can be controlled: make hello objects=hello.o
 #$(executables): $(objects)
-$(patsubst %,${OUT}%,$(executables)): $(patsubst %,${OUT}%,$(objects))
+#$(patsubst %,${OUT}%,$(executables)): $(patsubst %,${OUT}%,$(objects))
 
 .PHONY: tags
 tags:
@@ -111,7 +113,7 @@ tags:
 #	find . -name '*.[ch]' | etags --ignore-indentation --no-defines -
 
 clean:
-	rm -f $(executables) $(exeobjs) $(objects) *~ mk.dep
+	rm -f $(executables) $(exeobjs) $(objects) *~ *.d mk.dep
 
 variables:
 	@echo cexesrc=$(cexesrc)

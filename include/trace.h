@@ -7,11 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-<<<<<<< HEAD
 #define TRACE_REV  "$Revision$$Date$"
-=======
-#define TRACE_REV  "$Id$"
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 #ifndef __KERNEL__
 
@@ -39,12 +35,9 @@
 # else
 #  define SYS_GETTID SYS_gettid
 # endif
-<<<<<<< HEAD
 # ifdef __cplusplus
 #  include <sstream> /* std::ostringstream */
 # endif
-=======
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
 #  define TRACE_ATOMIC_T     std::atomic<uint32_t>
@@ -93,12 +86,8 @@ static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
 # define TRACE_GETTIMEOFDAY( tvp ) do_gettimeofday( tvp )
 # define TRACE_PRINT               printk
 # define TRACE_VPRINT              vprintk
-<<<<<<< HEAD
 //static int trace_no_init_cnt=0;
 # define TRACE_INIT_CHECK          if(traceEntries_p!=0)
-=======
-# define TRACE_INIT_CHECK          /* no check for kernel -- init when module loaded */
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 # ifndef MODULE
 int trace_3_init(void);
 int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
@@ -136,20 +125,12 @@ static const char *  TRACE_NAME=NULL;
 
 /* c++98 c99 c++0x c11 c++11 */
 
-<<<<<<< HEAD
 # define TRACE( lvl, ... ) do			\
-=======
-# define TRACE( lvl, ... ) do \
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-<<<<<<< HEAD
 		{   trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
-=======
-            {   trace( &lclTime, lvl, TRACE_ARGS(__VA_ARGS__)-1 TRACE_XTRA_PASSED \
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
                       , __VA_ARGS__ );					\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
@@ -158,19 +139,12 @@ static const char *  TRACE_NAME=NULL;
         }								\
     } while (0)
 
-<<<<<<< HEAD
 //#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
 /* TRACE_NARGS configured to support 0 - 35 args */
 # define TRACE_NARGS(...) TRACE_NARGS_HELP1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 # define TRACE_NARGS_HELP1(...) TRACE_NARGS_HELP2(__VA_ARGS__,unused) /* "unused" to avoid warning "requires at least one argument for the "..." in a variadic macro" */
 # define TRACE_NARGS_HELP2(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
 # define TRACE_CNTL( ... ) traceCntl( TRACE_NARGS(__VA_ARGS__), __VA_ARGS__ )
-=======
-# define TRACE_ARGS(...) TRACE_ARGS_HELPER1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
-# define TRACE_ARGS_HELPER1(...) TRACE_ARGS_HELPER2(__VA_ARGS__)
-# define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, ...) n
-# define TRACE_CNTL( ... ) traceCntl( TRACE_ARGS(__VA_ARGS__) - 1, __VA_ARGS__ )
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 #else    /* __GXX_WEAK__... */
 
@@ -181,11 +155,7 @@ static const char *  TRACE_NAME=NULL;
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
-<<<<<<< HEAD
 	    {   trace( &lclTime, lvl, TRACE_NARGS(msgargs) TRACE_XTRA_PASSED \
-=======
-	    {   trace( &lclTime, lvl, TRACE_ARGS(0, msgargs)-2 TRACE_XTRA_PASSED \
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
                       , msgargs );					\
 	    }								\
 	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
@@ -194,17 +164,10 @@ static const char *  TRACE_NAME=NULL;
 	}								\
     } while (0)
 
-<<<<<<< HEAD
 # define TRACE_NARGS(args...) TRACE_NARGS_HELP1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0)
 # define TRACE_NARGS_HELP1(args...) TRACE_NARGS_HELP2(args,unused)
 # define TRACE_NARGS_HELP2(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
 # define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_NARGS( cmdargs ), cmdargs )
-=======
-# define TRACE_ARGS(args...) TRACE_ARGS_HELPER1(args,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
-# define TRACE_ARGS_HELPER1(args...) TRACE_ARGS_HELPER2(args)
-# define TRACE_ARGS_HELPER2(x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n, x...) n
-# define TRACE_CNTL( cmdargs... ) traceCntl( TRACE_ARGS( 0, cmdargs ) - 2 , cmdargs )
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 #endif   /* __GXX_WEAK__... */
 
@@ -256,11 +219,7 @@ union trace_mode_u
 
 struct traceControl_s
 {
-<<<<<<< HEAD
     char           version_string[sizeof(int64_t)*16];
-=======
-    char           version_string[sizeof(int32_t)*16];
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
     uint32_t	   version;
     uint32_t       num_params;
     uint32_t       siz_msg;
@@ -355,10 +314,7 @@ static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
        int                trace_allow_printk=0;              /* module_param */
-<<<<<<< HEAD
 static int                trace_buffer_numa_node=-1;		 /* module_param */
-=======
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 #  endif
 # else    /*                                         K=1,IMPL=0  */
 
@@ -996,11 +952,7 @@ static int traceInit( const char *_name )
 	printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
 	       ,numents_,   msgmax_,   argsmax_,   namtblents_ );
 	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
-<<<<<<< HEAD
 	traceControl_p = (struct traceControl_s *)vmalloc_node( memlen, trace_buffer_numa_node );
-=======
-	traceControl_p = (struct traceControl_s *)vmalloc( memlen );
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 	I_created = 1;  /* KERNEL always creates  (no verification against existing needed) */
 #  endif
 
@@ -1082,7 +1034,6 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 #endif /* TRACE_LIB */
 
-<<<<<<< HEAD
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) )
 # define TRACE_( lvl, ... ) do			\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
@@ -1128,6 +1079,4 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 # endif
 #endif
 
-=======
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 #endif /* TRACE_H_5216 */

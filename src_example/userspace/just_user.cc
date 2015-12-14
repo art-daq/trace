@@ -3,7 +3,6 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
-<<<<<<< HEAD
 // rev="$Revision$$Date$";
 */
 
@@ -12,11 +11,6 @@
 #include <sstream>
 #include <ios>
 
-=======
-// rev="$Revision: 1.3 $$Date: 2014/04/15 19:07:37 $";
-*/
-
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 # if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* c++98 c99 c++0x c11 c++11 */
 #  define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)          printf( __VA_ARGS__ );printf("\n")
@@ -27,7 +21,6 @@
 #include "trace.h"		/* TRACE */
 
 int
-<<<<<<< HEAD
 //main(  int	argc
 //     , char	*argv[] )
 main ()
@@ -68,11 +61,5 @@ main ()
 		   "%d %d %d %d %d %d %d %d %d %d "
 		   "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d"
 		   , 41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75 );
-=======
-main(  int	argc
-     , char	*argv[] )
-{
-    TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
     return (0);
 }   /* main */

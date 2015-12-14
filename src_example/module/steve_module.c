@@ -3,11 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: steve_module.c,v $
-<<<<<<< HEAD
     rev="$Revision$$Date$";
-=======
-    rev="$Revision: 1.2 $$Date: 2015/04/25 16:52:48 $";
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
     */
 
 #include <linux/module.h>

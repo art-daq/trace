@@ -4,11 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-<<<<<<< HEAD
 char *rev="$Revision$$Date$";
-=======
-char *rev="$Revision: 1.95 $$Date: 2015/09/14 15:50:12 $";
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -126,10 +122,6 @@ enum show_opts_e {
 void get_arg_sizes(	 char            *ofmt
 				   , char            *ifmt
 				   , int              opts
-<<<<<<< HEAD
-=======
-				   , int              num_params
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 				   , int              param_bytes
 				   , struct sizepush *sizes_out)
 {	char    *in;
@@ -264,11 +256,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	*/
 	if (start >= 0)
 	{	start++; /* start slot index needs to be turned into a "count" */
-<<<<<<< HEAD
 	  if ((unsigned)start > traceControl_p->num_entries)
-=======
-		if (start > traceControl_p->num_entries)
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 		{	start = traceControl_p->num_entries;
 			printf("specified start index too large, adjusting to %d\n",start );
 		}
@@ -279,11 +267,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	}
 	if ((count>=0) && (start>=0))
 	{
-<<<<<<< HEAD
 	  if ((unsigned)count > traceControl_p->num_entries)
-=======
-		if (count > traceControl_p->num_entries)
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 		{	max = traceControl_p->num_entries;
 			printf("specified count > num_entrie, adjusting to %d\n",max);
 		}
@@ -294,11 +278,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		max = traceControl_p->num_entries;
 	else
 		max = rdIdx;
-<<<<<<< HEAD
 	if ((count>=0) && (start<0) && ((unsigned)count<max)) max=count;
-=======
-	if ((count>=0) && (start<0) && (count<max)) max=count;
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 	buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
 	local_msg     =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
@@ -358,10 +338,6 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		msg_p[traceControl_p->siz_msg - 1] = '\0';
 
 		get_arg_sizes(	local_msg, msg_p, opts
-<<<<<<< HEAD
-=======
-					  , traceControl_p->num_params
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 					  , myEnt_p->param_bytes, params_sizes );
 
 		/* determine if args need to be copied */
@@ -613,7 +589,6 @@ extern  int        optind;         /* for getopt */
 
 		for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
 
-<<<<<<< HEAD
 		/* NOTE: using setenv method works in threading env where as additional
 		   threads initializing via TRACE will disable/undo the levels
 		   set by the initialization via TRACE_CNTL("lvlsetS",0xffLL) */
@@ -623,10 +598,6 @@ extern  int        optind;         /* for getopt */
 		/* _at_least_ set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
 		   bit -- this is what is on by default when the file is created */
 		/*                    Mem    Slow Trig */
-=======
-		/* at least set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
-		   bit -- this is what is on by default when the file is created */
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 		TRACE_CNTL( "lvlset", 0xfLL, 0LL, 0LL ); TRACE_CNTL( "modeM", 1LL );
 
 		TRACE( 0, "hello" );

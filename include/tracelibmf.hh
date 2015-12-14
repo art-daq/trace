@@ -3,22 +3,15 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracelibmf.hh,v $
-<<<<<<< HEAD
  // rev="$Revision$$Date$";
-=======
- // rev="$Revision: 1.4 $$Date: 2014/04/18 19:37:16 $";
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
  */
 #ifndef TRACELIBMF_H
 #define TRACELIBMF_H
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
-<<<<<<< HEAD
 // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
 // The TRACE macro will then use the TRACE_MF_LOGGER macro defined below for the "slow"
 // tracing function (if appropriate mask bit is set :)
-=======
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 # define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)  TRACE_MF_LOGGER( lvl,__VA_ARGS__ )
 #include "tracelib.h"		/* TRACE */
 

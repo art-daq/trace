@@ -4,13 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: cvs_rel_notes.sh,v $
-<<<<<<< HEAD
 #   $Revision$
 #   $Date$
-=======
-#   $Revision: 1.2 $
-#   $Date: 2015/02/27 17:57:50 $
->>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 set -u
 USAGE="usage: `basename $0` [--update_REL_NOTES] <nextVersion>

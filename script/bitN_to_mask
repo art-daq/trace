@@ -4,7 +4,11 @@
 # or COPYING file. If you do not have such a file, one can be obtained by
 # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 # $RCSfile: bitN_to_mask,v $
+<<<<<<< HEAD
 # rev="$Revision$$Date$";
+=======
+# rev="$Revision: 1.1 $$Date: 2014/05/01 13:06:34 $";
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 bitN_to_mask()
 {

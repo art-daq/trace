@@ -1,6 +1,11 @@
 #   $RCSfile: TRACE.table,v $
+<<<<<<< HEAD
 #   $Revision$
 #   $Date$
+=======
+#   $Revision: 1.10 $
+#   $Date: 2015/08/29 09:34:18 $
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 FILE = TABLE
 Product=TRACE
 

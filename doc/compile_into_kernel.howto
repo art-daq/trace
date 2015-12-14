@@ -3,7 +3,11 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
+<<<<<<< HEAD
  rev="$Revision$$Date$";
+=======
+ rev="$Revision: 1.4 $$Date: 2015/09/16 19:54:42 $";
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 
 
@@ -17,9 +21,12 @@
 5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
 5b. external modules can just include trace.h and insert TRACEs
     as opposed to using EXTRA_CFLAGS or CFLAGS_EXTRA, and KBUILD_EXTRA_SYMBOLS
+<<<<<<< HEAD
 5c. build userspace programs with include path (-I):
        lib/modules/`uname -r`/build/include/linux   (if installed)
     or <path_to_source>/include/linux
+=======
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 ==================================================
 
@@ -69,6 +76,7 @@ diff -u init/main.c{.~1~,}
 
 
 
+<<<<<<< HEAD
 # assuming you want to have trace.h installed into INSTALL_HDR_PATH/include/linux:
 
 diff -u include/uapi/linux/Kbuild{.~1~,}
@@ -87,6 +95,8 @@ diff -u include/uapi/linux/Kbuild{.~1~,}
 
 # example:
 
+=======
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 diff -u net/socket.c{.~1~,}
 --- net/socket.c.~1~    2015-07-09 13:33:55.000000000 -0500
 +++ net/socket.c        2015-08-29 13:52:55.448929180 -0500

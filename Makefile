@@ -3,7 +3,11 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
+<<<<<<< HEAD
  # rev="$Revision$$Date$";
+=======
+ # rev="$Revision: 1.23 $$Date: 2015/08/31 16:01:24 $";
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 # TOP LEVEL Makefile
 
@@ -12,8 +16,12 @@ echo "OUT=<dir> must be specified and <dir> must exist.";\
 echo "Examples:";\
 echo "  make OUT=\$$PWD -j4     \# the default is to build the 2 userspace programs";\
 echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
+<<<<<<< HEAD
 echo "  make OUT=\$$PWD NO32ON64=1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
 echo "  make OUT=\$$PWD NO32ON64=1 KDIR=/home/ron/work/WireCapPrj/linux-3.16.1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+=======
+echo "  make OUT=\$$PWD NO32ON64=1 src_lib src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 echo "  make OUT=\$$PWD src_module";\
 echo "  make OUT=\$$PWD modules";\
 echo "  make OUT=\$$PWD modules KDIR=<path_to_built_kernel>";\

@@ -3,7 +3,11 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_sub4.cc,v $
+<<<<<<< HEAD
  // rev="$Revision$$Date$";
+=======
+ // rev="$Revision: 1.1 $$Date: 2015/04/24 17:05:47 $";
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 #include "trace.h"
 

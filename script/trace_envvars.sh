@@ -4,7 +4,11 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_envvars.sh,v $
+<<<<<<< HEAD
  # rev='$Revision$$Date$'
+=======
+ # rev='$Revision: 1.2 $$Date: 2014/07/02 20:24:37 $'
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 USAGE="\
  usage: `basename $0` [[path/]file]   # default file is trace_cntl

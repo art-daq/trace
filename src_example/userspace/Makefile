@@ -3,8 +3,13 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
+<<<<<<< HEAD
 #  $Revision$
 #  $Date$
+=======
+#  $Revision: 1.7 $
+#  $Date: 2015/04/24 17:05:47 $
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -40,12 +45,19 @@ LDFLAGS  = -lpthread  # -g not needed
 #       http://www.delorie.com/gnu/docs/make/make_101.html
 #   and 10.7 Old-Fashioned Suffix Rules
 #       http://www.delorie.com/gnu/docs/make/make_112.html
+<<<<<<< HEAD
 % : %.c        # cancel the built-in rule (give no recipe)
 ${OUT}% : %.c  # cancel the built-in rule (give no recipe)
 %.o : %.c        # cancel the built-in rule (give no recipe)
 ${OUT}%.o : %.c
 	$(CC) $(CFLAGS) $(XTRA_CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
 ${OUT}% : ${OUT}%.o
+=======
+%.o : %.c        # cancel the built-in rule (give no recipe)
+${OUT}%.o : %.c
+	$(CC) $(CFLAGS) $(XTRA_CFLAGS) $(CPPFLAGS) -g -c -o $@ $<
+% : %.o
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 	@echo 'CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" ^="$^"'
 	@echo 'LOADLIBES="$(LOADLIBES)" LDLIBS="$(LDLIBS)" @="$@"'
 	$(CXX) $(LDFLAGS) $^ $(LOADLIBES) $(LDLIBS) -o $@
@@ -104,7 +116,11 @@ endif
 # to handle any further dependencies
 # Note: "objects" can be controlled: make hello objects=hello.o
 #$(executables): $(objects)
+<<<<<<< HEAD
 #$(patsubst %,${OUT}%,$(executables)): $(patsubst %,${OUT}%,$(objects))
+=======
+$(patsubst %,${OUT}%,$(executables)): $(patsubst %,${OUT}%,$(objects))
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 .PHONY: tags
 tags:
@@ -113,7 +129,11 @@ tags:
 #	find . -name '*.[ch]' | etags --ignore-indentation --no-defines -
 
 clean:
+<<<<<<< HEAD
 	rm -f $(executables) $(exeobjs) $(objects) *~ *.d mk.dep
+=======
+	rm -f $(executables) $(exeobjs) $(objects) *~ mk.dep
+>>>>>>> b06df97e1064bf6d8b0e7c0cfd42e2343a2521a5
 
 variables:
 	@echo cexesrc=$(cexesrc)

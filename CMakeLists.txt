@@ -6,12 +6,10 @@
 #  buildtool
 # ======================================================================
 
-
 # use cmake 2.8 or later
 cmake_minimum_required (VERSION 2.8)
 
 project(TRACE)
-
 # cetbuildtools contains our cmake modules
 set( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
 if( NOT CETBUILDTOOLS_VERSION )
@@ -26,6 +24,9 @@ cet_cmake_env()
 cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros
                        EXTRA_C_FLAGS -std=c11)
 cet_report_compiler_flags()
+
+# these are minimum required versions, not the actual product versions
+find_ups_product( cetbuildtools v3_03_00 )
 
 include_directories(include)
 

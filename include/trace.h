@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 445 $$Date: 2015-12-14 09:59:32 -0600 (Mon, 14 Dec 2015) $"
+#define TRACE_REV  "$Revision: 450 $$Date: 2015-12-15 13:35:07 -0600 (Tue, 15 Dec 2015) $"
 
 #ifndef __KERNEL__
 
@@ -37,6 +37,7 @@
 # endif
 # ifdef __cplusplus
 #  include <sstream> /* std::ostringstream */
+#  include <string>
 # endif
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
@@ -121,16 +122,10 @@ static const char *  TRACE_NAME=NULL;
 #define TRACE_CACHELINE        64
 
 #define LVLBITSMSK ((sizeof(uint64_t)*8)-1)
+
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
-# ifdef __cplusplus
-/* c++0x c11 c++11 */
-#  define TRACE TRACE_
-# else
-/* c++98 c99 */
-#  define TRACE TRACEC
-# endif
-
+# define TRACE TRACEC
 //#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
 # define TRACEC( lvl, ... ) do			\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
@@ -156,7 +151,8 @@ static const char *  TRACE_NAME=NULL;
 
 /* c89 */
 
-# define TRACE( lvl, msgargs... ) do		\
+# define TRACE TRACEC
+# define TRACEC( lvl, msgargs... ) do		\
     {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
 	TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
@@ -181,9 +177,7 @@ static const char *  TRACE_NAME=NULL;
 #if   defined(__i386__)
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-# ifndef TRACE_LIB
-   static void trace(struct timeval*,unsigned,unsigned,const char *,...)__attribute__((format(printf,4,5)));
-# endif
+# define TRACE_PRINTF_FMT_ARG_NUM 4
 # define TRACE_VA_LIST_INIT(addr) (va_list)addr
 # define TRACE_ENT_FILLER         uint32_t x[2];
 # define TRACE_32_DOUBLE_KLUDGE   nargs*=2;    /* kludge to support potential double in msg fmt */
@@ -195,9 +189,7 @@ static const char *  TRACE_NAME=NULL;
 	,double d2 __attribute__((__unused__)),double d3 __attribute__((__unused__)) \
 	,double d4 __attribute__((__unused__)),double d5 __attribute__((__unused__)) \
 	,double d6 __attribute__((__unused__)),double d7 __attribute__((__unused__))
-# ifndef TRACE_LIB
-   static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,14,15)));
-# endif
+# define TRACE_PRINTF_FMT_ARG_NUM 14
 # define TRACE_VA_LIST_INIT(addr) {{6*8,6*8+9*16,addr,addr}}
 # define TRACE_ENT_FILLER
 # define TRACE_32_DOUBLE_KLUDGE
@@ -205,13 +197,17 @@ static const char *  TRACE_NAME=NULL;
 #else
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-# ifndef TRACE_LIB
-   static void trace(struct timeval*,unsigned,unsigned,const char *,...)__attribute__((format(printf,4,5)));
-# endif
+# define TRACE_PRINTF_FMT_ARG_NUM 4
 # define TRACE_VA_LIST_INIT(addr) {addr}
 # define TRACE_ENT_FILLER
 # define TRACE_32_DOUBLE_KLUDGE   if(sizeof(long)==4)nargs*=2;
 # define TRACE_TSC32( low )       low=0
+#endif
+#ifndef TRACE_LIB
+static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
+# ifdef __cplusplus
+static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,std::string,...);
+# endif
 #endif
 
 
@@ -275,10 +271,14 @@ struct traceNamLvls_s
 };
 
 
+#ifdef __GNUC__
+#define SUPPRESS_NOT_USED_WARN __attribute__ ((unused))
+#else
+#define SUPPRESS_NOT_USED_WARN
+#endif
 
 /*--------------------------------------------------------------------------*/
 /* enter the 5 use case "areas" -- see doc/5in1.txt                         */
-
 
 #ifndef TRACE_DECL
 #define TRACE_DECL( scope, type_name, initializer ) scope type_name initializer
@@ -374,13 +374,11 @@ static uint32_t                 name2tid( const char *name );
 #   define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  trace_user( tvp,tid,lvl,msgargs )
 #  endif   /* __GXX_WEAK__... */
 
-static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, ... )
-{   va_list ap;
+static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
+{
 #  ifdef __KERNEL__
     if (!trace_allow_printk) return;
-    va_start( ap, msg );
     TRACE_VPRINT( msg, ap );
-    va_end( ap );
     TRACE_PRINT("\n");
 #  else
     char   obuf[0x1000]; int printed=0;
@@ -389,11 +387,9 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
 			, (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
 			, "%10ld%06ld %2d %2d ",tvp->tv_sec,(long)tvp->tv_usec
 			, TID,lvl );
-    va_start( ap, msg );
     printed += vsnprintf( &(obuf[printed])
 			 , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
 			 , msg, ap );
-    va_end( ap );
     if (printed < (int)sizeof(obuf))
     {   /* there is room for the \n */
 	/* buf first see if it is needed */
@@ -416,20 +412,32 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
     }
 #  endif
 }
+SUPPRESS_NOT_USED_WARN
+static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, ... )
+{
+	va_list ap;
+	va_start( ap, msg );
+	vtrace_user( tvp, TID, lvl, msg,  ap );
+	va_end( ap );
+}
+# ifdef __cplusplus
+SUPPRESS_NOT_USED_WARN
+static void trace_user( struct timeval *tvp, int TID, unsigned lvl, std::string msg, ... )
+{
+    va_list ap;
+	va_start( ap, msg );
+	vtrace_user( tvp, TID, lvl, msg.c_str(),  ap );
+	va_end( ap );	
+}   /* trace */
+# endif
+
+
 # endif /* TRACE_LOG_FUNCTION */
 
 
-# if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
-# endif
-
-static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
-                  TRACE_XTRA_UNUSED		  
-		  , const char *msg, ... )
+static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
+		  , const char *msg, va_list ap )
 {
-    va_list ap;
-
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
     unsigned long         * params_p;
@@ -497,10 +505,8 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
     if (nargs)
     {   TRACE_32_DOUBLE_KLUDGE
 	    if (nargs > traceControl_p->num_params) nargs=traceControl_p->num_params;
-	va_start( ap, msg );
 	for (argIdx=0; argIdx<nargs; ++argIdx)
 	    params_p[argIdx]=va_arg(ap,unsigned long);
-	va_end( ap );
     }
     if (traceControl_p->trigActivePost) /* armed, armed/trigger */
     {
@@ -521,7 +527,36 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 	    traceControl_p->trigIdxCnt = myIdxCnt;
 	}
     }
+}   /* vtrace */
+
+# if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
+# endif
+
+SUPPRESS_NOT_USED_WARN
+static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
+                  TRACE_XTRA_UNUSED		  
+		  , const char *msg, ... )
+{
+    va_list ap;
+	va_start( ap, msg );
+	vtrace( tvp, lvl, nargs, msg, ap );
+	va_end( ap );	
 }   /* trace */
+
+# ifdef __cplusplus
+SUPPRESS_NOT_USED_WARN
+static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
+                  TRACE_XTRA_UNUSED		  
+				  , std::string msg, ... )
+{
+    va_list ap;
+	va_start( ap, msg );
+	vtrace( tvp, lvl, nargs, msg.c_str(), ap );
+	va_end( ap );	
+}   /* trace */
+# endif
 
 # if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 #  pragma GCC diagnostic pop

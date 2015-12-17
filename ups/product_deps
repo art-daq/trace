@@ -19,7 +19,7 @@ product		version
 gcc             v4_9_3     e9
 gcc		v4_9_2     e7
 gcc             v4_9_1     e6
-cetbuildtools   v4_14_02   only_for_build
+cetbuildtools   v4_17_01   only_for_build
 end_product_list
 
 qualifier	gcc	notes

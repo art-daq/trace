@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 418 $$Date: 2015-10-16 14:50:47 -0500 (Fri, 16 Oct 2015) $";
+ # rev="$Revision: 483 $$Date: 2016-01-13 13:24:02 -0600 (Wed, 13 Jan 2016) $";
 
 # TOP LEVEL Makefile
 
@@ -12,8 +12,9 @@ echo "OUT=<dir> must be specified and <dir> must exist.";\
 echo "Examples:";\
 echo "  make OUT=\$$PWD -j4     \# the default is to build the 2 userspace programs";\
 echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
-echo "  make OUT=\$$PWD NO32ON64=1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
-echo "  make OUT=\$$PWD NO32ON64=1 KDIR=/home/ron/work/WireCapPrj/linux-3.16.1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+echo "  make OUT=\$$PWD src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+echo "  make OUT=\$$PWD KDIR=/home/ron/work/WireCapPrj/linux-3.16.1 src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
+echo "  make OUT=\$$PWD 32ON64=1 XTRA_CXXFLAGS=-std=c++11 XTRA_CFLAGS=-std=c11";\
 echo "  make OUT=\$$PWD src_module";\
 echo "  make OUT=\$$PWD modules";\
 echo "  make OUT=\$$PWD modules KDIR=<path_to_built_kernel>";\
@@ -69,7 +70,7 @@ src_example_user: OUT_check src_lib
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}";\
 	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	$(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include LIBDIR="$$out/lib/";\
-	if [ `uname -m` = x86_64 -a -z '${NO32ON64}' ];then\
+	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\
 	    out=`echo "$$out" | sed 's/64bit//'`;\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	    $(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32 LIBDIR=$$out/lib/;\
@@ -93,7 +94,7 @@ src_utility: OUT_check
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
-	if [ `uname -m` = x86_64 -a -z '${NO32ON64}' ];then\
+	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\
 	    out=`echo "$$out" | sed 's/64bit//'`;\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
@@ -106,7 +107,7 @@ src_lib: OUT_check
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/lib/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
-	if [ `uname -m` = x86_64 -a -z '${NO32ON64}' ];then\
+	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\
 	    out=`echo "$$out" | sed 's/64bit//'`;\
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\

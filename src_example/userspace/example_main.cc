@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 416 $$Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $";
+ // rev="$Revision: 476 $$Date: 2016-01-11 15:09:10 -0600 (Mon, 11 Jan 2016) $";
 
 #include <pthread.h>		/* pthread_self */
 #include <sys/time.h>		/* gettimeofday */
@@ -28,12 +28,12 @@ void* thread_func(void *arg)
     timeval mark;
     if      (trace_thread_option == 1)
     {   /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
-	tid = (long)syscall(SYS_GETTID);
+	tid = (long)syscall(TRACE_GETTID);
 	snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tid );
 	TRACE_CNTL( "file", tmp );
     }
     else if (trace_thread_option == 2)
-    {   tid = (long)syscall(SYS_GETTID);
+    {   tid = (long)syscall(TRACE_GETTID);
 	snprintf( tmp, sizeof(tmp), "T%ld", tid );
 	printf( "setting name to %s\n",tmp );
 	TRACE_CNTL( "name", tmp );

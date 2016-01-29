@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent TRACE v3_06_01
+parent TRACE v3_06_02
 defaultqual e7
 
 # These optional lines define the installed directories where
@@ -19,7 +19,7 @@ product		version
 gcc             v4_9_3     e9
 gcc		v4_9_2     e7
 gcc             v4_9_1     e6
-cetbuildtools   v4_17_01   only_for_build
+cetbuildtools   v4_18_02   only_for_build
 end_product_list
 
 qualifier	gcc	notes

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 450 $$Date: 2015-12-15 13:35:07 -0600 (Tue, 15 Dec 2015) $"
+#define TRACE_REV  "$Revision: 491 $$Date: 2016-01-26 13:44:13 -0600 (Tue, 26 Jan 2016) $"
 
 #ifndef __KERNEL__
 
@@ -31,9 +31,11 @@
 #  define PATH_MAX 1024  /* conservative */
 # endif
 # ifdef __sun__
-#  define SYS_GETTID SYS_lwp_self
+#  define TRACE_GETTID SYS_lwp_self
+# elif defined(__APPLE__)
+#  define TRACE_GETTID SYS_thread_selfid
 # else
-#  define SYS_GETTID SYS_gettid
+#  define TRACE_GETTID SYS_gettid
 # endif
 # ifdef __cplusplus
 #  include <sstream> /* std::ostringstream */
@@ -41,54 +43,98 @@
 # endif
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
-#  define TRACE_ATOMIC_T     std::atomic<uint32_t>
-#  define TRACE_THREAD_LOCAL thread_local 
+#  define TRACE_ATOMIC_T              std::atomic<uint32_t>
+#  define TRACE_ATOMIC_INIT           ATOMIC_VAR_INIT(0)
+#  define TRACE_ATOMIC_LOAD(ptr)      atomic_load(ptr)
+#  define TRACE_ATOMIC_STORE(ptr,val) atomic_store(ptr,val)
+#  define TRACE_THREAD_LOCAL          thread_local 
 # elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-#  include <stdatomic.h>		/* atomic_compare_exchange_weak */
-#  define TRACE_ATOMIC_T          /*volatile*/ _Atomic(uint32_t)
-#  define TRACE_THREAD_LOCAL      _Thread_local
+#  include <stdatomic.h>	      /* atomic_compare_exchange_weak */
+#  define TRACE_ATOMIC_T              /*volatile*/ _Atomic(uint32_t)
+#  define TRACE_ATOMIC_INIT           ATOMIC_VAR_INIT(0)
+#  define TRACE_ATOMIC_LOAD(ptr)      atomic_load(ptr)
+#  define TRACE_ATOMIC_STORE(ptr,val) atomic_store(ptr,val)
+#  define TRACE_THREAD_LOCAL          _Thread_local
 # elif defined(__x86_64__) || defined(__i686__) || defined(__i386__)
-#  define TRACE_ATOMIC_T          uint32_t
+#  define TRACE_ATOMIC_T              uint32_t
+#  define TRACE_ATOMIC_INIT           0
+#  define TRACE_ATOMIC_LOAD(ptr)      *(ptr)
+#  define TRACE_ATOMIC_STORE(ptr,val) *(ptr) = val
 #  define TRACE_THREAD_LOCAL
-static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_) \
-    { uint32_t __ret;							\
-    uint32_t __old = (old);						\
-    uint32_t __new = (new_);						\
-    volatile uint32_t *__ptr = (volatile uint32_t *)(ptr);		\
-    __asm__ volatile("lock cmpxchgl %2,%1"				\
-		 : "=a" (__ret), "+m" (*__ptr)				\
-		 : "r" (__new), "0" (__old)				\
-		 : "memory");						\
-    return (__ret);							\
+static inline uint32_t cmpxchg( uint32_t *ptr, uint32_t old, uint32_t new_)
+    { uint32_t __ret;
+    uint32_t __old = (old);
+    uint32_t __new = (new_);
+    volatile uint32_t *__ptr = (volatile uint32_t *)(ptr);
+    __asm__ volatile("lock cmpxchgl %2,%1"
+		 : "=a" (__ret), "+m" (*__ptr)
+		 : "r" (__new), "0" (__old)
+		 : "memory");
+    return (__ret);
     }
+# elif defined(__sparc__)
+/* Sparc, as per wikipedia 2016.01.11, does not do CAS.
+   I could move move the DECL stuff up can define another spinlock so that sparc could work in
+   the define/declare environment. In this case, the module static TRACE_NAME feature could not
+   be used. */
+struct my_atomic { uint32_t lck; uint32_t val; };
+#  define TRACE_ATOMIC_T              struct my_atomic
+#  define TRACE_ATOMIC_INIT           {0}
+#  define TRACE_ATOMIC_LOAD(ptr)      (ptr)->val
+#  define TRACE_ATOMIC_STORE(ptr,vv)  (ptr)->val = vv
+#  define TRACE_THREAD_LOCAL
+static inline uint32_t xchg_u32(__volatile__ uint32_t *m, uint32_t val)
+{
+        __asm__ __volatile__("swap [%2], %0"
+                             : "=&r" (val)
+                             : "" (val), "r" (m)
+                             : "memory");
+        return val;
+}
+static inline uint32_t cmpxchg( TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
+{  uint32_t old;
+   while (xchg_u32(&ptr->lck,1)!=0) ;  /* lock */
+   old=ptr->val;
+   if (old==exp) ptr->val = new_;
+   ptr->lck=0;                         /* unlock */
+   return (old);
+}
 # else
-#  define TRACE_ATOMIC_T          uint32_t
+/* THIS IS A PROBLEM -- I SHOULD PROBABLY #error */
+#  define TRACE_ATOMIC_T              uint32_t
+#  define TRACE_ATOMIC_INIT           0
+#  define TRACE_ATOMIC_LOAD(ptr)      *(ptr)
+#  define TRACE_ATOMIC_STORE(ptr,val) *(ptr) = val
 #  define TRACE_THREAD_LOCAL
 #  define cmpxchg(ptr, old, new) \
-  ({ uint32_t __old = (old); old=*ptr; *ptr=new; __old;  })
+	({ uint32_t old__ = *(ptr); if(old__==(old)) *ptr=new; old__;  })  /* THIS IS A PROBLEM -- NEED OS MUTEX HELP :( */
 # endif
-# define TRACE_GETTIMEOFDAY( tvp ) gettimeofday( tvp, NULL )
-# define TRACE_PRINT              printf
-# define TRACE_VPRINT             vprintf
-/*# define TRACE_INIT_CHECK         if((traceControl_p!=NULL)||(traceInit(TRACE_NAME)==0))*/
-# define TRACE_INIT_CHECK         if(((traceTid!=0)&&(traceControl_p!=0))||(traceInit(TRACE_NAME)==0))
+# define TRACE_GETTIMEOFDAY( tvp )    gettimeofday( tvp, NULL )
+# define TRACE_PRINT                  printf
+# define TRACE_VPRINT                 vprintf
+/*# define TRACE_INIT_CHECK             if((traceControl_p!=NULL)||(traceInit(TRACE_NAME)==0))*/
+/*# define TRACE_INIT_CHECK             if(((traceTid!=0)&&(traceControl_p!=0))||(traceInit(TRACE_NAME)==0))*/
+# define TRACE_INIT_CHECK             if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) /* See note by traceTID decl/def below */
 
 #else  /* __KERNEL__ */
 
-# include <linux/time.h>	   /* do_gettimeofday */
-/*# include <linux/printk.h>	      printk, vprintk */
-# include <linux/kernel.h>	   /* printk, vprintk */
-# include <linux/mm.h>		   /* kmalloc OR __get_free_pages */
-# include <linux/vmalloc.h>	   /* __vmalloc, vfree */
-# include <linux/spinlock.h>	   /* cmpxchg */
-# include <linux/sched.h>	   /* current (struct task_struct *) */
-# define TRACE_ATOMIC_T            uint32_t
+# include <linux/time.h>	      /* do_gettimeofday */
+/*# include <linux/printk.h>	         printk, vprintk */
+# include <linux/kernel.h>	      /* printk, vprintk */
+# include <linux/mm.h>		      /* kmalloc OR __get_free_pages */
+# include <linux/vmalloc.h>	      /* __vmalloc, vfree */
+# include <linux/spinlock.h>	      /* cmpxchg */
+# include <linux/sched.h>	      /* current (struct task_struct *) */
+# define TRACE_ATOMIC_T               uint32_t
+# define TRACE_ATOMIC_INIT            0
+# define TRACE_ATOMIC_LOAD(ptr)       *(ptr)
+# define TRACE_ATOMIC_STORE(ptr,val)  *(ptr) = val
 # define TRACE_THREAD_LOCAL 
-# define TRACE_GETTIMEOFDAY( tvp ) do_gettimeofday( tvp )
-# define TRACE_PRINT               printk
-# define TRACE_VPRINT              vprintk
+# define TRACE_GETTIMEOFDAY( tvp )    do_gettimeofday( tvp )
+# define TRACE_PRINT                  printk
+# define TRACE_VPRINT                 vprintk
 //static int trace_no_init_cnt=0;
-# define TRACE_INIT_CHECK          if(traceEntries_p!=0)
+# define TRACE_INIT_CHECK             if((traceTID!=-1)||((traceTID=name2TID(TRACE_NAME))!=-1))
 # ifndef MODULE
 int trace_3_init(void);
 int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
@@ -103,12 +149,16 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   50000
 #define TRACE_DFLT_NAM_SZ           16
-#define TRACE_DFLT_NAME        "TRACE"
+#ifdef __KERNEL__
+# define TRACE_DFLT_NAME        "KERNEL"
+#else
+# define TRACE_DFLT_NAME        "TRACE"
+#endif
 
-#ifndef  TRACE_NAME
-# if !defined(TRACE_LIB) && !defined(__KERNEL__)
+#if !defined(TRACE_NAME) && !defined(__KERNEL__)
 static const char *  TRACE_NAME=NULL;
-# endif
+#elif !defined(TRACE_NAME) && defined(__KERNEL__)
+# define TRACE_NAME TRACE_DFLT_NAME /* kernel doesn't have env.var, so different init path*/
 #endif
 
 #ifndef  TRACE_PRINT_FD
@@ -128,14 +178,13 @@ static const char *  TRACE_NAME=NULL;
 # define TRACE TRACEC
 //#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
 # define TRACEC( lvl, ... ) do			\
-    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
-	TRACE_INIT_CHECK						\
+    {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
-		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1LL<<((lvl)&LVLBITSMSK)))) \
 		{   trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );					\
 	    }								\
-		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
 	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ ); \
 	    }								\
         }								\
@@ -153,14 +202,13 @@ static const char *  TRACE_NAME=NULL;
 
 # define TRACE TRACEC
 # define TRACEC( lvl, msgargs... ) do		\
-    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
-	TRACE_INIT_CHECK						\
+    {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
-	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1LL<<((lvl)&LVLBITSMSK)))) \
 	    {   trace( &lclTime, lvl, TRACE_NARGS(msgargs) TRACE_XTRA_PASSED \
                       , msgargs );					\
 	    }								\
-	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
 	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, msgargs );	\
 	    }								\
 	}								\
@@ -203,11 +251,10 @@ static const char *  TRACE_NAME=NULL;
 # define TRACE_32_DOUBLE_KLUDGE   if(sizeof(long)==4)nargs*=2;
 # define TRACE_TSC32( low )       low=0
 #endif
-#ifndef TRACE_LIB
+
 static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
-# ifdef __cplusplus
+#ifdef __cplusplus
 static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,std::string,...);
-# endif
 #endif
 
 
@@ -219,27 +266,29 @@ union trace_mode_u
     uint32_t  mode;
 };
 
+typedef char trace_vers_t[sizeof(int64_t)*16];
+
 struct traceControl_s
 {
-    char           version_string[sizeof(int64_t)*16];
-    uint32_t	   version;
-    uint32_t       num_params;
-    uint32_t       siz_msg;
-    uint32_t       siz_entry;
-    uint32_t       num_entries;
-    uint32_t       largest_multiple;
-    uint32_t       num_namLvlTblEnts;
-  volatile int32_t trace_initialized;/* these and above would be read only if */
-    uint32_t       memlen;           /* in kernel */
-    uint32_t       create_tv_sec;
-    uint32_t       largest_zero_offset;
-    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-27]; /* allow mmap 1st page(s) (stuff above) readonly */
+    trace_vers_t   version_string;
+    uint32_t	   version;             /*  1 */
+    uint32_t       num_params;          /*  2 */
+    uint32_t       siz_msg;             /*  3 */
+    uint32_t       siz_entry;           /*  4 */
+    uint32_t       num_entries;         /*  5 */
+    uint32_t       largest_multiple;    /*  6 */
+    uint32_t       num_namLvlTblEnts;   /*  7 */
+  volatile int32_t trace_initialized;   /*  8 these and above would be read only if */
+    uint32_t       memlen;              /*  9 in kernel */
+    uint32_t       create_tv_sec;       /* 10 */
+    uint32_t       largest_zero_offset; /* 11 */
+    uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-(11+sizeof(trace_vers_t)/sizeof(int32_t))]; /* allow mmap 1st page(s) (stuff above) readonly */
 
-    TRACE_ATOMIC_T wrIdxCnt;	/* 32 bit */
-    uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
+    TRACE_ATOMIC_T wrIdxCnt;	/* 32 or 64 bits */
+    uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-(sizeof(TRACE_ATOMIC_T)/sizeof(int32_t))];   /* the goal is to have wrIdxCnt in it's own cache line */
 
-    TRACE_ATOMIC_T spinlock;	/* 32 bit */
-    uint32_t       cacheline2[TRACE_CACHELINE/sizeof(int32_t)-1];   /* the goal is to have wrIdxCnt in it's own cache line */
+    TRACE_ATOMIC_T spinlock;	/* 32 or 64 bits */
+    uint32_t       cacheline2[TRACE_CACHELINE/sizeof(int32_t)-(sizeof(TRACE_ATOMIC_T)/sizeof(int32_t))];   /* the goal is to have wrIdxCnt in it's own cache line */
 
     union trace_mode_u mode;
     uint32_t      reserved0;    /* use to be trigOffMode */
@@ -258,7 +307,7 @@ struct traceEntryHdr_s
     pid_t          pid; /*P system info */
     pid_t          tid; /*i system info - "thread id" */
     int32_t        cpu; /*C -- kernel sched switch will indicate this info? */
-    uint32_t       TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
+    int32_t        TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
     uint16_t       get_idxCnt_retries;/*R*/
     uint16_t       param_bytes;       /*B*/
 };                                    /*M -- NO, ALWAY PRINTED LAST! formated Message */
@@ -279,58 +328,66 @@ struct traceNamLvls_s
 
 /*--------------------------------------------------------------------------*/
 /* enter the 5 use case "areas" -- see doc/5in1.txt                         */
-
-#ifndef TRACE_DECL
-#define TRACE_DECL( scope, type_name, initializer ) scope type_name initializer
+/*  defining TRACE_DEFINE wins over DEFINE or nothing. STATIC wins over all */
+/* It's OK if one module has DEFINE and all the reset have any of (nothing, DECLARE, STATIC) */
+/* The only thing that is invalid is if more than one has DEFINE            */
+#if   defined(TRACE_STATIC) && !defined(__KERNEL__)
+# define TRACE_DECL( var_type_and_name, initializer ) static var_type_and_name initializer
+#elif defined(TRACE_DEFINE)
+# define TRACE_DECL( var_type_and_name, initializer ) var_type_and_name initializer
+#elif defined(TRACE_DECLARE) || defined(__KERNEL__)
+# define TRACE_DECL( var_type_and_name, initializer ) extern var_type_and_name
+#else
+# define TRACE_DECL( var_type_and_name, initializer ) static var_type_and_name initializer
 #endif
+
+//#define TRACE_THREAD_LOCALX TRACE_THREAD_LOCAL    /* use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
+#define TRACE_THREAD_LOCALX
+
+TRACE_DECL( struct traceControl_s    traceControl[2], ); /* for when TRACE is disabled. NOTE: traceNamLvls_p should always point to traceControl_p+1 */
+TRACE_DECL( TRACE_THREAD_LOCALX struct traceControl_s  *traceControl_p, =NULL );
+TRACE_DECL( TRACE_THREAD_LOCALX struct traceNamLvls_s *traceNamLvls_p, =(struct traceNamLvls_s*)&traceControl[1] );
+TRACE_DECL( TRACE_THREAD_LOCALX struct traceEntryHdr_s *traceEntries_p, );
+static TRACE_THREAD_LOCAL int   traceTID=-1;  /* idx into lvlTbl, namTbl -- always
+												static (never global) and possibly
+thread_local -- this will cause the most traceInit calls (but not much work, hopefully),
+which will ensure that a module (not thread) can be assigned it's own trace name/id. */
 
 #if defined(__KERNEL__)
-extern struct traceNamLvls_s  *traceNamLvls_p;
-extern struct traceEntryHdr_s *traceEntries_p;
-extern struct traceControl_s  *traceControl_p;
 extern int                     trace_allow_printk;                 /* module_param */
-static const char             *traceName="KERNEL";
+static TRACE_THREAD_LOCAL const char *traceName=TRACE_DFLT_NAME;
 #else
-# define TRACE_DISABLE_NAM_SZ  2   /* used also in tracelib.c */
-TRACE_DECL( static, struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ], ); /* IMPORTANT - 1) this size, 2) traceInit setting of num_namLvlTblEnts, 3) traceInitNames and 4) "tids" MUST agree */
-TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceNamLvls_s *traceNamLvls_p, =&traceNamLvls[0] );
-TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p, );
-TRACE_DECL( static, TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p, =NULL );
-TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
-TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
-TRACE_DECL( static, int                      tracePrintFd, =1 );
-TRACE_DECL( static, pid_t                    tracePid,     =0 );
-TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid,     =0 );  /* thread id */
+TRACE_DECL( TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
+TRACE_DECL( TRACE_THREAD_LOCALX const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
+TRACE_DECL( TRACE_THREAD_LOCAL pid_t traceTid,     =0 );  /* thread id */
+TRACE_DECL( pid_t                    tracePid,     =0 );
+TRACE_DECL( int                      tracePrintFd, =1 );
+TRACE_DECL( TRACE_ATOMIC_T traceInitLck, =TRACE_ATOMIC_INIT );
+TRACE_DECL( uint32_t traceInitLck_hung_max, =0 );
+static char traceFile_static[PATH_MAX]={0};
+static struct traceControl_s *traceControl_p_static=NULL;
 #endif
-
-
-TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl, namTbl */
-
-
-#ifndef TRACE_LIB
+/*--------------------------------------------------------------------------*/
 
 /* forward declarations, important functions */
 static struct traceEntryHdr_s*  idxCnt2entPtr( uint32_t idxCnt );
-# if !defined(__KERNEL__) || defined(TRACE_IMPL)  /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)  /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
 static int                      traceInit( const char *name );
-static void                     traceInitNames( void );
-#  ifdef __KERNEL__                               /*                         K=1,IMPL=1 */
+static void                     traceInitNames( struct traceControl_s  *t_p );
+# ifdef __KERNEL__                               /*                         K=1,IMPL=1 */
 static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
        int                trace_allow_printk=0;              /* module_param */
 static int                trace_buffer_numa_node=-1;		 /* module_param */
-#  endif
-# else    /*                                         K=1,IMPL=0  */
-
-# endif   /*  __KERNEL__             TRACE_IMPL  */
-# ifndef __KERNEL__
-static struct traceControl_s    traceControl;
 # endif
+#else    /*                                         K=1,IMPL=0  */
+
+#endif   /*  __KERNEL__             TRACE_IMPL  */
 
 static int                      traceCntl( int nargs, const char *cmd, ... );
-static uint32_t                 name2tid( const char *name );
+static int32_t                  name2TID( const char *name );
 #define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
 #define namtblSiz( ents )       (((uint32_t)sizeof(struct traceNamLvls_s)*ents+TRACE_CACHELINE)&~(TRACE_CACHELINE-1))
 #define entSiz( siz_msg, num_params ) ( sizeof(struct traceEntryHdr_s)\
@@ -365,22 +422,24 @@ static uint32_t                 name2tid( const char *name );
     )
 
 
-# ifndef TRACE_LOG_FUNCTION
-#  if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
+#ifndef TRACE_LOG_FUNCTION
+# if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* c++98 c99 c++0x c11 c++11 */
-#   define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)          trace_user( tvp,tid,lvl,__VA_ARGS__ )
-#  else
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)          trace_user( tvp,tid,lvl,__VA_ARGS__ )
+# else
 /* c89 */
-#   define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  trace_user( tvp,tid,lvl,msgargs )
-#  endif   /* __GXX_WEAK__... */
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  trace_user( tvp,tid,lvl,msgargs )
+# endif   /* __GXX_WEAK__... */
+#endif /* TRACE_LOG_FUNCTION */
 
+SUPPRESS_NOT_USED_WARN
 static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
 {
-#  ifdef __KERNEL__
+#ifdef __KERNEL__
     if (!trace_allow_printk) return;
     TRACE_VPRINT( msg, ap );
     TRACE_PRINT("\n");
-#  else
+#else
     char   obuf[0x1000]; int printed=0;
     if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
     printed += snprintf( &(obuf[printed])
@@ -410,7 +469,7 @@ static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char 
 	    /*printf("changed \\0 to \\n printed=%d\n",);*/
 	}
     }
-#  endif
+#endif
 }
 SUPPRESS_NOT_USED_WARN
 static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, ... )
@@ -420,7 +479,7 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *
 	vtrace_user( tvp, TID, lvl, msg,  ap );
 	va_end( ap );
 }
-# ifdef __cplusplus
+#ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
 static void trace_user( struct timeval *tvp, int TID, unsigned lvl, std::string msg, ... )
 {
@@ -429,10 +488,8 @@ static void trace_user( struct timeval *tvp, int TID, unsigned lvl, std::string 
 	vtrace_user( tvp, TID, lvl, msg.c_str(),  ap );
 	va_end( ap );	
 }   /* trace */
-# endif
+#endif
 
-
-# endif /* TRACE_LOG_FUNCTION */
 
 
 static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
@@ -443,30 +500,30 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
     unsigned long         * params_p;
     unsigned                argIdx;
     uint16_t                get_idxCnt_retries=0;
-    uint32_t                myIdxCnt=traceControl_p->wrIdxCnt;
+    uint32_t                myIdxCnt=TRACE_ATOMIC_LOAD( &traceControl_p->wrIdxCnt );
 
-# if defined(__KERNEL__)
+#if defined(__KERNEL__)
     uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
     while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
     {   ++get_idxCnt_retries;
-	myIdxCnt=traceControl_p->wrIdxCnt;
+	myIdxCnt=TRACE_ATOMIC_LOAD( &traceControl_p->wrIdxCnt );
 	desired = IDXCNT_ADD( myIdxCnt,1);
     }
-# elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
     uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
     while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					 , &myIdxCnt, desired))
     {   ++get_idxCnt_retries;
 	desired = IDXCNT_ADD( myIdxCnt,1);
     }
-# else
+#else
     uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
     while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
     {   ++get_idxCnt_retries;
-	myIdxCnt=traceControl_p->wrIdxCnt;
+	myIdxCnt=TRACE_ATOMIC_LOAD( &traceControl_p->wrIdxCnt );
 	desired = IDXCNT_ADD( myIdxCnt,1);
     }
-# endif
+#endif
 
     if (myIdxCnt == traceControl_p->num_entries)
 	traceControl_p->full = 1; /* now we'll know if wrIdxCnt has rolled over */
@@ -474,8 +531,11 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
 	/* There are some places in the kernel where the gettimeofday routine
 	   cannot be called (i.e. kernel/notifier.c routines). For these routines,
 	   add 64 for the level (i.e. 22+64) */
-    if(lvl<64)TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
-	else {tvp->tv_sec=tvp->tv_usec=0;}
+#ifdef __KERNEL__
+    if(lvl>=64){tvp->tv_sec=1;tvp->tv_usec=0;}
+	else
+#endif
+    TRACE_GETTIMEOFDAY( tvp );  /* hopefully NOT a system call */
 
     myEnt_p  = idxCnt2entPtr( myIdxCnt );
     msg_p    = (char*)(myEnt_p+1);
@@ -484,17 +544,17 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
     myEnt_p->time = *tvp;
     TRACE_TSC32( myEnt_p->tsc );
     myEnt_p->lvl  = lvl;
-# if defined(__KERNEL__)
+#if defined(__KERNEL__)
     myEnt_p->pid  = current->tgid;
     myEnt_p->tid  = current->pid;
     myEnt_p->cpu  = raw_smp_processor_id();
-# else
+#else
     myEnt_p->pid  = tracePid;
     myEnt_p->tid  = traceTid;
-#  if defined(__linux__) && !defined(NO_SCHED_GETCPU)
+# if defined(__linux__) && !defined(NO_SCHED_GETCPU)
     myEnt_p->cpu  = sched_getcpu();
-#  endif
 # endif
+#endif
     myEnt_p->TID  = traceTID;
     myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
     myEnt_p->param_bytes = sizeof(long);
@@ -529,10 +589,10 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
     }
 }   /* vtrace */
 
-# if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
-# endif
+#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
+#endif
 
 SUPPRESS_NOT_USED_WARN
 static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
@@ -545,7 +605,7 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 	va_end( ap );	
 }   /* trace */
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
 static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
                   TRACE_XTRA_UNUSED		  
@@ -556,51 +616,63 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 	vtrace( tvp, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
-# endif
+#endif
 
-# if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-#  pragma GCC diagnostic pop
-# endif
+#if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+# pragma GCC diagnostic pop
+#endif
 
 
-static void trace_lock( void )
+static void trace_lock( TRACE_ATOMIC_T *atomic_addr )
 {
     uint32_t desired=1, expect=0, hung=0;
-# if defined(__KERNEL__)
-    while (cmpxchg(&traceControl_p->spinlock,expect,desired) != expect)
+#if defined(__KERNEL__)
+    while (cmpxchg(atomic_addr,expect,desired) != expect)
 	if (++hung >100000000) { TRACE_PRINT("trace_lock: hung?\n"); break; }
-# elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-    while (!atomic_compare_exchange_weak(&traceControl_p->spinlock, &expect, desired))
+#elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+    while (!atomic_compare_exchange_weak(atomic_addr, &expect, desired))
     {   expect=0;
 	if (++hung >100000000) { TRACE_PRINT("trace_lock: hung?\n"); break; }
     }
-# else
-    while (cmpxchg(&traceControl_p->spinlock,expect,desired) != expect)
+    if(atomic_addr==&traceInitLck && traceInitLck_hung_max<hung) traceInitLck_hung_max=hung;
+#else
+    while (cmpxchg(atomic_addr,expect,desired) != expect)
 	if (++hung >100000000) { TRACE_PRINT("trace_lock: hung?\n"); break; }
-# endif
+    if(atomic_addr==&traceInitLck && traceInitLck_hung_max<hung) traceInitLck_hung_max=hung;
+#endif
 }
 
-static void trace_unlock( void )
-{   traceControl_p->spinlock=0;
+static void trace_unlock( TRACE_ATOMIC_T *atomic_addr )
+{
+#if defined(__KERNEL__)
+    TRACE_ATOMIC_STORE(atomic_addr,(uint32_t)0);
+#elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+    atomic_store(atomic_addr,(uint32_t)0);
+#else
+    TRACE_ATOMIC_STORE(atomic_addr,(uint32_t)0);
+#endif
 }
 
-static uint32_t name2tid( const char *name )
+static int32_t name2TID( const char *name )
 {
     uint32_t ii;
-    trace_lock();
+#if defined(__KERNEL__)
+    if (traceEntries_p==NULL) return -1;
+#endif
+    trace_lock( &traceControl_p->spinlock );
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0)
-	{   trace_unlock();
+	{   trace_unlock( &traceControl_p->spinlock );
 	    return (ii);
 	}
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 	if (traceNamLvls_p[ii].name[0] == '\0')
 	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
 	    traceNamLvls_p[ii].M = 0x1;
-	    trace_unlock();
+	    trace_unlock( &traceControl_p->spinlock );
 	    return (ii);
 	}
-    trace_unlock();
+    trace_unlock( &traceControl_p->spinlock );
     return (traceControl_p->num_namLvlTblEnts-1);
 }
 
@@ -616,12 +688,12 @@ static int traceCntl( int nargs, const char *cmd, ... )
     int      ret=0;
     va_list  ap;
     unsigned ii;
-# if 0 && !defined(__KERNEL__)
+#if 0 && !defined(__KERNEL__)
     va_start( ap, cmd );
     for (ii=0; ii<nargs; ++ii) /* nargs is number of args AFTER cmd */
 	printf("arg%u=0x%llx\n",ii+1,va_arg(ap,unsigned long long));
     va_end( ap );
-# endif
+#endif
 
     va_start( ap, cmd );
 
@@ -632,19 +704,18 @@ static int traceCntl( int nargs, const char *cmd, ... )
        NOTE: CAN'T HAVE FILE-PER-THREAD unless traceControl_p,traceEntries_p,traceNamLvls_p are THREAD_LOCAL
              CAN'T HAVE NAME-PER-THREAD unless traceTID       is THREAD_LOCAL
     */
-# ifndef __KERNEL__
+#ifndef __KERNEL__
     if (strncmp(cmd,"file",4) == 0)/* THIS really only makes sense for non-thread local-file-for-module or for tracelib.h (non-static implementation) w/TLS to file-per-thread */
     {	traceFile = va_arg(ap,char*);/* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
 	traceInit(TRACE_NAME);		/* force (re)init */
 	va_end(ap); return (0);
     }
-    /*if (traceControl_p == NULL) traceInit(TRACE_NAME);*/
-    TRACE_INIT_CHECK {};     /* note: allows name2tid to be called in userspace */
-# endif
+    TRACE_INIT_CHECK {};     /* note: allows name2TID to be called in userspace */
+#endif
 
     if (strncmp(cmd,"name",4) == 0)/* THIS really only makes sense for non-thread local-name-for-module or for tracelib.h (non-static implementation) w/TLS to name-per-thread */
     {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit(TRACE_NAME) is called; suggest testing w. TRACE_ARGSMAX=10*/
-	traceTID = name2tid( traceName );/* doing it this way allows this to be called by kernel module */
+	traceTID = name2TID( traceName );/* doing it this way allows this to be called by kernel module */
     }
     else if (strncmp(cmd,"trig",4) == 0)    /* takes 2 args: lvlsMsk, postEntries */
     {
@@ -739,17 +810,17 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    {   uint32_t mode=va_arg(ap,uint64_t);
 		union trace_mode_u tmp;
 		tmp.mode = mode;
-# ifndef __KERNEL__
-	        if (traceControl_p == &traceControl) tmp.bits.M=0;
-# endif
+#ifndef __KERNEL__
+	        if (traceControl_p == &(traceControl[0])) tmp.bits.M=0;
+#endif
 		traceControl_p->mode = tmp;
 	    }
 	    break;
 	case 'M':
 	    ret=traceControl_p->mode.bits.M;
-# ifndef __KERNEL__
-	    if (traceControl_p == &traceControl) break;
-# endif
+#ifndef __KERNEL__
+	    if (traceControl_p == &(traceControl[0])) break;
+#endif
 	    if (nargs==1)
 	    {   uint32_t mode=va_arg(ap,uint64_t);
 		traceControl_p->mode.bits.M = mode;
@@ -769,36 +840,85 @@ static int traceCntl( int nargs, const char *cmd, ... )
     else if (strcmp(cmd,"reset") == 0) 
     {
 	traceControl_p->full
-	    = traceControl_p->wrIdxCnt
 	    = traceControl_p->trigIdxCnt
 	    = traceControl_p->trigActivePost
 	    = 0;
+	TRACE_ATOMIC_STORE( &traceControl_p->wrIdxCnt, (uint32_t)0 );
 	traceControl_p->triggered = 0;
     }
     else
     {   ret = -1;
     }
     va_end(ap);
-# ifdef __KERNEL__
+#ifdef __KERNEL__
     if (ret==-1) printk(  KERN_ERR "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
-# else
+#else
     if (ret==-1) fprintf( stderr, "TRACE: invalid control string %s nargs=%d\n", cmd, nargs );
-# endif
+#endif
     return (ret);
 }   /* traceCntl */
 
 
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
-# ifndef __KERNEL__
+static void trace_created_init(  struct traceControl_s *t_p
+			       , uint32_t msgmax, uint32_t argsmax, uint32_t numents, uint32_t namtblents
+			       , int                   memlen )
+{
+    struct timeval tv;
+    TRACE_GETTIMEOFDAY( &tv );
+# ifdef TRACE_DEBUG_INIT
+    trace_user( &tv,0,0,"trace_created_init: tC_p=%p",t_p );
+# endif
+    strncpy( t_p->version_string, TRACE_REV, sizeof(t_p->version_string) );
+    t_p->version_string[sizeof(t_p->version_string)-1] = '\0';
+    t_p->create_tv_sec       = (uint32_t)tv.tv_sec;
+    t_p->num_params          = argsmax;
+    t_p->siz_msg             = msgmax;
+    t_p->siz_entry           = entSiz( msgmax, argsmax );
+    t_p->num_entries         = numents;
+    t_p->largest_multiple    = (uint32_t)-1 - ((uint32_t)-1 % numents);
+    t_p->largest_zero_offset = ((uint32_t)-1 % numents) +1;
+    t_p->num_namLvlTblEnts   = namtblents;
+    t_p->memlen              = memlen;
 
+    TRACE_ATOMIC_STORE( &t_p->spinlock, (uint32_t)0 );
+    
+    /*TRACE_CNTL( "reset" );  Can't call traceCntl during Init b/c it does an INIT_CHECK and will call Init */
+    TRACE_ATOMIC_STORE( &t_p->wrIdxCnt, (uint32_t)0 );
+    t_p->full = t_p->trigIdxCnt = t_p->trigActivePost = t_p->triggered = 0;
+
+    t_p->mode.mode           = 0;
+    t_p->mode.bits.M         = 1;
+
+    traceInitNames( t_p ); /* THIS SETS GLOBAL traceNamLvls_p REFERENCED NEXT. */
+
+    /* this depends on the actual value of the num_namLvlTblEnts which
+       may be different from the "calculated" value WHEN the buffer has
+       previously been configured */
+    traceEntries_p = (struct traceEntryHdr_s *)				\
+	((unsigned long)traceNamLvls_p+namtblSiz(t_p->num_namLvlTblEnts));
+
+    t_p->trace_initialized = 1;
+# ifdef TRACE_DEBUG_INIT
+    tv.tv_sec=0;
+    trace_user( &tv,0,0,"trace_created_init: tC_p=%p",t_p );
+# endif
+}   /* trace_created_init */
+
+#endif
+
+#ifndef __KERNEL__
 
 /* RETURN "created" status */
 static int trace_mmap_file( const char *_file
 			   , int       *memlen   /* in/out -- in for when file created, out when not */
-			   , struct traceControl_s **t_p )
+			   , struct traceControl_s **tC_p
+			   , uint32_t msgmax, uint32_t argsmax, uint32_t numents, uint32_t namtblents  /* all in for when file created */
+			   )
 {
     int                    fd;
-    uint8_t               *rw_p;
+    struct traceControl_s *rw_p, *tmp_p;
     off_t                  off;
     char                   path[PATH_MAX];
     char                  *logname=getenv("LOGNAME"); /* login/user name */
@@ -810,25 +930,27 @@ static int trace_mmap_file( const char *_file
     {   /* successfully created new file - must init */
 	uint8_t one_byte='\0';
 	off = lseek( fd, (*memlen)-1, SEEK_SET );
-	if (off == (off_t)-1) { perror("lseek"); *t_p=&traceControl;return (0); }
+	if (off == (off_t)-1) { perror("lseek"); *tC_p=&(traceControl[0]);return (0); }
 	write( fd, &one_byte, 1 );
 	created = 1;
     }
     else
-    {   struct stat           statbuf;
+    {   /* There's an existing file... I must mmap it -- twice -- the 1st time just to get the memlen */
+	struct stat           statbuf;
 	struct traceControl_s *tmp_traceControl_p;
+	int                   try_=3000;
 	/* must verify that it already exists */
 	fd=open(path,O_RDWR);
 	if (fd == -1)
 	{   fprintf( stderr,"TRACE: open(%s)=%d errno=%d pid=%d\n", path, fd, errno, tracePid );
-	    *t_p=&traceControl;
+	    *tC_p=&(traceControl[0]);
 	    return (0);
 	}
 	/*printf( "trace_mmap_file - fd=%d\n",fd );*/ /*interesting in multithreaded env.*/
 	if (fstat(fd,&statbuf) == -1)
 	{   perror("fstat");
 	    close( fd );
-	    *t_p=&traceControl;
+	    *tC_p=&(traceControl[0]);
 	    return (0);
 	}
 	while (statbuf.st_size < (off_t)sizeof(struct traceControl_s))
@@ -836,7 +958,7 @@ static int trace_mmap_file( const char *_file
 	    if (   ((stat_try++ >= 30)         && (fprintf(stderr,"too many stat tries\n"),1))
 		|| ((fstat(fd,&statbuf) == -1) && (perror("fstat"),1)) )
 	    {   close( fd );
-		*t_p=&traceControl;
+		*tC_p=&(traceControl[0]);
 		return (0);
 	    }
 	}
@@ -846,20 +968,26 @@ static int trace_mmap_file( const char *_file
 					 , MAP_SHARED, fd, 0 );
 	if (tmp_traceControl_p == (struct traceControl_s *)-1)
 	{   perror( "mmap(NULL,sizeof(struct traceControl_s),PROT_READ,MAP_SHARED,fd,0) error" );
-	    *t_p=&traceControl;
+	    *tC_p=&(traceControl[0]);
 	    return (0);
 	}
-	if (  (tmp_traceControl_p->trace_initialized != 1)
-	    /*||(tmp_traceControl_p->siz_entry         != 256)
-	    ||(tmp_traceControl_p->num_entries       != 50000)
-	    ||(tmp_traceControl_p->num_namLvlTblEnts != 20)
-	    ||(tmp_traceControl_p->memlen            != (unsigned)*memlen)
-	    ||(tmp_traceControl_p->siz_msg           != 128)*/ )
-	{   printf("Trace file not initialzed; consider (re)moving it.\n");
-	    close( fd );
-	    *t_p=&traceControl;
-	    return (0);
-	}
+	while (try_--)
+	    if (  (tmp_traceControl_p->trace_initialized != 1)
+		/*||(tmp_traceControl_p->siz_entry         != 256)
+		  ||(tmp_traceControl_p->num_entries       != 50000)
+		  ||(tmp_traceControl_p->num_namLvlTblEnts != 20)
+		  ||(tmp_traceControl_p->memlen            != (unsigned)*memlen)
+		  ||(tmp_traceControl_p->siz_msg           != 128)*/ )
+	    {
+		if(try_==0)
+		{   printf("Trace file not initialzed; consider (re)moving it.\n");
+		    close( fd );
+		    *tC_p=&(traceControl[0]);
+		    return (0);
+		}
+		if(try_==1) sleep(1); /* just sleep a crazy amount the last time */
+	    }
+	    else break;
 	/*sleep(1);*/
 	*memlen = tmp_traceControl_p->memlen;
 	munmap( tmp_traceControl_p, sizeof(struct traceControl_s) ); /* throw this mapping out */
@@ -869,38 +997,44 @@ static int trace_mmap_file( const char *_file
     /* I MUST allocate/grab a contiguous vm address space! [in testing threads (where address space
        is shared (obviously)), thread creation allocates vm space which can occur between
        these two calls] */
-    rw_p = (uint8_t*)mmap( NULL,*memlen,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0 );
+    rw_p = (struct traceControl_s*)mmap( NULL,*memlen,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0 );
     if (rw_p == (void *)-1)
     {   perror("Error:mmap(NULL,*memlen,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0)");
-	printf( "(*memlen)=%d\n", (*memlen) );
+	printf( "(*memlen)=%d errno=%d\n", (*memlen), errno );
 	close( fd );
-	*t_p=&traceControl;
+	*tC_p=&(traceControl[0]);
 	return (0);
     }
 
-    /* If I didn't create it, go back and make the first "page" read-only */
-    if (created == 0)
-    {
-	*t_p = (struct traceControl_s *)mmap( rw_p, TRACE_PAGESIZE, PROT_READ
-					     , MAP_SHARED|MAP_FIXED, fd, 0 );
-	if (*t_p == (struct traceControl_s *)-1)
-	{   perror( "Error: mmap(rw_p,TRACE_PAGESIZE,PROT_READ,MAP_SHARED|MAP_FIXED,fd,0)");
-	    printf( "(*memlen)=%d\n", (*memlen) );
-	    munmap( rw_p, *memlen );
-	    close( fd );
-	    *t_p=&traceControl;
-	    return (0);
-	}
-	if (*t_p != (struct traceControl_s *)rw_p)
-	{   printf( "traceInit mmap read-only returned invalid address\n" );
-	    munmap( rw_p, *memlen );
-	    close( fd );
-	    *t_p=&traceControl;
-	    return (0);
-	}
+    if (created) /* write to it while I have it rw */
+	trace_created_init( rw_p, msgmax, argsmax, numents, namtblents, *memlen );
+    else {
+	traceNamLvls_p = (struct traceNamLvls_s *)	\
+	    ((unsigned long)rw_p+cntlPagesSiz());
+	traceEntries_p = (struct traceEntryHdr_s *)			\
+	    ((unsigned long)traceNamLvls_p+namtblSiz(rw_p->num_namLvlTblEnts));
     }
-    else
-	*t_p = (struct traceControl_s *)rw_p;
+
+    /* Now, go back and make the first "page" read-only */
+    tmp_p = (struct traceControl_s *)mmap( rw_p, TRACE_PAGESIZE, PROT_READ
+					     , MAP_SHARED|MAP_FIXED, fd, 0 );
+    if (tmp_p == (struct traceControl_s *)-1)
+    {   perror( "Error:mmap(rw_p,TRACE_PAGESIZE,PROT_READ,MAP_SHARED|MAP_FIXED,fd,0)");
+	printf( "(*memlen)=%d errno=%d\n", (*memlen), errno );
+	munmap( rw_p, *memlen );
+	close( fd );
+	*tC_p=&(traceControl[0]);
+	return (0);
+    }
+    if (tmp_p != rw_p)
+    {   printf( "traceInit mmap read-only returned invalid address\n" );
+	munmap( rw_p, *memlen );
+	close( fd );
+	*tC_p=&(traceControl[0]);
+	return (0);
+    }
+
+    *tC_p = tmp_p;
 
     /* The POSIX mmap man page says:
        The mmap() function shall add an extra reference to the file
@@ -912,38 +1046,33 @@ static int trace_mmap_file( const char *_file
     return (created);
 }   /* trace_mmap_file */
 
-# endif	/* not __KERNEL__*/
+#endif	/* not __KERNEL__*/
 
 
-# if !defined(__KERNEL__) || defined(TRACE_IMPL)
+#if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
 static int traceInit( const char *_name )
 {
     int         memlen;
     uint32_t    msgmax_, argsmax_, numents_, namtblents_;
-    int		I_created=0;
-#  ifndef __KERNEL__
+# ifndef __KERNEL__
     int         activate=0;
     const char *_file;
     const char *cp;
 
-    if(traceTid==0) /* traceInit may be called w/ or w/o checking traceTid */
-    {   traceTid=syscall(SYS_GETTID);
-	tracePid = getpid();  /* do/re-do -- it may be forked process */
-#   ifdef TRACE_DEBUG_INIT
-	if (traceControl_p == NULL) printf("init both (tid=%d)\n",traceTid );
-	else                        printf("init just traceTid (tid=%d)\n",traceTid);
-#   endif
-    }
-#   ifdef TRACE_DEBUG_INIT
-    else if (traceControl_p == NULL) printf("init just traceControl_p (tid=%d)\n",traceTid);
-#   endif
+#  ifdef TRACE_DEBUG_INIT
+    if (traceControl_p == NULL && (traceTid==0)) printf("traceInit: both %p\n",traceControl_p_static);
+    else if (traceControl_p == NULL) printf("traceInit: just traceControl_p (tid=%d) %p\n",traceTid,traceControl_p_static);
+    else                        printf("traceInit: just traceTid (traceControl_p=%p) %p\n",traceControl_p,traceControl_p_static);
+#  endif
 
+    trace_lock( &traceInitLck );
     if (traceControl_p == NULL)
-    {
+    {  /* block_start */
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
 	if (_name != NULL){if(getenv("TRACE_NAME")) activate=1;}
 	else if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0')&&(activate=1))) _name=traceName;
+
 	if (!((_file=getenv("TRACE_FILE"))&&(*_file!='\0')&&(activate=1))) _file=traceFile;
 	if ((cp=getenv("TRACE_ARGSMAX"))  &&(*cp)&&(activate=1)) argsmax_=strtoul(cp,NULL,0);else argsmax_   =TRACE_DFLT_MAX_PARAMS;
 	/* use _MSGMAX= so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG */
@@ -955,37 +1084,40 @@ static int traceInit( const char *_name )
 	if ((cp=getenv("TRACE_PRINT_FD")) && (*cp)) tracePrintFd=strtoul(cp,NULL,0);
 
 	if (!activate)
-	{   traceControl_p=&traceControl;
+	{   traceControl_p=&(traceControl[0]);
 	}
 	else
 	{
 	    if (namtblents_ == 1) namtblents_ = 2; /* If it has been specified in the env. it should be at least 2 */
 	    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
-	    I_created = trace_mmap_file( _file, &memlen, &traceControl_p );
+	    if ((traceControl_p_static!=NULL) && (strcmp(traceFile_static,_file)==0))
+		traceControl_p=traceControl_p_static;
+	    else
+		trace_mmap_file( _file, &memlen, &traceControl_p, msgmax_, argsmax_, numents_, namtblents_ );
 	}
-	if (traceControl_p == &traceControl)
+
+	if (traceControl_p == &(traceControl[0]))
 	{
-	    traceControl_p->num_namLvlTblEnts = sizeof(traceNamLvls)/sizeof(traceNamLvls[0]);
-	    traceInitNames();
-
-	    /* now, to allow test in trace_cntl.c to proceed */
-	    traceControl_p->num_entries      = 1;
-	    traceControl_p->largest_multiple = (uint32_t)-1 - ((uint32_t)-1 % 1);
-
-	    if ((cp=getenv("TRACE_LVLS"))     && (*cp))
-	    {   /* Calling traceCntl here causes general circular dependency
-		   (b/c traceCntl calls traceInit) (but never infinite
-		   loop). But mainly, calling traceCntl here redemiats the
-		   "warning: 'traceCntl' defined but not used" that would happen
-		   in the user space use case (currently no traceInit/traceCntl
-		   for modules) */
-		TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
-		TRACE_CNTL( "modeS", 1LL );
-	    }
-	    return (0);
+	    trace_created_init( traceControl_p
+			       , msgmax_
+			       , argsmax_
+			       , 1 /*numents_*/
+			       , 2 /*namtblents_*/
+			       , sizeof(traceControl) );
 	}
-#  else  /* ifndef __KERNEL__ */
-    {
+	else 
+	{
+	    if (traceControl_p_static == NULL)
+	    {
+		strcpy( traceFile_static, _file );
+		traceControl_p_static = traceControl_p;
+	    }
+	}
+#  ifdef TRACE_DEBUG_INIT
+	printf("traceInit: static=%p tC_p=%p\n", traceControl_p_static, traceControl_p );
+#  endif
+# else  /* ifndef __KERNEL__ */
+    {   /* block start */
 	msgmax_     =msgmax;	 /* module_param */
 	argsmax_    =argsmax;	 /* module_param */
 	numents_    =numents;	 /* module_param */
@@ -994,74 +1126,53 @@ static int traceInit( const char *_name )
 	       ,numents_,   msgmax_,   argsmax_,   namtblents_ );
 	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
 	traceControl_p = (struct traceControl_s *)vmalloc_node( memlen, trace_buffer_numa_node );
-	I_created = 1;  /* KERNEL always creates  (no verification against existing needed) */
-#  endif
+	trace_created_init( traceControl_p, msgmax_, argsmax_, numents_, namtblents_, memlen );
+# endif
 
-	/* this is needed in order to initNames */
-	/* ADD TO ABOVE, FOR WHEN (I_created==0), VERIFICATION THAT cntlPagesSiz() == size from file */
-	traceNamLvls_p = (struct traceNamLvls_s *)			\
-	    ((unsigned long)traceControl_p+cntlPagesSiz());
-
-	if (I_created)
-	{   struct timeval tv;
-	    TRACE_GETTIMEOFDAY( &tv );
-	    strncpy( traceControl_p->version_string, TRACE_REV, sizeof(traceControl_p->version_string) );
-	    traceControl_p->version_string[sizeof(traceControl_p->version_string)-1] = '\0';
-	    traceControl_p->create_tv_sec       = (uint32_t)tv.tv_sec;
-	    traceControl_p->num_params          = argsmax_;
-	    traceControl_p->siz_msg             = msgmax_;
-	    traceControl_p->siz_entry           = entSiz( msgmax_, argsmax_ );
-	    traceControl_p->num_entries         = numents_;
-	    traceControl_p->largest_multiple    = (uint32_t)-1 - ((uint32_t)-1 % numents_);
-	    traceControl_p->largest_zero_offset = ((uint32_t)-1 % numents_) +1;
-	    traceControl_p->num_namLvlTblEnts   = namtblents_;
-	    traceControl_p->memlen              = memlen;
-
-	    traceControl_p->spinlock            = 0;
-	    TRACE_CNTL( "reset" );
-	    traceControl_p->mode.mode           = 0;
-	    traceControl_p->mode.bits.M         = 1;
-
-	    traceInitNames();
-
-	    traceControl_p->trace_initialized = 1;
-	}
-
-	/* this depends on the actual value of the num_namLvlTblEnts which
-	   may be different from the "calculated" value WHEN the buffer has
-	   previously been configured */
-	traceEntries_p = (struct traceEntryHdr_s *)	\
-	    ((unsigned long)traceNamLvls_p+namtblSiz(traceControl_p->num_namLvlTblEnts));
     }   /* if KERNEL - end "{"; else end "if (traceControl_p==NULL)" */
+
     if (_name == NULL) _name=traceName; /* for when naming a thread */
-    traceTID = name2tid( _name );
+    traceTID = name2TID( _name );
     /*printf("traceTID=%d\n",traceTID);*/
-#  ifndef __KERNEL__
+
+# ifndef __KERNEL__
+    /* Now that the critical variables
+       (traceControl_p, traceNamLvls_p, traceEntries_p) and even traceTID are
+       set, it's OK to indicate that the initialization is complete */
+    if(traceTid==0) /* traceInit may be called w/ or w/o checking traceTid */
+    {   tracePid = getpid();  /* do/re-do -- it may be forked process */
+	traceTid=syscall(TRACE_GETTID);
+    }
+    trace_unlock( &traceInitLck );
+
     if ((cp=getenv("TRACE_LVLS"))     && (*cp))
     {   TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
 	TRACE_CNTL( "modeS", 1LL );
     }
-#  endif
+# endif
+
     return (0);
 }   /* traceInit */
 
 
-static void traceInitNames( void )
+static void traceInitNames( struct traceControl_s *tC_p )
 {
     unsigned ii;
-    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+    traceNamLvls_p = (struct traceNamLvls_s *)\
+	((unsigned long)tC_p+cntlPagesSiz());
+    for (ii=0; ii<tC_p->num_namLvlTblEnts; ++ii)
     {   traceNamLvls_p[ii].name[0] = '\0';
 	traceNamLvls_p[ii].S = traceNamLvls_p[ii].T = 0;
 	traceNamLvls_p[ii].M = 0x1;
     }
-#  ifdef __KERNEL__
+# ifdef __KERNEL__
     strcpy( traceNamLvls_p[0].name,"KERNEL" );
-#  endif
-    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-2].name,"TRACE" );
-    strcpy( traceNamLvls_p[traceControl_p->num_namLvlTblEnts-1].name,"_TRACE_" );
+# endif
+    strcpy( traceNamLvls_p[tC_p->num_namLvlTblEnts-2].name,"TRACE" );
+    strcpy( traceNamLvls_p[tC_p->num_namLvlTblEnts-1].name,"_TRACE_" );
 }
 
-# endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
+#endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
 
 
 static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
@@ -1073,21 +1184,19 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
     return (struct traceEntryHdr_s *)((char*)traceEntries_p+off);
 }
 
-#endif /* TRACE_LIB */
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* used in c++0x c11 c++11 environment */
 # define TRACE_( lvl, ... ) do			\
-    {   unsigned __lvl=(lvl)&LVLBITSMSK;	\
-	TRACE_INIT_CHECK						\
+    {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		std::ostringstream ostr__;										\
-		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<__lvl))) \
+		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<((lvl)&LVLBITSMSK)))) \
         {   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
 			trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED					\
 				  , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
 	    }								\
-		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<__lvl))) \
+		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<((lvl)&LVLBITSMSK)))) \
 	    {   if (lclTime.tv_sec == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); }					\
             TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
 	    }								\

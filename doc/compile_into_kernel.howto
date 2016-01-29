@@ -3,7 +3,7 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 427 $$Date: 2015-10-30 11:12:11 -0500 (Fri, 30 Oct 2015) $";
+ rev="$Revision: 480 $$Date: 2016-01-12 01:44:19 -0600 (Tue, 12 Jan 2016) $";
 
 
 
@@ -13,7 +13,7 @@
 3b. sym link ../include/linux/trace.h init/trace.h to avoid
     having to change trace_.c.  Note: putting trace.h into just include
     messes with the kernels tracing.
-4.  edit or patch init/main.c
+4.  edit or patch init/main.c (see below)
 5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
 5b. external modules can just include trace.h and insert TRACEs
     as opposed to using EXTRA_CFLAGS or CFLAGS_EXTRA, and KBUILD_EXTRA_SYMBOLS
@@ -39,26 +39,27 @@ diff -u init/Makefile{.~1~,}
 
 
 diff -u init/main.c{.~1~,}
---- init/main.c.~1~     2014-08-13 21:36:35.000000000 -0500
-+++ init/main.c 2015-09-15 14:15:36.198627790 -0500
-@@ -78,6 +78,7 @@
+--- main.c.~1~  2015-10-26 19:53:59.000000000 -0500
++++ main.c      2016-01-12 01:41:39.467643463 -0600
+@@ -75,6 +75,7 @@
+ #include <linux/blkdev.h>
+ #include <linux/elevator.h>
+ #include <linux/sched_clock.h>
++#include <linux/trace.h>  /* trace_3_init(), trace_sched_switch_hook_add */
  #include <linux/context_tracking.h>
  #include <linux/random.h>
  #include <linux/list.h>
-+#include <linux/trace.h>  /* trace_3_init(), trace_sched_switch_hook_add */
- 
- #include <asm/io.h>
- #include <asm/bugs.h>
-@@ -587,6 +588,8 @@
-        hrtimers_init();
-        softirq_init();
-        timekeeping_init();
+@@ -597,6 +598,9 @@
+        WARN(!irqs_disabled(), "Interrupts were enabled early\n");
+        early_boot_irqs_disabled = false;
+        local_irq_enable();
++       printk("main.c:start_kernel: calling trace_3_init\n");
 +       trace_3_init();
 +       TRACE( 0, "main.c: trace initialize" );
-        time_init();
-        sched_clock_postinit();
-        perf_event_init();
-@@ -932,6 +935,7 @@
+ 
+        kmem_cache_init_late();
+ 
+@@ -935,6 +939,7 @@
         int ret;
  
         kernel_init_freeable();

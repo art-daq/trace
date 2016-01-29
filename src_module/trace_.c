@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 429 $$Date: 2015-11-15 19:13:07 -0600 (Sun, 15 Nov 2015) $";
+    rev="$Revision: 479 $$Date: 2016-01-11 23:09:35 -0600 (Mon, 11 Jan 2016) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -23,6 +23,7 @@
 #include <trace/events/irq.h>	/*  */
 #include <trace/events/syscalls.h>/* */
 #define TRACE_IMPL		// implement traceInit
+#define TRACE_DEFINE
 #include "trace.h"
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
@@ -31,9 +32,11 @@
 # define REGISTER_NULL_ARG
 #endif
 
-struct traceControl_s  *traceControl_p=NULL;
-struct traceEntryHdr_s *traceEntries_p;
-struct traceNamLvls_s  *traceNamLvls_p;
+#if 0
+x struct traceControl_s  *traceControl_p=NULL;
+x struct traceEntryHdr_s *traceEntries_p;
+x struct traceNamLvls_s  *traceNamLvls_p;
+#endif
 EXPORT_SYMBOL_GPL( traceControl_p );
 EXPORT_SYMBOL_GPL( traceEntries_p );
 EXPORT_SYMBOL_GPL( traceNamLvls_p );

@@ -1,0 +1,75 @@
+2016.01.02
+
+traceInit...  and TRACE_INIT_CHECK
+
+
+per process and per module ---   traceControl_p/traceFile, tracePid, traceTID/traceName, 
+per thread  (TRACE_THREAD_LOCAL) traceTid       ??? TRACE_FILE ??? could cause remap??? -- 
+
+As of 2016.01.07, trace still needs to run in a multi-threaded & non-tls environment.
+The initialization needs to support both environment.
+  For the TLS environment, the INIT_CHECK should check to see of the traceTid
+    variable has been initialized. If the traceTid has not been initialize,
+    chances are the the traceControl_p has also not been initialized.
+    The initialization MUST ENSURE that the traceControl_p has been initialized
+    -- the initialization routine should initialize traceControl_p (and
+    related) FIRST, i.e. before setting traceTid LAST.
+
+  For the non-TLS environment, both traceTid and traceControl_p should get
+    initialized together. But, again, traceControl_p should get initialized
+    first.
+
+1st in module could be 1st in thread which could be first in process.
+
+tracelib makes the per module become per process/executable.
+
+Is the traceControl_p/traceFile PER THREAD possible???
+
+traceControl_p
+  traceNamLvls_p   (easy, fixed/constant offset from traceControl_p)
+  traceEntries_p   (depends on num_namLvlTblEnts)
+  other init (create) params: msgmax, argsmax, numents
+
+
+TRACE_DECL( static, TRACE_THREAD_LOCAL  struct traceNamLvls_s *traceNamLvls_p, =&traceNamLvls[0] );
+TRACE_DECL( static, TRACE_THREAD_LOCAL  struct traceEntryHdr_s *traceEntries_p, );
+TRACE_DECL( static, TRACE_THREAD_LOCAL  struct traceControl_s  *traceControl_p, =NULL );
+??????????
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
+????????
+TRACE_DECL( static, TRACE_THREAD_LOCAL pid_t traceTid,     =0 );  /* thread id */
+TRACE_DECL( static, TRACE_THREAD_LOCAL int   traceTID, =0 );  /* idx into lvlTbl, namTbl */
+
+
+
+traceControl_p/traceFile
+		snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tidx );
+		TRACE_CNTL( "file", tmp );
+
+
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceFile, ="/tmp/trace_buffer_%s" );/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
+
+
+	{	snprintf( tmp, sizeof(tmp), "T%ld", tidx );
+		printf( "setting name to %s\n",tmp );
+		TRACE_CNTL( "name", tmp );
+
+TRACE_DECL( static, TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
+
+
+static int traceInit( const char *_name )
+
+
+
+
+name_       traceInit arg (via TRACE_CONTROL), #define*, env, default 
+file_       traceInit arg (TRACE_CONTROL), #define**, env, default
+msgmax_     file, env, default
+argsmax_    file, env, default
+numents_    file, env, default
+namtblents_ file, env, default
+
+* - in/from main, set an overridable default via setenv( TRACE_NAME, val, overwrite=false )
+    Using the #define is meant to hardcore the name for TRACEs in a class module.
+** - not implemented

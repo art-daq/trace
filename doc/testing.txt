@@ -1,0 +1,157 @@
+setup -r$PWD -z$PWD TRACE
+export TRACE_MSGMAX=0
+
+
+# - - - - - - - CHECK MODULE COMPILE
+
+rm -fr module;\
+{ unsetup gcc;\
+  xx=`make OUT=$PWD modules 2>&1`;\
+  sts=$?; echo "$xx" | egrep -iB4 'error|warn';\
+  test $sts -eq 0 && echo OK || false;\
+}
+
+
+
+# - - - - - - - - DEBUG - - - - - - - - - - - - 
+
+rm -fr Linux*;\
+{ unsetup gcc;\
+  xx=`make OUT=$PWD XTRA_CXXFLAGS="-DTRACE_DEBUG_INIT -g -O0" 2>&1`;\
+  sts=$?; echo "$xx" | egrep -iB4 'error|warn';\
+  test $sts -eq 0 && echo OK || false;\
+}
+rm -f /tmp/trace_buffer_*;TRACE_NAME=simon example_main
+
+rm -fr Linux*;\
+{ setup gcc git;\
+  xx=`make OUT=$PWD XTRA_CXXFLAGS="-std=c++11 -DTRACE_DEBUG_INIT -g -O0" XTRA_CFLAGS=-std=gnu11 2>&1`;\
+  sts=$?; echo "$xx" | egrep -iB4 'error|warn';\
+  test $sts -eq 0 && echo OK || false;\
+}
+rm -f /tmp/trace_buffer_*;TRACE_NAME=simon example_main
+
+
+
+
+
+# - - - - - - -COUNT MAPPINGS - - - - - - - - - -
+
+rm -fr Linux*;\
+{ unsetup gcc;\
+  xx=`make OUT=$PWD 2>&1`;\
+  sts=$?; echo "$xx" | egrep -iB4 'error|warn';\
+  test $sts -eq 0 && echo OK || false;\
+}
+rm -f /tmp/trace_buffer_*; time tcntl -x4 test-threads 4 4095; time tcntl -x4 test-threads 4 4095
+rm -f /tmp/trace_buffer_*; time tcntl -x5 test-threads 4 4095; time tcntl -x5 test-threads 4 4095
+rm -f /tmp/trace_buffer_*; time tcntl -x6 test-threads 80 20; time tcntl -x6 test-threads 80 20
+
+rm -fr Linux*;\
+{ setup gcc git;\
+  xx=`make OUT=$PWD XTRA_CXXFLAGS="-std=c++11" XTRA_CFLAGS=-std=gnu11 2>&1`;\
+  sts=$?; echo "$xx" | egrep -iB4 'error|warn';\
+  test $sts -eq 0 && echo OK || false;\
+}
+rm -f /tmp/trace_buffer_*; time tcntl -x4 test-threads 4 4095; time tcntl -x4 test-threads 4 4095
+rm -f /tmp/trace_buffer_*; time tcntl -x5 test-threads 4 4095; time tcntl -x5 test-threads 4 4095
+rm -f /tmp/trace_buffer_*; time tcntl -x6 test-threads 80 20; time tcntl -x6 test-threads 80 20
+
+
+
+
+
+
+
+==== "big" test
+
+multi module modes:
+  1) all static
+  2) one DEFINE + all other DECLARE
+  3) one DEFINE + all other STATIC
+  4) one DEFINE + MIX -- some/most DECLARE + some/most STATIC
+     -- could #define DECLARE in specific modules
+     OR -DDECLARE for all and then in speicific modules do #undef DECLARE
+
+in order to have a module have it's own name and/or file, must/should #undef DECLARE
+    WHAT HAPPENS IF WE DON'T????
+
+Test 1 and 4.
+
+main
+  thread-per-core  (i.e. 100)
+
+0, 1, 2, ... 99
+File/Name
+   |
+   v
+  thread
+ 500 modules
+ module %100 => #define TRACE_NMAE
+  join
+  loop 1000000
+
+
+==============================================================================
+
+/home/ron/work/tracePrj/trace
+mu2edaq01 :^) big_ex.sh -DTRACE_STATIC -d100 ./big_ex.d; rm -fr /tmp/trace_buffer_*; time big_ex.d/big_ex_main -njones -x3 -l5000 -t7
+opt_depth=100
+nn=100
+Compile subs
+compile main
++ g++ -std=c++11 -DTRACE_STATIC -g -Wall -I/home/ron/work/tracePrj/trace/include -o big_ex_main big_ex_main.cc sub1.cc.o sub10.cc.o sub100.cc.o sub11.cc.o sub12.cc.o sub13.cc.o sub14.cc.o sub15.cc.o sub16.cc.o sub17.cc.o sub18.cc.o sub19.cc.o sub2.cc.o sub20.cc.o sub21.cc.o sub22.cc.o sub23.cc.o sub24.cc.o sub25.cc.o sub26.cc.o sub27.cc.o sub28.cc.o sub29.cc.o sub3.cc.o sub30.cc.o sub31.cc.o sub32.cc.o sub33.cc.o sub34.cc.o sub35.cc.o sub36.cc.o sub37.cc.o sub38.cc.o sub39.cc.o sub4.cc.o sub40.cc.o sub41.cc.o sub42.cc.o sub43.cc.o sub44.cc.o sub45.cc.o sub46.cc.o sub47.cc.o sub48.cc.o sub49.cc.o sub5.cc.o sub50.cc.o sub51.cc.o sub52.cc.o sub53.cc.o sub54.cc.o sub55.cc.o sub56.cc.o sub57.cc.o sub58.cc.o sub59.cc.o sub6.cc.o sub60.cc.o sub61.cc.o sub62.cc.o sub63.cc.o sub64.cc.o sub65.cc.o sub66.cc.o sub67.cc.o sub68.cc.o sub69.cc.o sub7.cc.o sub70.cc.o sub71.cc.o sub72.cc.o sub73.cc.o sub74.cc.o sub75.cc.o sub76.cc.o sub77.cc.o sub78.cc.o sub79.cc.o sub8.cc.o sub80.cc.o sub81.cc.o sub82.cc.o sub83.cc.o sub84.cc.o sub85.cc.o sub86.cc.o sub87.cc.o sub88.cc.o sub89.cc.o sub9.cc.o sub90.cc.o sub91.cc.o sub92.cc.o sub93.cc.o sub94.cc.o sub95.cc.o sub96.cc.o sub97.cc.o sub98.cc.o sub99.cc.o -lpthread
+test-threads - before create loop - num_threads=7
+trace_buffer mappings before join (#1) = 158
+trace_buffer mappings before join (#2) = 1400
+trace_buffer mappings after join (#1) = 1400
+trace_buffer mappings after join (#2) = 1400
+test-threads - after join loop
+
+real    0m3.596s
+user    0m15.781s
+sys     0m5.471s
+--2016.01.08_21:28:17--
+
+
+/home/ron/work/tracePrj/trace
+mu2edaq01 :^) big_ex.sh -DTRACE_DECLARE -d100 ./big_ex.d; rm -fr /tmp/trace_buffer_*; time big_ex.d/big_ex_main -njones -x3 -l5000 -t7
+opt_depth=100
+nn=100
+Compile subs
+compile main
++ g++ -std=c++11 -DTRACE_DECLARE -g -Wall -I/home/ron/work/tracePrj/trace/include -o big_ex_main big_ex_main.cc sub1.cc.o sub10.cc.o sub100.cc.o sub11.cc.o sub12.cc.o sub13.cc.o sub14.cc.o sub15.cc.o sub16.cc.o sub17.cc.o sub18.cc.o sub19.cc.o sub2.cc.o sub20.cc.o sub21.cc.o sub22.cc.o sub23.cc.o sub24.cc.o sub25.cc.o sub26.cc.o sub27.cc.o sub28.cc.o sub29.cc.o sub3.cc.o sub30.cc.o sub31.cc.o sub32.cc.o sub33.cc.o sub34.cc.o sub35.cc.o sub36.cc.o sub37.cc.o sub38.cc.o sub39.cc.o sub4.cc.o sub40.cc.o sub41.cc.o sub42.cc.o sub43.cc.o sub44.cc.o sub45.cc.o sub46.cc.o sub47.cc.o sub48.cc.o sub49.cc.o sub5.cc.o sub50.cc.o sub51.cc.o sub52.cc.o sub53.cc.o sub54.cc.o sub55.cc.o sub56.cc.o sub57.cc.o sub58.cc.o sub59.cc.o sub6.cc.o sub60.cc.o sub61.cc.o sub62.cc.o sub63.cc.o sub64.cc.o sub65.cc.o sub66.cc.o sub67.cc.o sub68.cc.o sub69.cc.o sub7.cc.o sub70.cc.o sub71.cc.o sub72.cc.o sub73.cc.o sub74.cc.o sub75.cc.o sub76.cc.o sub77.cc.o sub78.cc.o sub79.cc.o sub8.cc.o sub80.cc.o sub81.cc.o sub82.cc.o sub83.cc.o sub84.cc.o sub85.cc.o sub86.cc.o sub87.cc.o sub88.cc.o sub89.cc.o sub9.cc.o sub90.cc.o sub91.cc.o sub92.cc.o sub93.cc.o sub94.cc.o sub95.cc.o sub96.cc.o sub97.cc.o sub98.cc.o sub99.cc.o -lpthread
+test-threads - before create loop - num_threads=7
+trace_buffer mappings before join (#1) = 16
+trace_buffer mappings before join (#2) = 16
+trace_buffer mappings after join (#1) = 16
+trace_buffer mappings after join (#2) = 16
+test-threads - after join loop
+
+real    0m1.751s
+user    0m7.661s
+sys     0m2.318s
+--2016.01.08_21:37:30--
+
+
+/home/ron/work/tracePrj/trace
+mu2edaq01 :^) big_ex.sh -DNO_TRACE -d100 ./big_ex.d; rm -fr /tmp/trace_buffer_*; time big_ex.d/big_ex_main -njones -x3 -l5000 -t7
+opt_depth=100
+nn=100
+Compile subs
+compile main
++ g++ -std=c++11 -DNO_TRACE -g -Wall -I/home/ron/work/tracePrj/trace/include -o big_ex_main big_ex_main.cc sub1.cc.o sub10.cc.o sub100.cc.o sub11.cc.o sub12.cc.o sub13.cc.o sub14.cc.o sub15.cc.o sub16.cc.o sub17.cc.o sub18.cc.o sub19.cc.o sub2.cc.o sub20.cc.o sub21.cc.o sub22.cc.o sub23.cc.o sub24.cc.o sub25.cc.o sub26.cc.o sub27.cc.o sub28.cc.o sub29.cc.o sub3.cc.o sub30.cc.o sub31.cc.o sub32.cc.o sub33.cc.o sub34.cc.o sub35.cc.o sub36.cc.o sub37.cc.o sub38.cc.o sub39.cc.o sub4.cc.o sub40.cc.o sub41.cc.o sub42.cc.o sub43.cc.o sub44.cc.o sub45.cc.o sub46.cc.o sub47.cc.o sub48.cc.o sub49.cc.o sub5.cc.o sub50.cc.o sub51.cc.o sub52.cc.o sub53.cc.o sub54.cc.o sub55.cc.o sub56.cc.o sub57.cc.o sub58.cc.o sub59.cc.o sub6.cc.o sub60.cc.o sub61.cc.o sub62.cc.o sub63.cc.o sub64.cc.o sub65.cc.o sub66.cc.o sub67.cc.o sub68.cc.o sub69.cc.o sub7.cc.o sub70.cc.o sub71.cc.o sub72.cc.o sub73.cc.o sub74.cc.o sub75.cc.o sub76.cc.o sub77.cc.o sub78.cc.o sub79.cc.o sub8.cc.o sub80.cc.o sub81.cc.o sub82.cc.o sub83.cc.o sub84.cc.o sub85.cc.o sub86.cc.o sub87.cc.o sub88.cc.o sub89.cc.o sub9.cc.o sub90.cc.o sub91.cc.o sub92.cc.o sub93.cc.o sub94.cc.o sub95.cc.o sub96.cc.o sub97.cc.o sub98.cc.o sub99.cc.o -lpthread
+test-threads - before create loop - num_threads=7
+trace_buffer mappings before join (#1) = 0
+trace_buffer mappings before join (#2) = 0
+trace_buffer mappings after join (#1) = 0
+trace_buffer mappings after join (#2) = 0
+test-threads - after join loop
+
+real    0m0.840s
+user    0m0.585s
+sys     0m2.099s
+--2016.01.08_21:48:30--
+
+
+=================================================================================

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: some_module.c,v $
-    rev="$Revision: 416 $$Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $";
+    rev="$Revision: 491 $$Date: 2016-01-26 13:44:13 -0600 (Tue, 26 Jan 2016) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -15,7 +15,7 @@
 #include <linux/jiffies.h>
 #include <linux/delay.h>	/* msleep */
 
-#define TRACE_NAME "MOD1"   // not used, but quiet compiler
+#define TRACE_NAME "MOD1"   /* not used if TRACE_CNTL( "name"...) happens 1st */
 #include "trace.h"
 
 static struct workqueue_struct *wq=0; 

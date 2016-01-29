@@ -3,20 +3,9 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: tracelib.c,v $
-    rev="$Revision: 416 $$Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $";
+    rev="$Revision: 460 $$Date: 2016-01-06 20:52:50 -0600 (Wed, 06 Jan 2016) $";
     */
 
-#define TRACE_LIB
+#define TRACE_DEFINE
 #include "tracelib.h"
-
-struct traceNamLvls_s  traceNamLvls[TRACE_DISABLE_NAM_SZ];
-TRACE_THREAD_LOCAL struct traceNamLvls_s  *traceNamLvls_p=&traceNamLvls[0];
-TRACE_THREAD_LOCAL struct traceEntryHdr_s *traceEntries_p;
-TRACE_THREAD_LOCAL struct traceControl_s  *traceControl_p=NULL;
-TRACE_THREAD_LOCAL const char *traceFile="/tmp/trace_buffer_%s";/*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
-TRACE_THREAD_LOCAL const char *traceName="TRACE";
-int                      tracePrintFd=1;
-pid_t                    tracePid=0;
-TRACE_THREAD_LOCAL int   traceTID=0;
-TRACE_THREAD_LOCAL pid_t traceTid=0;
 

@@ -17,7 +17,7 @@ user_static
 kernel_child
 	staitc void trace()
 	static int traceCntl()
-        no traceInit
+        static traceInit
         extern struct traceNamLvls_s  *traceNamLvls_p;
 	extern struct traceEntryHdr_s *traceEntries_p;
 	extern struct traceControl_s  *traceControl_p;
@@ -25,7 +25,7 @@ kernel_child
 	static int   traceTID=0;  /* idx into lvlTbl, namTbl */
 	static pid_t traceTid=0;  /* thread id */
 
-kernel_parent
+kernel_parent  (main module or compiled into kernel)
 	staitc void trace()
 	static int traceCntl()
 	static int traceInit()
@@ -118,4 +118,23 @@ KERNEL TRACE_IMPL TRACE_LIB TRACE_DECL  Description
  1       1           0          1       n/a
  1       1           1          0       n/a
  1       1           1          1       n/a
+
+
+
+scope  type variable_name  initializer
+static int   my_variable    = 0;
+
+example:
+TRACE_DECL( TRACE_THREAD_LOCAL struct traceNamLvls_s *traceNamLvls_p, =&traceNamLvls[0] );
+
+
+/* "DEFINE" overrides "DECLARE" so we can specify TRACE_DEFINE in one "main" file
+   and include a Trace_wrapper header which has TRACE_DECLARE in it */
+#if   defined(TRACE_DEFINE)
+# define TRACE_DECL( var_type_and_name, initializer ) var_type_and_name = initializer
+#elif defined(TRACE_DECLARE)
+# define TRACE_DECL( var_type_and_name, initializer ) extern var_type_and_name
+#else
+# define TRACE_DECL( var_type_and_name, initializer ) static var_type_and_name = initializer
+#endif
 

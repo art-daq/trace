@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 433 $$Date: 2015-12-10 11:30:45 -0600 (Thu, 10 Dec 2015) $";
+char *rev="$Revision: 488 $$Date: 2016-01-22 11:41:32 -0600 (Fri, 22 Jan 2016) $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -79,14 +79,13 @@ void* thread_func(void *arg)
 	long tidx =(long)arg&0xfff;	   /* lower 12 bits have thread index */
 	long loops=(long)arg>>12;	   /* bits 12-31 have loops */
 	char tmp[PATH_MAX];
-	if      (trace_thread_option == 1)
+	if (trace_thread_option & 1)
 	{	/* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
 		snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tidx );
 		TRACE_CNTL( "file", tmp );
 	}
-	else if (trace_thread_option == 2)
+	if (trace_thread_option & 2)
 	{	snprintf( tmp, sizeof(tmp), "T%ld", tidx );
-		printf( "setting name to %s\n",tmp );
 		TRACE_CNTL( "name", tmp );
 	}
 
@@ -191,6 +190,7 @@ void get_arg_sizes(	 char            *ofmt
 		case 'h':  --modifier; *ofmt++ = *in++; goto chkChr;
 		case 'l':  ++modifier; *ofmt++ = *in++; goto chkChr;
 		case 'L':  ++modifier; *ofmt++ = *in++; goto chkChr;
+		case 'z':  ++modifier; *ofmt++ = *in++; goto chkChr;
 
 		case 's': case 'n': case 'p':       /* SAFETY -- CONVERT %s to %p */
 			*ofmt++='p'; in++;
@@ -263,7 +263,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		rdIdx=start;
 	}
 	else
-	{	rdIdx = traceControl_p->wrIdxCnt % traceControl_p->num_entries;
+	{	rdIdx = TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt) % traceControl_p->num_entries;
 	}
 	if ((count>=0) && (start>=0))
 	{
@@ -433,21 +433,22 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 
 void traceInfo()
 {
-	uint32_t   wrCopy, used;
-	uint32_t   spinlockCopy;
-	char       outstr[200];
-	struct tm *tmp;
-	time_t     tt=(time_t)traceControl_p->create_tv_sec;
+	uint32_t       used;
+	TRACE_ATOMIC_T wrCopy;
+	TRACE_ATOMIC_T spinlockCopy;
+	char           outstr[200];
+	struct tm      *tmp;
+	time_t         tt=(time_t)traceControl_p->create_tv_sec;
 	tmp = localtime( &tt );
 	if (tmp == NULL) { perror("localtime"); exit(EXIT_FAILURE); }
 	if (strftime(outstr, sizeof(outstr),"%a %b %d %H:%M:%S %Z %Y",tmp) == 0)
 	{   perror("strftime"); exit(EXIT_FAILURE);
 	}
-	spinlockCopy = traceControl_p->spinlock;
-	wrCopy = traceControl_p->wrIdxCnt;
+	TRACE_ATOMIC_STORE( &spinlockCopy, TRACE_ATOMIC_LOAD(&traceControl_p->spinlock) );
+	TRACE_ATOMIC_STORE( &wrCopy,       TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt) );
 	used = ((traceControl_p->full)
 		?traceControl_p->num_entries
-		:wrCopy); /* if not full this shouldn't be > traceControl_p->num_entries */
+		:TRACE_ATOMIC_LOAD(&wrCopy) ); /* if not full this shouldn't be > traceControl_p->num_entries */
 	printf("trace.h rev       = %s\n"
 	       "revision          = %s\n"
 	       "create time       = %s\n"
@@ -496,7 +497,7 @@ void traceInfo()
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
 	       , traceControl_p->memlen
-	       , (traceControl_p->memlen == traceMemLen( cntlPagesSiz()
+	       , (traceControl_p->memlen >= traceMemLen( cntlPagesSiz()
 							,traceControl_p->num_namLvlTblEnts
 							,traceControl_p->siz_msg
 							,traceControl_p->num_params
@@ -552,21 +553,23 @@ extern  int        optind;         /* for getopt */
 		uint32_t desired, myIdx;
 
 #	   if	defined(__cplusplus)      &&      (__cplusplus >= 201103L)
-		tid = (pid_t)syscall( SYS_GETTID );
+		tid = (pid_t)syscall( TRACE_GETTID );
 #	   elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-		tid = (pid_t)syscall( SYS_GETTID );
+		tid = (pid_t)syscall( TRACE_GETTID );
 #	   elif !defined(__sparc__)
-		tid = (pid_t)syscall( SYS_GETTID );
+		tid = (pid_t)syscall( TRACE_GETTID );
 #	   endif
 		if (tid == -1) perror("syscall");
-		printf("tid=%ld\n", (long int)syscall(SYS_GETTID) );
+		printf("tid=%ld\n", (long int)syscall(TRACE_GETTID) );
 
 		printf("sizeof: int:%u long:%u pid_t:%u pthread_t:%u timeval:%u "
-			   "double:%u traceControl_s:%u traceEntryHdr_s:%u\n"
-			   , (int)sizeof(int), (int)sizeof(long), (int)sizeof(pid_t)
-			   , (int)sizeof(pthread_t), (int)sizeof(struct timeval)
-			   , (int)sizeof(double), (int)sizeof(struct traceControl_s)
-			   , (int)sizeof(struct traceEntryHdr_s));
+		       "double:%u traceControl_s:%u traceEntryHdr_s:%u traceContol(for disabled):%u\n"
+		       , (unsigned)sizeof(unsigned), (unsigned)sizeof(long), (unsigned)sizeof(pid_t)
+		       , (unsigned)sizeof(pthread_t), (unsigned)sizeof(struct timeval)
+		       , (unsigned)sizeof(double)
+		       , (unsigned)sizeof(struct traceControl_s)
+		       , (unsigned)sizeof(struct traceEntryHdr_s)
+		       , (unsigned)sizeof(traceControl) );
 		printf("offset: trigIdxCount   =%p\n"
 			   "        trigActivePost =%p\n"
 			   "        full           =%p\n"
@@ -598,7 +601,8 @@ extern  int        optind;         /* for getopt */
 		/* _at_least_ set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
 		   bit -- this is what is on by default when the file is created */
 		/*                    Mem    Slow Trig */
-		TRACE_CNTL( "lvlset", 0xfLL, 0LL, 0LL ); TRACE_CNTL( "modeM", 1LL );
+		TRACE_CNTL( "lvlset", 0xfLL, 0LL, 0LL );
+		TRACE_CNTL( "modeM", 1LL );
 
 		TRACE( 0, "hello" );
 		myIdx = traceControl_p->largest_multiple - 3;
@@ -632,7 +636,7 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strcmp(cmd,"test-ro") == 0)
 	{
-		setenv("TRACE_FILE","/proc/trace/buffer",1);
+		setenv("TRACE_FILE","/proc/trace/buffer",0);
 		traceInit(NULL);
 		printf("try write to (presumably kernel memory) write-protected 1st page...\n");
 		traceControl_p->trace_initialized = 2;
@@ -733,8 +737,22 @@ extern  int        optind;         /* for getopt */
 		{
 			pthread_create(&(threads[ii]),NULL,thread_func,(void*)((loops<<12)|ii) );
 		}
+		if (trace_thread_option & 4)
+		{   char          cmd[200];
+		    sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
+		    system( cmd );
+		    sprintf( cmd, "echo trace_buffer mappings before join '(#2)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
+		    system( cmd );
+		}
 		for (ii=0; ii<num_threads; ii++)
 		{	pthread_join(threads[ii], NULL);
+		}
+		if (trace_thread_option & 4)
+		{   char          cmd[200];
+		    sprintf( cmd, "echo trace_buffer mappings after join '(#1)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
+		    system( cmd );
+		    sprintf( cmd, "echo trace_buffer mappings after join '(#2)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
+		    system( cmd );
 		}
 		printf("test-threads - after create loop - traceControl_p=%p\n",(void*)traceControl_p);
 		TRACE( 0, "after pthread_join" );
@@ -757,7 +775,7 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strcmp(cmd,"unlock") == 0) 
 	{	traceInit(NULL);
-		trace_unlock();
+		trace_unlock( &traceControl_p->spinlock );
 	}
 	else if (strcmp(cmd,"tids") == 0) 
 	{	traceInit(NULL);

@@ -22,7 +22,7 @@ include(CetCMakeEnv)
 cet_cmake_env()
 
 cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros
-                       EXTRA_C_FLAGS -std=c11)
+                       EXTRA_C_FLAGS -std=gnu11)
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions

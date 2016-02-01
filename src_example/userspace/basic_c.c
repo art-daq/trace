@@ -13,9 +13,9 @@ struct basic_c_s
   char ver2[0x1000];
 };
 
-static struct basic_c_s  before = {{0}};
+static struct basic_c_s  before = {{0},{0}};
 #include "trace.h"		/* TRACE */
-static struct basic_c_s  after = {{0}};
+static struct basic_c_s  after = {{0},{0}};
 
 int main( )
 {
@@ -43,7 +43,7 @@ int main( )
       &before[0]=%p\n\
 &traceControl[0]=%p\n\
        &after[0]=%p\n\
-",&before,&traceControl[0],&after );
+",(void*)&before,(void*)&traceControl[0],(void*)&after );
 
     /* The following is meant to test the trace "disabled" case --
 	   to make sure that no writing beyond the trace variable storage occurs.

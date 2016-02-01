@@ -4,34 +4,40 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 490 $$Date: 2016-01-23 13:55:50 -0600 (Sat, 23 Jan 2016) $'
+ # rev='$Revision: 496 $$Date: 2016-01-30 13:47:09 -0600 (Sat, 30 Jan 2016) $'
 set -u
 opt_depth=15
 opt_std=c++11
 do_define=1
 do_declare=1
 do_mapcheck=2
-check_opts='-l5000 -t7'
+#check_opts='-l5000 -t7 -x3'
+check_opts='-l100 -t256'
 check_numents=2000000  # maybe compute what this should be
 USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
           `basename $0` ./big_ex.d --std=
-          `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75' --check-numents=16000000
-          `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75' --check-numents=16000000
-          `basename $0` ./big_ex.d -DNO_TRACE -d200 --check-opts='-l1000 -t75' --check-numents=16000000
+          `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
+          `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
+          `basename $0` ./big_ex.d -DNO_TRACE -d200 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d --no-define --no-declare -d25 -std=
+          `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t2048 -x5' # os tid can recycle with - 
+                                                    #- higher -t val, approx 2600 uniq tids have been seen.
+          `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t512 -x1' --depth=200 --check-numents=6000000 # -
+                                                    #- with --depth=200 a -t much above 512 can lead to -
+                                                    #- \"Resource temporarily unavailable\" from pthread_create
 If directory does not exist, it will be created.
 Files in the dir will be overwritten.
---depth=   defalut is $opt_depth, but a better test might be 500
+-d, --depth=   defalut is $opt_depth, but a better test might be 500
 -DTRACE_DECLARE  add -DTRACE_DECLARE to compile line
 -DTRACE_STATIC   add -DTRACE_STATIC to compile line
 --std=<c++std>  -std=   both single and double - work
 --no-define      remvoe #define TRACE_DEFINE from subs (could also do -DTRACE_STATIC)
 --no-declare     remove #define TRACE_DECLARE from main
---mapcheck[=num] default=$do_mapcheck, the number of check loops
---check-opts=<opts> default=$check_opts
-----check-numents=<ents>
+--mapcheck[=num] default=$do_mapcheck, the number of check LOOPS
+--check-opts=<opts> default=$check_opts  for -x: b0=count maps; b1=use sub-threads; b2=random delay
+--check-numents=<ents>
 
 NOTE: the program can display the number of trace_buffer mappings which
 can get very large when a large combination of TRACE_STATIC modules and
@@ -87,10 +93,14 @@ rm -f big_ex_main.cc big_ex_main big_ex_main.out
 
 # - - - - - - - - - - - Make all the sub modules (except for the last 1) - - -
 
+struct_args='struct args { pid_t tid; unsigned loop; int xtra_options; useconds_t dly_us; }'
+
 echo opt_depth=$opt_depth
 nn=1
 while [ $nn -lt $opt_depth ];do
     next=`expr $nn + 1`
+    test $nn -eq 1 && POTENTIAL_DELAY='if(aa->xtra_options&4){aa->dly_us=random()%5000;usleep(aa->dly_us);}'\
+                   || POTENTIAL_DELAY=
     expr $nn % 10 >/dev/null && do_TRACE_NAME= || do_TRACE_NAME="\
 #define TRACE_NAME \"sub$nn\""
     cat >sub$nn.cc <<EOF
@@ -105,10 +115,13 @@ $do_TRACE_NAME
 # define TRACE(...)
 #endif
 
-struct args { pid_t tid; unsigned loop; };
+$struct_args;
+
 void sub$next( struct args *aa );
 void sub$nn( struct args *aa )
-{   TRACE( 0,"sub$nn loop=%u tid=%d calling sub$next tC_p=%p %u=tIL_hung_max",aa->loop,aa->tid,traceControl_p,traceInitLck_hung_max);
+{   TRACE( 0,"sub$nn loop=%u tid=%d calling sub$next tC_p=%p %u=tIL_hung_max"
+          ,aa->loop,aa->tid,traceControl_p,traceInitLck_hung_max);
+    $POTENTIAL_DELAY
     sub$next(aa);
 }
 EOF
@@ -132,10 +145,11 @@ $do_TRACE_NAME
 # define TRACE(...)
 #endif
 
-struct args { pid_t tid; unsigned loop; };
+$struct_args;
 
 void sub$last( struct args *aa )
-{   TRACE( 0, "sub$last loop=%u tid=%d returning tC_p=%p %u=tIL_hung_max",aa->loop,aa->tid,traceControl_p,traceInitLck_hung_max);
+{   TRACE( 0, "sub$last loop=%.4f=dly tid=%d ret tC_p=%p %u=tIL_hung_max"
+          , aa->loop+aa->dly_us/10000.0,aa->tid,traceControl_p,traceInitLck_hung_max);
 }
 EOF
 
@@ -165,23 +179,23 @@ options:\n\
 -f<TRACE_FILE>\n\
 -l<loops>\n\
 -t<num_threads>\n\
--x<mask>  extra options - b0=count maps\n\
+-x<mask>  extra options - b0=count maps; b1=use sub-threads; b2=random delay in sub1 after 1st TRACE\n\
 ", basename(argv[0]), basename(argv[0])
 
-static int xtra_options=1;
+$struct_args;
 
-struct args { pid_t tid; unsigned loop; };
 void sub1( struct args *aa );
 
 void* thread_func(void *arg)
 {
-    long loops=(long)arg;
-    struct args aa;
+    struct args *args_p=(struct args *)arg;
+    long loops=args_p->loop; // initial "loops" from main
+    struct args aa=*args_p;  // per thread copy -  initialize from main
     aa.tid=syscall(TRACE_GETTID);
     for (unsigned ii=0; ii<loops; ++ii)
     {   TRACE( 0, "tf loop=%u tid=%d calling sub1 tC_p=%p %u=tIL_hung_max",ii,aa.tid,traceControl_p,traceInitLck_hung_max);
         aa.loop=ii;
-        if (xtra_options & 2)
+        if (aa.xtra_options & 2)
         {   pthread_t thread;
             pthread_create(&thread,NULL,(void*(*)(void*))sub1,(void*)&aa);
             pthread_join(thread, NULL);
@@ -200,6 +214,8 @@ extern  char        * optarg;        // for getopt
         int           opt;           // for how I use getopt
 	unsigned long loops=500;
         unsigned      ii;
+        struct args   args;
+        int           xtra_options=1;
 
     while ((opt=getopt(argc,argv,"?hn:f:l:t:x:")) != -1)
     {   switch (opt)
@@ -213,11 +229,15 @@ extern  char        * optarg;        // for getopt
         }
     }
     threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
+    args.loop = loops; // the initial "loops"
+    args.xtra_options = xtra_options;
+    args.dly_us=0;
     TRACE( 0, "b4 pthread_create - loops=%lu tC_p=%p %u=tIL_hung_max", loops, traceControl_p, traceInitLck_hung_max );
     printf("test-threads - before create loop - loops=%lu num_threads=%u xtra_threads=%d\n",
            loops,num_threads,!!(xtra_options&2));
     for (ii=0; ii<num_threads; ii++)
-    {   pthread_create(&threads[ii],NULL,thread_func,(void*)loops);
+    {   int sts=pthread_create(&threads[ii],NULL,thread_func,(void*)&args);
+        if(sts!=0){perror("pthread_create");exit(1);}
     }
     if (xtra_options & 1)
     {   char          cmd[200];
@@ -280,7 +300,9 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     while true; do
         echo Testing... $do_mapcheck
 
-        time ./big_ex_main -njones -x3 $check_opts >big_ex_main.out 2>&1
+        time ./big_ex_main -njones -x1 $check_opts >big_ex_main.out 2>&1
+        sts=$?
+        test $sts -ne 0 && { echo ./big_ex_main FAILED - exit status: $sts; exit 1; }
 
         parallel_threads=`cat big_ex_main.out | sed -n -e '/num_threads/{s/.*num_threads= *//;s/ .*//;p;}'`
         loops=`cat big_ex_main.out | sed -n -e '/loops/{s/.*loops= *//;s/ .*//;p;}'`
@@ -294,11 +316,11 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
 Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLARE=%d ?tids=%d)\n\
 " $num_maps $loops $parallel_threads $expect_static $expect_declare $check_tids
 
+        trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
         uniq_addrs=`TRACE_SHOW=HxiICLR trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
         sub10_tid=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 /{print$2;exit;}'`
         uniq_tids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -u | wc -l`
         uniq2=`expr $uniq_addrs \* 2`
-        trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
         echo "  uniq_addrs=$uniq_addrs uniq2=$uniq2 num_maps=$num_maps sub10_tid=$sub10_tid uniq_tids=$uniq_tids"
         if [ "$uname" = Linux ];then
             test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) -a "$sub10_tid" -eq 1\

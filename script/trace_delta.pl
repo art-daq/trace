@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 416 $';
-#   $Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $
+$version = '$Revision: 500 $';
+#   $Date: 2016-02-03 09:38:49 -0600 (Wed, 03 Feb 2016) $
 
 use Time::Local; # timelocal()
 
@@ -219,6 +219,20 @@ sub get_delta_data
     if    ($delta_d =~ /^\s*[\d.]+\s*$/o)
     {   $ret = $delta_d;
     }
+    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
+    {   # convert to float seconds
+        $year=$1; $month=$2; $date=$3; $hour=$4; $minute=$5; $seconds=$6;
+        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	#print STDERR "time_then = $time_then\n";
+	$ret = $time_then . $7;
+    }
+    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
+    {   # convert to float seconds
+        $year=1970; $month=$1; $date=$2; $hour=$3; $minute=$4; $seconds=$5;
+        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	#print STDERR "time_then = $time_then\n";
+	$ret = $time_then . $6;
+    }
     elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
     {   # convert to float seconds
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
@@ -376,15 +390,18 @@ for $idx (0..$#col_cntl)
     if (!$opt_b) # if "not delta before" 
     {   
 	if ($col_cntl[$idx]{ct}) # if converting time
-	{   $sub .= "
+	{   if ($ENV{"TRACE_PRINT_FMT"} ne ""){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt="%m-%d %H:%M:%S.";}
+	    $fmtlen=length(strftime( $tfmt,localtime() ) );
+	    $fmtlen+=7;
+            $sub .= "
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
-                \$str = strftime( \"%m/%d %H:%M:%S.\$useconds\", localtime(\$seconds) );
-                \$out_line .= sprintf( \"%*s\", 22, \$str );
+                \$str = strftime( \"".$tfmt."\$useconds\", localtime(\$seconds) );
+                \$out_line .= sprintf( \"%*s\", $fmtlen, \$str );
 	    }
             else
-            {   \$out_line .= sprintf( \"%*s\", 22, \$data ); # delta will come after
+            {   \$out_line .= sprintf( \"%*s\", $fmtlen, \$data ); # delta will come after
             }";
 	}
 	else
@@ -471,15 +488,18 @@ for $idx (0..$#col_cntl)
     if ($opt_b)
     {
 	if ($col_cntl[$idx]{ct}) # if converting time
-	{   $sub .= "
+	{   if ($ENV{"TRACE_PRINT_FMT"} ne ""){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt="%m-%d %H:%M:%S.";}
+	    $fmtlen=length(strftime( $tfmt,localtime() ) );
+	    $fmtlen+=7;
+	    $sub .= "
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
-                \$str = strftime( \"%m/%d %H:%M:%S.\$useconds\", localtime(\$seconds) );
-                \$out_line .= sprintf( \"%*s\", 22, \$str );
+                \$str = strftime( \"".$tfmt."\$useconds\", localtime(\$seconds) );
+                \$out_line .= sprintf( \"%*s\", $fmtlen, \$str );
 	    }
             else
-            {   \$out_line .= sprintf( \"%*s\", 22,\$data ); # delta was before
+            {   \$out_line .= sprintf( \"%*s\", $fmtlen,\$data ); # delta was before
             }";
 	}
 	else

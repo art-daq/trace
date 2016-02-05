@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 462 $
-#   $Date: 2016-01-07 13:08:25 -0600 (Thu, 07 Jan 2016) $
+#   $Revision: 499 $
+#   $Date: 2016-02-02 13:05:38 -0600 (Tue, 02 Feb 2016) $
 FILE = TABLE
 Product=TRACE
 
@@ -101,14 +101,14 @@ COMMON:
 	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset )
 	addAlias( tdelta,  set_ opts=%s;tnotnull PAGER && sh -c "${UPS_PROD_DIR}/script/trace_delta.pl $opts | $PAGER;true" || ${UPS_PROD_DIR}/script/trace_delta.pl $opts )
 	addAlias( tenv,    ${UPS_PROD_DIR}/script/trace_envvars.sh %s )
-	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; trace_cntl modeM 1 )
-	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; trace_cntl modeS 1 )
+	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 1 )
+	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS 1 )
 	addAlias( tonT,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 0 `bitN_to_mask %s` )
 	addAlias( toffM,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclr  `bitN_to_mask %s` 0 0 )
 	addAlias( toffS,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclr  0 `bitN_to_mask %s` 0 )
 	addAlias( toffT,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclr  0 0 `bitN_to_mask %s` )
-	addAlias( tonMg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg `bitN_to_mask %s` 0 0; trace_cntl modeM 1 )
-	addAlias( tonSg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg 0 `bitN_to_mask %s` 0; trace_cntl modeS 1 )
+	addAlias( tonMg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg `bitN_to_mask %s` 0 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 1 )
+	addAlias( tonSg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg 0 `bitN_to_mask %s` 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS 1 )
 	addAlias( tonTg,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlsetg 0 0 `bitN_to_mask %s` )
 	addAlias( toffMg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg `bitN_to_mask %s` 0 0 )
 	addAlias( toffSg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 `bitN_to_mask %s` 0 )

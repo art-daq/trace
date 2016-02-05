@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 496 $$Date: 2016-01-30 13:47:09 -0600 (Sat, 30 Jan 2016) $'
+ # rev='$Revision: 502 $$Date: 2016-02-04 13:23:00 -0600 (Thu, 04 Feb 2016) $'
 set -u
 opt_depth=15
 opt_std=c++11
@@ -114,6 +114,8 @@ $do_TRACE_NAME
 #else
 # define TRACE(...)
 #endif
+#include <stdlib.h> /* random (optionally) */
+#include <unistd.h> /* usleep (optionally) */
 
 $struct_args;
 
@@ -191,7 +193,7 @@ void* thread_func(void *arg)
     struct args *args_p=(struct args *)arg;
     long loops=args_p->loop; // initial "loops" from main
     struct args aa=*args_p;  // per thread copy -  initialize from main
-    aa.tid=syscall(TRACE_GETTID);
+    aa.tid=syscall(SYS_gettid); // Note: don't use TRACE_GETTID as NO_TRACE may be defined
     for (unsigned ii=0; ii<loops; ++ii)
     {   TRACE( 0, "tf loop=%u tid=%d calling sub1 tC_p=%p %u=tIL_hung_max",ii,aa.tid,traceControl_p,traceInitLck_hung_max);
         aa.loop=ii;
@@ -271,9 +273,9 @@ echo Compile subs
 nn=1
 for ss in sub*.cc; do
    ofile=`basename $ss .c`.o
-   test -n "$do_once" && set -x
+   test -n "$do_once" && { flags=$-; set -x; }
    g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -c -o $ofile $ss &
-   test -n "$do_once" && { set +x; do_once=; }
+   test -n "$do_once" && { set +x; set -$flags; do_once=; }
    expr $nn % $opt_j >/dev/null || wait
    nn=`expr $nn + 1`
 done
@@ -316,12 +318,18 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
 Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLARE=%d ?tids=%d)\n\
 " $num_maps $loops $parallel_threads $expect_static $expect_declare $check_tids
 
-        trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
-        uniq_addrs=`TRACE_SHOW=HxiICLR trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
-        sub10_tid=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 /{print$2;exit;}'`
-        uniq_tids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -u | wc -l`
+        if [ -f $TRACE_FILE ];then
+            trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
+            uniq_addrs=`TRACE_SHOW=HxiICLR trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
+            sub10_tids=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 loop=/{print$2;}' | sort -u`
+            test `echo "$sub10_tids" | wc -l` -eq 1 && sub10_tid=$sub10_tids || sub10_tid=-1
+            uniq_tids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -u | wc -l`
+        else
+            echo "TRACE_FILE not found - FAIL will result"
+            uniq_addrs=0 sub10_tid=0 uniq_tids=0
+        fi
         uniq2=`expr $uniq_addrs \* 2`
-        echo "  uniq_addrs=$uniq_addrs uniq2=$uniq2 num_maps=$num_maps sub10_tid=$sub10_tid uniq_tids=$uniq_tids"
+        echo "  uniq_addrs=$uniq_addrs uniq2=$uniq2 num_maps=$num_maps sub10_tids="$sub10_tids "sub10_tid=$sub10_tid uniq_tids=$uniq_tids"
         if [ "$uname" = Linux ];then
             test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) -a "$sub10_tid" -eq 1\
                  -a $num_maps -eq $uniq2 -a \( $uniq_tids -eq 1 -o -z "$check_tids" -o $uniq_tids -eq "${check_tids:-0}" \)\

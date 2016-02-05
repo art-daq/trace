@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 491 $$Date: 2016-01-26 13:44:13 -0600 (Tue, 26 Jan 2016) $"
+#define TRACE_REV  "$Revision: 500 $$Date: 2016-02-03 09:38:49 -0600 (Wed, 03 Feb 2016) $"
 
 #ifndef __KERNEL__
 
@@ -15,6 +15,7 @@
 # include <stdarg.h>		/* va_list */
 # include <stdint.h>		/* uint64_t */
 # include <sys/time.h>          /* timeval */
+# include <time.h>		/* struct tm, localtime_r, strftime */
 # include <string.h>		/* strncmp */
 # include <fcntl.h>		/* open, O_RDWR */
 # include <sys/mman.h>		/* mmap */
@@ -149,6 +150,7 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   50000
 #define TRACE_DFLT_NAM_SZ           16
+#define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S."   /* match default in trace_delta.pl */
 #ifdef __KERNEL__
 # define TRACE_DFLT_NAME        "KERNEL"
 #else
@@ -364,6 +366,7 @@ TRACE_DECL( pid_t                    tracePid,     =0 );
 TRACE_DECL( int                      tracePrintFd, =1 );
 TRACE_DECL( TRACE_ATOMIC_T traceInitLck, =TRACE_ATOMIC_INIT );
 TRACE_DECL( uint32_t traceInitLck_hung_max, =0 );
+TRACE_DECL( char * tracePrintFmt, =NULL ); /* hardcoded default below that can only be overridden via env.var */
 static char traceFile_static[PATH_MAX]={0};
 static struct traceControl_s *traceControl_p_static=NULL;
 #endif
@@ -441,11 +444,19 @@ static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char 
     TRACE_PRINT("\n");
 #else
     char   obuf[0x1000]; int printed=0;
+    char   *cp;
+    struct tm	tm_s;
+    if (tracePrintFmt==NULL)
+    {   /* no matter who writes, it should basically be the same thing */
+	if((cp=getenv("TRACE_TIME_FMT"))!=NULL) tracePrintFmt=cp; /* single write here */
+	else                                    tracePrintFmt=(char*)TRACE_DFLT_TIME_FMT; /* OR single write here */
+    }
     if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
+    localtime_r( (time_t *)&tvp->tv_sec, &tm_s );
+    printed = strftime( obuf, sizeof(obuf), tracePrintFmt, &tm_s );
     printed += snprintf( &(obuf[printed])
 			, (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
-			, "%10ld%06ld %2d %2d ",tvp->tv_sec,(long)tvp->tv_usec
-			, TID,lvl );
+			, "%06ld %2d %2d ",(long)tvp->tv_usec, TID,lvl );
     printed += vsnprintf( &(obuf[printed])
 			 , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
 			 , msg, ap );
@@ -1060,13 +1071,10 @@ static int traceInit( const char *_name )
     const char *_file;
     const char *cp;
 
-#  ifdef TRACE_DEBUG_INIT
-    if (traceControl_p == NULL && (traceTid==0)) printf("traceInit: both %p\n",traceControl_p_static);
-    else if (traceControl_p == NULL) printf("traceInit: just traceControl_p (tid=%d) %p\n",traceTid,traceControl_p_static);
-    else                        printf("traceInit: just traceTid (traceControl_p=%p) %p\n",traceControl_p,traceControl_p_static);
-#  endif
-
     trace_lock( &traceInitLck );
+#  ifdef TRACE_DEBUG_INIT
+    printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TID=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);
+#  endif
     if (traceControl_p == NULL)
     {  /* block_start */
 	/*const char *conf=getenv("TRACE_CONF"); need params,msg_sz,num_entries,num_namLvlTblEnts */
@@ -1113,29 +1121,9 @@ static int traceInit( const char *_name )
 		traceControl_p_static = traceControl_p;
 	    }
 	}
-#  ifdef TRACE_DEBUG_INIT
-	printf("traceInit: static=%p tC_p=%p\n", traceControl_p_static, traceControl_p );
-#  endif
-# else  /* ifndef __KERNEL__ */
-    {   /* block start */
-	msgmax_     =msgmax;	 /* module_param */
-	argsmax_    =argsmax;	 /* module_param */
-	numents_    =numents;	 /* module_param */
-	namtblents_ =namtblents; /* module_param */
-	printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
-	       ,numents_,   msgmax_,   argsmax_,   namtblents_ );
-	memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
-	traceControl_p = (struct traceControl_s *)vmalloc_node( memlen, trace_buffer_numa_node );
-	trace_created_init( traceControl_p, msgmax_, argsmax_, numents_, namtblents_, memlen );
-# endif
-
-    }   /* if KERNEL - end "{"; else end "if (traceControl_p==NULL)" */
-
-    if (_name == NULL) _name=traceName; /* for when naming a thread */
+    }
+    if (_name == NULL) if (!((_name=getenv("TRACE_NAME"))&&(*_name!='\0'))) _name=traceName;
     traceTID = name2TID( _name );
-    /*printf("traceTID=%d\n",traceTID);*/
-
-# ifndef __KERNEL__
     /* Now that the critical variables
        (traceControl_p, traceNamLvls_p, traceEntries_p) and even traceTID are
        set, it's OK to indicate that the initialization is complete */
@@ -1143,12 +1131,30 @@ static int traceInit( const char *_name )
     {   tracePid = getpid();  /* do/re-do -- it may be forked process */
 	traceTid=syscall(TRACE_GETTID);
     }
+#  ifdef TRACE_DEBUG_INIT
+    printf("traceInit(debug:Z): tC_p=%p static=%p _name=%p Tid=%d TID=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);
+#  endif
     trace_unlock( &traceInitLck );
 
     if ((cp=getenv("TRACE_LVLS"))     && (*cp))
     {   TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
 	TRACE_CNTL( "modeS", 1LL );
     }
+
+# else  /* ifndef __KERNEL__ */
+
+    msgmax_     =msgmax;	 /* module_param */
+    argsmax_    =argsmax;	 /* module_param */
+    numents_    =numents;	 /* module_param */
+    namtblents_ =namtblents; /* module_param */
+    printk("numents_=%d msgmax_=%d argsmax_=%d namtblents_=%d\n"
+	   ,numents_,   msgmax_,   argsmax_,   namtblents_ );
+    memlen = traceMemLen( cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_ );
+    traceControl_p = (struct traceControl_s *)vmalloc_node( memlen, trace_buffer_numa_node );
+    trace_created_init( traceControl_p, msgmax_, argsmax_, numents_, namtblents_, memlen );
+    if (_name == NULL) _name=traceName;
+    traceTID = name2TID( _name );
+
 # endif
 
     return (0);

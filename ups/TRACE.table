@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 499 $
-#   $Date: 2016-02-02 13:05:38 -0600 (Tue, 02 Feb 2016) $
+#   $Revision: 507 $
+#   $Date: 2016-02-05 16:06:39 -0600 (Fri, 05 Feb 2016) $
 FILE = TABLE
 Product=TRACE
 
@@ -77,11 +77,11 @@ COMMON:
 	#execute( test $?shell \!= 1 && . ${UPS_PROD_DIR}/script/trace.sh.functions, NO_UPS_ENV )
 
 	if    ( test $?shell = 1 )
-	    addAlias( tnotnull, set vv=%s && eval test \$\?$vv -eq 1 && eval test -n \"\$$vv\" )
-	    addAlias( set_,     set )
+	    addAlias( tnotnull_, set vv=%s && eval test \$\?$vv -eq 1 && eval test -n \"\$$vv\" )
+	    addAlias( set__,     set )
 	else()
-	    addAlias( tnotnull, eval test -n \"\${%s-}\" )
-	    addAlias( set_,     sts=$?;xx=%s;var=`expr "$xx" : "\([^=]*\)"`; val=`/bin/echo "$xx" | sed -e "1s/^[^=]*=//;s/'/'\"'\"'/g"`;eval "$var='$val'"; return $sts )
+	    addAlias( tnotnull_, eval test -n \"\${%s-}\" )
+	    addAlias( set__,     sts=$?;xx=%s;var=`expr "$xx" : "\([^=]*\)"`; val=`/bin/echo "$xx" | sed -e "1s/^[^=]*=//;s/'/'\"'\"'/g"`;eval "$var='$val'"; return $sts )
 	endif ( test $?shell = 1 )
 	addAlias( tcntl,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl %s )
 	addAlias( tshow,   set_ opts=%s;tnotnull PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl show $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl show $opts )

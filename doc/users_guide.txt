@@ -118,3 +118,132 @@ toffS [opt]<lvls>  -- turns both the stdout and memory desinations off
 toffM [opt]<lvls>  -- turns both the stdout and memory desinations off
 tdelta [opts]      -- trace_delta.pl "$@" | less
 tcntl [opt]        -- general -- give cmd to trace_cntl i.e: tcntl TRACE 0 "hi"
+
+
+
+TRACE SHOW
+
+Perhaps the most significant part of TRACE is sending TRACEs to memory.
+
+Consider the example program compile to ./simple:
+
+cat <<'EOF' | g++ -Wall -x c++ -I$TRACE_DIR/include -o simple -
+#include "trace.h"
+
+int main(void)
+{
+    int sts=setenv("TRACE_LVLS","-1",0);
+    for (unsigned ii; ii<250000; ++ii) {
+        TRACE(0,"hello %u sts=%d",ii,sts);
+        TRACE(1,"hello %u sts=%d",ii,sts);
+    }
+    return 0;
+}
+EOF
+
+And then the following "time commands":
+
+1. time env -i                            ./simple | wc -l
+2. TRACE_MSGMAX=0 tonM 0,1
+   time env -i LOGNAME=$LOGNAME TRACE_MSGMAX=0 TRACE_LVLS= ./simple | wc -l
+3. time env -i LOGNAME=$LOGNAME TRACE_MSGMAX=0             ./simple | wc -l
+
+
+The first should send 500,000 "messages" to stdout. The second should
+send 500,000 messages to a memory mapped trace_buffer file (/tmp/trace_buffer_).
+The 3rd command should send the messages to both memory and stdout.
+Note: "wc -l" is used to count the message send to stdout in these examples.
+
+A 4th command to time:
+
+4. time env -i USER=$USER TRACE_MSGMAX=0 TRACE_LVLS=1 ./simple | wc -l
+
+will send 500000 message to memory, but only half (250,000) to stdout.
+
+In real applications, TRACE can be configured to send many messages to
+memory and a relatively small number to stdout.
+
+Note: As noted above, TRACE is controlled through the environment and also
+through the buffer file, when enabled. The use of "env -i" in the examples
+above is simple to ensure a consistent environment for these examples.
+Normally, the environment variables are configure separately/initially.
+
+At this point there should be a trace_buffer file with the message in it.
+To see them, do:
+
+export TRACE_MSGMAX=0
+tshow
+
+To see timing between each message, pipe the output from tshow into tdelta:
+
+tshow | tdelta
+
+An example of the output would be:
+$ tshow | tdelta | head
+  idx           us_tod     delta        tsc   tid TID cpu lv r msg
+----- ---------------- --------- ---------- ----- --- --- -- - -----------------------------
+    0 1454954308853479         0  468018178 15812  18  19  1 . hello 249999 sts=0
+    1 1454954308853479         0  468017834 15812  18  19  0 . hello 249999 sts=0
+    2 1454954308853479         0  468017438 15812  18  19  1 . hello 249998 sts=0
+    3 1454954308853479         0  468017002 15812  18  19  0 . hello 249998 sts=0
+    4 1454954308853478         1  468016650 15812  18  19  1 . hello 249997 sts=0
+    5 1454954308853478         0  468016298 15812  18  19  0 . hello 249997 sts=0
+    6 1454954308853478         0  468015946 15812  18  19  1 . hello 249996 sts=0
+    7 1454954308853478         0  468015602 15812  18  19  0 . hello 249996 sts=0
+
+In the output above, the first column "idx" is just a simple line index.
+"us_tod" is the unix time in microseconds since Jan 1, 1970; "delta" is
+the delta microseconds between the current line and the previous line;
+"tsc" is the 32 bit "time stamp counter register" value -- it usually counts
+at the clock frequency of the processor (typically some number of GHz); "tid"
+is the unix OS task id; "TID" is the TRACE NAME ID; "cpu" is the core; "lv"
+is the TRACE level (1st parameter to TRACE macro); "r" is, if not ".", the
+number of retries that occurred when getting the trace "slot" index; and "msg"
+(the rest of the line) is the message.
+
+The output can be controlled via the option env.var. TRACE_SHOW. For, example,
+to omit the "tsc":
+
+$ TRACE_SHOW=HxNTiICLR tshow | tdelta | head
+  idx           us_tod     delta   tid TID cpu lv r msg
+----- ---------------- --------- ----- --- --- -- - -----------------------------
+    0 1454954308853479         0 15812  18  19  1 . hello 249999 sts=0
+    1 1454954308853479         0 15812  18  19  0 . hello 249999 sts=0
+    2 1454954308853479         0 15812  18  19  1 . hello 249998 sts=0
+    3 1454954308853479         0 15812  18  19  0 . hello 249998 sts=0
+    4 1454954308853478         1 15812  18  19  1 . hello 249997 sts=0
+    5 1454954308853478         0 15812  18  19  0 . hello 249997 sts=0
+    6 1454954308853478         0 15812  18  19  1 . hello 249996 sts=0
+    7 1454954308853478         0 15812  18  19  0 . hello 249996 sts=0
+
+tdelta can convert the time to human readable format:
+(Note: when converting the time (via -ct 1), the "-d 1" option needs to be
+specified to tele which column to do the delta on.)
+
+$ export TRACE_SHOW=HxNTiICLR
+$ tshow | tdelta -ct 1 -d 1 | head
+  idx                us_tod     delta   tid TID cpu lv r msg
+-----      ---------------- --------- ----- --- --- -- - -----------------------------
+    0 02-08 11:58:28.853479         0 15812  18  19  1 . hello 249999 sts=0
+    1 02-08 11:58:28.853479         0 15812  18  19  0 . hello 249999 sts=0
+    2 02-08 11:58:28.853479         0 15812  18  19  1 . hello 249998 sts=0
+    3 02-08 11:58:28.853479         0 15812  18  19  0 . hello 249998 sts=0
+    4 02-08 11:58:28.853478         1 15812  18  19  1 . hello 249997 sts=0
+    5 02-08 11:58:28.853478         0 15812  18  19  0 . hello 249997 sts=0
+    6 02-08 11:58:28.853478         0 15812  18  19  1 . hello 249996 sts=0
+    7 02-08 11:58:28.853478         0 15812  18  19  0 . hello 249996 sts=0
+
+Standard unix filtering, (e.g. via grep) can be used and times between the
+remaining lines can be displayed:
+
+$ tshow | grep '1 . hello 24..00' | tdelta -ct 1 -d 1 | head
+  198 02-08 11:58:28.853447         0 15812  18  19  1 . hello 249900 sts=0
+  398 02-08 11:58:28.853414        33 15812  18  19  1 . hello 249800 sts=0
+  598 02-08 11:58:28.853381        33 15812  18  19  1 . hello 249700 sts=0
+  798 02-08 11:58:28.853348        33 15812  18  19  1 . hello 249600 sts=0
+  998 02-08 11:58:28.853315        33 15812  18  19  1 . hello 249500 sts=0
+ 1198 02-08 11:58:28.853279        36 15812  18  19  1 . hello 249400 sts=0
+ 1398 02-08 11:58:28.853241        38 15812  18  19  1 . hello 249300 sts=0
+ 1598 02-08 11:58:28.853206        35 15812  18  19  1 . hello 249200 sts=0
+ 1798 02-08 11:58:28.853170        36 15812  18  19  1 . hello 249100 sts=0
+ 1998 02-08 11:58:28.853137        33 15812  18  19  1 . hello 249000 sts=0

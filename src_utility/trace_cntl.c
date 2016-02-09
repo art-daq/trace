@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 501 $$Date: 2016-02-03 11:52:37 -0600 (Wed, 03 Feb 2016) $";
+char *rev="$Revision: 511 $$Date: 2016-02-09 12:17:03 -0600 (Tue, 09 Feb 2016) $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -244,7 +244,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	char                  * tfmt;
 	int                     tfmt_len;
 	time_t                  tt=time(NULL);
-	char                    tbuf[0x1000];
+	char                    tbuf[0x100], ttbuf[0x100];
 
 	opts |= quiet?quiet_:0;
 	opts |= (strchr(ospec,'D')?indent_:0);
@@ -254,10 +254,9 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	/* get the time format and the length of the format (using example time (now) */
 	if((tfmt=getenv("TRACE_TIME_FMT"))==NULL)
 		//tfmt=(char*)TRACE_DFLT_TIME_FMT;
-		tfmt=(char*)"%s";
-	strftime(tbuf,sizeof(tbuf),tfmt,localtime(&tt));
-	tfmt_len=strlen(tbuf);
-	tfmt_len += 6; /* add space for the useconds (the space after is handled in the printing) */
+		tfmt=(char*)"%s%%06d";
+	strftime(ttbuf,sizeof(ttbuf),tfmt,localtime(&tt));
+	tfmt_len=snprintf( tbuf,sizeof(tbuf),ttbuf, 0 );  /* possibly (probably) add usecs (i.e. FMT has %%06d) */
 
 	/* If just a count is given, it will be a way to limit the number printed;
 	   a short hand version of "... | head -count". (so if there are not entries,
@@ -306,7 +305,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			{
 			case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
 			case 's': printf("%*s ", buf_slot_width, "slt" ); break;
-			case 'T': printf("%*s ", tfmt_len,"us_tod"); break;
+			case 'T': if(tfmt_len)printf("%*s ", tfmt_len,"us_tod"); break;
 			case 't': printf("       tsc "); break;
 			case 'i': printf("  tid "); break;
 			case 'I': printf("TID "); break;
@@ -326,7 +325,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			{
 			case 'N': printf("%.*s ", minw(3,countDigits(max-1)), "--------------"); break;
 			case 's': printf("%.*s ", buf_slot_width, "--------------"); break;
-			case 'T': printf("%.*s ", tfmt_len,"----------------------------------"); break;
+			case 'T': if(tfmt_len)printf("%.*s ", tfmt_len,"----------------------------------"); break;
 			case 't': printf("---------- "); break;
 			case 'i': printf("----- "); break;
 			case 'I': printf("--- "); break;
@@ -408,8 +407,8 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			{
 			case 'N': printf("%*u ", minw(3,countDigits(max-1)), printed ); break;
 			case 's': printf("%*u ", buf_slot_width, rdIdx ); break;
-			case 'T':{   strftime(tbuf,sizeof(tbuf),tfmt,localtime(&seconds)); strcat(tbuf,"%06u ");
-					  printf(tbuf, useconds);} break;
+			case 'T': if(tfmt_len){ strftime(tbuf,sizeof(tbuf),tfmt,localtime(&seconds)); strcat(tbuf," ");
+					  printf(tbuf, useconds); } break;
 			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 			case 'i': printf("%5d ", myEnt_p->tid); break;
 			case 'I': printf("%3u ", myEnt_p->TID); break;

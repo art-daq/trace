@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 500 $$Date: 2016-02-03 09:38:49 -0600 (Wed, 03 Feb 2016) $"
+#define TRACE_REV  "$Revision: 511 $$Date: 2016-02-09 12:17:03 -0600 (Tue, 09 Feb 2016) $"
 
 #ifndef __KERNEL__
 
@@ -150,7 +150,7 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 #define TRACE_DFLT_NAMTBL_ENTS      20
 #define TRACE_DFLT_NUM_ENTRIES   50000
 #define TRACE_DFLT_NAM_SZ           16
-#define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S."   /* match default in trace_delta.pl */
+#define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S.%%06d"   /* match default in trace_delta.pl */
 #ifdef __KERNEL__
 # define TRACE_DFLT_NAME        "KERNEL"
 #else
@@ -443,7 +443,7 @@ static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char 
     TRACE_VPRINT( msg, ap );
     TRACE_PRINT("\n");
 #else
-    char   obuf[0x1000]; int printed=0;
+    char   obuf[0x1000]; char tbuf[0x100]; int printed=0;
     char   *cp;
     struct tm	tm_s;
     if (tracePrintFmt==NULL)
@@ -453,10 +453,11 @@ static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char 
     }
     if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
     localtime_r( (time_t *)&tvp->tv_sec, &tm_s );
-    printed = strftime( obuf, sizeof(obuf), tracePrintFmt, &tm_s );
-    printed += snprintf( &(obuf[printed])
-			, (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
-			, "%06ld %2d %2d ",(long)tvp->tv_usec, TID,lvl );
+    strftime( tbuf, sizeof(tbuf), tracePrintFmt, &tm_s );
+    printed = snprintf( obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec ); /* possibly (probably) add usecs */
+    printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
+			, " %2d %2d "+(printed==0?1:0) /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
+			, TID, lvl );
     printed += vsnprintf( &(obuf[printed])
 			 , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
 			 , msg, ap );

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 500 $';
-#   $Date: 2016-02-03 09:38:49 -0600 (Wed, 03 Feb 2016) $
+$version = '$Revision: 511 $';
+#   $Date: 2016-02-09 12:17:03 -0600 (Tue, 09 Feb 2016) $
 
 use Time::Local; # timelocal()
 
@@ -26,7 +26,7 @@ options:
 -i                   invert (use this is deltas are always negative)
 -r                   change \"timeStamp\" column to \"relative\" (currently
                      effects all -d columns)
--ct   <col_spec>     make time more readable (convert time)
+-ct   <col_spec>     make time more readable (convert time) IFF time is usecs from epoch
 -syscall <file>      attempt read <file> (i.e /usr/include/asm/unistd.h or
                      unistd_64.h) to convert system call numbers in string
                      \"syscall=\\d+\" to names
@@ -43,6 +43,9 @@ defaults:
 -d  timeStamp        Note: not -dc. Use -dc timeStamp if desired
 -dw 10
 ";
+
+$TRACE_DFLT_TIME_FMT = "%m-%d %H:%M:%S.%%06d";
+
 #
 #   RECORD OPTIONS
 #
@@ -390,18 +393,21 @@ for $idx (0..$#col_cntl)
     if (!$opt_b) # if "not delta before" 
     {   
 	if ($col_cntl[$idx]{ct}) # if converting time
-	{   if ($ENV{"TRACE_PRINT_FMT"} ne ""){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt="%m-%d %H:%M:%S.";}
-	    $fmtlen=length(strftime( $tfmt,localtime() ) );
-	    $fmtlen+=7;
+	{   if (defined $ENV{"TRACE_TIME_FMT"}){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt=$TRACE_DFLT_TIME_FMT;}
+	    $tbuf = strftime( $tfmt,localtime() );
+	    $fmtlen=length( sprintf($tbuf,0) ); # add usecs if present
+	    #print STDERR "tfmt=$tfmt tbuf=$tbuf fmtlen=$fmtlen\n";
+	    if($fmtlen){ $fmtlen++; }
             $sub .= "
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
-                \$str = strftime( \"".$tfmt."\$useconds\", localtime(\$seconds) );
-                \$out_line .= sprintf( \"%*s\", $fmtlen, \$str );
+                \$str = strftime( \"".$tfmt."\", localtime(\$seconds) );
+                \$str = sprintf( \$str, \$useconds );
+                \$out_line .= sprintf( \"%*s\",$fmtlen,\$str );
 	    }
             else
-            {   \$out_line .= sprintf( \"%*s\", $fmtlen, \$data ); # delta will come after
+            {   \$out_line .= sprintf( \"%*.*s\",$fmtlen,$fmtlen,substr \$data,-$fmtlen+1 ); # delta will come after
             }";
 	}
 	else
@@ -488,18 +494,21 @@ for $idx (0..$#col_cntl)
     if ($opt_b)
     {
 	if ($col_cntl[$idx]{ct}) # if converting time
-	{   if ($ENV{"TRACE_PRINT_FMT"} ne ""){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt="%m-%d %H:%M:%S.";}
-	    $fmtlen=length(strftime( $tfmt,localtime() ) );
-	    $fmtlen+=7;
+	{   if (defined $ENV{"TRACE_TIME_FMT"}){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt=$TRACE_DFLT_TIME_FMT;}
+	    $tbuf = strftime( $tfmt,localtime() );
+	    $fmtlen=length( sprintf($tbuf,0) ); # add usecs if present
+	    #print STDERR "tfmt=$tfmt tbuf=$tbuf fmtlen=$fmtlen\n";
+	    if($fmtlen){ $fmtlen++; }
 	    $sub .= "
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
-                \$str = strftime( \"".$tfmt."\$useconds\", localtime(\$seconds) );
+                \$str = strftime( \"".$tfmt."\", localtime(\$seconds) );
+                \$str = sprintf( \$str, \$useconds );
                 \$out_line .= sprintf( \"%*s\", $fmtlen, \$str );
 	    }
             else
-            {   \$out_line .= sprintf( \"%*s\", $fmtlen,\$data ); # delta was before
+            {   \$out_line .= sprintf( \"%*.*s\",$fmtlen,$fmtlen,substr \$data,-$fmtlen+1 ); # delta was before
             }";
 	}
 	else

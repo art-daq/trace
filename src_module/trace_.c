@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 479 $$Date: 2016-01-11 23:09:35 -0600 (Mon, 11 Jan 2016) $";
+    rev="$Revision: 520 $$Date: 2016-02-16 11:37:38 -0600 (Tue, 16 Feb 2016) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -32,77 +32,74 @@
 # define REGISTER_NULL_ARG
 #endif
 
-#if 0
-x struct traceControl_s  *traceControl_p=NULL;
-x struct traceEntryHdr_s *traceEntries_p;
-x struct traceNamLvls_s  *traceNamLvls_p;
-#endif
 EXPORT_SYMBOL_GPL( traceControl_p );
 EXPORT_SYMBOL_GPL( traceEntries_p );
 EXPORT_SYMBOL_GPL( traceNamLvls_p );
 EXPORT_SYMBOL_GPL( trace_allow_printk );
-
+EXPORT_SYMBOL_GPL( trace_lvlS );
 
 #ifdef MODULE
 // ls /sys/module/TRACE/parameters
 module_param(     msgmax,  int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( msgmax,  "Character beyond this length will be discarded" );
-
 module_param(     argsmax, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( argsmax, "Maximum number of arguments that will be stored" );
-
 module_param(     numents, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( numents, "The number for entries in the circular buffer" );
-
 module_param(     namtblents, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( namtblents, "Number of name table entries" );
-
 module_param(     trace_buffer_numa_node, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( trace_buffer_numa_node, "Numa node for trace buffer kernel memory" );
-
 module_param(     trace_allow_printk, int, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_allow_printk, "whether or not to allow TRACEs to do printk's" );
+module_param(     trace_lvlS, ulong, 0644 ); // defined in trace.h
+MODULE_PARM_DESC( trace_lvlS, "default printk lvl" );
 #else
-# define KSTRVAL( str, parm, xx ) \
+# define KSTRVAL( str, parm, xx,fmt )				\
 	unsigned long val;\
 	if (kstrtoul(str, 0, &val)) {\
 		pr_warn("invalid " # parm " parameter '%s'\n", str);\
 		return 0;\
 	}\
 	xx = val;\
-	pr_info("setting " # parm " to %d\n", xx);\
+	pr_info("setting " # parm " to %" # fmt "\n", xx);\
 	return 1
 
 static int __init trace_msgmax_setup(char *str)
 {
-	KSTRVAL( str, trace_msgmax, msgmax );
+	KSTRVAL( str, trace_msgmax, msgmax, d );
 }
 __setup("trace_msgmax=", trace_msgmax_setup);
 static int __init trace_argsmax_setup(char *str)
 {
-	KSTRVAL( str, trace_argsmax, argsmax );
+	KSTRVAL( str, trace_argsmax, argsmax, d );
 }
 __setup("trace_argsmax=", trace_argsmax_setup);
 static int __init trace_numents_setup(char *str)
 {
-	KSTRVAL( str, trace_numents, numents );
+	KSTRVAL( str, trace_numents, numents, d );
 }
 __setup("trace_numents=", trace_numents_setup);
 static int __init trace_namtblents_setup(char *str)
 {
-	KSTRVAL( str, trace_namtblents, namtblents );
+	KSTRVAL( str, trace_namtblents, namtblents, d );
 }
 __setup("trace_namtblents=", trace_namtblents_setup);
 static int __init trace_buffer_numa_node_setup(char *str)
 {
-	KSTRVAL( str, trace_buffer_numa_node, trace_buffer_numa_node );
+	KSTRVAL( str, trace_buffer_numa_node, trace_buffer_numa_node, d );
 }
 __setup("trace_buffer_numa_node=", trace_buffer_numa_node_setup);
 static int __init trace_allow_printk_setup(char *str)
 {
-	KSTRVAL( str, trace_allow_printk, trace_allow_printk );
+	KSTRVAL( str, trace_allow_printk, trace_allow_printk, d );
 }
 __setup("trace_allow_printk=", trace_allow_printk_setup);
+static int __init trace_lvlS_setup(char *str)
+{
+	KSTRVAL( str, trace_lvlS, trace_lvlS, lu );
+}
+__setup("trace_lvlS=", trace_lvlS_setup);
 
 static ssize_t trace_proc_control_write( struct file *fil, const char __user *src_p
 				      , size_t siz, loff_t *off )
@@ -119,6 +116,10 @@ static ssize_t trace_proc_control_write( struct file *fil, const char __user *sr
         {   sptr+=sizeof("trace_allow_printk=")-1;
             trace_allow_printk = simple_strtoul(sptr,&sptr,0);
         }
+		else if (strncmp("trace_lvlS=",sptr,sizeof("trace_lvlS=")-1)==0)
+        {   sptr+=sizeof("trace_lvlS=")-1;
+            trace_lvlS = simple_strtoul(sptr,&sptr,0);
+        }
 	}
 	return siz;
 }
@@ -127,7 +128,9 @@ static ssize_t trace_proc_control_read( struct file *fil, char __user *dst_p
 {
 	char    kernelBuffer[1024];
 	int     cc;
-	cc = snprintf( kernelBuffer,siz,"trace_allow_printk=%d\n", trace_allow_printk );
+	cc  = snprintf( &(kernelBuffer[0]), siz,"trace_allow_printk=%d\n", trace_allow_printk );
+	if (*off >= cc) return 0;
+	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlS=0x%lx\n", trace_lvlS );
 	if (*off >= cc) return 0;
 	copy_to_user( dst_p, &kernelBuffer[*off], cc-*off );
 	cc = cc-*off;

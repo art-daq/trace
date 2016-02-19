@@ -22,7 +22,7 @@ include(CetCMakeEnv)
 cet_cmake_env()
 
 cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros
-                       EXTRA_C_FLAGS -std=gnu11)
+                       EXTRA_C_FLAGS -std=gnu11 -D_GNU_SOURCE)
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
@@ -30,17 +30,30 @@ find_ups_product( cetbuildtools v3_03_00 )
 
 include_directories(include)
 
+# We're going to install the source folders directly to make sure to have the correct Makefiles
+# for building kernel modules after deployment.
+FILE(COPY Makefile DESTINATION .)
+INSTALL(FILES Makefile DESTINATION ${product}/${version})
+
 # The trace library
 add_subdirectory(src_lib)
+FILE(COPY src_lib DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_lib DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 
 # The trace utility
 add_subdirectory(src_utility)
+FILE(COPY src_utility DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_utility DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 
 # Example Programs
 add_subdirectory(src_example)
+FILE(COPY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_example DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 
 # Kernel Module
 add_subdirectory(src_module)
+FILE(COPY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_module DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
 
 # The include directory (aka the core of TRACE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)

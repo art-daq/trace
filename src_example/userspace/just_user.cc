@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 470 $$Date: 2016-01-10 13:27:22 -0600 (Sun, 10 Jan 2016) $";
+char const *rev="$Revision: 521 $$Date: 2016-02-17 01:45:32 -0600 (Wed, 17 Feb 2016) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -15,14 +15,17 @@ char const *rev="$Revision: 470 $$Date: 2016-01-10 13:27:22 -0600 (Sun, 10 Jan 2
 #include <iostream>
 #include <typeinfo>				// typeid().name()
 #include <libgen.h>				// basename
+#include <stdlib.h>
 
+#if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* c++98 c99 c++0x c11 c++11 */
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)          my_log( __VA_ARGS__ )
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,...)          my_log( nargs, __VA_ARGS__ )
 #else
 /* c89 */
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  my_log( msgargs )
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,msgargs... )  my_log( nargs, msgargs )
 #endif   /* __GXX_WEAK__... */
+#endif
 
 #include "trace.h"		/* TRACE */
 
@@ -78,17 +81,21 @@ static void parse_args_( int argc, char	*argv[] )
 
 
 SUPPRESS_NOT_USED_WARN
-void my_log(const char   *msg,...)
+void my_log(uint16_t nargs, const char   *msg,...)
 { va_list ap;
   va_start(ap,msg);
-  vprintf(msg,ap);printf("\n");
+  if(nargs)vprintf(msg,ap);
+  else      printf("%s",msg);
+  printf("\n");
   va_end(ap);
 }
 SUPPRESS_NOT_USED_WARN
-void my_log(std::string  msg,...)
+void my_log(uint16_t nargs, std::string  msg,...)
 { va_list ap;
   va_start(ap,msg);
-  vprintf(msg.c_str(),ap);printf("\n");
+  if(nargs)vprintf(msg.c_str(),ap);
+  else     printf("%s",msg.c_str());
+  printf("\n");
   va_end(ap);
 }
 
@@ -134,6 +141,32 @@ int main( int argc, char *argv[] )
 		TRACE_( 1, "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<std::hex<<15 );
 
 		std::cout<<"\n";
+
+		//FILE *fp(popen("head -107 $HOME/.bashrc", "r")); // 107 lines is 4025 chars - works
+		//FILE *fp(popen("head -108 $HOME/.bashrc", "r")); // 108 lines is 4192 chars - works
+		//FILE *fp(popen("head -115 $HOME/.bashrc", "r")); // 115 lines is 4754 chars - works
+		FILE *fp(popen("head -525 $HOME/.bashrc", "r")); // 525 lines is 22843 chars - crash
+		//FILE *fp(popen("head -170 $HOME/.bashrc", "r")); // 170 lines is 8258 chars - works
+		//FILE *fp(popen("head -300 $HOME/.bashrc", "r")); // works
+		//FILE *fp(popen("head -400 $HOME/.bashrc", "r")); // crash
+		//FILE *fp(popen("head -350 $HOME/.bashrc", "r")); // works
+		//FILE *fp(popen("head -375 $HOME/.bashrc", "r")); // works
+		//FILE *fp(popen("head -388 $HOME/.bashrc", "r")); // crash
+		//FILE *fp(popen("head -382 $HOME/.bashrc", "r")); // crash
+		//FILE *fp(popen("head -378 $HOME/.bashrc", "r")); // works  378 lines is 16664
+		//FILE *fp(popen("head -380 $HOME/.bashrc", "r")); // crash
+		//FILE *fp(popen("head -379 $HOME/.bashrc", "r")); // crash  379 lines in 16742 -- line 379 has HISTTIMEFORMAT="%a %m/%d %H:%M:%S  "
+		//FILE *fp(popen("cat $HOME/t.t", "r")); // 63125 KB of lines of 100 chars 123456... - works
+		std::string result;
+		if (fp) {
+			char buffer[128];
+			while (!feof(fp)) {
+				if (fgets(buffer, 128, fp) != NULL)
+					result += buffer;
+			}
+			TRACE_( 1, "bashrc: " << result );
+			pclose(fp);
+		}
 
 		ostr << "<< stdstr (just to confuse) %d" << stdstr;
 		std::cout << ostr << "\n";

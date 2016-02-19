@@ -22,4 +22,4 @@ add_custom_command(
 )
 add_custom_target(some_mod ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../../module/${KVERS}/some_mod.ko src_module)
 
-install_source()
+#install_source()

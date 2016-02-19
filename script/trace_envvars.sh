@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_envvars.sh,v $
- # rev='$Revision: 416 $$Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $'
+ # rev='$Revision: 514 $$Date: 2016-02-09 14:31:44 -0600 (Tue, 09 Feb 2016) $'
 
 USAGE="\
  usage: `basename $0` [[path/]file]   # default file is trace_cntl
@@ -24,7 +24,10 @@ eval set -- ${args-} \"\$@\"; unset op args xx
 tenv()  # $1=file
 {   tcntlexe=$1
     envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p'`
-    for ee in $envvars;do echo $ee=`printenv | sed -n -e"/^$ee=/{s/^[^=]*=//;p;}"`; done
+    for ee in $envvars;do
+       #echo $ee=`printenv | sed -n -e"/^$ee=/{s/^[^=]*=//;p;}"`
+       printenv | /bin/grep "^$ee=" || echo $ee
+    done
 }
 
 test $# -gt 0 && file=$1 || file=trace_cntl

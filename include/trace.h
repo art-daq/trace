@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 511 $$Date: 2016-02-09 12:17:03 -0600 (Tue, 09 Feb 2016) $"
+#define TRACE_REV  "$Revision: 528 $$Date: 2016-02-18 17:47:37 -0600 (Thu, 18 Feb 2016) $"
 
 #ifndef __KERNEL__
 
@@ -187,7 +187,7 @@ static const char *  TRACE_NAME=NULL;
                       , __VA_ARGS__ );					\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
-	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ ); \
+	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__ ); \
 	    }								\
         }								\
     } while (0)
@@ -211,7 +211,7 @@ static const char *  TRACE_NAME=NULL;
                       , msgargs );					\
 	    }								\
 	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
-	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, msgargs );	\
+	    {   TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, TRACE_NARGS(msgargs), msgargs );	\
 	    }								\
 	}								\
     } while (0)
@@ -254,9 +254,9 @@ static const char *  TRACE_NAME=NULL;
 # define TRACE_TSC32( low )       low=0
 #endif
 
-static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
+static void trace(struct timeval*,uint16_t,uint16_t TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
 #ifdef __cplusplus
-static void trace(struct timeval*,unsigned,unsigned TRACE_XTRA_UNUSED,std::string,...);
+static void trace(struct timeval*,uint16_t,uint16_t TRACE_XTRA_UNUSED,std::string,...);
 #endif
 
 
@@ -304,8 +304,9 @@ struct traceControl_s
 struct traceEntryHdr_s
 {   struct timeval time;/*T*/
     TRACE_ENT_FILLER	     /* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
-    uint64_t       tsc;               /*t*/
-    int32_t        lvl; /*L*/
+    uint64_t       tsc; /*t*/
+    uint16_t       lvl; /*L*/
+    uint16_t       nargs;
     pid_t          pid; /*P system info */
     pid_t          tid; /*i system info - "thread id" */
     int32_t        cpu; /*C -- kernel sched switch will indicate this info? */
@@ -356,7 +357,8 @@ thread_local -- this will cause the most traceInit calls (but not much work, hop
 which will ensure that a module (not thread) can be assigned it's own trace name/id. */
 
 #if defined(__KERNEL__)
-extern int                     trace_allow_printk;                 /* module_param */
+TRACE_DECL( int           trace_allow_printk, =0 );          /* module_param */
+TRACE_DECL( unsigned long trace_lvlS,         =0 );          /* module_param */
 static TRACE_THREAD_LOCAL const char *traceName=TRACE_DFLT_NAME;
 #else
 TRACE_DECL( TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
@@ -382,8 +384,7 @@ static int                msgmax=TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
 static int                argsmax=TRACE_DFLT_MAX_PARAMS;     /* module_param */
 static int                numents=TRACE_DFLT_NUM_ENTRIES;    /* module_param */
 static int                namtblents=TRACE_DFLT_NAMTBL_ENTS; /* module_param */
-       int                trace_allow_printk=0;              /* module_param */
-static int                trace_buffer_numa_node=-1;		 /* module_param */
+static int                trace_buffer_numa_node=-1;	     /* module_param */
 # endif
 #else    /*                                         K=1,IMPL=0  */
 
@@ -428,21 +429,27 @@ static int32_t                  name2TID( const char *name );
 #ifndef TRACE_LOG_FUNCTION
 # if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* c++98 c99 c++0x c11 c++11 */
-#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)          trace_user( tvp,tid,lvl,__VA_ARGS__ )
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,...)          trace_user( tvp,tid,lvl,nargs,__VA_ARGS__ )
 # else
 /* c89 */
-#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,msgargs... )  trace_user( tvp,tid,lvl,msgargs )
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,msgargs... )  trace_user( tvp,tid,lvl,nargs,msgargs )
 # endif   /* __GXX_WEAK__... */
 #endif /* TRACE_LOG_FUNCTION */
 
 SUPPRESS_NOT_USED_WARN
-static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, va_list ap )
+static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nargs, const char *msg, va_list ap )
 {
 #ifdef __KERNEL__
     if (!trace_allow_printk) return;
     TRACE_VPRINT( msg, ap );
-    TRACE_PRINT("\n");
+    if(msg[strlen(msg)-1]!='\n')TRACE_PRINT("\n");
 #else
+    /* I format output in a local output buffer (with specific/limited size)
+       first. There are 2 main reasons that this is done:
+       1) allows the use of write to a specific tracePrintFd;
+       2) there will be one system call which is most efficient and less likely
+          to have the output mangled in a multi-threaded environment.
+    */
     char   obuf[0x1000]; char tbuf[0x100]; int printed=0;
     char   *cp;
     struct tm	tm_s;
@@ -458,9 +465,15 @@ static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char 
     printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
 			, " %2d %2d "+(printed==0?1:0) /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
 			, TID, lvl );
-    printed += vsnprintf( &(obuf[printed])
-			 , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
-			 , msg, ap );
+    if (nargs)
+	printed += vsnprintf( &(obuf[printed])
+			     , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
+			     , msg, ap );
+    else /* don't do any parsing for format specifiers in the msg -- tshow will
+	    also know to do this on the memory side of things */
+	printed += snprintf( &(obuf[printed])
+			    , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
+			    , "%s", msg );
     if (printed < (int)sizeof(obuf))
     {   /* there is room for the \n */
 	/* buf first see if it is needed */
@@ -484,27 +497,27 @@ static void vtrace_user( struct timeval *tvp, int TID, unsigned lvl, const char 
 #endif
 }
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TID, unsigned lvl, const char *msg, ... )
+static void trace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nargs, const char *msg, ... )
 {
 	va_list ap;
 	va_start( ap, msg );
-	vtrace_user( tvp, TID, lvl, msg,  ap );
+	vtrace_user( tvp, TID, lvl, nargs, msg, ap );
 	va_end( ap );
 }
 #ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TID, unsigned lvl, std::string msg, ... )
+static void trace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nargs, std::string msg, ... )
 {
     va_list ap;
 	va_start( ap, msg );
-	vtrace_user( tvp, TID, lvl, msg.c_str(),  ap );
+	vtrace_user( tvp, TID, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
 #endif
 
 
 
-static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
+static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 		  , const char *msg, va_list ap )
 {
     struct traceEntryHdr_s* myEnt_p;
@@ -556,6 +569,7 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
     myEnt_p->time = *tvp;
     TRACE_TSC32( myEnt_p->tsc );
     myEnt_p->lvl  = lvl;
+    myEnt_p->nargs = nargs;
 #if defined(__KERNEL__)
     myEnt_p->pid  = current->tgid;
     myEnt_p->tid  = current->pid;
@@ -564,7 +578,14 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
     myEnt_p->pid  = tracePid;
     myEnt_p->tid  = traceTid;
 # if defined(__linux__) && !defined(NO_SCHED_GETCPU)
+#  if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#  endif
     myEnt_p->cpu  = sched_getcpu();
+#  if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#   pragma GCC diagnostic pop
+#  endif
 # endif
 #endif
     myEnt_p->TID  = traceTID;
@@ -607,7 +628,7 @@ static void vtrace( struct timeval *tvp, unsigned lvl, unsigned nargs
 #endif
 
 SUPPRESS_NOT_USED_WARN
-static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
+static void trace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED		  
 		  , const char *msg, ... )
 {
@@ -619,7 +640,7 @@ static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
 
 #ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
-static void trace( struct timeval *tvp, unsigned lvl, unsigned nargs
+static void trace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED		  
 				  , std::string msg, ... )
 {
@@ -681,6 +702,10 @@ static int32_t name2TID( const char *name )
 	if (traceNamLvls_p[ii].name[0] == '\0')
 	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
 	    traceNamLvls_p[ii].M = 0x1;
+#if defined(__KERNEL__)
+	    /* like userspace TRACE_LVLS env.var - See also traceInitNames */
+	    if(trace_lvlS){traceNamLvls_p[ii].S=trace_lvlS;traceControl_p->mode.bits.S=1;}
+#endif
 	    trace_unlock( &traceControl_p->spinlock );
 	    return (ii);
 	}
@@ -722,8 +747,8 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	traceInit(TRACE_NAME);		/* force (re)init */
 	va_end(ap); return (0);
     }
-    TRACE_INIT_CHECK {};     /* note: allows name2TID to be called in userspace */
 #endif
+    TRACE_INIT_CHECK {};     /* note: allows name2TID to be called in userspace */
 
     if (strncmp(cmd,"name",4) == 0)/* THIS really only makes sense for non-thread local-name-for-module or for tracelib.h (non-static implementation) w/TLS to name-per-thread */
     {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit(TRACE_NAME) is called; suggest testing w. TRACE_ARGSMAX=10*/
@@ -741,17 +766,33 @@ static int traceCntl( int nargs, const char *cmd, ... )
 	    traceControl_p->trigIdxCnt       = 0;
 	}
     }
-    else if (strncmp(cmd,"lvlmsk",6) == 0)   /* CURRENTLY TAKE just 1 arg: lvl */
-    {   unsigned ee;
-	uint64_t lvl=va_arg(ap,uint64_t);
-	if ((cmd[6])&&(cmd[7]=='g')){ ii=0;        ee=traceControl_p->num_namLvlTblEnts; }
-	else                        { ii=traceTID; ee=traceTID+1; }
+    else if (strncmp(cmd,"lvlmsk",6) == 0) /* TAKES 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
+    {   uint64_t lvl, lvlm, lvls, lvlt;
+	unsigned ee;
+	if ((cmd[6]=='g')||((cmd[6])&&(cmd[7]=='g')))
+	{   ii=0;        ee=traceControl_p->num_namLvlTblEnts;
+	}
+	else
+	{   ii=traceTID; ee=traceTID+1;
+	}
+	lvl=va_arg(ap,uint64_t); /* "FIRST" ARG SHOULD ALWAYS BE THERE */
 	switch (cmd[6])
 	{
 	case 'M': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].M = lvl; break;
 	case 'S': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].S = lvl; break;
 	case 'T': for ( ; ii<ee; ++ii) traceNamLvls_p[ii].T = lvl; break;
-	default: ret=-1;
+	default:
+	    if (nargs != 3)
+	    {   TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs);va_end(ap); return (-1);
+	    }
+	    lvlm=lvl; /* "FIRST" arg from above */
+	    lvls=va_arg(ap,uint64_t);
+	    lvlt=va_arg(ap,uint64_t);
+	    for ( ; ii<ee; ++ii)
+	    {   traceNamLvls_p[ii].M = lvlm;
+		traceNamLvls_p[ii].S = lvls;
+		traceNamLvls_p[ii].T = lvlt;
+	    }
 	}
     }
     else if (strncmp(cmd,"lvlset",6) == 0)   /* takes 3 args: M S T ((0 val ==> no-op) */
@@ -880,7 +921,7 @@ static void trace_created_init(  struct traceControl_s *t_p
     struct timeval tv;
     TRACE_GETTIMEOFDAY( &tv );
 # ifdef TRACE_DEBUG_INIT
-    trace_user( &tv,0,0,"trace_created_init: tC_p=%p",t_p );
+    trace_user( &tv,0,0,1,"trace_created_init: tC_p=%p",t_p );
 # endif
     strncpy( t_p->version_string, TRACE_REV, sizeof(t_p->version_string) );
     t_p->version_string[sizeof(t_p->version_string)-1] = '\0';
@@ -1155,7 +1196,6 @@ static int traceInit( const char *_name )
     trace_created_init( traceControl_p, msgmax_, argsmax_, numents_, namtblents_, memlen );
     if (_name == NULL) _name=traceName;
     traceTID = name2TID( _name );
-
 # endif
 
     return (0);
@@ -1174,6 +1214,8 @@ static void traceInitNames( struct traceControl_s *tC_p )
     }
 # ifdef __KERNEL__
     strcpy( traceNamLvls_p[0].name,"KERNEL" );
+	/* like userspace TRACE_LVLS env.var - See also name2TID */
+	if(trace_lvlS){traceNamLvls_p[0].S=trace_lvlS;traceControl_p->mode.bits.S=1;}	
 # endif
     strcpy( traceNamLvls_p[tC_p->num_namLvlTblEnts-2].name,"TRACE" );
     strcpy( traceNamLvls_p[tC_p->num_namLvlTblEnts-1].name,"_TRACE_" );
@@ -1193,31 +1235,30 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
-/* used in c++0x c11 c++11 environment */
+/* used only in c++0x c11 c++11 environment */
 # define TRACE_( lvl, ... ) do			\
     {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		std::ostringstream ostr__;										\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<((lvl)&LVLBITSMSK)))) \
-        {   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
+		{   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);		\
 			trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED					\
 				  , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
-	    }								\
+		}							\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<((lvl)&LVLBITSMSK)))) \
-	    {   if (lclTime.tv_sec == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); }					\
-            TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
-	    }								\
+		{   if (lclTime.tv_sec == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); } \
+		    TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+		}							\
         }								\
     } while (0)
 # define TRACE_ARGS_FMT( first, ... ) first
-# if 0
-//#  pragma GCC system_header /* Suppress warnings (esp. related to variadic macros from -pedantic) */
-#  define TRACE_ARGS_ARGS( first, ... ) , ##__VA_ARGS__
-# else
-	// The trick is: the number of args in __VA_ARGS__ "shifts" the appropriate XX*(__VA_ARGS__) macro
-    // to the DO_THIS postition in the DO_XX macro. Then only that appropriate XX*(__VA_ARGS__) macro is
-    // evalutated; the others are ignored.
-#  define TRACE_ARGS_ARGS(...) \
+/*#  pragma GCC system_header  Suppress warnings (esp. related to variadic macros from -pedantic) NOT NEEDED ANY MORE */
+/* The trick is: the number of args in __VA_ARGS__ "shifts" the appropriate XX*(__VA_ARGS__) macro
+   to the DO_THIS postition in the DO_XX macro. Then only that appropriate XX*(__VA_ARGS__) macro is
+   evalutated; the others are ignored.
+   TRACE_ARGS_ARGS(...) ignores the 1st arg (the "format" arg) and returns the remaining "args", if any.
+*/
+# define TRACE_ARGS_ARGS(...) \
 	DO_XX(__VA_ARGS__,\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
@@ -1231,10 +1272,9 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__),	\
 		  XXX_X(__VA_ARGS__), XXX_X(__VA_ARGS__), XXX_0(__VA_ARGS__), unused ) /* "unused" to avoid warning "requires at least one argument for the "..." in a variadic macro" */
-#  define DO_XX(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,do_this,...) do_this
-#  define XXX_0(A)
-#  define XXX_X(A,...) ,__VA_ARGS__
-# endif
-#endif
+# define DO_XX(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,do_this,...) do_this
+# define XXX_0(A)
+# define XXX_X(A,...) ,__VA_ARGS__
+#endif /* defined(__GXX_WEAK__) || ... */
 
 #endif /* TRACE_H_5216 */

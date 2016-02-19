@@ -6,7 +6,7 @@
 	rev="$Revision: 1.26 $$Date: 2015/08/02 00:03:01 $";
 	*/
 
-#define _GNU_SOURCE
+/*#define _GNU_SOURCE*/ /* Defined by compiler flags now to kill the sched_getcpu error once and for all */
 #include <stdio.h>		/* printf */
 struct basic_c_s
 { char ver1[0x1000];

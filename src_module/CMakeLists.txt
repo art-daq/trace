@@ -23,4 +23,4 @@ add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/$
 
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION ${${product}_inc_dir}/../module)
 
-install_source()
+#install_source()

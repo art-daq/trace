@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 511 $$Date: 2016-02-09 12:17:03 -0600 (Tue, 09 Feb 2016) $";
+char *rev="$Revision: 524 $$Date: 2016-02-17 14:10:37 -0600 (Wed, 17 Feb 2016) $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -245,6 +245,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	int                     tfmt_len;
 	time_t                  tt=time(NULL);
 	char                    tbuf[0x100], ttbuf[0x100];
+	unsigned                longest_name=0;
 
 	opts |= quiet?quiet_:0;
 	opts |= (strchr(ospec,'D')?indent_:0);
@@ -257,6 +258,11 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		tfmt=(char*)"%s%%06d";
 	strftime(ttbuf,sizeof(ttbuf),tfmt,localtime(&tt));
 	tfmt_len=snprintf( tbuf,sizeof(tbuf),ttbuf, 0 );  /* possibly (probably) add usecs (i.e. FMT has %%06d) */
+
+	if (strchr(ospec,'n'))
+		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+			if (longest_name<strlen(traceNamLvls_p[ii].name))
+				longest_name=strlen(traceNamLvls_p[ii].name);
 
 	/* If just a count is given, it will be a way to limit the number printed;
 	   a short hand version of "... | head -count". (so if there are not entries,
@@ -305,15 +311,17 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			{
 			case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
 			case 's': printf("%*s ", buf_slot_width, "slt" ); break;
-			case 'T': if(tfmt_len)printf("%*s ", tfmt_len,"us_tod"); break;
+			case 'T': if(tfmt_len)printf("%*.*s ", tfmt_len,tfmt_len,"us_tod"+(tfmt_len>=6?0:6-tfmt_len)); break;
 			case 't': printf("       tsc "); break;
 			case 'i': printf("  tid "); break;
 			case 'I': printf("TID "); break;
+			case 'n': printf("%*s ", longest_name,"name");break;
 			case 'C': printf("cpu "); break;
 			case 'L': printf("lv "); break;
 			case 'B': printf("B "); break;
 			case 'P': printf("  pid "); break;
 			case 'R': printf("r "); break;
+			case '#': printf("args ");break;
 				/* ignore other unknown chars in ospec */
 			}
 		}
@@ -321,19 +329,22 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		sp = ospec;
 		for (sp=ospec; *sp; ++sp)
 		{
+# define TRACE_LONG_DASHES "----------------------------------"
 			switch (*sp)
 			{
-			case 'N': printf("%.*s ", minw(3,countDigits(max-1)), "--------------"); break;
-			case 's': printf("%.*s ", buf_slot_width, "--------------"); break;
-			case 'T': if(tfmt_len)printf("%.*s ", tfmt_len,"----------------------------------"); break;
+			case 'N': printf("%.*s ", minw(3,countDigits(max-1)), TRACE_LONG_DASHES); break;
+			case 's': printf("%.*s ", buf_slot_width, TRACE_LONG_DASHES); break;
+			case 'T': if(tfmt_len)printf("%.*s ", tfmt_len, TRACE_LONG_DASHES); break;
 			case 't': printf("---------- "); break;
 			case 'i': printf("----- "); break;
 			case 'I': printf("--- "); break;
+			case 'n': printf("%.*s ", longest_name,TRACE_LONG_DASHES);break;
 			case 'C': printf("--- "); break;
 			case 'L': printf("-- "); break;
 			case 'B': printf("-- "); break;
 			case 'P': printf("------ "); break;
 			case 'R': printf("- "); break;
+			case '#': printf("---- ");break;
 				/* ignore other unknown chars in ospec */
 			}
 		}
@@ -412,6 +423,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 			case 'i': printf("%5d ", myEnt_p->tid); break;
 			case 'I': printf("%3u ", myEnt_p->TID); break;
+			case 'n': printf("%*s ",longest_name,traceNamLvls_p[myEnt_p->TID].name);break;
 			case 'C': printf("%3u ", myEnt_p->cpu); break;
 			case 'L': printf("%2d ", myEnt_p->lvl); break;
 			case 'B': printf("%u ", myEnt_p->param_bytes); break;
@@ -421,12 +433,13 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 				else							 printf( ". " );
 				break;
 			case 'm': print_just_converted_ofmt=1; break;
+			case '#': printf("%4u ", myEnt_p->nargs); break;
 			}
 		}
 
 		/*typedef unsigned long parm_array_t[1];*/
 		/*va_start( ap, params_p[-1] );*/
-		if (!print_just_converted_ofmt)
+		if (!print_just_converted_ofmt && myEnt_p->nargs)
 		{	/* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
 			   Here, I need an initializer so I must have this inside braces { } */
 			va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
@@ -437,7 +450,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			vprintf( local_msg, ap );
 			printf("\n");
 		}
-		else
+		else /* print_just_converted_ofmt */
 			printf("%s\n",local_msg);
 	}
 }	/*traceShow*/
@@ -484,7 +497,7 @@ void traceInfo()
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u          %s\n"
-	       "default TRACE_SHOW=%s others: B(paramBytes) P(pid) s(slot) m(convertedMsgfmt_only) D(inDent)\n"
+	       "default TRACE_SHOW=%s others: B(paramBytes) P(pid) s(slot) m(convertedMsgfmt_only) D(inDent) n(TIDname) #(nargs)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr

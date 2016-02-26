@@ -7,7 +7,8 @@ endif()
 
 message("KVERS is ${KVERS}")
 
-add_custom_command(
+if (EXISTS /lib/modules/${KVERS}/build)
+    add_custom_command(
 		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/Makefile ${CMAKE_CURRENT_BINARY_DIR}
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/trace_.c ${CMAKE_CURRENT_BINARY_DIR}
@@ -17,10 +18,10 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E rename ${CMAKE_CURRENT_BINARY_DIR}/TRACE.ko ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/Module.symvers ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/Module.symvers
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/trace_.c
-)
+    )
 
-add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
+    add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION ${${product}_inc_dir}/../module)
-
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION ${${product}_inc_dir}/../module)
+endif()
 #install_source()

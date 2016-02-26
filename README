@@ -5,8 +5,8 @@ standard is desirable.
 
 https://cdcvs.fnal.gov/redmine/projects/trace
 http://oink.fnal.gov/distro/packages/TRACE/
-Public readonly CVS access via:
-cvs -d :pserver:anonymous@cdcvs.fnal.gov:/cvs/projects/trace checkout trace
-Authorized read-write via:
-cvs -d :ext:p-trace@cdcvs.fnal.gov/cvs/projects/trace checkout trace
+Public readonly GIT access via:
+git clone http://cdcvs.fnal.gov/projects/trace-git trace
+Authorized read-write SVN access via:
+svn co svn+ssh://p-trace@cdcvs.fnal.gov:/cvs/projects/trace-svn/trunk trace
 

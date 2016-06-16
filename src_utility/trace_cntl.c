@@ -261,7 +261,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 
 	if (strchr(ospec,'n'))
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii) {
-			int ll=0;
+			unsigned ll=0;
 			while (traceNamLvls_p[ii].name[ll]!='\0' && ++ll < sizeof(traceNamLvls_p->name)) ;
 			if (longest_name<ll)
 				longest_name=ll;

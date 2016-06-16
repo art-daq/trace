@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 524 $$Date: 2016-02-17 14:10:37 -0600 (Wed, 17 Feb 2016) $";
+char *rev="$Revision: 535 $$Date: 2016-04-27 20:59:19 -0500 (Wed, 27 Apr 2016) $";
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -260,9 +260,12 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	tfmt_len=snprintf( tbuf,sizeof(tbuf),ttbuf, 0 );  /* possibly (probably) add usecs (i.e. FMT has %%06d) */
 
 	if (strchr(ospec,'n'))
-		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-			if (longest_name<strlen(traceNamLvls_p[ii].name))
-				longest_name=strlen(traceNamLvls_p[ii].name);
+		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii) {
+			int ll=0;
+			while (traceNamLvls_p[ii].name[ll]!='\0' && ++ll < sizeof(traceNamLvls_p->name)) ;
+			if (longest_name<ll)
+				longest_name=ll;
+		}
 
 	/* If just a count is given, it will be a way to limit the number printed;
 	   a short hand version of "... | head -count". (so if there are not entries,
@@ -342,7 +345,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			case 'C': printf("--- "); break;
 			case 'L': printf("-- "); break;
 			case 'B': printf("-- "); break;
-			case 'P': printf("------ "); break;
+			case 'P': printf("----- "); break;
 			case 'R': printf("- "); break;
 			case '#': printf("---- ");break;
 				/* ignore other unknown chars in ospec */
@@ -423,11 +426,11 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 			case 'i': printf("%5d ", myEnt_p->tid); break;
 			case 'I': printf("%3u ", myEnt_p->TID); break;
-			case 'n': printf("%*s ",longest_name,traceNamLvls_p[myEnt_p->TID].name);break;
+			case 'n': printf("%*.*s ",longest_name,longest_name,traceNamLvls_p[myEnt_p->TID].name);break;
 			case 'C': printf("%3u ", myEnt_p->cpu); break;
 			case 'L': printf("%2d ", myEnt_p->lvl); break;
 			case 'B': printf("%u ", myEnt_p->param_bytes); break;
-			case 'P': printf("%6d ", myEnt_p->pid); break;
+			case 'P': printf("%5d ", myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 */
 			case 'R':
 				if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 				else							 printf( ". " );
@@ -825,8 +828,10 @@ extern  int        optind;         /* for getopt */
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 		{
 			if (traceNamLvls_p[ii].name[0] != '\0')
-			{	printf("%3d %*s 0x%016llx 0x%016llx 0x%016llx\n"
-				       , ii, (int)sizeof(traceNamLvls_p->name)
+			{	printf("%3d %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
+				       , ii
+					   , (int)sizeof(traceNamLvls_p->name)
+					   , (int)sizeof(traceNamLvls_p->name)
 				       , traceNamLvls_p[ii].name
 				       , (unsigned long long)traceNamLvls_p[ii].M
 				       , (unsigned long long)traceNamLvls_p[ii].S

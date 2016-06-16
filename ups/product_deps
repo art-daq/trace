@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent TRACE v3_06_06
+parent TRACE v3_06_07
 defaultqual e7
 
 # These optional lines define the installed directories where
@@ -16,13 +16,16 @@ bindir  fq_dir       bin
 libdir  fq_dir       lib
 
 product		version
+gcc             v4_9_3a    e10
 gcc             v4_9_3     e9
 gcc		v4_9_2     e7
 gcc             v4_9_1     e6
-cetbuildtools   v4_18_02   only_for_build
+cetbuildtools   v5_04_01   only_for_build
 end_product_list
 
 qualifier	gcc	notes
+e10:debug        -nq-    --std=c++14
+e10:prof        -nq-    --std=c++14
 e9:debug        -nq-    --std=c++14
 e9:prof        -nq-    --std=c++14
 e7:debug        -nq-    --std=c++1y

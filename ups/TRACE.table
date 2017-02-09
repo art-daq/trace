@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 509 $
-#   $Date: 2016-02-08 10:11:17 -0600 (Mon, 08 Feb 2016) $
+#   $Revision: 558 $
+#   $Date: 2017-02-08 16:38:34 -0600 (Wed, 08 Feb 2017) $
 FILE = TABLE
 Product=TRACE
 
@@ -55,7 +55,6 @@ COMMON:
    ACTION = setup__
 
 	prodDir( _INC, include )
-        envSet( ${UPS_PROD_NAME_UC}_LIB, ${${UPS_PROD_NAME_UC}_FQ_DIR}/lib ) 
         envSet( ${UPS_PROD_NAME_UC}_BIN, ${${UPS_PROD_NAME_UC}_FQ_DIR}/bin ) 
 
         if    ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
@@ -64,12 +63,6 @@ COMMON:
 	else  ()
             execute( true, NO_UPS_ENV )
         endif ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
-
-	if ( test `uname` = "Darwin" )
-          envPrepend(DYLD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
-	else()
-          envPrepend(LD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
-	endif ( test `uname` = "Darwin" )
 
 	envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 

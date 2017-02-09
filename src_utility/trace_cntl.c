@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-char *rev="$Revision: 535 $$Date: 2016-04-27 20:59:19 -0500 (Wed, 27 Apr 2016) $";
+#define TRACE_CNTL_REV "$Revision: 548 $$Date: 2017-01-25 02:47:37 -0600 (Wed, 25 Jan 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -30,6 +30,7 @@ done
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
 #include <sys/syscall.h>	/* syscall */
+#include <locale.h>				/* setlocale */
 
 #include "trace.h"
 
@@ -51,7 +52,16 @@ commands:\n\
 opts:\n\
  -f<file>\n\
  -n<name>\n\
+ -V           print version and exit\n\
+show opts:\n\
+ -H           no header\n\
+ -l<LC_NUMERIC val>  i.e. -len_US\n\
+ -q           silence format errors\n\
+ -F           show forward, poll for new entries. \"count\" avoids older entries\n\
+ other options encoded in TRACE_SHOW env.var.\n\
 tests:  (use %s show after test)\n\
+ -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings\n\
+\n\
 %s\n\
 ", basename(argv[0]), basename(argv[0]), USAGE_TESTS
 #define USAGE_TESTS "\
@@ -72,7 +82,6 @@ tests:  (use %s show after test)\n\
 #endif
 #define NUMTHREADS 4
 static int trace_thread_option=0;
-
 
 void* thread_func(void *arg)
 {
@@ -115,7 +124,8 @@ struct sizepush
 enum show_opts_e {
 	filter_newline_=0x1,
 	quiet_         =0x2,
-	indent_        =0x4
+	indent_        =0x4,
+    forward_       =0x8
 };
 
 void get_arg_sizes(	 char            *ofmt
@@ -222,10 +232,20 @@ int countDigits(int n)
 		: 1;
 }
 
-void traceShow( const char *ospec, int count, int start, int quiet )
+/* count==-1, start==-1  ==> DEFAULT - reverse print from wrIdx to zero (if not
+                             full) or for num_entrie
+   count>=0,  start==-1  ==> reverse print "count" entries (incuding 0, which
+                             doesn't seem to useful
+   count>=0,  start>=0   ==> reverse print count entries starting at "slot" idx
+                             "start"  I.e. if 8 traces have occurred, these 2
+                             are equivalent:
+                             traceShow( ospec, -1, -1, 0 ) and
+                             traceShow( ospec,  8,  7, 0 )
+ */
+void traceShow( const char *ospec, int count, int start, int show_opts )
 {
 	uint32_t rdIdx;
-	uint32_t max;
+	int32_t max;
 	unsigned printed=0;
 	unsigned ii;
 	int	   	 buf_slot_width;
@@ -246,8 +266,10 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	time_t                  tt=time(NULL);
 	char                    tbuf[0x100], ttbuf[0x100];
 	unsigned                longest_name=0;
+	int                     for_rev=-1; /* default is reverse print */
+	int                     forward_continuous=0; /* continuous==1 will force for_rev=1 */
 
-	opts |= quiet?quiet_:0;
+	opts |= show_opts; /* see enum show_opts_e above */
 	opts |= (strchr(ospec,'D')?indent_:0);
 
 	traceInit(NULL);
@@ -276,29 +298,37 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 	*/
 	if (start >= 0)
 	{	start++; /* start slot index needs to be turned into a "count" */
-	  if ((unsigned)start > traceControl_p->num_entries)
+		if ((unsigned)start > traceControl_p->num_entries)
 		{	start = traceControl_p->num_entries;
 			printf("specified start index too large, adjusting to %d\n",start );
 		}
 		rdIdx=start;
 	}
 	else
-	{	rdIdx = TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt) % traceControl_p->num_entries;
+	{	/* here, rdIdx stars as a count (see max = rdIdx below), but it is
+		   used as an index after first being decremented (assuming reverse
+		   printing) */
+		rdIdx = TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt) % traceControl_p->num_entries;
 	}
 	if ((count>=0) && (start>=0))
 	{
-	  if ((unsigned)count > traceControl_p->num_entries)
+		if ((unsigned)count > traceControl_p->num_entries)
 		{	max = traceControl_p->num_entries;
 			printf("specified count > num_entrie, adjusting to %d\n",max);
-		}
-		else
+		} else
 			max = count;
-	}
-	else if (traceControl_p->full)
+	} else if (TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt)>=traceControl_p->num_entries) { /* traceControl_p-> may not be being used */
 		max = traceControl_p->num_entries;
-	else
+	} else
 		max = rdIdx;
 	if ((count>=0) && (start<0) && ((unsigned)count<max)) max=count;
+	if (opts&forward_) {
+		rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt), -max );
+		/* subtract 1 b/c during loop (below) rdIdx is incremented first */
+		rdIdx = IDXCNT_ADD( rdIdx, -1 );
+		forward_continuous =1;
+		for_rev=1;
+	}
 
 	buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
 	local_msg     =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
@@ -314,7 +344,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			{
 			case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
 			case 's': printf("%*s ", buf_slot_width, "slt" ); break;
-			case 'T': if(tfmt_len)printf("%*.*s ", tfmt_len,tfmt_len,"us_tod"+(tfmt_len>=6?0:6-tfmt_len)); break;
+			case 'T': if(tfmt_len)printf("%*.*s ", tfmt_len,tfmt_len,&("us_tod"[tfmt_len>=6?0:6-tfmt_len])); break;
 			case 't': printf("       tsc "); break;
 			case 'i': printf("  tid "); break;
 			case 'I': printf("TID "); break;
@@ -353,10 +383,25 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		}
 		printf("-----------------------------\n");
 	}
-	for (printed=0; printed<max; ++printed)
+
+	for (printed=0; printed<max || forward_continuous; ++printed)
 	{	time_t seconds; unsigned useconds;
 		int print_just_converted_ofmt=0;
-		rdIdx = IDXCNT_ADD( rdIdx, -1 ) % traceControl_p->num_entries;
+		rdIdx = IDXCNT_ADD( rdIdx, for_rev );
+		if (opts&forward_) {
+			uint32_t now, ini;
+ forward_check:
+			ini=TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt);
+			while (rdIdx == (now=TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt)))
+				usleep( 100000 );
+			/* attempt to detect a treset which occurred _while_sleeping_ */
+			uint32_t delta=now-ini;
+			/*fprintf(stderr,"rdIdx=%u now=%u old=%u delta=%u\n",rdIdx,now,ini,delta);*/
+			if (delta > 0x80000000) {
+				rdIdx = 0;
+				goto forward_check;
+			}
+		}
 		myEnt_p = idxCnt2entPtr( rdIdx );
 		msg_p	 = (char*)(myEnt_p+1);
 		params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
@@ -420,7 +465,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 			switch (*sp)
 			{
 			case 'N': printf("%*u ", minw(3,countDigits(max-1)), printed ); break;
-			case 's': printf("%*u ", buf_slot_width, rdIdx ); break;
+			case 's': printf("%*u ", buf_slot_width, rdIdx%traceControl_p->num_entries ); break;
 			case 'T': if(tfmt_len){ strftime(tbuf,sizeof(tbuf),tfmt,localtime(&seconds)); strcat(tbuf," ");
 					  printf(tbuf, useconds); } break;
 			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
@@ -455,6 +500,7 @@ void traceShow( const char *ospec, int count, int start, int quiet )
 		}
 		else /* print_just_converted_ofmt */
 			printf("%s\n",local_msg);
+		fflush(stdout);
 	}
 }	/*traceShow*/
 
@@ -536,6 +582,9 @@ void traceInfo()
 
 
 
+/* for "test-compare" printf buffer (could use write) and (more so) "TRACE" */
+#pragma GCC diagnostic ignored "-Wformat-security"
+
 int main(  int	argc
          , char	*argv[] )
 {
@@ -545,10 +594,10 @@ extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
 	int	   do_heading=1;
-	int	   opt_quiet=0;
+	int	   show_opts=0;
 	unsigned   ii=0;
 
-	while ((opt=getopt(argc,argv,"?hn:f:x:HqV")) != -1)
+	while ((opt=getopt(argc,argv,"?hn:f:x:HqVl:F")) != -1)
 	{	switch (opt)
 		{ /* '?' is also what you get w/ "invalid option -- -" */
 		case '?': case 'h': printf(USAGE);exit(0);           break;
@@ -556,8 +605,10 @@ extern  int        optind;         /* for getopt */
 		case 'f': setenv("TRACE_FILE",optarg,1);             break;
 		case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
 		case 'H': do_heading=0;                              break;
-		case 'q': opt_quiet=1;                               break;
-		case 'V': printf( rev ); exit(0);                    break;
+		case 'q': show_opts|=quiet_;                         break;
+		case 'V': printf( TRACE_CNTL_REV ); exit(0);         break;
+		case 'l': setlocale(LC_NUMERIC,optarg);              break;
+        case 'F': show_opts|=forward_;                       break;
 		}
 	}
 	if (argc - optind < 1)
@@ -566,6 +617,8 @@ extern  int        optind;         /* for getopt */
 	}
 	cmd = argv[optind++];
 
+	if(getenv("LC_NUMERIC"))
+		setlocale(LC_NUMERIC,getenv("LC_NUMERIC")); 
 
 	if		(strcmp(cmd,"test1") == 0)
 	{	int loops=1;
@@ -579,6 +632,7 @@ extern  int        optind;         /* for getopt */
 	{	float	 ff[10];
 		pid_t	 tid;
 		uint32_t desired, myIdx;
+		int32_t  xx;
 
 #	   if	defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 		tid = (pid_t)syscall( TRACE_GETTID );
@@ -633,6 +687,7 @@ extern  int        optind;         /* for getopt */
 		TRACE_CNTL( "modeM", 1LL );
 
 		TRACE( 0, "hello" );
+
 		myIdx = traceControl_p->largest_multiple - 3;
 		printf("myIdx=0x%08x\n", myIdx );
 		for (ii=0; ii<6; ++ii)
@@ -646,6 +701,23 @@ extern  int        optind;         /* for getopt */
 			myIdx = desired;
 		}
 		printf("myIdx=0x%08x\n", myIdx );
+
+		xx=5;
+		myIdx = traceControl_p->largest_multiple - (3*xx);
+		printf("myIdx=0x%08x\n", myIdx );
+		for (ii=0; ii<6; ++ii)
+		{	desired = IDXCNT_ADD(myIdx,xx);
+			printf( "myIdx==>myIdx+5: 0x%08x 0x%08x\n",myIdx, desired );
+			myIdx = desired;
+		}
+		for (ii=0; ii<6; ++ii)
+		{	desired = IDXCNT_ADD(myIdx,-xx);  /* NOTE: this will not work if xx is of type uint32_t; it must be of int32_t */
+			printf( "myIdx==>myIdx-5: 0x%08x 0x%08x\n",myIdx, desired );
+			myIdx = desired;
+		}
+		printf("myIdx=0x%08x\n", myIdx );
+
+
 		TRACE( 1, "hello %d\nthere\n", 1 );
 		TRACE( 2, "hello %d %d", 1, 2 );
 		TRACE( 3, "hello %d %d %d", 1,2,3 );
@@ -794,7 +866,7 @@ extern  int        optind;         /* for getopt */
 		if ((do_heading==0) && (ospec[0]=='H')) ++ospec;
 		if ((argc-optind)>=1) count=strtoul(argv[optind],  NULL,0);
 		if ((argc-optind)>=2) start=strtoul(argv[optind+1],NULL,0);
-		traceShow(ospec,count,start,opt_quiet);
+		traceShow(ospec,count,start,show_opts);
 	}
 	else if (strncmp(cmd,"info",4) == 0) 
 	{

@@ -35,11 +35,6 @@ include_directories(include)
 FILE(COPY Makefile DESTINATION .)
 INSTALL(FILES Makefile DESTINATION ${product}/${version})
 
-# The trace library
-add_subdirectory(src_lib)
-FILE(COPY src_lib DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY src_lib DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
-
 # The trace utility
 add_subdirectory(src_utility)
 FILE(COPY src_utility DESTINATION . PATTERN ".svn" EXCLUDE)

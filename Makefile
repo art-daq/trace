@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 483 $$Date: 2016-01-13 13:24:02 -0600 (Wed, 13 Jan 2016) $";
+ # rev="$Revision: 558 $$Date: 2017-02-08 16:38:34 -0600 (Wed, 08 Feb 2017) $";
 
 # TOP LEVEL Makefile
 
@@ -63,17 +63,17 @@ src_module: OUT_check
 # have to do this in two parts:
 #    1) userspace - src can remain
 #    2) module (which needs src copied)
-src_example_user: OUT_check src_lib
+src_example_user: OUT_check
 	${FLAVOR_SUBDIR};\
 	test -n "${TRACE_FQ_DIR}"\
 	 && out="${TRACE_FQ_DIR}"\
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}";\
 	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
-	$(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include LIBDIR="$$out/lib/";\
+	$(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include;\
 	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\
 	    out=`echo "$$out" | sed 's/64bit//'`;\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
-	    $(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32 LIBDIR=$$out/lib/;\
+	    $(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32;\
 	fi
 src_example_module: OUT_check
 	test -n "${KDIR}"\
@@ -92,19 +92,6 @@ src_utility: OUT_check
 	test -n "${TRACE_FQ_DIR}"\
 	 && out="${TRACE_FQ_DIR}/bin/"\
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin/";\
-	test -d "$$out" || mkdir -p "$$out";\
-	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
-	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\
-	    out=`echo "$$out" | sed 's/64bit//'`;\
-	    test -d "$$out" || mkdir -p "$$out";\
-	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
-	fi
-
-src_lib: OUT_check
-	${FLAVOR_SUBDIR};\
-	test -n "${TRACE_FQ_DIR}"\
-	 && out="${TRACE_FQ_DIR}/lib/"\
-	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/lib/";\
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}";\
 	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\

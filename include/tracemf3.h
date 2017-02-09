@@ -1,19 +1,17 @@
-/* This file (tracelibmf.h) was created by Ron Rechenmacher <ron@fnal.gov> on
+/* This file (tracemf3.h) was created by Ron Rechenmacher <ron@fnal.gov> on
  // Apr 18, 2014. "TERMS AND CONDITIONS" governing this file are in the README
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
- // $RCSfile: tracelibmf.hh,v $
- // rev="$Revision: 430 $$Date: 2015-12-08 11:34:52 -0600 (Tue, 08 Dec 2015) $";
+ // rev="$Revision: 552 $$Date: 2017-01-27 12:32:23 -0600 (Fri, 27 Jan 2017) $";
  */
-#ifndef TRACELIBMF_H
-#define TRACELIBMF_H
+#ifndef TRACEMF3_H
+#define TRACEMF3_H
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
 // The TRACE macro will then use the TRACE_MF_LOGGER macro defined below for the "slow"
 // tracing function (if appropriate mask bit is set :)
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)  TRACE_MF_LOGGER( lvl,__VA_ARGS__ )
-#include "tracelib.h"		/* TRACE */
+#include "trace.h"		/* TRACE */
 
 #include <string>
 
@@ -49,4 +47,29 @@ Fri Apr 18 11:55:38 -0500 2014: %MSG
 	}						\
     } while (0)
 
-#endif /* TRACELIBMF_H */
+
+/* Now define a trace macro that uses the "trigger mask" as a "3rd function" mask
+ */
+#undef TRACE
+# define TRACE( lvl, ... ) do                   \
+    {	TRACE_INIT_CHECK												\
+	    {	struct timeval lclTime; lclTime.tv_sec = 0;					\
+			/* 1st "function" is memory */								\
+			if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1LL<<((lvl)&LVLBITSMSK)))) \
+			{   trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
+					  , __VA_ARGS__ );									\
+			}															\
+			/* 2nd "function" is console */								\
+			if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
+			{   if (lclTime.tv_sec == 0) gettimeofday( &lclTime, NULL ); \
+				TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ );	\
+			}															\
+			/* 3rnd "function" is network */							\
+			if (traceControl_p->mode.mode&(1<<2) && (traceNamLvls_p[traceTID].T & (1LL<<((lvl&LVLBITSMSK))))) \
+			{   TRACE_MF_LOGGER( lvl, __VA_ARGS__ );					\
+			}															\
+		}																\
+    } while (0)
+
+
+#endif /* TRACEMF3_H */

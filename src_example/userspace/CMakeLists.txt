@@ -5,7 +5,6 @@ cet_make_exec(example_main SOURCE
 						   example_sub3.cc
 						   example_sub4.cc
 						   LIBRARIES
-						   trace
 						   pthread
 )
 

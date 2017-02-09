@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 520 $$Date: 2016-02-16 11:37:38 -0600 (Tue, 16 Feb 2016) $";
+    rev="$Revision: 560 $$Date: 2017-02-09 11:58:10 -0600 (Thu, 09 Feb 2017) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -311,7 +311,9 @@ static void trace_proc_remove( void )
 
 /* based on code in kernel/trace/trace_sched_switch.c */
 static void my_trace_sched_switch_hook(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+# if   LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+									   void *ignore, bool preempt
+# elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 				       void *__rq
 # else
 				       struct rq *__rq
@@ -320,6 +322,8 @@ static void my_trace_sched_switch_hook(
 				       , struct task_struct *next )
 {
 	TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
+	//TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), task_pid_nr(prev), task_pid_nr(next) );
+	//TRACE( 31, "schedule: cpu=%d prev=%p next=%p", raw_smp_processor_id(), prev, next );
 }   // my_trace_sched_switch_hook
 
 static void my_trace_hirq_enter(

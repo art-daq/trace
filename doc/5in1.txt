@@ -71,8 +71,8 @@ user_lib_define
   use cases:                      aka      key defines           distinguishing characteristics
   ----------------------------   ------  -------------------- -----------------------------------------
   userspace all static           static
-  userspace "library" definer    libdef  TRACE_LIB TRACE_DECL variables declared extern in trace.h, defined in src_lib/tracelib.c
-  userspace library user         libuse  TRACE_DECL           variables declared extern in trace.h
+  userspace "library" definer    libdef  TRACE_DEFINE         variables declared extern in trace.h, defined in some "main" program
+  userspace library user         libuse  TRACE_DECLARE        variables declared extern in trace.h
   kernel main                    kmain   TRACE_IMPL KERNEL    variables defined in src_module/trace_.c
   kernel subordinate             ksub    KERNEL               no 
 

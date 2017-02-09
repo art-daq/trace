@@ -3,13 +3,14 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 476 $$Date: 2016-01-11 15:09:10 -0600 (Mon, 11 Jan 2016) $";
+ // rev="$Revision: 557 $$Date: 2017-02-08 16:25:24 -0600 (Wed, 08 Feb 2017) $";
 
 #include <pthread.h>		/* pthread_self */
 #include <sys/time.h>		/* gettimeofday */
 #include <libgen.h>		/* basename (Darwin) */
 
-#include "tracelib.h"
+#define TRACE_DEFINE
+#include "trace.h"
 
 #define USAGE "\
   usage: %s\n\

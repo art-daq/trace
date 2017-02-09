@@ -4,7 +4,7 @@
 # or COPYING file. If you do not have such a file, one can be obtained by
 # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 # $RCSfile: bitN_to_mask,v $
-# rev="$Revision: 492 $$Date: 2016-01-26 15:33:29 -0600 (Tue, 26 Jan 2016) $";
+# rev="$Revision: 554 $$Date: 2017-01-31 15:25:51 -0600 (Tue, 31 Jan 2017) $";
 
 bitN_to_mask()
 {
@@ -36,7 +36,7 @@ bitN_to_mask()
     done
     echo $opts
     #echo $rr|awk '{for(i=1;i<NF+1;++i)m=or(m,lshift(1,$i));printf"0x%x\n",m;}'
-    echo $rr|perl -e '$_=<>;split;foreach$w(@_){$rr|=1<<$w}printf"0x%x\n",$rr'
+    echo $rr|perl -e '$_=<STDIN>;@l = split;foreach$w(@l){$rr|=1<<$w}printf"0x%x\n",$rr'
 }
 
 bitN_to_mask "$@"

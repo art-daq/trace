@@ -1,7 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent TRACE v3_06_07
-defaultqual e7
+parent TRACE v3_07_00
 
 # These optional lines define the installed directories where
 # headers, libraries, and executables will be found
@@ -12,26 +11,13 @@ defaultqual e7
 # The third field is not constrained.
 # Defaults:
 #incdir  product_dir
-bindir  fq_dir       bin
-libdir  fq_dir       lib
 
 product		version
-gcc             v4_9_3a    e10
-gcc             v4_9_3     e9
-gcc		v4_9_2     e7
-gcc             v4_9_1     e6
-cetbuildtools   v5_04_01   only_for_build
+cetbuildtools   v5_06_06   -      only_for_build
 end_product_list
 
-qualifier	gcc	notes
-e10:debug        -nq-    --std=c++14
-e10:prof        -nq-    --std=c++14
-e9:debug        -nq-    --std=c++14
-e9:prof        -nq-    --std=c++14
-e7:debug        -nq-    --std=c++1y
-e7:prof        -nq-    --std=c++1y
-e6:debug        -nq-    --std=c++1y
-e6:prof        -nq-    --std=c++1y
+qualifier 	cetbuildtools	notes
+-nq-		-nq-
 end_qualifier_list
 
 table_fragment_begin
@@ -43,12 +29,6 @@ if ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_P
 else  ()
   execute( true, NO_UPS_ENV )
 endif ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
-
-if ( test `uname` = "Darwin" )
-  envPrepend(DYLD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
-else()
-  envPrepend(LD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
-endif ( test `uname` = "Darwin" )
 
 envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
@@ -92,6 +72,10 @@ endif ( test $?shell = 1 )
 	addAlias( toffMg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg `bitN_to_mask %s` 0 0 )
 	addAlias( toffSg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 `bitN_to_mask %s` 0 )
 	addAlias( toffTg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 0 `bitN_to_mask %s` )
+
+	Action = GetFQDir
+	       envSet ( ${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/$(get-directory-name subdir). )
+
 table_fragment_end
 
 # Preserve tabs and formatting in emacs and vi / vim:

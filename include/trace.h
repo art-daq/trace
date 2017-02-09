@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 528 $$Date: 2016-02-18 17:47:37 -0600 (Thu, 18 Feb 2016) $"
+#define TRACE_REV  "$Revision: 557 $$Date: 2017-02-08 16:25:24 -0600 (Wed, 08 Feb 2017) $"
 
 #ifndef __KERNEL__
 
@@ -134,7 +134,7 @@ static inline uint32_t cmpxchg( TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_
 # define TRACE_GETTIMEOFDAY( tvp )    do_gettimeofday( tvp )
 # define TRACE_PRINT                  printk
 # define TRACE_VPRINT                 vprintk
-//static int trace_no_init_cnt=0;
+/*static int trace_no_init_cnt=0;*/
 # define TRACE_INIT_CHECK             if((traceTID!=-1)||((traceTID=name2TID(TRACE_NAME))!=-1))
 # ifndef MODULE
 int trace_3_init(void);
@@ -178,7 +178,7 @@ static const char *  TRACE_NAME=NULL;
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 
 # define TRACE TRACEC
-//#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header
+/*#define TRACE_( lvl, ... )  (WITH trailing "_") MOVED TO END OF FILE AND AFTER # pragma GCC system_header*/
 # define TRACEC( lvl, ... ) do			\
     {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
@@ -286,10 +286,10 @@ struct traceControl_s
     uint32_t       largest_zero_offset; /* 11 */
     uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-(11+sizeof(trace_vers_t)/sizeof(int32_t))]; /* allow mmap 1st page(s) (stuff above) readonly */
 
-    TRACE_ATOMIC_T wrIdxCnt;	/* 32 or 64 bits */
+    TRACE_ATOMIC_T wrIdxCnt;	/* 32 bits */
     uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-(sizeof(TRACE_ATOMIC_T)/sizeof(int32_t))];   /* the goal is to have wrIdxCnt in it's own cache line */
 
-    TRACE_ATOMIC_T spinlock;	/* 32 or 64 bits */
+    TRACE_ATOMIC_T spinlock;	/* 32 bits */
     uint32_t       cacheline2[TRACE_CACHELINE/sizeof(int32_t)-(sizeof(TRACE_ATOMIC_T)/sizeof(int32_t))];   /* the goal is to have wrIdxCnt in it's own cache line */
 
     union trace_mode_u mode;
@@ -331,7 +331,7 @@ struct traceNamLvls_s
 
 /*--------------------------------------------------------------------------*/
 /* enter the 5 use case "areas" -- see doc/5in1.txt                         */
-/*  defining TRACE_DEFINE wins over DEFINE or nothing. STATIC wins over all */
+/*  defining TRACE_DEFINE wins over DECLARE or nothing. STATIC wins over all */
 /* It's OK if one module has DEFINE and all the reset have any of (nothing, DECLARE, STATIC) */
 /* The only thing that is invalid is if more than one has DEFINE            */
 #if   defined(TRACE_STATIC) && !defined(__KERNEL__)
@@ -410,15 +410,31 @@ static int32_t                  name2TID( const char *name );
    Some standards don't seem to line "static inline"
    Use of the following seems to produce the same code as the optimized
    code which calls inline idxCnt_add (the c11/c++11 optimizer seem to do what
-   this macro does). */
+   this macro does).
+   NOTE: when using macro version, "add" should be of type int32_t */
+#if 1
 #define IDXCNT_ADD( idxCnt, add )					\
-    ((add<0)								\
-     ?(((uint32_t)-add>idxCnt)						\
-       ?(traceControl_p->largest_multiple-(-add-idxCnt))%traceControl_p->largest_multiple \
-       :(idxCnt-(-add))%traceControl_p->largest_multiple		\
+    (((add)<0)										\
+	?(((uint32_t)-(add)>(idxCnt))										\
+	   ?(traceControl_p->largest_multiple-(-(add)-(idxCnt)))%traceControl_p->largest_multiple \
+	   :((idxCnt)-(-(add)))%traceControl_p->largest_multiple			\
        )								\
-     :(idxCnt+add)%traceControl_p->largest_multiple			\
+	 :((idxCnt)+(add))%traceControl_p->largest_multiple	\
     )
+#else
+static uint32_t IDXCNT_ADD( uint32_t idxCnt, int32_t add )
+{
+	uint32_t retval;
+	if (add < 0)
+		if (-add > idxCnt)
+			retval = (traceControl_p->largest_multiple-(-add-idxCnt))%traceControl_p->largest_multiple;
+		else
+			retval = (idxCnt-(-add))%traceControl_p->largest_multiple;
+	else
+		retval = (idxCnt+add)%traceControl_p->largest_multiple;
+	return retval;
+}
+#endif
 #define IDXCNT_DELTA( cur, prv )			\
     ((cur>=prv)						\
      ? cur-prv						\
@@ -453,6 +469,7 @@ static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t na
     char   obuf[0x1000]; char tbuf[0x100]; int printed=0;
     char   *cp;
     struct tm	tm_s;
+	int    quiet_warn=0;
     if (tracePrintFmt==NULL)
     {   /* no matter who writes, it should basically be the same thing */
 	if((cp=getenv("TRACE_TIME_FMT"))!=NULL) tracePrintFmt=cp; /* single write here */
@@ -463,7 +480,7 @@ static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t na
     strftime( tbuf, sizeof(tbuf), tracePrintFmt, &tm_s );
     printed = snprintf( obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec ); /* possibly (probably) add usecs */
     printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
-			, " %2d %2d "+(printed==0?1:0) /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
+	                    , &(" %2d %2d ")[printed==0?1:0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
 			, TID, lvl );
     if (nargs)
 	printed += vsnprintf( &(obuf[printed])
@@ -482,15 +499,15 @@ static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t na
 	    /*printf("added \\n printed=%d\n",printed);*/
 	}
 	/*else printf("already there printed=%d\n",printed);*/
-	write( tracePrintFd, obuf, printed );
+	quiet_warn += write( tracePrintFd, obuf, printed );
     }
     else
     {  /* obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n */
 	if (obuf[sizeof(obuf)-2] == '\n')
-	    write( tracePrintFd, obuf, sizeof(obuf)-1 );
+	    quiet_warn += write( tracePrintFd, obuf, sizeof(obuf)-1 );
 	else
 	{   obuf[sizeof(obuf)-1] = '\n';
-	    write( tracePrintFd, obuf, sizeof(obuf) );
+	    quiet_warn += write( tracePrintFd, obuf, sizeof(obuf) );
 	    /*printf("changed \\0 to \\n printed=%d\n",);*/
 	}
     }
@@ -535,6 +552,7 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 	desired = IDXCNT_ADD( myIdxCnt,1);
     }
 #elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+	pid_t    chkpid;
     uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
     while (!atomic_compare_exchange_weak(&traceControl_p->wrIdxCnt
 					 , &myIdxCnt, desired))
@@ -542,6 +560,7 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 	desired = IDXCNT_ADD( myIdxCnt,1);
     }
 #else
+	pid_t    chkpid;
     uint32_t desired=IDXCNT_ADD(myIdxCnt,1);
     while (cmpxchg(&traceControl_p->wrIdxCnt,myIdxCnt,desired)!=myIdxCnt)
     {   ++get_idxCnt_retries;
@@ -575,6 +594,8 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
     myEnt_p->tid  = current->pid;
     myEnt_p->cpu  = raw_smp_processor_id();
 #else
+	if (tracePid != (chkpid=getpid())) /* "pid/tid not changed after 2nd fork" issue */
+		tracePid = traceTid = chkpid;
     myEnt_p->pid  = tracePid;
     myEnt_p->tid  = traceTid;
 # if defined(__linux__) && !defined(NO_SCHED_GETCPU)
@@ -742,7 +763,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
              CAN'T HAVE NAME-PER-THREAD unless traceTID       is THREAD_LOCAL
     */
 #ifndef __KERNEL__
-    if (strncmp(cmd,"file",4) == 0)/* THIS really only makes sense for non-thread local-file-for-module or for tracelib.h (non-static implementation) w/TLS to file-per-thread */
+    if (strncmp(cmd,"file",4) == 0)/* THIS really only makes sense for non-thread local-file-for-module or for non-static implementation w/TLS for file-per-thread */
     {	traceFile = va_arg(ap,char*);/* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
 	traceInit(TRACE_NAME);		/* force (re)init */
 	va_end(ap); return (0);
@@ -750,7 +771,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 #endif
     TRACE_INIT_CHECK {};     /* note: allows name2TID to be called in userspace */
 
-    if (strncmp(cmd,"name",4) == 0)/* THIS really only makes sense for non-thread local-name-for-module or for tracelib.h (non-static implementation) w/TLS to name-per-thread */
+    if (strncmp(cmd,"name",4) == 0)/* THIS really only makes sense for non-thread local-name-for-module or for non-static implementation w/TLS for name-per-thread */
     {	traceName = va_arg(ap,char*);/* this can still be overridden by env.var. IF traceInit(TRACE_NAME) is called; suggest testing w. TRACE_ARGSMAX=10*/
 	traceTID = name2TID( traceName );/* doing it this way allows this to be called by kernel module */
     }
@@ -943,6 +964,7 @@ static void trace_created_init(  struct traceControl_s *t_p
 
     t_p->mode.mode           = 0;
     t_p->mode.bits.M         = 1;
+    t_p->mode.bits.S         = 1;
 
     traceInitNames( t_p ); /* THIS SETS GLOBAL traceNamLvls_p REFERENCED NEXT. */
 
@@ -977,6 +999,7 @@ static int trace_mmap_file( const char *_file
     char                  *logname=getenv("LOGNAME"); /* login/user name */
     int			   created=0;
     int			   stat_try=0;
+	int            quiet_warn=0;
 
     snprintf( path, PATH_MAX, _file, logname?logname:"");/* in case, for some strange reason, LOGNAME does not exist */
     if ((fd=open(path,O_RDWR|O_CREAT|O_EXCL,0666)) != -1)
@@ -984,7 +1007,7 @@ static int trace_mmap_file( const char *_file
 	uint8_t one_byte='\0';
 	off = lseek( fd, (*memlen)-1, SEEK_SET );
 	if (off == (off_t)-1) { perror("lseek"); *tC_p=&(traceControl[0]);return (0); }
-	write( fd, &one_byte, 1 );
+	quiet_warn += write( fd, &one_byte, 1 );
 	created = 1;
     }
     else
@@ -1209,8 +1232,9 @@ static void traceInitNames( struct traceControl_s *tC_p )
 	((unsigned long)tC_p+cntlPagesSiz());
     for (ii=0; ii<tC_p->num_namLvlTblEnts; ++ii)
     {   traceNamLvls_p[ii].name[0] = '\0';
-	traceNamLvls_p[ii].S = traceNamLvls_p[ii].T = 0;
-	traceNamLvls_p[ii].M = 0x1;
+	traceNamLvls_p[ii].M = 0x3;
+	traceNamLvls_p[ii].S = 0x3;
+	traceNamLvls_p[ii].T = 0;
     }
 # ifdef __KERNEL__
     strcpy( traceNamLvls_p[0].name,"KERNEL" );
@@ -1235,7 +1259,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
-/* used only in c++0x c11 c++11 environment */
+/* used only in c++0x c++11 environment */
 # define TRACE_( lvl, ... ) do			\
     {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
@@ -1243,7 +1267,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<((lvl)&LVLBITSMSK)))) \
 		{   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);		\
 			trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED					\
-				  , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
+				  , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
 		}							\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<((lvl)&LVLBITSMSK)))) \
 		{   if (lclTime.tv_sec == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); } \

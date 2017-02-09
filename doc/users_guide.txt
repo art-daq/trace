@@ -76,7 +76,7 @@ the S (stdout) and T (trigger) masks.
 
 LEVELMASKS:
 
-There are basically to main set of masks: one to cause a trace to
+There are basically two main set of masks: one to cause a trace to
 be saved into the circulare memory buffer (file) and one to cause a 
 trace to be printed to stdout.
 
@@ -95,6 +95,16 @@ TRACE_NAME unless all the entries have been used by other names).
 
 With the above printout, only trace level 0 TRACEs with some up only
 in the trace file -- shown via the "tshow" function.
+
+Additional NAMEs (TIDs) will be created when the name specified by TRACE_NAME
+does not exist (until the maximum configured NAMEs is reached in which case
+the name _TRACE_ will be used).
+
+Note: when different NAMEs are used, TRACEs in header files may then be
+associated with multiple NAMEs. If your application uses TRACEs in header
+files and multiple NAMEs/TIDs, you may wish to use a specific level range
+(i.e. 12-19) for the TRACEs in the header files and then
+activate/deactivate them globally (for all TIDs). 
 
 
 CONVENIENCE FUNCTIONS
@@ -247,3 +257,27 @@ $ tshow | grep '1 . hello 24..00' | tdelta -ct 1 -d 1 | head
  1598 02-08 11:58:28.853206        35 15812  18  19  1 . hello 249200 sts=0
  1798 02-08 11:58:28.853170        36 15812  18  19  1 . hello 249100 sts=0
  1998 02-08 11:58:28.853137        33 15812  18  19  1 . hello 249000 sts=0
+
+
+Advanced TRACEing - OS interaction
+----------------------------------
+A TRACE module can be compiled and loading into the kernel.
+The module creates a virtual trace buffer file at /proc/trace/buffer.
+export TRACE_FILE=/proc/trace/buffer
+A TRACE_NAME "KERNEL" is created. The following levels, if enabled, with
+trace the indicated events:
+level     event
+-----     -----
+ 25       system call enter
+ 26       system call exit/return
+ 27       software irq enter
+ 28       software irq return
+ 29       hardware irq enter
+ 30       hardware irq return
+ 31       schedule switch hook
+ 
+Module load parameters can be used to control aspects of the virtual
+trace file.
+
+Once the modules is loaded, other modules can be developed/loaded which
+contain TRACEs.

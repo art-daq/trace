@@ -3,8 +3,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 416 $
-#   $Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $
+#   $Revision: 564 $
+#   $Date: 2017-02-16 12:57:50 -0600 (Thu, 16 Feb 2017) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -73,5 +73,5 @@ toffTg()   { trace_cntl lvlclrg 0 0 `bitN_to_mask $*`; }
 tenv()
 {   tcntlexe=`which trace_cntl`
     envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p'`
-    for ee in $envvars;do echo $ee=`printenv | sed -n -e"/^$ee=/{s/^[^=]*=//;p;}"`; done
+    for ee in $envvars;do echo $ee`printenv | sed -n -e"/^$ee=/{s/^[^=]*=/=/;p;}"`; done
 }

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 548 $$Date: 2017-01-25 02:47:37 -0600 (Wed, 25 Jan 2017) $"
+#define TRACE_CNTL_REV "$Revision: 567 $$Date: 2017-02-17 02:54:55 -0600 (Fri, 17 Feb 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -55,21 +55,22 @@ opts:\n\
  -V           print version and exit\n\
 show opts:\n\
  -H           no header\n\
- -l<LC_NUMERIC val>  i.e. -len_US\n\
+ -L<LC_NUMERIC val>  i.e. -Len_US\n\
  -q           silence format errors\n\
  -F           show forward, poll for new entries. \"count\" avoids older entries\n\
  other options encoded in TRACE_SHOW env.var.\n\
 tests:  (use %s show after test)\n\
  -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings\n\
+ -l<loops>\n\
 \n\
 %s\n\
 ", basename(argv[0]), basename(argv[0]), USAGE_TESTS
 #define USAGE_TESTS "\
- test1 [loops]  a single TRACE [or more if loops != 0]\n\
+ test1 [-lloops]  a single TRACE [or more if loops != 0]\n\
  test           various\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
- test-compare   compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
- [-x2] test-threads   threading\n\
+ test-compare [-lloops]  compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
+ [-x2] test-threads [-lloops] [num_threads]  threading\n\
  TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
 "
 
@@ -596,8 +597,9 @@ extern  int        optind;         /* for getopt */
 	int	   do_heading=1;
 	int	   show_opts=0;
 	unsigned   ii=0;
+	int    opt_loops=-1;
 
-	while ((opt=getopt(argc,argv,"?hn:f:x:HqVl:F")) != -1)
+	while ((opt=getopt(argc,argv,"?hn:f:x:HqVL:Fl:")) != -1)
 	{	switch (opt)
 		{ /* '?' is also what you get w/ "invalid option -- -" */
 		case '?': case 'h': printf(USAGE);exit(0);           break;
@@ -607,8 +609,9 @@ extern  int        optind;         /* for getopt */
 		case 'H': do_heading=0;                              break;
 		case 'q': show_opts|=quiet_;                         break;
 		case 'V': printf( TRACE_CNTL_REV ); exit(0);         break;
-		case 'l': setlocale(LC_NUMERIC,optarg);              break;
+		case 'L': setlocale(LC_NUMERIC,optarg);              break;
         case 'F': show_opts|=forward_;                       break;
+		case 'l': opt_loops=strtoul(optarg,NULL,0);          break;
 		}
 	}
 	if (argc - optind < 1)
@@ -622,7 +625,7 @@ extern  int        optind;         /* for getopt */
 
 	if		(strcmp(cmd,"test1") == 0)
 	{	int loops=1;
-		if (argc - optind == 1) loops=strtoul(argv[optind],NULL,0);
+		if (opt_loops > -1) loops=opt_loops;
 		for (; loops; --loops)
 		{	TRACE( 0, "Hello %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
 				  , loops, 'c',2.5,(short)5,(long long)5000000000LL,15 );
@@ -748,14 +751,16 @@ extern  int        optind;         /* for getopt */
 	else if (strcmp(cmd,"test-compare") == 0)
 	{	char     buffer[200];
 		uint64_t mark;
+		unsigned loops=1000000;
 		unsigned compares=1000; /* some big number */
-		if (argc == 3) compares=strtoul(argv[optind+1],NULL,0);
+		if (argc - optind == 1) compares=strtoul(argv[optind],NULL,0);
+		if (opt_loops > -1) loops=(unsigned)opt_loops;
 
 #	   define END_FMT "end	 in mode 1 delta=%llu"
 		TRACE_CNTL("reset");
 		TRACE_CNTL("mode",2LL);TRACE(0,"start no snprintf in mode 1");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
-		for (ii=0; ii<1000000; ++ii)
+		for (ii=0; ii<loops; ++ii)
 		{	TRACE( 0, "any msg" );
 		} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
@@ -763,7 +768,7 @@ extern  int        optind;         /* for getopt */
 		TRACE_CNTL("reset");
 		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 1 arg in mode 1");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
-		for (ii=0; ii<1000000; ++ii)
+		for (ii=0; ii<loops; ++ii)
 		{	snprintf( buffer, sizeof(buffer), "this is one small param: %u", 12345678 );
 			TRACE( 0, buffer );
 		} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
@@ -773,7 +778,7 @@ extern  int        optind;         /* for getopt */
 		TRACE_CNTL("reset");
 		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 2 arg in mode 1");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
-		for (ii=0; ii<1000000; ++ii)
+		for (ii=0; ii<loops; ++ii)
 		{	snprintf( buffer, sizeof(buffer), "this is 2 params: %u %u", 12345678, ii );
 			TRACE( 0, buffer );
 		} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
@@ -783,7 +788,7 @@ extern  int        optind;         /* for getopt */
 		TRACE_CNTL("reset");
 		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 8 arg in mode 1");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
-		for (ii=0; ii<1000000; ++ii)
+		for (ii=0; ii<loops; ++ii)
 		{	snprintf( buffer, sizeof(buffer)
 			         , "this is 8 params: %u %u %u %u %u %u %u %f"
 			         , 12345678, ii, ii*2, ii+6
@@ -797,7 +802,7 @@ extern  int        optind;         /* for getopt */
 		TRACE_CNTL("reset");
 		TRACE_CNTL("mode",2LL);TRACE(0,"start TRACE w/8 arg in mode 1");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
-		for (ii=0; ii<1000000; ++ii)
+		for (ii=0; ii<loops; ++ii)
 		{	TRACE( 0, "this is 8 params: %u %u %u %u %u %u %u %f"
 			      , 12345678, ii, ii*2, ii+6
 			      , 12345679, ii, ii-7, (float)ii*1.5
@@ -809,7 +814,7 @@ extern  int        optind;         /* for getopt */
 		TRACE_CNTL("reset");
 		TRACE_CNTL("mode",2LL);TRACE(0,"start (repeat) no snprintf in mode 1");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
-		for (ii=0; ii<1000000; ++ii)
+		for (ii=0; ii<loops; ++ii)
 		{	TRACE( 0, "any msg" );
 		} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 	}
@@ -818,14 +823,14 @@ extern  int        optind;         /* for getopt */
 	{	pthread_t *threads;
 		unsigned   num_threads=NUMTHREADS;
 		long loops=10000;
-		if ((argc-optind)>=1)
-		{	loops=strtoul(argv[optind],NULL,0);
+		if (opt_loops > -1)
+		{	loops=opt_loops;
 			if (loops > 1048575) loops=1048575;
 			printf("loops set to %ld\n", loops );
 		}
 		loops -= loops%4;	/* assuming thread does 4 TRACEs per loop */
-		if ((argc-optind)==2)
-		{	num_threads=strtoul(argv[optind+1],NULL,0);
+		if ((argc-optind)==1)
+		{	num_threads=strtoul(argv[optind],NULL,0);
 			if (num_threads > 4095) num_threads=4095;
 			printf("num_threads set to %d\n", num_threads );
 		}

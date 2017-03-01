@@ -34,6 +34,8 @@ cd $tag
 make OUT=$PWD XTRA_CFLAGS=-std=c11 XTRA_CXXFLAGS=-std=c++11 \
           src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'
 : note: if OUT!=$PWD, use the "all" target which, additionally, includes the ups and script dirs
+# note: "make OUT=$PWD 32ON64=1 ..." will build both 64 and 32 bit versions on
+#        x86_64 (see output of "make help")
 
 : ?other kernel versions?
 : make OUT=$PWD modules KDIR=/usr/local/src/build-3.10.18-x86_64

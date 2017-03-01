@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 521 $$Date: 2016-02-17 01:45:32 -0600 (Wed, 17 Feb 2016) $";
+char const *rev="$Revision: 563 $$Date: 2017-02-14 12:43:13 -0600 (Tue, 14 Feb 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -174,7 +174,7 @@ int main( int argc, char *argv[] )
 		test( ostr << "test function passed ostr<<\"string\"\n" );
 		test( (std::ostringstream)"cast (std::ostringstream)\"str\"<<\"str\"" << "jkl;\n" ); // gives address
 		test( std::ostringstream("asdf") << "std::ostringstream(\"asdf\")<<\"string\"\n" ); // also gives address
-		std::cout << typeid( std::ostringstream("asdf") << "xyz\n" ).name() << '\n';
+		//std::cout << typeid( std::ostringstream("asdf") << "xyz\n" ).name() << '\n';
 		test( std::ostringstream("asdf").flush() << "xyz\n" ); // gives desired output
 
 		std::cout<<"\nXXXX\n";

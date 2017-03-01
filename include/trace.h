@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 557 $$Date: 2017-02-08 16:25:24 -0600 (Wed, 08 Feb 2017) $"
+#define TRACE_REV  "$Revision: 566 $$Date: 2017-02-17 00:13:04 -0600 (Fri, 17 Feb 2017) $"
 
 #ifndef __KERNEL__
 
@@ -225,14 +225,16 @@ static const char *  TRACE_NAME=NULL;
 
 
 #if   defined(__i386__)
+
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
 # define TRACE_PRINTF_FMT_ARG_NUM 4
 # define TRACE_VA_LIST_INIT(addr) (va_list)addr
 # define TRACE_ENT_FILLER         uint32_t x[2];
-# define TRACE_32_DOUBLE_KLUDGE   nargs*=2;    /* kludge to support potential double in msg fmt */
 # define TRACE_TSC32( low )       __asm__ __volatile__ ("rdtsc;movl %%eax,%0":"=m"(low)::"eax","edx")
+
 #elif defined(__x86_64__)
+
 # define TRACE_XTRA_PASSED        ,0,0, .0,.0,.0,.0,.0,.0,.0,.0
 # define TRACE_XTRA_UNUSED        ,long l0 __attribute__((__unused__)),long l1 __attribute__((__unused__))\
 	,double d0 __attribute__((__unused__)),double d1 __attribute__((__unused__)) \
@@ -242,16 +244,21 @@ static const char *  TRACE_NAME=NULL;
 # define TRACE_PRINTF_FMT_ARG_NUM 14
 # define TRACE_VA_LIST_INIT(addr) {{6*8,6*8+9*16,addr,addr}}
 # define TRACE_ENT_FILLER
-# define TRACE_32_DOUBLE_KLUDGE
 # define TRACE_TSC32( low )       __asm__ __volatile__ ("rdtsc" : "=a" (low) : : "edx")
+
 #else
+
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
 # define TRACE_PRINTF_FMT_ARG_NUM 4
 # define TRACE_VA_LIST_INIT(addr) {addr}
-# define TRACE_ENT_FILLER
-# define TRACE_32_DOUBLE_KLUDGE   if(sizeof(long)==4)nargs*=2;
-# define TRACE_TSC32( low )       low=0
+# if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
+#  define TRACE_ENT_FILLER         uint32_t x[2];
+# else
+#  define TRACE_ENT_FILLER
+# endif
+# define TRACE_TSC32( low )       
+
 #endif
 
 static void trace(struct timeval*,uint16_t,uint16_t TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
@@ -539,7 +546,7 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 {
     struct traceEntryHdr_s* myEnt_p;
     char                  * msg_p;
-    unsigned long         * params_p;
+    uint64_t              * params_p; /* some archs (ie. i386,32 bit arm) pass have 32 bit and 64 bit args; use biggest */
     unsigned                argIdx;
     uint16_t                get_idxCnt_retries=0;
     uint32_t                myIdxCnt=TRACE_ATOMIC_LOAD( &traceControl_p->wrIdxCnt );
@@ -583,7 +590,7 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 
     myEnt_p  = idxCnt2entPtr( myIdxCnt );
     msg_p    = (char*)(myEnt_p+1);
-    params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
+    params_p = (uint64_t*)(msg_p+traceControl_p->siz_msg);
 
     myEnt_p->time = *tvp;
     TRACE_TSC32( myEnt_p->tsc );
@@ -616,11 +623,10 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
     strncpy(msg_p,msg,traceControl_p->siz_msg);
     /* emulate stack push - right to left (so that arg1 end up at a lower
        address, arg2 ends up at the next higher address, etc. */
-    if (nargs)
-    {   TRACE_32_DOUBLE_KLUDGE
+    if (nargs) {
 	    if (nargs > traceControl_p->num_params) nargs=traceControl_p->num_params;
 	for (argIdx=0; argIdx<nargs; ++argIdx)
-	    params_p[argIdx]=va_arg(ap,unsigned long);
+	    params_p[argIdx]=va_arg(ap,uint64_t); /* this will usually copy 2x and 32bit archs, but they might be all %f or %g args */
     }
     if (traceControl_p->trigActivePost) /* armed, armed/trigger */
     {

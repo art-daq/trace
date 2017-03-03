@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 566 $$Date: 2017-02-17 00:13:04 -0600 (Fri, 17 Feb 2017) $"
+#define TRACE_REV  "$Revision: 570 $$Date: 2017-03-03 09:57:00 -0600 (Fri, 03 Mar 2017) $"
 
 #ifndef __KERNEL__
 
@@ -606,12 +606,12 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
     myEnt_p->pid  = tracePid;
     myEnt_p->tid  = traceTid;
 # if defined(__linux__) && !defined(NO_SCHED_GETCPU)
-#  if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 #   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
 #  endif
     myEnt_p->cpu  = sched_getcpu();
-#  if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 #   pragma GCC diagnostic pop
 #  endif
 # endif

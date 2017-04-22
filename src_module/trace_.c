@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 560 $$Date: 2017-02-09 11:58:10 -0600 (Thu, 09 Feb 2017) $";
+    rev="$Revision: 573 $$Date: 2017-04-21 16:53:25 -0500 (Fri, 21 Apr 2017) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -18,7 +18,7 @@
 #include <linux/io.h>		/* ioremap_page_range */
 #include <linux/proc_fs.h>      /* create_proc_entry, struct proc_dir_entry */
 #include <asm/io.h>             /* virt_to_phys */
-#include <asm-generic/uaccess.h>/* copy_to_user */
+#include <asm/uaccess.h>/* copy_to_user */
 #include <trace/events/sched.h> /* register/unregister_trace_sched_switch */
 #include <trace/events/irq.h>	/*  */
 #include <trace/events/syscalls.h>/* */

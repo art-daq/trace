@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 570 $$Date: 2017-03-03 09:57:00 -0600 (Fri, 03 Mar 2017) $"
+#define TRACE_REV  "$Revision: 572 $$Date: 2017-03-09 13:57:56 -0600 (Thu, 09 Mar 2017) $"
 
 #ifndef __KERNEL__
 
@@ -483,7 +483,14 @@ static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t na
 	else                                    tracePrintFmt=(char*)TRACE_DFLT_TIME_FMT; /* OR single write here */
     }
     if (tvp->tv_sec == 0) TRACE_GETTIMEOFDAY( tvp );
+# if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+# endif
     localtime_r( (time_t *)&tvp->tv_sec, &tm_s );
+# if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#  pragma GCC diagnostic pop
+# endif
     strftime( tbuf, sizeof(tbuf), tracePrintFmt, &tm_s );
     printed = snprintf( obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec ); /* possibly (probably) add usecs */
     printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
@@ -1200,7 +1207,14 @@ static int traceInit( const char *_name )
        set, it's OK to indicate that the initialization is complete */
     if(traceTid==0) /* traceInit may be called w/ or w/o checking traceTid */
     {   tracePid = getpid();  /* do/re-do -- it may be forked process */
+#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#   pragma GCC diagnostic push
+#   pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#  endif
 	traceTid=syscall(TRACE_GETTID);
+#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+#   pragma GCC diagnostic pop
+#  endif
     }
 #  ifdef TRACE_DEBUG_INIT
     printf("traceInit(debug:Z): tC_p=%p static=%p _name=%p Tid=%d TID=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);

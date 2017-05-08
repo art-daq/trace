@@ -1,6 +1,6 @@
 #   $RCSfile: TRACE.table,v $
-#   $Revision: 558 $
-#   $Date: 2017-02-08 16:38:34 -0600 (Wed, 08 Feb 2017) $
+#   $Revision: 592 $
+#   $Date: 2017-05-05 14:04:34 -0500 (Fri, 05 May 2017) $
 FILE = TABLE
 Product=TRACE
 
@@ -92,6 +92,7 @@ COMMON:
 	addAlias( tmodeS,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS %s )
 	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 )
 	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset )
+        # ups only parses one "%s"
 	addAlias( tdelta,  set__ opts=%s;tnotnull_ PAGER && sh -c "${UPS_PROD_DIR}/script/trace_delta.pl $opts | $PAGER;true" || ${UPS_PROD_DIR}/script/trace_delta.pl $opts )
 	addAlias( tenv,    ${UPS_PROD_DIR}/script/trace_envvars.sh %s )
 	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 1 )

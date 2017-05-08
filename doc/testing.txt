@@ -87,7 +87,7 @@ File/Name
    v
   thread
  500 modules
- module %100 => #define TRACE_NMAE
+ module %100 => #define TRACE_NAME
   join
   loop 1000000
 
@@ -155,3 +155,19 @@ sys     0m2.099s
 
 
 =================================================================================
+
+threads, TRACE_NAMTBLENTS and name2TID
+
+NOTE: need -std=c11 for thread local!!!!
+nn=10
+nn=1000
+for nn in 10 1000;do
+  rm -f /tmp/trace_buffer_*; export TRACE_NAMTBLENTS=$nn
+  : 'CREATE 10% (or so) more threads than NAMTBLENTS'
+  treset; tmodeS 0; tcntl -x2 -l4 test-threads `expr $TRACE_NAMTBLENTS \* 4 + $TRACE_NAMTBLENTS / 10`
+  num_names=`tshow -H | awk '{print$5}' | sort -u | wc -l`
+  test $num_names -eq $TRACE_NAMTBLENTS && echo PASS || echo FAIL
+  tshow |tdelta -stats | tail
+  tinfo | grep used
+done
+tshow|tdelta

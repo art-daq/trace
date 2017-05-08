@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 567 $$Date: 2017-02-17 02:54:55 -0600 (Fri, 17 Feb 2017) $"
+#define TRACE_CNTL_REV "$Revision: 592 $$Date: 2017-05-05 14:04:34 -0500 (Fri, 05 May 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -77,9 +77,9 @@ tests:  (use %s show after test)\n\
 #define minw(a,b) (b<a?a:b)
 
 #ifdef __linux__
-# define DFLT_SHOW         "HxNTtiICLR"
+# define DFLT_SHOW         "HxNTtinCLR"
 #else
-# define DFLT_SHOW         "HxNTtiILR"
+# define DFLT_SHOW         "HxNTtinLR"
 #endif
 #define NUMTHREADS 4
 static int trace_thread_option=0;
@@ -95,16 +95,18 @@ void* thread_func(void *arg)
 		TRACE_CNTL( "file", tmp );
 	}
 	if (trace_thread_option & 2)
-	{	snprintf( tmp, sizeof(tmp), "T%ld", tidx );
+	{	snprintf( tmp, sizeof(tmp), "TGROUP_%ld", tidx&~3 );
 		TRACE_CNTL( "name", tmp );
 	}
 
 	while (loops-- > 0)
-	{	TRACE( 0, "loops=%ld", loops );
+	{	/* NOTE: be mindful of classic issue with macro -- args could be evaluted multiple times! */
+		/* BUT -- when TRACE-ing a value, there you would not likely operate on it */
+		TRACE( 0, "loops=%ld", loops ); --loops;
 		TRACE( 1, "loops=%ld - extra, if enabled", loops );
-		TRACE( 0, "loops=%ld", --loops );
-		TRACE( 0, "loops=%ld", --loops );
-		TRACE( 0, "loops=%ld", --loops );
+		TRACE( 0, "loops=%ld", loops ); --loops;
+		TRACE( 0, "loops=%ld", loops ); --loops;
+		TRACE( 0, "loops=%ld", loops );
 	}
 	pthread_exit(NULL);
 }
@@ -363,7 +365,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 		sp = ospec;
 		for (sp=ospec; *sp; ++sp)
 		{
-# define TRACE_LONG_DASHES "----------------------------------"
+# define TRACE_LONG_DASHES "------------------------------------------------"
 			switch (*sp)
 			{
 			case 'N': printf("%.*s ", minw(3,countDigits(max-1)), TRACE_LONG_DASHES); break;
@@ -547,7 +549,7 @@ void traceInfo()
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u          %s\n"
-	       "default TRACE_SHOW=%s others: B(paramBytes) P(pid) s(slot) m(convertedMsgfmt_only) D(inDent) n(TIDname) #(nargs)\n"
+	       "default TRACE_SHOW=%s others: B(paramBytes) P(pid) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr
@@ -883,32 +885,38 @@ extern  int        optind;         /* for getopt */
 		trace_unlock( &traceControl_p->spinlock );
 	}
 	else if (strcmp(cmd,"tids") == 0) 
-	{	traceInit(NULL);
-#		define UNDERLINE "----------------------------------------------"
+	{	int longest_name=0;
+		traceInit(NULL);
+		/* calc longest name */
+		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+			if (strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
+				longest_name = strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
+		/*printf("longest_name=%d\n",longest_name);*/
+
 		printf( "mode:%*s               M=%d                S=%d\n"
-		       , (int)sizeof(traceNamLvls_p[0].name), ""
+		       , longest_name, ""
 		       , traceControl_p->mode.bits.M, traceControl_p->mode.bits.S );
 		printf("%*s %*s %*s %*s %*s\n"
 		       , 3, "TID"
-		       , (int)sizeof(traceNamLvls_p[0].name), "NAME"
+		       , longest_name, "NAME"
 		       , 18, "maskM"
 		       , 18, "maskS"
 		       , 18, "maskT"
 		       );
 		printf("%.*s %.*s %.*s %.*s %.*s\n"
-		       , 3, UNDERLINE
-		       , (int)sizeof(traceNamLvls_p[0].name), UNDERLINE
-		       , 18, UNDERLINE
-		       , 18, UNDERLINE
-		       , 18, UNDERLINE
+		       , 3, TRACE_LONG_DASHES
+		       , longest_name, TRACE_LONG_DASHES
+		       , 18, TRACE_LONG_DASHES
+		       , 18, TRACE_LONG_DASHES
+		       , 18, TRACE_LONG_DASHES
 		       );
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 		{
 			if (traceNamLvls_p[ii].name[0] != '\0')
 			{	printf("%3d %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
 				       , ii
-					   , (int)sizeof(traceNamLvls_p->name)
-					   , (int)sizeof(traceNamLvls_p->name)
+					   , longest_name
+					   , longest_name
 				       , traceNamLvls_p[ii].name
 				       , (unsigned long long)traceNamLvls_p[ii].M
 				       , (unsigned long long)traceNamLvls_p[ii].S

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 572 $$Date: 2017-03-09 13:57:56 -0600 (Thu, 09 Mar 2017) $"
+#define TRACE_REV  "$Revision: 593 $$Date: 2017-05-05 14:13:30 -0500 (Fri, 05 May 2017) $"
 
 #ifndef __KERNEL__
 
@@ -101,7 +101,7 @@ static inline uint32_t cmpxchg( TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_
    return (old);
 }
 # else
-/* THIS IS A PROBLEM -- I SHOULD PROBABLY #error */
+/* THIS IS A PROBLEM (older compiler on unknown arch) -- I SHOULD PROBABLY #error */
 #  define TRACE_ATOMIC_T              uint32_t
 #  define TRACE_ATOMIC_INIT           0
 #  define TRACE_ATOMIC_LOAD(ptr)      *(ptr)
@@ -147,9 +147,9 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 /* 88,7=192 bytes/ent   96,6=192   128,10=256*/
 #define TRACE_DFLT_MAX_MSG_SZ      128
 #define TRACE_DFLT_MAX_PARAMS       10
-#define TRACE_DFLT_NAMTBL_ENTS      20
+#define TRACE_DFLT_NAMTBL_ENTS     127  /* this is for creating new trace_buffer file -- it currently matches the "trace disable" number that fits into traceControl[1] (see below) */
 #define TRACE_DFLT_NUM_ENTRIES   50000
-#define TRACE_DFLT_NAM_SZ           16
+#define TRACE_DFLT_NAM_SZ           40
 #define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S.%%06d"   /* match default in trace_delta.pl */
 #ifdef __KERNEL__
 # define TRACE_DFLT_NAME        "KERNEL"
@@ -183,7 +183,7 @@ static const char *  TRACE_NAME=NULL;
     {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1LL<<((lvl)&LVLBITSMSK)))) \
-		{   trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
+		{   trace( &lclTime, traceTID, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );					\
 	    }								\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
@@ -207,7 +207,7 @@ static const char *  TRACE_NAME=NULL;
     {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 	    if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1LL<<((lvl)&LVLBITSMSK)))) \
-	    {   trace( &lclTime, lvl, TRACE_NARGS(msgargs) TRACE_XTRA_PASSED \
+	    {   trace( &lclTime, traceTID, lvl, TRACE_NARGS(msgargs) TRACE_XTRA_PASSED \
                       , msgargs );					\
 	    }								\
 	    if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
@@ -228,15 +228,15 @@ static const char *  TRACE_NAME=NULL;
 
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-# define TRACE_PRINTF_FMT_ARG_NUM 4
+# define TRACE_PRINTF_FMT_ARG_NUM 5
 # define TRACE_VA_LIST_INIT(addr) (va_list)addr
 # define TRACE_ENT_FILLER         uint32_t x[2];
 # define TRACE_TSC32( low )       __asm__ __volatile__ ("rdtsc;movl %%eax,%0":"=m"(low)::"eax","edx")
 
 #elif defined(__x86_64__)
 
-# define TRACE_XTRA_PASSED        ,0,0, .0,.0,.0,.0,.0,.0,.0,.0
-# define TRACE_XTRA_UNUSED        ,long l0 __attribute__((__unused__)),long l1 __attribute__((__unused__))\
+# define TRACE_XTRA_PASSED        ,0, .0,.0,.0,.0,.0,.0,.0,.0
+# define TRACE_XTRA_UNUSED        ,long l0 __attribute__((__unused__))\
 	,double d0 __attribute__((__unused__)),double d1 __attribute__((__unused__)) \
 	,double d2 __attribute__((__unused__)),double d3 __attribute__((__unused__)) \
 	,double d4 __attribute__((__unused__)),double d5 __attribute__((__unused__)) \
@@ -250,7 +250,7 @@ static const char *  TRACE_NAME=NULL;
 
 # define TRACE_XTRA_PASSED
 # define TRACE_XTRA_UNUSED
-# define TRACE_PRINTF_FMT_ARG_NUM 4
+# define TRACE_PRINTF_FMT_ARG_NUM 5
 # define TRACE_VA_LIST_INIT(addr) {addr}
 # if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
 #  define TRACE_ENT_FILLER         uint32_t x[2];
@@ -261,9 +261,9 @@ static const char *  TRACE_NAME=NULL;
 
 #endif
 
-static void trace(struct timeval*,uint16_t,uint16_t TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
+static void trace(struct timeval*,int,uint16_t,uint16_t TRACE_XTRA_UNUSED,const char *,...)__attribute__((format(printf,TRACE_PRINTF_FMT_ARG_NUM,TRACE_PRINTF_FMT_ARG_NUM+1)));
 #ifdef __cplusplus
-static void trace(struct timeval*,uint16_t,uint16_t TRACE_XTRA_UNUSED,std::string,...);
+static void trace(struct timeval*,int,uint16_t,uint16_t TRACE_XTRA_UNUSED,std::string,...);
 #endif
 
 
@@ -363,9 +363,9 @@ static TRACE_THREAD_LOCAL int   traceTID=-1;  /* idx into lvlTbl, namTbl -- alwa
 thread_local -- this will cause the most traceInit calls (but not much work, hopefully),
 which will ensure that a module (not thread) can be assigned it's own trace name/id. */
 
+TRACE_DECL( unsigned long trace_lvlS,         =0 );          /* module_param */
 #if defined(__KERNEL__)
 TRACE_DECL( int           trace_allow_printk, =0 );          /* module_param */
-TRACE_DECL( unsigned long trace_lvlS,         =0 );          /* module_param */
 static TRACE_THREAD_LOCAL const char *traceName=TRACE_DFLT_NAME;
 #else
 TRACE_DECL( TRACE_THREAD_LOCAL const char *traceName, =TRACE_DFLT_NAME );
@@ -548,7 +548,7 @@ static void trace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nar
 
 
 
-static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
+static void vtrace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 		  , const char *msg, va_list ap )
 {
     struct traceEntryHdr_s* myEnt_p;
@@ -623,7 +623,7 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 #  endif
 # endif
 #endif
-    myEnt_p->TID  = traceTID;
+    myEnt_p->TID  = trcId;
     myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
     myEnt_p->param_bytes = sizeof(long);
 
@@ -649,7 +649,7 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 	    }
 	    /* else just waiting... */
 	}
-	else if (traceNamLvls_p[traceTID].T & (1<<lvl))
+	else if (traceNamLvls_p[trcId].T & (1<<lvl))
 	{   traceControl_p->triggered = 1;
 	    traceControl_p->trigIdxCnt = myIdxCnt;
 	}
@@ -662,25 +662,25 @@ static void vtrace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
 #endif
 
 SUPPRESS_NOT_USED_WARN
-static void trace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
+static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED		  
 		  , const char *msg, ... )
 {
     va_list ap;
 	va_start( ap, msg );
-	vtrace( tvp, lvl, nargs, msg, ap );
+	vtrace( tvp, trcId, lvl, nargs, msg, ap );
 	va_end( ap );	
 }   /* trace */
 
 #ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
-static void trace( struct timeval *tvp, uint16_t lvl, uint16_t nargs
+static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED		  
 				  , std::string msg, ... )
 {
     va_list ap;
 	va_start( ap, msg );
-	vtrace( tvp, lvl, nargs, msg.c_str(), ap );
+	vtrace( tvp, trcId, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
 #endif
@@ -726,22 +726,28 @@ static int32_t name2TID( const char *name )
 #if defined(__KERNEL__)
     if (traceEntries_p==NULL) return -1;
 #endif
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+		if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) {
+			return (ii);
+		}
+	/* NOTE: multiple threads which may want to create the same name might arrive at this
+       point at the same time. So, each thread should check if another thread has just released
+       the lock after creating the name.
+	*/
     trace_lock( &traceControl_p->spinlock );
-    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0)
-	{   trace_unlock( &traceControl_p->spinlock );
-	    return (ii);
-	}
-    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-	if (traceNamLvls_p[ii].name[0] == '\0')
-	{   strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
-	    traceNamLvls_p[ii].M = 0x1;
-#if defined(__KERNEL__)
-	    /* like userspace TRACE_LVLS env.var - See also traceInitNames */
-	    if(trace_lvlS){traceNamLvls_p[ii].S=trace_lvlS;traceControl_p->mode.bits.S=1;}
-#endif
-	    trace_unlock( &traceControl_p->spinlock );
-	    return (ii);
+    for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii) {
+		if (traceNamLvls_p[ii].name[0] == '\0') {
+			strncpy(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ);
+			traceNamLvls_p[ii].M = 0x1;
+			/* like userspace TRACE_LVLS env.var - See also traceInitNames */
+			if(trace_lvlS){traceNamLvls_p[ii].S=trace_lvlS;traceControl_p->mode.bits.S=1;}
+			trace_unlock( &traceControl_p->spinlock );
+			return (ii);
+		}
+		if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) {
+			trace_unlock( &traceControl_p->spinlock );
+			return (ii);
+		}
 	}
     trace_unlock( &traceControl_p->spinlock );
     return (traceControl_p->num_namLvlTblEnts-1);
@@ -1184,11 +1190,12 @@ static int traceInit( const char *_name )
 
 	if (traceControl_p == &(traceControl[0]))
 	{
+#       define DISABLED_ENTS 1
 	    trace_created_init( traceControl_p
 			       , msgmax_
 			       , argsmax_
-			       , 1 /*numents_*/
-			       , 2 /*namtblents_*/
+			       , DISABLED_ENTS /*numents_*/
+		           , (sizeof(traceControl)-sizeof(traceControl[0])-DISABLED_ENTS*entSiz(msgmax_,argsmax_))/sizeof(struct traceNamLvls_s) /*namtblents_*/
 			       , sizeof(traceControl) );
 	}
 	else 
@@ -1223,7 +1230,8 @@ static int traceInit( const char *_name )
 
     if ((cp=getenv("TRACE_LVLS"))     && (*cp))
     {   TRACE_CNTL( "lvlmskS", strtoull(cp,NULL,0) );
-	TRACE_CNTL( "modeS", 1LL );
+		TRACE_CNTL( "modeS", 1LL );
+	    trace_lvlS = strtoull(cp,NULL,0);
     }
 
 # else  /* ifndef __KERNEL__ */
@@ -1280,13 +1288,18 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 #if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
 /* used only in c++0x c++11 environment */
+/* Note: This supports using a mix of stream syntax and format args, i.e: "string is " << some_str << " and float is %f", some_float
+   Note also how the macro evaluates the first part (the "FMT") only once
+   no matter which destination ("M" and/or "S") is active.
+   Note: "xx" in TRACE_ARGS_FMT(__VA_ARGS__,xx) is just a dummy arg to that macro.
+*/
 # define TRACE_( lvl, ... ) do			\
     {   TRACE_INIT_CHECK						\
 	{   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		std::ostringstream ostr__;										\
 		if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1<<((lvl)&LVLBITSMSK)))) \
 		{   ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);		\
-			trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED					\
+			trace( &lclTime,traceTID, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED					\
 				  , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) );			\
 		}							\
 		if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1<<((lvl)&LVLBITSMSK)))) \

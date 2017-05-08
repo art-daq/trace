@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 563 $$Date: 2017-02-14 12:43:13 -0600 (Tue, 14 Feb 2017) $";
+char const *rev="$Revision: 577 $$Date: 2017-04-25 15:21:56 -0500 (Tue, 25 Apr 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -31,6 +31,11 @@ char const *rev="$Revision: 563 $$Date: 2017-02-14 12:43:13 -0600 (Tue, 14 Feb 2
 
 #define SUPPRESS_NOT_USED_WARN __attribute__ ((unused))
 
+
+
+#define TRACE_STREAMER(lvl, name) {int lvl_ = lvl;std::ostringstream o;o << name << ": "
+#define TRACE_ENDS ""; TRACE(lvl_, o.str());}
+#define TLOG_ENDS TRACE_ENDS
 
 #define USAGE "\
   usage: %s [-t <test>]\n\
@@ -216,6 +221,11 @@ int main( int argc, char *argv[] )
 	else if (strcmp(opt_test,"C")==0) {
 		while(opt_loops--) {
 			TRACE(0,"this is an int: %d",55 );
+		}
+	}
+	else if (strcmp(opt_test, "X") == 0) {
+		while (opt_loops--) {
+			TRACE_STREAMER(0, "this is an int") << 55 << TLOG_ENDS;
 		}
 	}
 # if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 593 $$Date: 2017-05-05 14:13:30 -0500 (Fri, 05 May 2017) $"
+#define TRACE_REV  "$Revision: 596 $$Date: 2017-05-18 13:41:17 -0500 (Thu, 18 May 2017) $"
 
 #ifndef __KERNEL__
 
@@ -293,6 +293,8 @@ struct traceControl_s
     uint32_t       largest_zero_offset; /* 11 */
     uint32_t       page_align[TRACE_PAGESIZE/sizeof(int32_t)-(11+sizeof(trace_vers_t)/sizeof(int32_t))]; /* allow mmap 1st page(s) (stuff above) readonly */
 
+	/* "page" break */
+
     TRACE_ATOMIC_T wrIdxCnt;	/* 32 bits */
     uint32_t       cacheline1[TRACE_CACHELINE/sizeof(int32_t)-(sizeof(TRACE_ATOMIC_T)/sizeof(int32_t))];   /* the goal is to have wrIdxCnt in it's own cache line */
 
@@ -305,7 +307,7 @@ struct traceControl_s
     int32_t       triggered;
     uint32_t	  trigActivePost;
     int32_t       full;
-    uint32_t      xtra[TRACE_CACHELINE/sizeof(int32_t)-6]; /* force some sort of alignment -- here 10+6(fields above) = 16 */
+    uint32_t      xtra[TRACE_CACHELINE/sizeof(int32_t)-6]; /* force some sort of alignment -- taking into account the 6 fields (above) since the last cache line alignment */
 };
 
 struct traceEntryHdr_s
@@ -400,7 +402,7 @@ static int                trace_buffer_numa_node=-1;	     /* module_param */
 static int                      traceCntl( int nargs, const char *cmd, ... );
 static int32_t                  name2TID( const char *name );
 #define cntlPagesSiz()          ((uint32_t)sizeof(struct traceControl_s))
-#define namtblSiz( ents )       (((uint32_t)sizeof(struct traceNamLvls_s)*ents+TRACE_CACHELINE)&~(TRACE_CACHELINE-1))
+#define namtblSiz( ents )       (((uint32_t)sizeof(struct traceNamLvls_s)*ents+TRACE_CACHELINE-1)&~(TRACE_CACHELINE-1))
 #define entSiz( siz_msg, num_params ) ( sizeof(struct traceEntryHdr_s)\
     + sizeof(uint64_t)*num_params /* NOTE: extra size for i686 (32bit processors) */\
     + siz_msg )
@@ -408,7 +410,7 @@ static int32_t                  name2TID( const char *name );
     (( siz_cntl_pages							\
       + namtblSiz( num_namLvlTblEnts )					\
       + entSiz(siz_msg,num_params)*num_entries				\
-      + TRACE_PAGESIZE )						\
+      + TRACE_PAGESIZE-1 )						\
      & ~(TRACE_PAGESIZE-1) )
 
 /* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"

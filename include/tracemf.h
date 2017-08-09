@@ -3,23 +3,30 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 591 $$Date: 2017-05-03 16:27:49 -0500 (Wed, 03 May 2017) $";
+ // rev="$Revision: 626 $$Date: 2017-08-07 23:01:52 -0500 (Mon, 07 Aug 2017) $";
+ */
+/** 
+ * \file tracemf.h
+ * Defines TRACE macros which send "slow" traces to MessageFacility
+ *
  */
 #ifndef TRACEMF_H
 #define TRACEMF_H
 
 #ifdef __cplusplus
- // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
- // The TRACE macro will then use the TRACE_MF_LOGGER macro defined below for the "slow"
- // tracing function (if appropriate mask bit is set :)
+// Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
+// The TRACE macro will then use the TRACE_MF_LOGGER macro defined below for the "slow"
+// tracing function (if appropriate mask bit is set :)
 #undef TRACE_LOG_FUNCTION
 # define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,...)  mftrace_user(tvp, tid, lvl,__FILE__,__LINE__,nargs, __VA_ARGS__ )
 #include "trace.h"		/* TRACE */
 
+// "static int tid_" is thread safe in so far as multiple threads may init,
+// but will init with same value.
 #define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
-	{int tid_ = name2TID(std::string(name).c_str());  int lvl_ = lvl;       \
-	bool do_m = traceControl_p->mode.bits.M && (traceNamLvls_p[tid_].M & (1LL<<((lvl)&LVLBITSMSK))); \
-	bool do_s = traceControl_p->mode.bits.S && (force_s || (traceNamLvls_p[tid_].S & (1LL<<((lvl)&LVLBITSMSK)))); \
+	{static int tid_=-1; if(tid_==-1)tid_=name2TID(std::string(name).c_str());  int lvl_ = lvl; \
+	bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
+	bool do_s = traceControl_rwp->mode.bits.S && (force_s || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
 	if(do_s || do_m)  { std::ostringstream o;o
 
 #define TRACE_ENDL ""; \
@@ -36,9 +43,9 @@
 #define TLVL_DEBUG        3
 #define TLVL_TRACE        4
 #define TLOG_ERROR(name) TRACE_STREAMER(TLVL_ERROR, name, 1)
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, 1)
-#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, 1)
-#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, 1)
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled())
+#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled())
+#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled())
 #define TLOG_TRACE(name) TRACE_STREAMER(TLVL_TRACE, name, 0)
 #define TLOG_ARB(lvl,name) TRACE_STREAMER(lvl,name,0)
 

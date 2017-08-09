@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent TRACE v3_08_01
+parent TRACE v3_09_00
 
 # These optional lines define the installed directories where
 # headers, libraries, and executables will be found
@@ -13,7 +13,7 @@ parent TRACE v3_08_01
 #incdir  product_dir
 
 product		version
-cetbuildtools   v5_06_06   -      only_for_build
+cetbuildtools   v5_08_01   -      only_for_build
 end_product_list
 
 qualifier 	cetbuildtools	notes

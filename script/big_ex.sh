@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 502 $$Date: 2016-02-04 13:23:00 -0600 (Thu, 04 Feb 2016) $'
+ # rev='$Revision: 626 $$Date: 2017-08-07 23:01:52 -0500 (Mon, 07 Aug 2017) $'
 set -u
 opt_depth=15
 opt_std=c++11
@@ -164,7 +164,20 @@ cat >big_ex_main.cc <<EOF
 #include <pthread.h>		// pthread_self
 #include <unistd.h>		// getopt
 #include <sys/types.h>          // pid_t
+#ifndef __CYGWIN__
 #include <sys/syscall.h>	// syscall
+# ifdef __sun__
+#  define TRACE_GETTID SYS_lwp_self
+# elif defined(__APPLE__)
+#  define TRACE_GETTID SYS_thread_selfid
+# else
+#  define TRACE_GETTID SYS_gettid
+# endif
+static inline pid_t ex_gettid(void) { return syscall(TRACE_GETTID); }
+#else
+# include <windows.h>
+static inline pid_t ex_gettid(void) { return GetCurrentThreadId(); }
+#endif
 #include <libgen.h>             // basename
 ${do_define:+#define TRACE_DEFINE // trace variables are defined in this module}
 #ifndef NO_TRACE
@@ -193,7 +206,7 @@ void* thread_func(void *arg)
     struct args *args_p=(struct args *)arg;
     long loops=args_p->loop; // initial "loops" from main
     struct args aa=*args_p;  // per thread copy -  initialize from main
-    aa.tid=syscall(SYS_gettid); // Note: don't use TRACE_GETTID as NO_TRACE may be defined
+    aa.tid=ex_gettid();
     for (unsigned ii=0; ii<loops; ++ii)
     {   TRACE( 0, "tf loop=%u tid=%d calling sub1 tC_p=%p %u=tIL_hung_max",ii,aa.tid,traceControl_p,traceInitLck_hung_max);
         aa.loop=ii;

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 573 $$Date: 2017-04-21 16:53:25 -0500 (Fri, 21 Apr 2017) $";
+    rev="$Revision: 626 $$Date: 2017-08-07 23:01:52 -0500 (Mon, 07 Aug 2017) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -33,6 +33,7 @@
 #endif
 
 EXPORT_SYMBOL_GPL( traceControl_p );
+EXPORT_SYMBOL_GPL( traceControl_rwp );
 EXPORT_SYMBOL_GPL( traceEntries_p );
 EXPORT_SYMBOL_GPL( traceNamLvls_p );
 EXPORT_SYMBOL_GPL( trace_allow_printk );
@@ -557,7 +558,7 @@ trace_3_init(void)
 
     traceTID = 0;
 
-    traceControl_p->mode.bits.M = 1;
+    traceControl_rwp->mode.bits.M = 1;
     TRACE( 0, "kernel trace buffer initialized" );
 
     /* 1) create the buffer

@@ -3,8 +3,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 564 $
-#   $Date: 2017-02-16 12:57:50 -0600 (Thu, 16 Feb 2017) $
+#   $Revision: 617 $
+#   $Date: 2017-07-28 13:23:47 -0500 (Fri, 28 Jul 2017) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -74,4 +74,28 @@ tenv()
 {   tcntlexe=`which trace_cntl`
     envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p'`
     for ee in $envvars;do echo $ee`printenv | sed -n -e"/^$ee=/{s/^[^=]*=/=/;p;}"`; done
+}
+
+tlvlsSave() {
+  if [ $# -ne 1 ];then
+    echo "\
+   usage: tlvlsSave <id>   # where <id> is valid shell variable characters
+          tlvlsRestore [id] # if [id] not given, read stdin
+examples: export TRACE_MSGMAX=0; tlvlM 0xdeadbeef; tlvls; tlvlsSave test; rm -f /tmp/trace_buffer_$USER; tlvls; tlvlsRestore test; tlvls
+          tlvlsRestore test | sed /TRACE/s/0x./0x7/ | tlvlsRestore; tlvls
+"
+  else
+    x=`tlvls -H`
+    eval tlvls_save_$1=\$x
+  fi
+}
+tlvlsRestore() {
+  if [ $# -gt 1 ];then
+    tlvlsSave
+  else
+    test $# -eq 1 && eval x=\$tlvls_save_$1 || x=`cat`
+    echo "$x" | while read id name mskM mskS mskT;do
+      test -t 1 && trace_cntl lvlmsk -n$name $mskM $mskS $mskT || echo $id $name $mskM $mskS $mskT
+    done
+  fi
 }

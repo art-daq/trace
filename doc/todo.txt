@@ -1,11 +1,7 @@
 
-Rework 5 in 1 -- it seems inconsistent, overly complex. Need to find the MiLC.
+clean up documentation since move from cvs.
 
-Init - thread vs. process -- should be able to do one mapping per process to
-  get traceControl_p.  Since it takes time to do the mapping, there needs to be
-  an InitLock which threads of the same process will use to determine whether or
-  not they are the single thread which is doing the init or if it has to wait for
-  another thread to complete the init.
+TRACE_LVLM???
 
 module - add init check to allow for name-per-module???  maybe go back to compile time--
   where TRACE_NAME must be defined before include of trace.h???

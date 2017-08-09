@@ -55,17 +55,17 @@ Fri Apr 18 11:55:38 -0500 2014: %MSG
     {	TRACE_INIT_CHECK												\
 	    {	struct timeval lclTime; lclTime.tv_sec = 0;					\
 			/* 1st "function" is memory */								\
-			if (traceControl_p->mode.bits.M && (traceNamLvls_p[traceTID].M & (1LL<<((lvl)&LVLBITSMSK)))) \
+			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl))) \
 			{   trace( &lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
 					  , __VA_ARGS__ );									\
 			}															\
 			/* 2nd "function" is console */								\
-			if (traceControl_p->mode.bits.S && (traceNamLvls_p[traceTID].S & (1LL<<((lvl)&LVLBITSMSK)))) \
+			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl))) \
 			{   if (lclTime.tv_sec == 0) gettimeofday( &lclTime, NULL ); \
 				TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ );	\
 			}															\
 			/* 3rnd "function" is network */							\
-			if (traceControl_p->mode.mode&(1<<2) && (traceNamLvls_p[traceTID].T & (1LL<<((lvl&LVLBITSMSK))))) \
+			if (traceControl_rwp->mode.mode&(1<<2) && (traceNamLvls_p[traceTID].T & TLVLMSK(lvl))) \
 			{   TRACE_MF_LOGGER( lvl, __VA_ARGS__ );					\
 			}															\
 		}																\

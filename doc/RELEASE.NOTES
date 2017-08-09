@@ -1,3 +1,15 @@
+CHANGE(S) FOR VERSION V3_08_02
+  trace.h:
+    for TRACE_LVLS and trace active with existing trace file, don't change modeS.
+    fixed trigger functionality bug.
+    disable modeM when trace disabled.
+    misc. cleanup.
+  tracemf.h:
+    use is{Warning,Info,Debug}Enabled() as "force" param in corresponding TLOG_ macros
+  trace_cntl.c:
+    fix/more robust traceShow of entries with nargs=0
+    misc. cleanup and allow trace_cntl TRACE to test more arg cases.
+  
 
 CHANGE(S) FOR VERSION v3_05_00
 

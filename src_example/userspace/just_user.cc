@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 577 $$Date: 2017-04-25 15:21:56 -0500 (Tue, 25 Apr 2017) $";
+char const *rev="$Revision: 632 $$Date: 2017-08-08 16:50:06 -0500 (Tue, 08 Aug 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -12,7 +12,7 @@ char const *rev="$Revision: 577 $$Date: 2017-04-25 15:21:56 -0500 (Tue, 25 Apr 2
 #include <getopt.h>             // getopt_long, {no,required,optional}_argument, extern char *optarg; extern int opt{ind,err,opt}
 #include <sstream>
 #include <ios>
-#include <iostream>
+#include <iostream>				// std::cout
 #include <typeinfo>				// typeid().name()
 #include <libgen.h>				// basename
 #include <stdlib.h>
@@ -32,10 +32,19 @@ char const *rev="$Revision: 577 $$Date: 2017-04-25 15:21:56 -0500 (Tue, 25 Apr 2
 #define SUPPRESS_NOT_USED_WARN __attribute__ ((unused))
 
 
+// copy to/from include/tracemf.h
+#define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
+	{static int tid_=-1; if(tid_==-1)tid_=name2TID(std::string(name).c_str());  int lvl_ = lvl; \
+	bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
+	bool do_s = traceControl_rwp->mode.bits.S && (force_s || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
+	if(do_s || do_m)  { std::ostringstream o;o
 
-#define TRACE_STREAMER(lvl, name) {int lvl_ = lvl;std::ostringstream o;o << name << ": "
-#define TRACE_ENDS ""; TRACE(lvl_, o.str());}
-#define TLOG_ENDS TRACE_ENDS
+#define TRACE_ENDL ""; \
+	   struct timeval lclTime; lclTime.tv_sec = 0;			\
+		if(do_m) trace( &lclTime,tid_, lvl_, 0 TRACE_XTRA_PASSED,o.str() ); \
+		if(do_s) TRACE_LOG_FUNCTION( &lclTime, tid_, lvl_, 0,o.str() );	\
+	}}}
+#define TLOG_ENDL TRACE_ENDL
 
 #define USAGE "\
   usage: %s [-t <test>]\n\
@@ -174,11 +183,15 @@ int main( int argc, char *argv[] )
 		}
 
 		ostr << "<< stdstr (just to confuse) %d" << stdstr;
-		std::cout << ostr << "\n";
+		std::cout << ostr.str() << "\n";
 		test( ostr );
 		test( ostr << "test function passed ostr<<\"string\"\n" );
+
+# if defined(__cplusplus)&&(__cplusplus>201103L)
 		test( (std::ostringstream)"cast (std::ostringstream)\"str\"<<\"str\"" << "jkl;\n" ); // gives address
 		test( std::ostringstream("asdf") << "std::ostringstream(\"asdf\")<<\"string\"\n" ); // also gives address
+# endif
+
 		//std::cout << typeid( std::ostringstream("asdf") << "xyz\n" ).name() << '\n';
 		test( std::ostringstream("asdf").flush() << "xyz\n" ); // gives desired output
 
@@ -225,7 +238,7 @@ int main( int argc, char *argv[] )
 	}
 	else if (strcmp(opt_test, "X") == 0) {
 		while (opt_loops--) {
-			TRACE_STREAMER(0, "this is an int") << 55 << TLOG_ENDS;
+			TRACE_STREAMER(0, "this is an int",0) << 55 << TLOG_ENDL;
 		}
 	}
 # if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L

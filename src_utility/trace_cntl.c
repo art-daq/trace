@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 592 $$Date: 2017-05-05 14:04:34 -0500 (Fri, 05 May 2017) $"
+#define TRACE_CNTL_REV "$Revision: 629 $$Date: 2017-08-08 14:41:51 -0500 (Tue, 08 Aug 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -29,8 +29,8 @@ done
 #include <getopt.h>		/* getopt */
 #include <sys/time.h>           /* gettimeofday, struct timeval */
 #include <pthread.h>		/* pthread_self */
-#include <sys/syscall.h>	/* syscall */
 #include <locale.h>				/* setlocale */
+#include <string.h>				/* strnlen */
 
 #include "trace.h"
 
@@ -50,6 +50,7 @@ commands:\n\
  lvlclr[g] <mskM> <mskS> <mskT>\n\
  trig <lvlmskM> <postEntries>\n\
 opts:\n\
+ -?, -h       show this help\n\
  -f<file>\n\
  -n<name>\n\
  -V           print version and exit\n\
@@ -89,6 +90,7 @@ void* thread_func(void *arg)
 	long tidx =(long)arg&0xfff;	   /* lower 12 bits have thread index */
 	long loops=(long)arg>>12;	   /* bits 12-31 have loops */
 	char tmp[PATH_MAX];
+	pid_t tid=trace_gettid();
 	if (trace_thread_option & 1)
 	{	/* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
 		snprintf( tmp, sizeof(tmp),"/tmp/trace_buffer_%ld",tidx );
@@ -102,11 +104,11 @@ void* thread_func(void *arg)
 	while (loops-- > 0)
 	{	/* NOTE: be mindful of classic issue with macro -- args could be evaluted multiple times! */
 		/* BUT -- when TRACE-ing a value, there you would not likely operate on it */
-		TRACE( 0, "loops=%ld", loops ); --loops;
-		TRACE( 1, "loops=%ld - extra, if enabled", loops );
-		TRACE( 0, "loops=%ld", loops ); --loops;
-		TRACE( 0, "loops=%ld", loops ); --loops;
-		TRACE( 0, "loops=%ld", loops );
+	  TRACE( 0, "loops=%ld tid=%d", loops, tid ); --loops;
+		TRACE( 1, "loops=%ld tid=%d - extra, if enabled", loops, tid );
+		TRACE( 0, "loops=%ld tid=%d", loops, tid ); --loops;
+		TRACE( 0, "loops=%ld tid=%d", loops, tid ); --loops;
+		TRACE( 0, "loops=%ld tid=%d", loops, tid );
 	}
 	pthread_exit(NULL);
 }
@@ -135,11 +137,12 @@ void get_arg_sizes(	 char            *ofmt
 				   , char            *ifmt
 				   , int              opts
 				   , int              param_bytes
-				   , struct sizepush *sizes_out)
+				   , struct sizepush *sizes_out
+                   , unsigned         nargs )
 {	char    *in;
 	char    *percent_sav;
 	int	     numArgs=0;
-	int	     maxArgs=10;
+	int	     maxArgs=(nargs<traceControl_p->num_params?nargs:traceControl_p->num_params);
 	int	     modifier=0;
 	int	     filter_newline=opts&filter_newline_;
 
@@ -275,7 +278,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 	opts |= show_opts; /* see enum show_opts_e above */
 	opts |= (strchr(ospec,'D')?indent_:0);
 
-	traceInit(NULL);
+	traceInit(NULL); /* init traceControl_p, etc. */
 
 	/* get the time format and the length of the format (using example time (now) */
 	if((tfmt=getenv("TRACE_TIME_FMT"))==NULL)
@@ -311,7 +314,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 	{	/* here, rdIdx stars as a count (see max = rdIdx below), but it is
 		   used as an index after first being decremented (assuming reverse
 		   printing) */
-		rdIdx = TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt) % traceControl_p->num_entries;
+		rdIdx = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt) % traceControl_p->num_entries;
 	}
 	if ((count>=0) && (start>=0))
 	{
@@ -320,13 +323,13 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			printf("specified count > num_entrie, adjusting to %d\n",max);
 		} else
 			max = count;
-	} else if (TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt)>=traceControl_p->num_entries) { /* traceControl_p-> may not be being used */
+	} else if (TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt)>=traceControl_p->num_entries) { /* traceControl_p-> may not be being used */
 		max = traceControl_p->num_entries;
 	} else
 		max = rdIdx;
-	if ((count>=0) && (start<0) && ((unsigned)count<max)) max=count;
+	if ((count>=0) && (start<0) && (count<max)) max=count;
 	if (opts&forward_) {
-		rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt), -max );
+		rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt), -max );
 		/* subtract 1 b/c during loop (below) rdIdx is incremented first */
 		rdIdx = IDXCNT_ADD( rdIdx, -1 );
 		forward_continuous =1;
@@ -340,7 +343,6 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 
 	if (ospec[0] == 'H')
 	{	++ospec; /* done with Heading flag */
-		sp = ospec;
 		for (sp=ospec; *sp; ++sp)
 		{
 			switch (*sp)
@@ -362,7 +364,6 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			}
 		}
 		printf("msg\n");
-		sp = ospec;
 		for (sp=ospec; *sp; ++sp)
 		{
 # define TRACE_LONG_DASHES "------------------------------------------------"
@@ -387,15 +388,15 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 		printf("-----------------------------\n");
 	}
 
-	for (printed=0; printed<max || forward_continuous; ++printed)
+	for (printed=0; printed<(unsigned)max || forward_continuous; ++printed)
 	{	time_t seconds; unsigned useconds;
 		int print_just_converted_ofmt=0;
 		rdIdx = IDXCNT_ADD( rdIdx, for_rev );
 		if (opts&forward_) {
 			uint32_t now, ini;
  forward_check:
-			ini=TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt);
-			while (rdIdx == (now=TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt)))
+			ini=TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
+			while (rdIdx == (now=TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt)))
 				usleep( 100000 );
 			/* attempt to detect a treset which occurred _while_sleeping_ */
 			uint32_t delta=now-ini;
@@ -410,8 +411,19 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 		params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
 		msg_p[traceControl_p->siz_msg - 1] = '\0';
 
-		get_arg_sizes(	local_msg, msg_p, opts
-					  , myEnt_p->param_bytes, params_sizes );
+		if (myEnt_p->nargs)
+			get_arg_sizes(	local_msg, msg_p, opts
+			              , myEnt_p->param_bytes, params_sizes, myEnt_p->nargs );
+		else {
+			if (opts&filter_newline_) {
+				for (ii=0; msg_p[ii]!='\0' && ii<traceControl_p->siz_msg; ++ii) {
+					local_msg[ii] = (msg_p[ii]!='\n')?msg_p[ii]:';';
+				}
+				if (ii<traceControl_p->siz_msg) local_msg[ii]='\0';
+			}
+			else
+				strncpy( local_msg, msg_p, traceControl_p->siz_msg );
+		}
 
 		/* determine if args need to be copied */
 		if        (	 ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
@@ -427,7 +439,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			useconds = *ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
-			for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
+			for (ii=0; ii<myEnt_p->nargs && params_sizes[ii].push!=0; ++ii)
 			{
 				if      (params_sizes[ii].push == 4)
 				{	*(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
@@ -448,7 +460,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			useconds = (unsigned)*ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
-			for (ii=0; ii<traceControl_p->num_params && params_sizes[ii].push!=0; ++ii)
+			for (ii=0; ii<myEnt_p->nargs && params_sizes[ii].push!=0; ++ii)
 			{
 				if      (params_sizes[ii].size == 4)
 				{	*(unsigned*)lcl_param_ptr = (unsigned)*(unsigned long long*)ent_param_ptr;
@@ -462,7 +474,6 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			}
 			param_va_ptr = (void*)local_params;
 		}
-		sp = ospec;
 		for (sp=ospec; *sp; ++sp)
 		{
 			switch (*sp)
@@ -493,12 +504,12 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 		if (!print_just_converted_ofmt && myEnt_p->nargs)
 		{	/* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
 			   Here, I need an initializer so I must have this inside braces { } */
-			va_list ap=TRACE_VA_LIST_INIT(param_va_ptr);
+			va_list ap_=TRACE_VA_LIST_INIT(param_va_ptr);
 			if (opts&indent_) {
 				int ii=(myEnt_p->lvl>63)?63:myEnt_p->lvl;
 				printf("%s",&indent[63-ii]);
 			}
-			vprintf( local_msg, ap );
+			vprintf( local_msg, ap_ );
 			printf("\n");
 		}
 		else /* print_just_converted_ofmt */
@@ -521,9 +532,9 @@ void traceInfo()
 	if (strftime(outstr, sizeof(outstr),"%a %b %d %H:%M:%S %Z %Y",tmp) == 0)
 	{   perror("strftime"); exit(EXIT_FAILURE);
 	}
-	TRACE_ATOMIC_STORE( &spinlockCopy, TRACE_ATOMIC_LOAD(&traceControl_p->spinlock) );
-	TRACE_ATOMIC_STORE( &wrCopy,       TRACE_ATOMIC_LOAD(&traceControl_p->wrIdxCnt) );
-	used = ((traceControl_p->full)
+	TRACE_ATOMIC_STORE( &spinlockCopy, TRACE_ATOMIC_LOAD(&traceControl_rwp->namelock) );
+	TRACE_ATOMIC_STORE( &wrCopy,       TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt) );
+	used = ((traceControl_rwp->full)
 		?traceControl_p->num_entries
 		:TRACE_ATOMIC_LOAD(&wrCopy) ); /* if not full this shouldn't be > traceControl_p->num_entries */
 	printf("trace.h rev       = %s\n"
@@ -554,14 +565,14 @@ void traceInfo()
 	       , traceControl_p->version_string
 	       , outstr
 	       , traceControl_p->trace_initialized
-	       , traceControl_p->mode.mode
+	       , traceControl_rwp->mode.mode
 	       , wrCopy, used
-	       , traceControl_p->full
+	       , traceControl_rwp->full
 	       , spinlockCopy
 	       , traceControl_p->largest_multiple
-	       , traceControl_p->trigIdxCnt
-	       , traceControl_p->triggered
-	       , traceControl_p->trigActivePost
+	       , traceControl_rwp->trigIdxCnt
+	       , traceControl_rwp->triggered
+	       , traceControl_rwp->trigActivePost
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].S
 	       , traceControl_p->num_entries
@@ -570,7 +581,7 @@ void traceInfo()
 	       , traceControl_p->siz_entry
 	       , traceControl_p->num_namLvlTblEnts
 	       , (int)sizeof(traceNamLvls_p[0].name)
-	       , (void*)&((struct traceControl_s*)0)->wrIdxCnt
+	       , (void*)&((struct traceControl_s*)0)->rw.wrIdxCnt
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
 	       , traceControl_p->memlen
@@ -629,7 +640,7 @@ extern  int        optind;         /* for getopt */
 	{	int loops=1;
 		if (opt_loops > -1) loops=opt_loops;
 		for (; loops; --loops)
-		{	TRACE( 0, "Hello %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
+		{	TRACE( 2, "Hello %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
 				  , loops, 'c',2.5,(short)5,(long long)5000000000LL,15 );
 		}
 	}
@@ -639,18 +650,12 @@ extern  int        optind;         /* for getopt */
 		uint32_t desired, myIdx;
 		int32_t  xx;
 
-#	   if	defined(__cplusplus)      &&      (__cplusplus >= 201103L)
-		tid = (pid_t)syscall( TRACE_GETTID );
-#	   elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
-		tid = (pid_t)syscall( TRACE_GETTID );
-#	   elif !defined(__sparc__)
-		tid = (pid_t)syscall( TRACE_GETTID );
-#	   endif
-		if (tid == -1) perror("syscall");
-		printf("tid=%ld\n", (long int)syscall(TRACE_GETTID) );
+		tid = trace_gettid();
+		if (tid == -1) perror("trace_gettid");
+		printf("tid=%ld\n", (long int)tid );
 
 		printf("sizeof: int:%u long:%u pid_t:%u pthread_t:%u timeval:%u "
-		       "double:%u traceControl_s:%u traceEntryHdr_s:%u traceContol(for disabled):%u\n"
+		       "double:%u traceControl_s:%u traceEntryHdr_s:%u traceControl(for disabled):%u\n"
 		       , (unsigned)sizeof(unsigned), (unsigned)sizeof(long), (unsigned)sizeof(pid_t)
 		       , (unsigned)sizeof(pthread_t), (unsigned)sizeof(struct timeval)
 		       , (unsigned)sizeof(double)
@@ -666,9 +671,9 @@ extern  int        optind;         /* for getopt */
 			   "        get_retries    =%p\n"
 			   "        param_bytes    =%p\n"
 			   "        tsc            =%p\n"
-			   , (void*)&((struct traceControl_s*)0)->trigIdxCnt
-			   , (void*)&((struct traceControl_s*)0)->trigActivePost
-			   , (void*)&((struct traceControl_s*)0)->full
+			   , (void*)&((struct traceControl_s*)0)->rw.trigIdxCnt
+			   , (void*)&((struct traceControl_s*)0)->rw.trigActivePost
+			   , (void*)&((struct traceControl_s*)0)->rw.full
 			   , (void*)&((struct traceEntryHdr_s*)0)->lvl
 			   , (void*)&((struct traceEntryHdr_s*)0)->pid
 			   , (void*)&((struct traceEntryHdr_s*)0)->TID
@@ -741,6 +746,8 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strcmp(cmd,"test-ro") == 0)
 	{
+		/* To test normal userspace, can use: TRACE_FILE= trace_cntl test-ro
+		 */
 		setenv("TRACE_FILE","/proc/trace/buffer",0);
 		traceInit(NULL);
 		printf("try write to (presumably kernel memory) write-protected 1st page...\n");
@@ -882,7 +889,7 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strcmp(cmd,"unlock") == 0) 
 	{	traceInit(NULL);
-		trace_unlock( &traceControl_p->spinlock );
+		trace_unlock( &traceControl_rwp->namelock );
 	}
 	else if (strcmp(cmd,"tids") == 0) 
 	{	int longest_name=0;
@@ -893,23 +900,20 @@ extern  int        optind;         /* for getopt */
 				longest_name = strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
 		/*printf("longest_name=%d\n",longest_name);*/
 
-		printf( "mode:%*s               M=%d                S=%d\n"
-		       , longest_name, ""
-		       , traceControl_p->mode.bits.M, traceControl_p->mode.bits.S );
-		printf("%*s %*s %*s %*s %*s\n"
-		       , 3, "TID"
-		       , longest_name, "NAME"
-		       , 18, "maskM"
-		       , 18, "maskS"
-		       , 18, "maskT"
-		       );
-		printf("%.*s %.*s %.*s %.*s %.*s\n"
-		       , 3, TRACE_LONG_DASHES
-		       , longest_name, TRACE_LONG_DASHES
-		       , 18, TRACE_LONG_DASHES
-		       , 18, TRACE_LONG_DASHES
-		       , 18, TRACE_LONG_DASHES
-		       );
+		if (do_heading) {
+			printf( "mode:%*s               M=%d                S=%d\n"
+			       , longest_name, ""
+			       , traceControl_rwp->mode.bits.M, traceControl_rwp->mode.bits.S );
+			printf("%*s %*s %*s %*s %*s\n"
+			       , 3, "TID"
+			       , longest_name, "NAME"
+			       , 18, "maskM", 18, "maskS", 18, "maskT" );
+			printf("%.*s %.*s %.*s %.*s %.*s\n"
+			       , 3, TRACE_LONG_DASHES
+			       , longest_name, TRACE_LONG_DASHES
+			       , 18, TRACE_LONG_DASHES, 18, TRACE_LONG_DASHES
+			       , 18, TRACE_LONG_DASHES );
+		}
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 		{
 			if (traceNamLvls_p[ii].name[0] != '\0')
@@ -951,11 +955,62 @@ extern  int        optind;         /* for getopt */
 			break;
 		case 6: TRACE( strtoull(argv[optind+0],NULL,0)
 		              ,         argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0)
-		              ,strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0) );
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0) );
 			break;
+		case 7: TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0) );
+			break;
+		case 8: TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0) );
+			break;
+		case 9: TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
+		              ,strtoull(argv[optind+8],NULL,0) );
+			break;
+		case 10:TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
+		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0) );
+			break;
+		case 11:TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
+		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0)
+		              ,strtoull(argv[optind+10],NULL,0) );
+			break;
+		case 12:TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
+		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0)
+		              ,strtoull(argv[optind+10],NULL,0),strtoull(argv[optind+11],NULL,0) );
+			break;
+		case 13:TRACE( strtoull(argv[optind+0],NULL,0)
+		              ,         argv[optind+1]
+		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
+		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
+		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
+		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0)
+		              ,strtoull(argv[optind+10],NULL,0),strtoull(argv[optind+11],NULL,0)
+		              ,strtoull(argv[optind+12],NULL,0) );
+			break;
+		default:
+			printf( "oops - only able to test/handle up to 11 TRACE params/args - sorry.\n" );
 		}
 	}
 	else if (strncmp(cmd,"sleep",4) == 0) /* this allows time to look at /proc/fd/ and /proc/maps */

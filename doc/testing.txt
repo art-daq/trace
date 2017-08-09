@@ -171,3 +171,10 @@ for nn in 10 1000;do
   tinfo | grep used
 done
 tshow|tdelta
+
+==================
+
+treset;tmode 3;tcntl TRACE 1 "hello %d %d %d %d %d %d %d %d %d %d %d %d %U" 1 2 3 4 5 6 7 8 9 0 1
+tshow|head
+treset;tmode 3;tcntl TRACE 1 "hello %d %d %d %d %d %d %d %d %d %d %d %d %U" 1 2 3 4 5 6
+tshow|head

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 629 $$Date: 2017-08-08 14:41:51 -0500 (Tue, 08 Aug 2017) $"
+#define TRACE_CNTL_REV "$Revision: 640 $$Date: 2017-09-25 12:50:42 -0500 (Mon, 25 Sep 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -484,8 +484,8 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 					  printf(tbuf, useconds); } break;
 			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
 			case 'i': printf("%5d ", myEnt_p->tid); break;
-			case 'I': printf("%3u ", myEnt_p->TID); break;
-			case 'n': printf("%*.*s ",longest_name,longest_name,traceNamLvls_p[myEnt_p->TID].name);break;
+			case 'I': printf("%3u ", myEnt_p->TrcId); break;
+			case 'n': printf("%*.*s ",longest_name,longest_name,traceNamLvls_p[myEnt_p->TrcId].name);break;
 			case 'C': printf("%3u ", myEnt_p->cpu); break;
 			case 'L': printf("%2d ", myEnt_p->lvl); break;
 			case 'B': printf("%u ", myEnt_p->param_bytes); break;
@@ -676,7 +676,7 @@ extern  int        optind;         /* for getopt */
 			   , (void*)&((struct traceControl_s*)0)->rw.full
 			   , (void*)&((struct traceEntryHdr_s*)0)->lvl
 			   , (void*)&((struct traceEntryHdr_s*)0)->pid
-			   , (void*)&((struct traceEntryHdr_s*)0)->TID
+			   , (void*)&((struct traceEntryHdr_s*)0)->TrcId
 			   , (void*)&((struct traceEntryHdr_s*)0)->get_idxCnt_retries
 			   , (void*)&((struct traceEntryHdr_s*)0)->param_bytes
 			   , (void*)&((struct traceEntryHdr_s*)0)->tsc

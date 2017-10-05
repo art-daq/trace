@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 511 $';
-#   $Date: 2016-02-09 12:17:03 -0600 (Tue, 09 Feb 2016) $
+$version = '$Revision: 639 $';
+#   $Date: 2017-08-09 22:55:20 -0500 (Wed, 09 Aug 2017) $
 
 use Time::Local; # timelocal()
 
@@ -569,6 +569,7 @@ eval $sub;
 #
 #   NOW DO THE REAL WORK
 #
+$| = 1;     # no output line buffering to allow: tshow -F | tdelta -i | cat
 $_ = $line; # needed for opt_pre processing
 &process_line;
 

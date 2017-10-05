@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 633 $$Date: 2017-08-08 19:09:01 -0500 (Tue, 08 Aug 2017) $"
+#define TRACE_REV  "$Revision: 640 $$Date: 2017-09-25 12:50:42 -0500 (Mon, 25 Sep 2017) $"
 
 #ifndef __KERNEL__
 
@@ -43,7 +43,7 @@ static inline int trace_getcpu(void) { return 0; }
 #   define TRACE_GETTID SYS_thread_selfid
 static inline int trace_getcpu(void) { return 0; }
 #  else /* assume __linux__ */
-#   define TRACE_GETTID SYS_gettid
+#   define TRACE_GETTID __NR_gettid
 #   include <sched.h>		/* sched_getcpu - does vsyscall getcpu */
 static inline int trace_getcpu(void) { return sched_getcpu(); }
 #  endif
@@ -354,7 +354,7 @@ struct traceEntryHdr_s
     pid_t          pid; /*P system info */
     pid_t          tid; /*i system info - "thread id" */
     int32_t        cpu; /*C -- kernel sched switch will indicate this info? */
-    int32_t        TID; /*I Trace ID ==> idx into lvlTbl, namTbl */
+    int32_t        TrcId; /*I Trace ID ==> idx into lvlTbl, namTbl */
     uint16_t       get_idxCnt_retries;/*R*/
     uint16_t       param_bytes;       /*B*/
 };                                    /*M -- NO, ALWAY PRINTED LAST! formated Message */
@@ -499,7 +499,7 @@ static uint32_t IDXCNT_ADD( uint32_t idxCnt, int32_t add )
 #endif /* TRACE_LOG_FUNCTION */
 
 SUPPRESS_NOT_USED_WARN
-static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nargs, const char *msg, va_list ap )
+static void vtrace_user( struct timeval *tvp, int TrcId, uint16_t lvl, uint16_t nargs, const char *msg, va_list ap )
 {
 #ifdef __KERNEL__
     if (!trace_allow_printk) return;
@@ -534,7 +534,7 @@ static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t na
     printed = snprintf( obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec ); /* possibly (probably) add usecs */
     printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
 	                    , &(" %2d %2d ")[printed==0?1:0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
-			, TID, lvl );
+			, TrcId, lvl );
     if (nargs)
 	printed += vsnprintf( &(obuf[printed])
 			     , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
@@ -567,20 +567,20 @@ static void vtrace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t na
 #endif
 }
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nargs, const char *msg, ... )
+static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, uint16_t nargs, const char *msg, ... )
 {
 	va_list ap;
 	va_start( ap, msg );
-	vtrace_user( tvp, TID, lvl, nargs, msg, ap );
+	vtrace_user( tvp, TrcId, lvl, nargs, msg, ap );
 	va_end( ap );
 }
 #ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TID, uint16_t lvl, uint16_t nargs, std::string msg, ... )
+static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, uint16_t nargs, std::string msg, ... )
 {
     va_list ap;
 	va_start( ap, msg );
-	vtrace_user( tvp, TID, lvl, nargs, msg.c_str(), ap );
+	vtrace_user( tvp, TrcId, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
 #endif
@@ -653,7 +653,7 @@ static void vtrace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
     myEnt_p->tid  = traceTid;
     myEnt_p->cpu  = trace_getcpu();
 #endif
-    myEnt_p->TID  = trcId;
+    myEnt_p->TrcId  = trcId;
     myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
     myEnt_p->param_bytes = sizeof(long);
 
@@ -1052,7 +1052,7 @@ static int trace_mmap_file( const char *_file
                            )
 {
     int                    fd;
-    struct traceControl_s  *controlFirstPage_p;
+    struct traceControl_s  *controlFirstPage_p=NULL;
 	struct traceControl_rw *rw_rwp;
     off_t                  off;
     char                   path[PATH_MAX];
@@ -1212,7 +1212,7 @@ static int traceInit( const char *_name )
 
     trace_lock( &traceInitLck );
 #  ifdef TRACE_DEBUG_INIT
-    printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TID=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);
+    printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);
 #  endif
     if (traceControl_p == NULL) {
 
@@ -1290,7 +1290,7 @@ static int traceInit( const char *_name )
 #  endif
     }
 #  ifdef TRACE_DEBUG_INIT
-    printf("traceInit(debug:Z): tC_p=%p static=%p _name=%p Tid=%d TID=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);
+    printf("traceInit(debug:Z): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n",traceControl_p,traceControl_p_static,_name,traceTid,traceTID);
 #  endif
     trace_unlock( &traceInitLck );
 

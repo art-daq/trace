@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 626 $$Date: 2017-08-07 23:01:52 -0500 (Mon, 07 Aug 2017) $";
+    rev="$Revision: 644 $$Date: 2017-10-09 11:43:42 -0500 (Mon, 09 Oct 2017) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -109,7 +109,8 @@ static ssize_t trace_proc_control_write( struct file *fil, const char __user *sr
         char    *sptr;
         int     cc;
 	cc = (siz<(sizeof(kernelBuffer)-1))? siz: (sizeof(kernelBuffer)-1);
-    copy_from_user(  kernelBuffer, src_p, cc );
+    if (copy_from_user(  kernelBuffer, src_p, cc ) != 0)
+		return -1;
     kernelBuffer[cc] = '\0'; /* terminate our copy of the string */
     for (sptr=kernelBuffer; *sptr; sptr++)
     {
@@ -133,7 +134,8 @@ static ssize_t trace_proc_control_read( struct file *fil, char __user *dst_p
 	if (*off >= cc) return 0;
 	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlS=0x%lx\n", trace_lvlS );
 	if (*off >= cc) return 0;
-	copy_to_user( dst_p, &kernelBuffer[*off], cc-*off );
+	if (copy_to_user( dst_p, &kernelBuffer[*off], cc-*off ) != 0)
+		return -1;
 	cc = cc-*off;
 	*off += cc;
 	return cc;

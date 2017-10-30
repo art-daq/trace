@@ -8,6 +8,8 @@ module - add init check to allow for name-per-module???  maybe go back to compil
 
 develop test sweet - threads, 5-in-1, etc.
 
+%u %U on TRACE_FILE for "user" (/tmp/trace_buffer_%u) "uid" (/run/user/%U/trace_buffer)
+
 
 DONE:
 

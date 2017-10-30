@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 640 $$Date: 2017-09-25 12:50:42 -0500 (Mon, 25 Sep 2017) $"
+#define TRACE_CNTL_REV "$Revision: 652 $$Date: 2017-10-27 18:55:18 -0500 (Fri, 27 Oct 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -64,23 +64,22 @@ tests:  (use %s show after test)\n\
  -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings\n\
  -l<loops>\n\
 \n\
-%s\n\
-", basename(argv[0]), basename(argv[0]), USAGE_TESTS
+" USAGE_TESTS, basename(argv[0]), basename(argv[0]), DFLT_TEST_COMPARE_ITERS
 #define USAGE_TESTS "\
- test1 [-lloops]  a single TRACE [or more if loops != 0]\n\
+ test1 [-lloops]  a single TRACE lvl 2 [or more if loops != 0]\n\
  test           various\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
- test-compare [-lloops]  compare TRACE fmt+args vs. format+args converted (via sprintf)\n\
+ test-compare [-lloops]  compare TRACE fmt+args vs. format+args converted (via sprintf). dflt loops=%d\n\
  [-x2] test-threads [-lloops] [num_threads]  threading\n\
  TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported\n\
 "
-
+#define DFLT_TEST_COMPARE_ITERS 1000000
 #define minw(a,b) (b<a?a:b)
 
 #ifdef __linux__
-# define DFLT_SHOW         "HxNTtinCLR"
+# define DFLT_SHOW         "HxNTPiCnLR"
 #else
-# define DFLT_SHOW         "HxNTtinLR"
+# define DFLT_SHOW         "HxNTPinLR"
 #endif
 #define NUMTHREADS 4
 static int trace_thread_option=0;
@@ -217,7 +216,7 @@ void get_arg_sizes(	 char            *ofmt
 			break;
 		case '*':   /* special -- "arg" in an arg */
 			sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;
-			if (++numArgs == maxArgs) *ofmt++ = *in++; break;
+			if (++numArgs == maxArgs) { *ofmt++ = *in++; break; }
 			*ofmt++ = *in++;
 			goto chkChr;
 		default:
@@ -560,7 +559,7 @@ void traceInfo()
 	       "namLvls offset    =0x%lx\n"
 	       "buffer_offset     =0x%lx\n"
 	       "memlen            =%u          %s\n"
-	       "default TRACE_SHOW=%s others: B(paramBytes) P(pid) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs)\n"
+	       "default TRACE_SHOW=%s others: t(tsc) B(paramBytes) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr
@@ -760,14 +759,14 @@ extern  int        optind;         /* for getopt */
 	else if (strcmp(cmd,"test-compare") == 0)
 	{	char     buffer[200];
 		uint64_t mark;
-		unsigned loops=1000000;
+		unsigned loops=DFLT_TEST_COMPARE_ITERS;
 		unsigned compares=1000; /* some big number */
 		if (argc - optind == 1) compares=strtoul(argv[optind],NULL,0);
 		if (opt_loops > -1) loops=(unsigned)opt_loops;
 
-#	   define END_FMT "end	 in mode 1 delta=%llu"
+#	   define END_FMT "end	                            delta=%llu"
 		TRACE_CNTL("reset");
-		TRACE_CNTL("mode",2LL);TRACE(0,"start no snprintf in mode 1");TRACE_CNTL("mode",1LL);
+		TRACE_CNTL("mode",2LL);TRACE(0,"start const short msg (NO snprintf) to mem only");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
 		for (ii=0; ii<loops; ++ii)
 		{	TRACE( 0, "any msg" );
@@ -775,7 +774,7 @@ extern  int        optind;         /* for getopt */
 
 
 		TRACE_CNTL("reset");
-		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 1 arg in mode 1");TRACE_CNTL("mode",1LL);
+		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 1 arg to mem only");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
 		for (ii=0; ii<loops; ++ii)
 		{	snprintf( buffer, sizeof(buffer), "this is one small param: %u", 12345678 );
@@ -785,7 +784,7 @@ extern  int        optind;         /* for getopt */
 		if (--compares == 0) return (0);
 
 		TRACE_CNTL("reset");
-		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 2 arg in mode 1");TRACE_CNTL("mode",1LL);
+		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 2 arg to mem only");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
 		for (ii=0; ii<loops; ++ii)
 		{	snprintf( buffer, sizeof(buffer), "this is 2 params: %u %u", 12345678, ii );
@@ -795,11 +794,11 @@ extern  int        optind;         /* for getopt */
 		if (--compares == 0) return (0);
 
 		TRACE_CNTL("reset");
-		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 8 arg in mode 1");TRACE_CNTL("mode",1LL);
+		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 8 args (7 ints, 1 float) to mem only");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
 		for (ii=0; ii<loops; ++ii)
 		{	snprintf( buffer, sizeof(buffer)
-			         , "this is 8 params: %u %u %u %u %u %u %u %f"
+			         , "this is 8 params: %u %u %u %u %u %u %u %g"
 			         , 12345678, ii, ii*2, ii+6
 			         , 12345679, ii, ii-7, (float)ii*1.5
 			         );
@@ -809,19 +808,33 @@ extern  int        optind;         /* for getopt */
 		if (--compares == 0) return (0);
 
 		TRACE_CNTL("reset");
-		TRACE_CNTL("mode",2LL);TRACE(0,"start TRACE w/8 arg in mode 1");TRACE_CNTL("mode",1LL);
+		TRACE_CNTL("mode",2LL);TRACE(0,"start snprintf 8 args (1 ints, 7 float) to mem only");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
 		for (ii=0; ii<loops; ++ii)
-		{	TRACE( 0, "this is 8 params: %u %u %u %u %u %u %u %f"
-			      , 12345678, ii, ii*2, ii+6
-			      , 12345679, ii, ii-7, (float)ii*1.5
+		{	snprintf( buffer, sizeof(buffer)
+			         , "this is 8 params: %u %g %g %g %g %g %g %g"
+			         , 12345678, (float)ii, (float)ii*2.5, (float)ii+3.14
+			         , (float)12345679, (float)ii/.25, (float)ii-2*3.14, (float)ii*1.5
+			         );
+			TRACE( 0, buffer );
+		} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
+
+		if (--compares == 0) return (0);
+
+		TRACE_CNTL("reset");
+		TRACE_CNTL("mode",2LL);TRACE(0,"start TRACE same 8 args to mem only");TRACE_CNTL("mode",1LL);
+		mark = get_us_timeofday();
+		for (ii=0; ii<loops; ++ii)
+		{	TRACE( 0, "this is 8 params: %u %g %g %g %g %g %g %g"
+				  , 12345678, (float)ii, (float)ii*2.5, (float)ii+3.14
+				  , (float)12345679, (float)ii/.25, (float)ii-2*3.14, (float)ii*1.5
 			      );
 		} TRACE_CNTL("mode",2LL);TRACE(0,END_FMT,(unsigned long long)get_us_timeofday()-mark );
 
 		if (--compares == 0) return (0);
 
 		TRACE_CNTL("reset");
-		TRACE_CNTL("mode",2LL);TRACE(0,"start (repeat) no snprintf in mode 1");TRACE_CNTL("mode",1LL);
+		TRACE_CNTL("mode",2LL);TRACE(0,"start (repeat) 1st test - const short msg (NO snprintf) to mem only");TRACE_CNTL("mode",1LL);
 		mark = get_us_timeofday();
 		for (ii=0; ii<loops; ++ii)
 		{	TRACE( 0, "any msg" );
@@ -892,24 +905,25 @@ extern  int        optind;         /* for getopt */
 		trace_unlock( &traceControl_rwp->namelock );
 	}
 	else if (strcmp(cmd,"tids") == 0) 
-	{	int longest_name=0;
+	{	int longest_name=0, namLvlTblEnts_digits;
 		traceInit(NULL);
 		/* calc longest name */
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 			if (strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
 				longest_name = strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
 		/*printf("longest_name=%d\n",longest_name);*/
-
+		namLvlTblEnts_digits=countDigits(traceControl_p->num_namLvlTblEnts-1);
 		if (do_heading) {
-			printf( "mode:%*s               M=%d                S=%d\n"
+			printf( "mode:%*s%*s            M=%d                S=%d\n"
+			       , minw(3,namLvlTblEnts_digits), ""
 			       , longest_name, ""
 			       , traceControl_rwp->mode.bits.M, traceControl_rwp->mode.bits.S );
 			printf("%*s %*s %*s %*s %*s\n"
-			       , 3, "TID"
+			       , minw(3,namLvlTblEnts_digits), "TID"
 			       , longest_name, "NAME"
 			       , 18, "maskM", 18, "maskS", 18, "maskT" );
 			printf("%.*s %.*s %.*s %.*s %.*s\n"
-			       , 3, TRACE_LONG_DASHES
+			       , minw(3,namLvlTblEnts_digits), TRACE_LONG_DASHES
 			       , longest_name, TRACE_LONG_DASHES
 			       , 18, TRACE_LONG_DASHES, 18, TRACE_LONG_DASHES
 			       , 18, TRACE_LONG_DASHES );
@@ -917,8 +931,8 @@ extern  int        optind;         /* for getopt */
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 		{
 			if (traceNamLvls_p[ii].name[0] != '\0')
-			{	printf("%3d %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
-				       , ii
+			{	printf("%*d %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
+				       , minw(3,namLvlTblEnts_digits), ii
 					   , longest_name
 					   , longest_name
 				       , traceNamLvls_p[ii].name

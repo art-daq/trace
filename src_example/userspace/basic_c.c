@@ -33,11 +33,13 @@ int main( )
 	/* Currently, TRACE supports 0-35 args after the format, if you accidently put 36 args,
 	   the trace macros thinks the number of args is the 36th arg :(
 	   This example also shows that if one accidentally puts a lvl > 63, the macro mask the lower bits */
+#ifdef TOO_MANY_ARGS
 	TRACE( 30+64,"TRACE - 35 args "
 		  "%d %d %d %d %d %d %d %d %d %d "
 		  "%d %d %d %d %d %d %d %d %d %d "
 		  "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d"
 		  , 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,6 );
+#endif
 
 	printf("\
       &before[0]=%p\n\

@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_envvars.sh,v $
- # rev='$Revision: 514 $$Date: 2016-02-09 14:31:44 -0600 (Tue, 09 Feb 2016) $'
+ # rev='$Revision: 651 $$Date: 2017-10-26 17:30:48 -0500 (Thu, 26 Oct 2017) $'
 
 USAGE="\
  usage: `basename $0` [[path/]file]   # default file is trace_cntl
@@ -23,10 +23,17 @@ eval set -- ${args-} \"\$@\"; unset op args xx
 
 tenv()  # $1=file
 {   tcntlexe=$1
-    envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p'`
+    envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p' | sort -u`
+    # according to trace.h, the following six "activate" TRACE
+    list='NAMTBLENTS NUMENTS ARGSMAX MSGMAX NAME FILE'
+    ere=`echo $list | sed 's/ /|/g'`
+    envvars=`echo "$envvars" | egrep -v "^TRACE_($ere)"`
+    for ee in $list;do
+        printenv | /bin/grep "^TRACE_$ee=" || echo TRACE_$ee
+    done
+    # now the rest/others
     for ee in $envvars;do
-       #echo $ee=`printenv | sed -n -e"/^$ee=/{s/^[^=]*=//;p;}"`
-       printenv | /bin/grep "^$ee=" || echo $ee
+        printenv | /bin/grep "^$ee=" || echo $ee
     done
 }
 

@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 632 $$Date: 2017-08-08 16:50:06 -0500 (Tue, 08 Aug 2017) $";
+char const *rev="$Revision: 666 $$Date: 2017-11-03 15:38:16 -0500 (Fri, 03 Nov 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -18,18 +18,10 @@ char const *rev="$Revision: 632 $$Date: 2017-08-08 16:50:06 -0500 (Tue, 08 Aug 2
 #include <stdlib.h>
 
 #if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
-#if defined(__GXX_WEAK__) || ( defined(__cplusplus) && (__cplusplus >= 199711L) ) || ( defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) )
-/* c++98 c99 c++0x c11 c++11 */
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,...)          my_log( nargs, __VA_ARGS__ )
-#else
-/* c89 */
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,nargs,msgargs... )  my_log( nargs, msgargs )
-#endif   /* __GXX_WEAK__... */
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)          my_log( nargs, __VA_ARGS__ )
 #endif
 
 #include "trace.h"		/* TRACE */
-
-#define SUPPRESS_NOT_USED_WARN __attribute__ ((unused))
 
 
 // copy to/from include/tracemf.h
@@ -42,7 +34,7 @@ char const *rev="$Revision: 632 $$Date: 2017-08-08 16:50:06 -0500 (Tue, 08 Aug 2
 #define TRACE_ENDL ""; \
 	   struct timeval lclTime; lclTime.tv_sec = 0;			\
 		if(do_m) trace( &lclTime,tid_, lvl_, 0 TRACE_XTRA_PASSED,o.str() ); \
-		if(do_s) TRACE_LOG_FUNCTION( &lclTime, tid_, lvl_, 0,o.str() );	\
+		if(do_s) TRACE_LOG_FUNCTION( &lclTime, tid_, lvl_, "", 0,o.str() ); \
 	}}}
 #define TLOG_ENDL TRACE_ENDL
 
@@ -188,8 +180,10 @@ int main( int argc, char *argv[] )
 		test( ostr << "test function passed ostr<<\"string\"\n" );
 
 # if defined(__cplusplus)&&(__cplusplus>201103L)
+#  if 0
 		test( (std::ostringstream)"cast (std::ostringstream)\"str\"<<\"str\"" << "jkl;\n" ); // gives address
 		test( std::ostringstream("asdf") << "std::ostringstream(\"asdf\")<<\"string\"\n" ); // also gives address
+#  endif
 # endif
 
 		//std::cout << typeid( std::ostringstream("asdf") << "xyz\n" ).name() << '\n';

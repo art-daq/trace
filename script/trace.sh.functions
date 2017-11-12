@@ -3,8 +3,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 617 $
-#   $Date: 2017-07-28 13:23:47 -0500 (Fri, 28 Jul 2017) $
+#   $Revision: 682 $
+#   $Date: 2017-11-09 14:01:41 -0600 (Thu, 09 Nov 2017) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -72,8 +72,16 @@ toffTg()   { trace_cntl lvlclrg 0 0 `bitN_to_mask $*`; }
 
 tenv()
 {   tcntlexe=`which trace_cntl`
-    envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p'`
-    for ee in $envvars;do echo $ee`printenv | sed -n -e"/^$ee=/{s/^[^=]*=/=/;p;}"`; done
+    envvars=`strings -a $tcntlexe | sed -n -e '/^TRACE_/p' | sort -u`
+    list='NAMTBLENTS NUMENTS ARGSMAX MSGMAX NAME FILE LVLM'
+    ere=`echo $list | sed 's/ /|/g'`
+    envvars=`echo "$envvars" | egrep -v "^TRACE_($ere)"`
+    for ee in $list;do
+        printenv | grep "^TRACE_$ee=" || echo TRACE_$ee
+    done
+    for ee in $envvars;do
+        eval echo "$ee\${$ee+=\"'\$$ee'\"}"
+    done
 }
 
 tlvlsSave() {

@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_envvars.sh,v $
- # rev='$Revision: 651 $$Date: 2017-10-26 17:30:48 -0500 (Thu, 26 Oct 2017) $'
+ # rev='$Revision: 682 $$Date: 2017-11-09 14:01:41 -0600 (Thu, 09 Nov 2017) $'
 
 USAGE="\
  usage: `basename $0` [[path/]file]   # default file is trace_cntl
@@ -20,20 +20,22 @@ while [ -n "${1+x}" ];do
 done
 eval set -- ${args-} \"\$@\"; unset op args xx
 
+test -f /bin/grep  &&  GREP=/bin/grep  ||  GREP=/usr/bin/grep
+test -f /bin/egrep && EGREP=/bin/egrep || EGREP=/usr/bin/egrep
 
 tenv()  # $1=file
 {   tcntlexe=$1
-    envvars=`strings -a $tcntlexe | sed -n -e'/^TRACE_/p' | sort -u`
+    envvars=`strings -a $tcntlexe | sed -n -e '/^TRACE_/p' | sort -u`
     # according to trace.h, the following six "activate" TRACE
-    list='NAMTBLENTS NUMENTS ARGSMAX MSGMAX NAME FILE'
+    list='NAMTBLENTS NUMENTS ARGSMAX MSGMAX NAME FILE LVLM'
     ere=`echo $list | sed 's/ /|/g'`
-    envvars=`echo "$envvars" | egrep -v "^TRACE_($ere)"`
+    envvars=`echo "$envvars" | $EGREP -v "^TRACE_($ere)"`
     for ee in $list;do
-        printenv | /bin/grep "^TRACE_$ee=" || echo TRACE_$ee
+        printenv | $GREP "^TRACE_$ee=" || echo TRACE_$ee
     done
     # now the rest/others
     for ee in $envvars;do
-        printenv | /bin/grep "^$ee=" || echo $ee
+        eval echo "$ee\${$ee+=\"'\$$ee'\"}"
     done
 }
 

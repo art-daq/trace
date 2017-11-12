@@ -64,6 +64,16 @@ QUALIFIERS = ""
 
 #*************************************************
 #
+FLAVOR = Darwin64bit+16
+VERSION = v3_x
+QUALIFIERS = ""
+  DECLARER = ron
+  DECLARED = 2014-03-04 18.03.56 GMT
+  MODIFIER = ron
+  MODIFIED = 2014-03-04 18.03.56 GMT
+
+#*************************************************
+#
 FLAVOR = SunOS64bit
 VERSION = v3_x
 QUALIFIERS = ""

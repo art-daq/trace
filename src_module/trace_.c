@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 644 $$Date: 2017-10-09 11:43:42 -0500 (Mon, 09 Oct 2017) $";
+    rev="$Revision: 679 $$Date: 2017-11-08 12:28:52 -0600 (Wed, 08 Nov 2017) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -38,6 +38,7 @@ EXPORT_SYMBOL_GPL( traceEntries_p );
 EXPORT_SYMBOL_GPL( traceNamLvls_p );
 EXPORT_SYMBOL_GPL( trace_allow_printk );
 EXPORT_SYMBOL_GPL( trace_lvlS );
+EXPORT_SYMBOL_GPL( trace_lvlM );
 
 #ifdef MODULE
 // ls /sys/module/TRACE/parameters
@@ -55,6 +56,8 @@ module_param(     trace_allow_printk, int, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_allow_printk, "whether or not to allow TRACEs to do printk's" );
 module_param(     trace_lvlS, ulong, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_lvlS, "default printk lvl" );
+module_param(     trace_lvlM, ulong, 0644 ); // defined in trace.h
+MODULE_PARM_DESC( trace_lvlM, "default memory lvl" );
 #else
 # define KSTRVAL( str, parm, xx,fmt )				\
 	unsigned long val;\
@@ -67,40 +70,37 @@ MODULE_PARM_DESC( trace_lvlS, "default printk lvl" );
 	return 1
 
 static int __init trace_msgmax_setup(char *str)
-{
-	KSTRVAL( str, trace_msgmax, msgmax, d );
+{	KSTRVAL( str, trace_msgmax, msgmax, d );
 }
 __setup("trace_msgmax=", trace_msgmax_setup);
 static int __init trace_argsmax_setup(char *str)
-{
-	KSTRVAL( str, trace_argsmax, argsmax, d );
+{	KSTRVAL( str, trace_argsmax, argsmax, d );
 }
 __setup("trace_argsmax=", trace_argsmax_setup);
 static int __init trace_numents_setup(char *str)
-{
-	KSTRVAL( str, trace_numents, numents, d );
+{	KSTRVAL( str, trace_numents, numents, d );
 }
 __setup("trace_numents=", trace_numents_setup);
 static int __init trace_namtblents_setup(char *str)
-{
-	KSTRVAL( str, trace_namtblents, namtblents, d );
+{	KSTRVAL( str, trace_namtblents, namtblents, d );
 }
 __setup("trace_namtblents=", trace_namtblents_setup);
 static int __init trace_buffer_numa_node_setup(char *str)
-{
-	KSTRVAL( str, trace_buffer_numa_node, trace_buffer_numa_node, d );
+{	KSTRVAL( str, trace_buffer_numa_node, trace_buffer_numa_node, d );
 }
 __setup("trace_buffer_numa_node=", trace_buffer_numa_node_setup);
 static int __init trace_allow_printk_setup(char *str)
-{
-	KSTRVAL( str, trace_allow_printk, trace_allow_printk, d );
+{	KSTRVAL( str, trace_allow_printk, trace_allow_printk, d );
 }
 __setup("trace_allow_printk=", trace_allow_printk_setup);
 static int __init trace_lvlS_setup(char *str)
-{
-	KSTRVAL( str, trace_lvlS, trace_lvlS, lu );
+{	KSTRVAL( str, trace_lvlS, trace_lvlS, lu );
 }
 __setup("trace_lvlS=", trace_lvlS_setup);
+static int __init trace_lvlM_setup(char *str)
+{	KSTRVAL( str, trace_lvlM, trace_lvlM, lu );
+}
+__setup("trace_lvlM=", trace_lvlM_setup);
 
 static ssize_t trace_proc_control_write( struct file *fil, const char __user *src_p
 				      , size_t siz, loff_t *off )
@@ -122,6 +122,10 @@ static ssize_t trace_proc_control_write( struct file *fil, const char __user *sr
         {   sptr+=sizeof("trace_lvlS=")-1;
             trace_lvlS = simple_strtoul(sptr,&sptr,0);
         }
+		else if (strncmp("trace_lvlM=",sptr,sizeof("trace_lvlM=")-1)==0)
+        {   sptr+=sizeof("trace_lvlM=")-1;
+            trace_lvlM = simple_strtoul(sptr,&sptr,0);
+        }
 	}
 	return siz;
 }
@@ -133,6 +137,8 @@ static ssize_t trace_proc_control_read( struct file *fil, char __user *dst_p
 	cc  = snprintf( &(kernelBuffer[0]), siz,"trace_allow_printk=%d\n", trace_allow_printk );
 	if (*off >= cc) return 0;
 	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlS=0x%lx\n", trace_lvlS );
+	if (*off >= cc) return 0;
+	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlM=0x%lx\n", trace_lvlM );
 	if (*off >= cc) return 0;
 	if (copy_to_user( dst_p, &kernelBuffer[*off], cc-*off ) != 0)
 		return -1;

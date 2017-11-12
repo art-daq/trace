@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 626 $$Date: 2017-08-07 23:01:52 -0500 (Mon, 07 Aug 2017) $'
+ # rev='$Revision: 667 $$Date: 2017-11-03 23:04:43 -0500 (Fri, 03 Nov 2017) $'
 set -u
 opt_depth=15
 opt_std=c++11
@@ -17,8 +17,8 @@ check_numents=2000000  # maybe compute what this should be
 USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
-          `basename $0` ./big_ex.d --std=
-          `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
+          `basename $0` ./big_ex.d --std=  # use compiler default c++ std
+          `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x1' --check-numents=16000000
           `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d -DNO_TRACE -d200 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d --no-define --no-declare -d25 -std=
@@ -27,17 +27,25 @@ examples: `basename $0` ./big_ex.d
           `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t512 -x1' --depth=200 --check-numents=6000000 # -
                                                     #- with --depth=200 a -t much above 512 can lead to -
                                                     #- \"Resource temporarily unavailable\" from pthread_create
+          TRACE_LIMIT_MS=4,1,4000 `basename $0` ./big_ex.d
 If directory does not exist, it will be created.
 Files in the dir will be overwritten.
--d, --depth=   defalut is $opt_depth, but a better test might be 500
+-d, --depth=   defalut is $opt_depth, but a better test might be 500. MIN 10
 -DTRACE_DECLARE  add -DTRACE_DECLARE to compile line
 -DTRACE_STATIC   add -DTRACE_STATIC to compile line
---std=<c++std>  -std=   both single and double - work
+--std=<c++std>,-std=<c++std)   both single and double - work default=$opt_std
 --no-define      remvoe #define TRACE_DEFINE from subs (could also do -DTRACE_STATIC)
 --no-declare     remove #define TRACE_DECLARE from main
 --mapcheck[=num] default=$do_mapcheck, the number of check LOOPS
---check-opts=<opts> default=$check_opts  for -x: b0=count maps; b1=use sub-threads; b2=random delay
+--check-opts=<opts> default=$check_opts  See below.
 --check-numents=<ents>
+
+Options passed to the program to be checked:
+-n<TRACE_NAME>
+-f<TRACE_FILE>
+-l<loops>
+-t<num_threads>   # in addition to main program
+-x<mask>  extra options - b0=count maps; b1=use sub-threads; b2=random delay in sub1 after 1st TRACE
 
 NOTE: the program can display the number of trace_buffer mappings which
 can get very large when a large combination of TRACE_STATIC modules and
@@ -78,6 +86,7 @@ set -u
 test $# -lt 1 && echo 'Missing required "directory" argument.' && do_help=1
 test $# -gt 1 && echo 'Extra arguments.' && do_help=1
 help() { echo "$USAGE";test $opt_v -ge 1 && echo "$VUSAGE" || true for pipeline; }
+test $opt_depth -lt 10 && echo WARNING: depth option should be min 10
 test -n "${do_help-}" && help && exit
 
 test $opt_depth -ge 1 || { echo "depth option cannot be 0"; exit 1; }
@@ -89,7 +98,7 @@ test -d $odir || mkdir -p $odir
 cd $odir
 # Clean up
 rm -f sub*.cc sub*.o
-rm -f big_ex_main.cc big_ex_main big_ex_main.out
+rm -f big_ex_main.cc big_ex_main
 
 # - - - - - - - - - - - Make all the sub modules (except for the last 1) - - -
 
@@ -121,10 +130,11 @@ $struct_args;
 
 void sub$next( struct args *aa );
 void sub$nn( struct args *aa )
-{   TRACE( 0,"sub$nn loop=%u tid=%d calling sub$next tC_p=%p %u=tIL_hung_max"
-          ,aa->loop,aa->tid,traceControl_p,traceInitLck_hung_max);
+{   TRACE( 0,"sub$nn tid=%d loop=%u calling sub$next tC_p=%p %u=tIL_hung_max"
+          ,aa->tid,aa->loop,traceControl_p,traceInitLck_hung_max);
     $POTENTIAL_DELAY
     sub$next(aa);
+    TRACE( 1, "sub$nn tid=%d after (returned from) call to sub$next",aa->tid );
 }
 EOF
     nn=`expr $nn + 1`
@@ -150,8 +160,8 @@ $do_TRACE_NAME
 $struct_args;
 
 void sub$last( struct args *aa )
-{   TRACE( 0, "sub$last loop=%.4f=dly tid=%d ret tC_p=%p %u=tIL_hung_max"
-          , aa->loop+aa->dly_us/10000.0,aa->tid,traceControl_p,traceInitLck_hung_max);
+{   TRACE( 0, "sub$last tid=%d loop=%.4f=dly ret tC_p=%p %u=tIL_hung_max"
+          , aa->tid,aa->loop+aa->dly_us/10000.0,traceControl_p,traceInitLck_hung_max);
 }
 EOF
 
@@ -171,7 +181,7 @@ cat >big_ex_main.cc <<EOF
 # elif defined(__APPLE__)
 #  define TRACE_GETTID SYS_thread_selfid
 # else
-#  define TRACE_GETTID SYS_gettid
+#  define TRACE_GETTID __NR_gettid
 # endif
 static inline pid_t ex_gettid(void) { return syscall(TRACE_GETTID); }
 #else
@@ -193,7 +203,7 @@ options:\n\
 -n<TRACE_NAME>\n\
 -f<TRACE_FILE>\n\
 -l<loops>\n\
--t<num_threads>\n\
+-t<num_threads>   # in addition to main program\n\
 -x<mask>  extra options - b0=count maps; b1=use sub-threads; b2=random delay in sub1 after 1st TRACE\n\
 ", basename(argv[0]), basename(argv[0])
 
@@ -207,16 +217,20 @@ void* thread_func(void *arg)
     long loops=args_p->loop; // initial "loops" from main
     struct args aa=*args_p;  // per thread copy -  initialize from main
     aa.tid=ex_gettid();
-    for (unsigned ii=0; ii<loops; ++ii)
-    {   TRACE( 0, "tf loop=%u tid=%d calling sub1 tC_p=%p %u=tIL_hung_max",ii,aa.tid,traceControl_p,traceInitLck_hung_max);
+    for (unsigned ii=0; ii<loops; ++ii) {
+        TRACE( 0, "tf tid=%d loop=%u calling sub1 tC_p=%p %u=tIL_hung_max",aa.tid,ii,traceControl_p,traceInitLck_hung_max);
         aa.loop=ii;
-        if (aa.xtra_options & 2)
-        {   pthread_t thread;
+        if (aa.xtra_options & 2) {
+            pthread_t thread;
+            TRACE( 1, "tf tid=%d loop xtra_option b1 - before pthread_create of sub-thread",aa.tid );
             pthread_create(&thread,NULL,(void*(*)(void*))sub1,(void*)&aa);
             pthread_join(thread, NULL);
         }
-        else
+        else {
+            TRACE( 1, "tf tid=%d loop before call to sub1",aa.tid );
             sub1(&aa);
+            TRACE( 1, "tf tid=%d loop after (returned from) call to sub1",aa.tid );
+        }
     }
     pthread_exit(NULL);
 }
@@ -306,7 +320,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     TRACE_MSGMAX=48
     TRACE_NUMENTS=$check_numents
     TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
-    rm -f $TRACE_FILE
+    rm -f $TRACE_FILE   # master reset :)
     echo check_opts=$check_opts
     uname=`uname`
     expect_static=`expr \( $opt_depth + 1 \) \* 2`
@@ -315,12 +329,13 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     while true; do
         echo Testing... $do_mapcheck
 
+        test -f big_ex_main.out && mv -f big_ex_main.out big_ex_main.out~
         time ./big_ex_main -njones -x1 $check_opts >big_ex_main.out 2>&1
         sts=$?
         test $sts -ne 0 && { echo ./big_ex_main FAILED - exit status: $sts; exit 1; }
 
         parallel_threads=`cat big_ex_main.out | sed -n -e '/num_threads/{s/.*num_threads= *//;s/ .*//;p;}'`
-        loops=`cat big_ex_main.out | sed -n -e '/loops/{s/.*loops= *//;s/ .*//;p;}'`
+        loops=`cat big_ex_main.out | sed -n -e '/before create/{s/.*loops= *//;s/ .*//;p;}'`
         num_maps=`cat big_ex_main.out | sed -n -e '/after join (#2) = /{s/.*= *//;p;}'`
         xtra_threads=`cat big_ex_main.out | sed -n -e '/xtra_threads/{s/.*xtra_threads= *//;s/ .*//;p;}'`
         test $xtra_threads -eq 0 && check_tids=`expr 1 + $parallel_threads` || check_tids=
@@ -334,9 +349,9 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         if [ -f $TRACE_FILE ];then
             trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
             uniq_addrs=`TRACE_SHOW=HxiICLR trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
-            sub10_tids=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 loop=/{print$2;}' | sort -u`
+            sub10_tids=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`
             test `echo "$sub10_tids" | wc -l` -eq 1 && sub10_tid=$sub10_tids || sub10_tid=-1
-            uniq_tids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -u | wc -l`
+            uniq_tids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -nu | wc -l`
         else
             echo "TRACE_FILE not found - FAIL will result"
             uniq_addrs=0 sub10_tid=0 uniq_tids=0
@@ -355,5 +370,5 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         trace_cntl reset
         do_mapcheck=`expr $do_mapcheck - 1`
     done
-    ls -l $TRACE_FILE
+    ls -l $TRACE_FILE big_ex_main.out*
 fi

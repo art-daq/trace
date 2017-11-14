@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 687 $$Date: 2017-11-10 13:18:46 -0600 (Fri, 10 Nov 2017) $"
+#define TRACE_CNTL_REV "$Revision: 691 $$Date: 2017-11-13 12:59:35 -0600 (Mon, 13 Nov 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -128,7 +128,10 @@ void* thread_func(void *arg)
 		if(dly_ms && (lp%burst)==0 && loops)
 			usleep( dly_ms*1000 );
 	}
-	pthread_exit(NULL);
+	if (argsp->tidx)
+		pthread_exit(NULL);
+	else
+		return (NULL);
 }
 
 
@@ -555,6 +558,11 @@ void traceInfo()
 	char           outstr[200];
 	struct tm      *tmp;
 	time_t         tt=(time_t)traceControl_p->create_tv_sec;
+	int            memlen=traceMemLen( cntlPagesSiz()
+	                                  ,traceControl_p->num_namLvlTblEnts
+	                                  ,traceControl_p->siz_msg
+	                                  ,traceControl_p->num_params
+	                                  ,traceControl_p->num_entries); /* for when buffer is vmalloc (kernel) or file mmapped (user), but not userspace inactive */ 
 	tmp = localtime( &tt );
 	if (tmp == NULL) { perror("localtime"); exit(EXIT_FAILURE); }
 	if (strftime(outstr, sizeof(outstr),"%a %b %d %H:%M:%S %Z %Y",tmp) == 0)
@@ -568,36 +576,36 @@ void traceInfo()
 	printf("trace.h rev       = %s\n"
 	       "revision          = %s\n"
 	       "create time       = %s\n"
-	       "trace_initialized =%d\n"
-	       "mode              =0x%-8x  %s%s\n"
-	       "writeIdxCount     =0x%08x  entries used: %u\n"
-	       "full              =%d\n"
-	       "nameLock          =%u\n"
-	       "largestMultiple   =0x%08x\n"
-	       "trigIdxCnt        =0x%08x\n"
-	       "triggered         =%d\n"
-	       "trigActivePost    =%u\n"
-	       "limit_cnt_limit   =%u\n"
-	       "limit_span_on_ms  =%llu\n"
-	       "limit_span_off_ms =%llu\n"
-	       "traceLevel        =0x%0*llx 0x%0*llx\n"
-	       "num_entries       =%u\n"
-	       "max_msg_sz        =%u  includes system enforced terminator\n"
-	       "max_params        =%u\n"
-	       "entry_size        =%u\n"
-	       "namLvlTbl_ents    =%u\n"
-	       "namLvlTbl_name_sz =%u\n"
-	       "longest_name      =%u\n"
-	       "wrIdxCnt offset   =%p\n"
-	       "namLvls offset    =0x%lx\n"
-	       "buffer_offset     =0x%lx\n"
-	       "memlen            =%u          %s\n"
+	       "trace_initialized = %d\n"
+	       "mode              = 0x%-8x  %s%s\n"
+	       "writeIdxCount     = 0x%08x  entries used: %u\n"
+	       "full              = %d\n"
+	       "nameLock          = %u\n"
+	       "largestMultiple   = 0x%08x\n"
+	       "trigIdxCnt        = 0x%08x\n"
+	       "triggered         = %d\n"
+	       "trigActivePost    = %u\n"
+	       "limit_cnt_limit   = %u\n"
+	       "limit_span_on_ms  = %llu\n"
+	       "limit_span_off_ms = %llu\n"
+	       "traceLevel        = 0x%0*llx 0x%0*llx\n"
+	       "num_entries       = %u\n"
+	       "max_msg_sz        = %u  includes system enforced terminator\n"
+	       "max_params        = %u\n"
+	       "entry_size        = %u\n"
+	       "namLvlTbl_ents    = %u\n"
+	       "namLvlTbl_name_sz = %u\n"
+	       "longest_name      = %u\n"
+	       "wrIdxCnt offset   = %p\n"
+	       "namLvls offset    = 0x%lx\n"
+	       "buffer_offset     = 0x%lx\n"
+	       "memlen            = %u          %s\n"
 	       "default TRACE_SHOW=%s others: t(tsc) B(paramBytes) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs) l(lvl int)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr
 	       , traceControl_p->trace_initialized
-	       , traceControl_rwp->mode.mode, traceControl_rwp->mode.bits.S?"Slow:ON, ":"Slow:off", traceControl_rwp->mode.bits.S?" Mem:ON":" Mem:off"
+	       , traceControl_rwp->mode.mode, traceControl_rwp->mode.bits.S?"Slow:ON, ":"Slow:off", traceControl_rwp->mode.bits.M?" Mem:ON":" Mem:off"
 	       , wrCopy, used
 	       , traceControl_rwp->full
 	       , nameLockCopy
@@ -608,7 +616,7 @@ void traceInfo()
 	       , traceControl_rwp->limit_cnt_limit
 	       , (unsigned long long)traceControl_rwp->limit_span_on_ms
 	       , (unsigned long long)traceControl_rwp->limit_span_off_ms
-	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M
+	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M /* sizeof(uint64_t)*2 is "nibbles" */
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].S
 	       , traceControl_p->num_entries
 	       , traceControl_p->siz_msg
@@ -621,11 +629,7 @@ void traceInfo()
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
 	       , traceControl_p->memlen
-	       , (traceControl_p->memlen >= traceMemLen( cntlPagesSiz()
-							,traceControl_p->num_namLvlTblEnts
-							,traceControl_p->siz_msg
-							,traceControl_p->num_params
-							,traceControl_p->num_entries))?"":"check fails"
+	       , (traceControl_p->memlen != memlen)?"not for mmap":""
 	       , DFLT_SHOW
 	       );
 }   /* traceInfo */
@@ -897,8 +901,9 @@ extern  int        optind;         /* for getopt */
 	else if (strcmp(cmd,"test-threads") == 0)
 	{	pthread_t *threads;
 		unsigned   num_threads=NUMTHREADS;
-		args_t    *argsp;
-		int loops=2;
+		args_t    *argsp, args0;
+		int        loops=2;
+		pid_t      main_tid=trace_gettid();
 		if (opt_loops > -1)
 			loops=opt_loops;
 		if (opt_burst == 0) {
@@ -912,15 +917,22 @@ extern  int        optind;         /* for getopt */
 		threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
 		argsp   =    (args_t*)malloc(num_threads*sizeof(args_t));
 
-		TRACE( 1, "before pthread_create - loops=%d, threads=%u, dly_ms=%u traceControl_p=%p"
-		      , loops, num_threads, opt_dly_ms, (void*)traceControl_p );
+		TRACE( 1, "before pthread_create - main_tid=%u loops=%d, threads=%u, dly_ms=%u traceControl_p=%p"
+		      , main_tid, loops, num_threads, opt_dly_ms, (void*)traceControl_p );
 		for (ii=0; ii<num_threads; ii++) {
-			argsp[ii].tidx   = ii;
+			argsp[ii].tidx   = ii+1;
 			argsp[ii].loops  = loops;
 			argsp[ii].dly_ms = opt_dly_ms;
 			argsp[ii].burst  = opt_burst;
 			pthread_create(&(threads[ii]),NULL,thread_func,(void*)&argsp[ii] );
 		}
+
+		args0.tidx   = 0;
+		args0.loops  = loops;
+		args0.dly_ms = opt_dly_ms;
+		args0.burst  = opt_burst;
+		thread_func( &args0 );
+
 		if (trace_thread_option & 4)
 		{   char          cmd[200];
 		    sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
@@ -938,7 +950,7 @@ extern  int        optind;         /* for getopt */
 		    sprintf( cmd, "echo trace_buffer mappings after join '(#2)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
 		    system( cmd );
 		}
-		TRACE( 1, "after pthread_join - traceControl_p=%p", (void*)traceControl_p );
+		TRACE( 1, "after pthread_join - main_tid=%u traceControl_p=%p", main_tid, (void*)traceControl_p );
 		free( threads );
 	}
 #	endif

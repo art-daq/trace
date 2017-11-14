@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 687 $$Date: 2017-11-10 13:18:46 -0600 (Fri, 10 Nov 2017) $"
+#define TRACE_REV  "$Revision: 693 $$Date: 2017-11-13 20:30:33 -0600 (Mon, 13 Nov 2017) $"
 
 #ifndef __KERNEL__
 
@@ -25,6 +25,7 @@
 # include <limits.h>		/* PATH_MAX */
 # include <stdlib.h>		/* getenv, setenv, strtoul */
 # include <ctype.h>			/* isspace, isgraph */
+# include <sys/uio.h>		/* struct iovec */
 
 # if   defined(__CYGWIN__)
 #  include <windows.h>
@@ -274,17 +275,16 @@ static const char *  TRACE_NAME=NULL;
 # define TRACE_( lvl, ... ) do {										\
 		TRACE_INIT_CHECK {												\
 			struct timeval lclTime; lclTime.tv_sec = 0;				\
-			std::ostringstream ostr__;									\
-			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl))) { \
-				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);			\
-				trace( &lclTime,traceTID, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
-				      , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) );	\
-			}															\
-			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl))) {	\
-				TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
-					if (ostr__.tellp() == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); } \
-					TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, "", TRACE_NARGS(__VA_ARGS__) \
-					                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl));\
+			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl));\
+			if (do_s || do_m) { std::ostringstream ostr__; /*instance creation is heavy weight*/ \
+				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
+				if(do_m) trace( &lclTime,traceTID, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
+				               , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+				if(do_s){TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
+						TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, "", TRACE_NARGS(__VA_ARGS__) \
+						                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+					}													\
 				}														\
 			}															\
         }																\
@@ -293,17 +293,16 @@ static const char *  TRACE_NAME=NULL;
 		TRACE_INIT_CHECK {												\
 			static TRACE_THREAD_LOCAL int tid_=-1; struct timeval lclTime;				\
 			if(tid_==-1)tid_=name2TID(nam);	lclTime.tv_sec = 0;			\
-			std::ostringstream ostr__;									\
-			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl))) { \
-				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);			\
-				trace( &lclTime,tid_, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
-				      , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) );	\
-			}															\
-			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl))) {	\
-				TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
-					if (ostr__.tellp() == 0) { ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx); } \
-					TRACE_LOG_FUNCTION( &lclTime, tid_, lvl, "", TRACE_NARGS(__VA_ARGS__) \
-					                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));\
+			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl));\
+			if (do_s || do_m) { std::ostringstream ostr__; /*instance creation is heavy weight*/ \
+				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
+				if(do_m) trace( &lclTime,tid_, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
+				               , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+				if(do_s){TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
+						TRACE_LOG_FUNCTION( &lclTime, tid_, lvl, "", TRACE_NARGS(__VA_ARGS__) \
+						                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+					}													\
 				}														\
 			}															\
         }																\
@@ -742,6 +741,8 @@ static void vtrace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const cha
 # endif
 	strftime( tbuf, sizeof(tbuf), tracePrintFmt, &tm_s );
 	printed = snprintf( obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec ); /* possibly (probably) add usecs */
+
+# if 1
 	printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
 	                    , &(" %*s %s %s")[printed==0?1:0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
 	                    , traceControl_rwp->longest_name,traceNamLvls_p[TrcId].name
@@ -790,6 +791,79 @@ static void vtrace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const cha
 			/*printf("changed \\0 to \\n printed=%d\n",);*/
 		}
 	}
+# else
+	/* NOTE: even though man pages seem to indicate the single writev should be atomic:
+	   ...
+       The data transfers performed by readv() and writev()  are  atomic:  the
+       data  written  by  writev()  is  written  as a single block that is not
+       intermingled with output  from  writes  in  other  processes  (but  see
+       pipe(7) for an exception); analogously, readv() is guaranteed to read a
+       contiguous block of data from the file, regardless of  read  operations
+       performed  in  other  threads  or  processes that have file descriptors
+       referring to the same open file description (see open(2)).
+	   ...
+
+	   The above man page appears to be wrong, at least for SL7 -
+	   Linux mu2edaq01.fnal.gov 3.10.0-514.10.2.el7.x86_64 #1 SMP Thu Mar 2 11:21:24 CST 2017 x86_64 x86_64 x86_64 GNU/Linux
+
+/home/ron/work/tracePrj/trace
+mu2edaq01 :^) tcntl test-threads 0 -l5 & tcntl test-threads 0 -l5 & tcntl test-threads 0 -l5
+[3] 28144
+[4] 28145
+11-13 10:31:23.604651    TRACE wrn 11-13 10:31:23.604651    TRACE wrn before pthread_create - main_tid=28146 loops=5, threads=0, dly_ms=0 traceControl_p=0x613740before pthread_create - main_tid=28147 loops=5, threads=0, dly_ms=0 traceControl_p=0x613740
+
+11-13 10:31:23.604736    TRACE inf 11-13 10:31:23.604736    TRACE inf tidx=0 loop=1 of 5 tid=28146 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message manglingtidx=0 loop=1 of 5 tid=28147 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
+
+11-13 10:31:23.604746    TRACE inf 11-13 10:31:23.604747    TRACE inf tidx=0 loop=1 of 5 tid=28146 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9tidx=0 loop=1 of 5 tid=28147 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
+
+11-13 10:31:23.604762     TRACE inf 11-13 10:31:23.604762     TRACE inf tidx=0 loop=2 of 5 tid=28146 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message manglingtidx=0 loop=2 of 5 tid=28147 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
+
+11-13 10:31:23.604772     TRACE inf 11-13 10:31:23.604773     TRACE inf tidx=0 loop=2 of 5 tid=28146 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9tidx=0 loop=2 of 5 tid=28147 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
+
+11-13 10:31:23.604780     TRACE inf 11-13 10:31:23.604781     TRACE inf tidx=0 loop=3 of 5 tid=28146 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message manglingtidx=0 loop=3 of 5 tid=28147 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
+...
+11-13 10:31:23.604895     TRACE inf tidx=0 loop=4 of 5 tid=28148 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
+11-13 10:31:23.605072     TRACE inf tidx=0 loop=5 of 5 tid=28148 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
+11-13 10:31:23.605077     TRACE inf tidx=0 loop=5 of 5 tid=28148 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
+11-13 10:31:23.605082     TRACE wrn after pthread_join - main_tid=28148 traceControl_p=0x613740
+--2017-11-13_10:31:23--
+	*/
+	{
+		struct iovec  iov[6]; int iovcnt=0;
+		printed += snprintf( &(obuf[printed]), sizeof(obuf)-printed
+		                    , &(" %*s %s ")[printed==0?1:0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
+		                    , traceControl_rwp->longest_name,traceNamLvls_p[TrcId].name
+		                    , _lvlstr[lvl&LVLBITSMSK]?_lvlstr[lvl&LVLBITSMSK]:"" );
+		iov[iovcnt  ].iov_base = obuf;
+		iov[iovcnt++].iov_len  = printed;
+		if (insert && insert[0]) {
+			iov[iovcnt  ].iov_base = (void*)insert;
+			iov[iovcnt++].iov_len  = strlen(insert);
+		}
+		if (nargs) {
+			int sts;
+			iov[iovcnt  ].iov_base = &(obuf[printed]);
+			sts = vsnprintf( &(obuf[printed])
+			                , (printed<(int)sizeof(obuf))?sizeof(obuf)-printed:0
+			                , msg, ap );
+			if (obuf[printed+sts-1] == '\n')
+				iov[iovcnt++].iov_len  = sts-1;
+			else
+				iov[iovcnt++].iov_len  = sts;
+		} else {
+			int len=strlen(msg);
+			iov[iovcnt  ].iov_base = (void*)msg;
+			iov[iovcnt++].iov_len  = msg[len-1]=='\n'?len-1:len;
+		}
+		if (tracePrintEndLen) {
+			iov[iovcnt  ].iov_base = (void*)tracePrintEndL;
+			iov[iovcnt++].iov_len  = tracePrintEndLen;
+		}
+		iov[iovcnt  ].iov_base = (void*)"\n";
+		iov[iovcnt++].iov_len  = 1;
+		quiet_warn += writev( tracePrintFd, iov, iovcnt );
+	}
+# endif
 #endif
 }   /* vtrace_user */
 SUPPRESS_NOT_USED_WARN
@@ -1581,8 +1655,7 @@ static int traceInit( const char *_name )
 		{
 #       define DISABLED_ENTS 1
 			trace_created_init( traceControl_p, traceControl_rwp
-			                   , msgmax_
-			                   , argsmax_
+			                   , msgmax_, argsmax_
 			                   , DISABLED_ENTS /*numents_*/
 			                   , ((sizeof(traceControl)-sizeof(traceControl[0])
 							       -DISABLED_ENTS*entSiz(msgmax_,argsmax_))

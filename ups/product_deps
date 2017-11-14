@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent TRACE v3_11_00
+parent TRACE v3_11_01
 
 # These optional lines define the installed directories where
 # headers, libraries, and executables will be found
@@ -56,8 +56,8 @@ endif ( test $?shell = 1 )
 	addAlias( tmode,   ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl mode %s )
 	addAlias( tmodeM,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM %s )
 	addAlias( tmodeS,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS %s )
-	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 )
-	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset )
+	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 %s )
+	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset %s )
 	addAlias( tdelta,  set__ opts=%s;tnotnull_ PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_delta.pl $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_delta.pl $opts )
 	addAlias( tenv,    ${${UPS_PROD_NAME_UC}_BIN}/trace_envvars.sh %s )
 	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 1 )

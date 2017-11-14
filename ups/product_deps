@@ -11,6 +11,7 @@ parent TRACE v3_11_01
 # The third field is not constrained.
 # Defaults:
 #incdir  product_dir
+fcldir      -
 
 product		version
 cetbuildtools   v5_08_01   -      only_for_build

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 691 $$Date: 2017-11-13 12:59:35 -0600 (Mon, 13 Nov 2017) $"
+#define TRACE_CNTL_REV "$Revision: 696 $$Date: 2017-11-14 17:02:34 -0600 (Tue, 14 Nov 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -823,6 +823,7 @@ extern  int        optind;         /* for getopt */
         setlocale(LC_NUMERIC,"en_US");  /* make ' printf flag work -- setting LC_NUMERIC in env does not seem to work */
 
 		TRACE_CNTL("mode",3LL);
+		traceControl_rwp->mode.bits.M = 1;		   // NOTE: TRACE_CNTL("modeM",1LL) hardwired to NOT enable when not mapped!
 
 #      define STRT_FMT "%-50s"
 #	   define END_FMT  "%'10llu us (%5.3f us/TRACE)\n",delta,(double)delta/loops

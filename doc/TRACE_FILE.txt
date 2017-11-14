@@ -1,0 +1,13 @@
+The current default is to put the trace buffer file in /tmp.
+The best place for a buffer file would be a ramdisk (i.e. tmpfs); this would
+avoid the periodic writing of dirty trace buffer pages to disk, buf, of course,
+the file would not be persistent.
+In SL7, the user is given a tmpfs: /run/user/`id -u`/
+It is usually big enough for the default trace buffer size.
+If it needs to be bigger, the standard way of controlling the size of
+/run/user/`id -u`/ is the RuntimeDirectorySize directive in
+/etc/systemd/logind.conf (see the man page for logind.conf for more info).
+
+
+A trace buffer file can be in nfs, but multinode operation is not supported
+and buffer corruption will occur.

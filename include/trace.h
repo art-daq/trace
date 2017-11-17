@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 693 $$Date: 2017-11-13 20:30:33 -0600 (Mon, 13 Nov 2017) $"
+#define TRACE_REV  "$Revision: 702 $$Date: 2017-11-17 00:05:11 -0600 (Fri, 17 Nov 2017) $"
 
 #ifndef __KERNEL__
 
@@ -417,11 +417,11 @@ struct traceControl_rw {
 	int32_t       triggered;
 	uint32_t	  trigActivePost;
 	int32_t       full;
-	uint64_t      limit_span_on_ms;
-	uint64_t      limit_span_off_ms;
+	uint32_t      limit_span_on_ms; /* 4 billion ms is 49 days */
+	uint32_t      limit_span_off_ms;
 	uint32_t      limit_cnt_limit;
 	uint32_t      longest_name;    /* helps with trace_user if printing names */
-	uint32_t      xtra[TRACE_CACHELINE/sizeof(int32_t)-12]; /* force some sort of alignment -- taking into account the 6 fields (above) since the last cache line alignment */
+	uint32_t      xtra[TRACE_CACHELINE/sizeof(int32_t)-10]; /* force some sort of alignment -- taking into account the 6 fields (above) since the last cache line alignment */
 };
 struct traceControl_s {
     trace_vers_t   version_string;
@@ -1079,10 +1079,10 @@ static void trace_namLvlSet( void )
 		int                 ign; /* will ignore trace id (index) if present */
 		char                name[TRACE_DFLT_NAM_SZ+1];
 		unsigned long long  M,S,T=0;
-		while (   ((sts=sscanf(cp,"%d %" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx %llx",&ign,name,&M,&S,&T))&&sts==5)
-		       || ((sts=sscanf(cp,"%" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx %llx",           name,&M,&S,&T))&&sts==4)
-		       || ((sts=sscanf(cp,"%" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx",                name,&M,&S   ))&&sts==3)) {
+		while (   ((sts=sscanf(cp,"%d %" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx %llx",&ign,name,&M,&S,&T))&&sts>=4)
+		       || ((sts=sscanf(cp,   "%" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx %llx",     name,&M,&S,&T))&&sts>=3)) {
 			int tid=name2TID(name);
+			/*fprintf(stderr,"name=%s sts=%d\n",name,sts );*/
 			traceNamLvls_p[tid].M = M;
 			traceNamLvls_p[tid].S = S;
 			traceNamLvls_p[tid].T = T;
@@ -1313,7 +1313,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 			= 0;
 		TRACE_ATOMIC_STORE( &traceControl_rwp->wrIdxCnt, (uint32_t)0 );
 		traceControl_rwp->triggered = 0;
-	} else if (strcmp(cmd,"limit") == 0) { /* 2 or 3 args: limit_cnt, span_on_ms, [span_off_ms] */
+	} else if (strcmp(cmd,"limit_ms") == 0) { /* 2 or 3 args: limit_cnt, span_on_ms, [span_off_ms] */
 		if (nargs>=2 && nargs<=3) {
 			traceControl_rwp->limit_cnt_limit  = va_arg(ap,uint64_t);
 			traceControl_rwp->limit_span_on_ms = va_arg(ap,uint64_t);

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 696 $$Date: 2017-11-14 17:02:34 -0600 (Tue, 14 Nov 2017) $"
+#define TRACE_CNTL_REV "$Revision: 705 $$Date: 2017-11-17 12:41:32 -0600 (Fri, 17 Nov 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -599,7 +599,7 @@ void traceInfo()
 	       "wrIdxCnt offset   = %p\n"
 	       "namLvls offset    = 0x%lx\n"
 	       "buffer_offset     = 0x%lx\n"
-	       "memlen            = %u          %s\n"
+	       "memlen            = 0x%x          %s\n"
 	       "default TRACE_SHOW=%s others: t(tsc) B(paramBytes) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs) l(lvl int)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
@@ -626,8 +626,8 @@ void traceInfo()
 	       , (int)sizeof(traceNamLvls_p[0].name)
 	       , traceControl_rwp->longest_name
 	       , (void*)&((struct traceControl_s*)0)->rw.wrIdxCnt
-	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_p
-	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_p
+	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_rwp
+	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_rwp
 	       , traceControl_p->memlen
 	       , (traceControl_p->memlen != memlen)?"not for mmap":""
 	       , DFLT_SHOW

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 702 $$Date: 2017-11-17 00:05:11 -0600 (Fri, 17 Nov 2017) $"
+#define TRACE_REV  "$Revision: 705 $$Date: 2017-11-17 12:41:32 -0600 (Fri, 17 Nov 2017) $"
 
 #ifndef __KERNEL__
 
@@ -1156,6 +1156,10 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		else
 			trace_namLvlSet();  /* recall trace_namLvlSet(). optional name, if given, is ignored */
 		va_end(ap); return (0);
+	} else if (strcmp(cmd,"mapped") == 0) {
+		TRACE_INIT_CHECK {};
+		ret = (traceControl_p!=&traceControl[0]); /* compatible with define TRACE_CNTL(...) (0) */
+		va_end(ap); return (ret);
 	}
 #endif
 	TRACE_INIT_CHECK {};     /* note: allows name2TID to be called in userspace */
@@ -1314,7 +1318,10 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		TRACE_ATOMIC_STORE( &traceControl_rwp->wrIdxCnt, (uint32_t)0 );
 		traceControl_rwp->triggered = 0;
 	} else if (strcmp(cmd,"limit_ms") == 0) { /* 2 or 3 args: limit_cnt, span_on_ms, [span_off_ms] */
-		if (nargs>=2 && nargs<=3) {
+		if (nargs == 0) {
+			ret = traceControl_rwp->limit_cnt_limit;
+		} else if (nargs>=2 && nargs<=3) {
+			ret = traceControl_rwp->limit_cnt_limit;
 			traceControl_rwp->limit_cnt_limit  = va_arg(ap,uint64_t);
 			traceControl_rwp->limit_span_on_ms = va_arg(ap,uint64_t);
 			if (nargs == 3)
@@ -1322,7 +1329,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 			else
 				traceControl_rwp->limit_span_off_ms = traceControl_rwp->limit_span_on_ms;
 		} else {
-			TRACE_PRINT("limit needs 2 or 3 args (cnt,span_of[,span_off]) %d given\n",nargs);va_end(ap); return (-1);
+			TRACE_PRINT("limit needs 0 or 2 or 3 args (cnt,span_of[,span_off]) %d given\n",nargs);va_end(ap); return (-1);
 		}
 	} else {
 		ret = -1;

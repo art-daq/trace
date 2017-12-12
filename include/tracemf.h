@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 716 $$Date: 2017-12-12 11:40:21 -0600 (Tue, 12 Dec 2017) $";
+ // rev="$Revision: 723 $$Date: 2017-12-12 12:57:46 -0600 (Tue, 12 Dec 2017) $";
  */
 /** 
  * \file tracemf.h
@@ -79,6 +79,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	va_end(ap);
 }
 
+SUPPRESS_NOT_USED_WARN
 static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;

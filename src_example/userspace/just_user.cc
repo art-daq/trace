@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 666 $$Date: 2017-11-03 15:38:16 -0500 (Fri, 03 Nov 2017) $";
+char const *rev="$Revision: 716 $$Date: 2017-12-12 11:40:21 -0600 (Tue, 12 Dec 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -18,25 +18,11 @@ char const *rev="$Revision: 666 $$Date: 2017-11-03 15:38:16 -0500 (Fri, 03 Nov 2
 #include <stdlib.h>
 
 #if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
+void my_log(uint16_t nargs, std::string  msg,...);
 # define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)          my_log( nargs, __VA_ARGS__ )
 #endif
 
 #include "trace.h"		/* TRACE */
-
-
-// copy to/from include/tracemf.h
-#define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
-	{static int tid_=-1; if(tid_==-1)tid_=name2TID(std::string(name).c_str());  int lvl_ = lvl; \
-	bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
-	bool do_s = traceControl_rwp->mode.bits.S && (force_s || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
-	if(do_s || do_m)  { std::ostringstream o;o
-
-#define TRACE_ENDL ""; \
-	   struct timeval lclTime; lclTime.tv_sec = 0;			\
-		if(do_m) trace( &lclTime,tid_, lvl_, 0 TRACE_XTRA_PASSED,o.str() ); \
-		if(do_s) TRACE_LOG_FUNCTION( &lclTime, tid_, lvl_, "", 0,o.str() ); \
-	}}}
-#define TLOG_ENDL TRACE_ENDL
 
 #define USAGE "\
   usage: %s [-t <test>]\n\

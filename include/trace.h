@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 705 $$Date: 2017-11-17 12:41:32 -0600 (Fri, 17 Nov 2017) $"
+#define TRACE_REV  "$Revision: 716 $$Date: 2017-12-12 11:40:21 -0600 (Tue, 12 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -58,8 +58,10 @@ static inline pid_t trace_gettid(void) { return syscall(TRACE_GETTID); }
 #  define PATH_MAX 1024  /* conservative */
 # endif
 # ifdef __cplusplus
-#  include <sstream> /* std::ostringstream */
 #  include <string>
+#  include <sstream> /* std::ostringstream */
+#  include <array>
+#  include <iomanip>
 # endif
 
 # if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
@@ -876,7 +878,7 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 }   /* trace_user - const char* */
 #ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, std::string& msg, ... )
+static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const std::string& msg, ... )
 {
     va_list ap;
 	va_start( ap, msg );
@@ -1765,5 +1767,274 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
     off = idx * traceControl_p->siz_entry;
     return (struct traceEntryHdr_s *)((char*)traceEntries_p+off);
 }   /* idxCnt2entPtr */
+
+
+#ifdef __cplusplus
+
+// "static int tid_" is thread safe in so far as multiple threads may init,
+// but will init with same value.
+#define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
+	{static TRACE_THREAD_LOCAL int tid_ =-1;if (tid_ == -1)tid_ = name2TID(std::string(name).c_str()); \
+     static TRACE_THREAD_LOCAL TraceStreamer s; s.init(tid_, lvl, force_s)
+
+#define TRACE_ENDL ""; s.str();}}
+#define TLOG_ENDL TRACE_ENDL
+
+#ifdef __OPTIMIZE__
+# define DEBUG_FORCED 0
+#else
+# define DEBUG_FORCED 1
+#endif
+
+#define TLVL_ERROR        0
+#define TLVL_WARNING      1
+#define TLVL_INFO         2
+#define TLVL_DEBUG        3
+#define TLVL_TRACE        4
+#define TLOG_ERROR(name) TRACE_STREAMER(TLVL_ERROR, name, 1)
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled())
+#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled())
+#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled() && DEBUG_FORCED)
+#define TLOG_TRACE(name) TRACE_STREAMER(TLVL_TRACE, name,0)
+#define TLOG_DBG(lvl,name) TRACE_STREAMER(lvl,name,0)
+#define TLOG_ARB(lvl,name) TRACE_STREAMER(lvl,name,0)
+#define TRACE_STREAMER_ARGSMAX 35
+#define TRACE_STREAMER_MSGMAX 300
+#define TRACE_STREAMER_DEBUG 0
+#define TRACE_STREAMER_TEMPLATE 1
+#define TRACE_STREAMER_EXPAND(args) args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7],args[8],args[9] \
+                                   ,args[10],args[11],args[12],args[13],args[14],args[15],args[16],args[17],args[18],args[19] \
+								   ,args[20],args[21],args[22],args[23],args[24],args[25],args[26],args[27],args[28],args[29] \
+                                   ,args[30],args[31],args[32],args[33],args[34]
+
+struct TraceStreamer : std::ios {
+	union arg {
+		int i;
+		double d;
+		long unsigned int u;
+		long int l;
+		void* p;
+	};
+	std::string msg;
+	arg  args[TRACE_STREAMER_ARGSMAX];
+	size_t argCount;
+	int tid_;
+	int lvl_;
+	bool do_s;
+	bool do_m;
+	bool enabled;
+	std::string widthStr;
+	std::string precisionStr;
+public:
+
+	explicit TraceStreamer() : argCount(0)
+	{
+		msg.reserve(TRACE_STREAMER_MSGMAX);
+#      if TRACE_STREAMER_DEBUG
+		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl;
+#      endif
+	}
+
+	inline TraceStreamer& init(int tid, int lvl, bool force_s)
+	{
+		TRACE_INIT_CHECK {
+			msg = "";
+			argCount = 0;
+			tid_ = tid;
+			lvl_ = lvl;
+			do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));
+			do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));
+			enabled = do_s || do_m;
+		}
+		return *this;
+	}
+
+	inline void str()
+	{
+#      if TRACE_STREAMER_DEBUG
+		std::cout << "Message is " << msg << std::endl;
+#      endif
+		struct timeval lclTime; lclTime.tv_sec = 0;
+		if (do_m) trace(&lclTime, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
+		if (do_s) {
+			TRACE_LIMIT_SLOW(_insert, &lclTime) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, argCount, msg, TRACE_STREAMER_EXPAND(args));
+		}
+	}
+
+	inline void format(bool isFloat, bool isUnsigned, std::string length, std::ios::fmtflags flags)
+	{	//See, for example: http://www.cplusplus.com/reference/cstdio/printf/
+		msg += "%";
+
+		// Flags
+		if (flags & left) { msg += "-"; }
+		if (flags & showpos) { msg += "+"; }
+		if (flags & (showpoint | showbase)) { msg += "#"; } // INCLUSIVE OR
+
+		// Width
+		msg += widthStr;
+
+		if (isFloat) {
+			// Precision
+			msg += (precisionStr.size() ? "." + precisionStr : "") + length;
+
+			if ((flags & (fixed | scientific)) == (fixed | scientific)) /*AND*/ { msg += flags & uppercase ? "A" : "a"; }
+			else if (flags & fixed) { msg += flags & uppercase ? "F" : "f"; }
+			else if (flags & scientific) { msg += flags & uppercase ? "E" : "e"; }
+			else { msg += flags & uppercase ? "G" : "g"; }
+		} else {
+			msg += length;
+			if (isUnsigned) {
+				if (flags & hex) { msg += flags & uppercase ? "X" : "x"; }
+				else if (flags & oct) { msg += "o"; }
+				else { msg += "u"; }
+			} else
+				msg += "d";
+		}
+	}
+
+	inline TraceStreamer& width(int y)
+	{	if (y != _M_width) {
+			_M_width = y;
+			widthStr = std::to_string(y);
+#          if TRACE_STREAMER_DEBUG
+			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
+#          endif
+		}
+		return *this;
+	}
+
+	inline TraceStreamer& precision(int y)
+	{	if (y != _M_precision) {
+			_M_precision = y;
+			precisionStr = std::to_string(y);
+#          if TRACE_STREAMER_DEBUG
+			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
+#          endif
+		}
+		return *this;
+	}
+
+	inline TraceStreamer& operator<<(std::_Setprecision __f)
+	{
+		precision(__f._M_n);
+		return *this;
+	}
+
+	inline TraceStreamer& operator<<(std::_Setw __f)
+	{
+		width(__f._M_n);
+		return *this;
+	}
+
+	// necessary for std::hex, std::dec
+	typedef std::ios_base& (*manipulator)(std::ios_base&);
+	inline TraceStreamer& operator<<(manipulator r)
+	{	r(*this);
+		return *this;
+	}
+
+	inline TraceStreamer& operator<<(void* const& p) // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
+	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { msg += "%p";    args[argCount++].p = p; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const bool& b)
+	{	if (enabled) {
+			if (_M_flags & boolalpha) {
+				msg += (b ? "true" : "false");
+			} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg += "%d";    args[argCount++].i = b; }
+		}
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const int& r)
+	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"", _M_flags); args[argCount++].i = r; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const long int& r)
+	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"l",_M_flags); args[argCount++].l = r; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const unsigned int& r)
+	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "", _M_flags); args[argCount++].u = r; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const long unsigned int& r)
+	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = r; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const double& r)
+	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(true, false,"", _M_flags); args[argCount++].d = r; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const std::string& s)
+	{	if (enabled) { msg += s; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(char const* s)
+	{	if (enabled) { msg += s; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(char* s)
+	{	if (enabled) { msg += s; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(std::atomic<unsigned long> const& a)
+	{
+		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = a.load(); }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(std::atomic<short int> const& a)
+	{
+		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"h",_M_flags); args[argCount++].i = a.load(); }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(std::atomic<bool> const& a)
+	{	if (enabled) {
+			if (_M_flags & boolalpha) {
+				msg += (a.load() ? "true" : "false");
+			} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg += "%d";    args[argCount++].i = a.load(); }
+		}
+		return *this;
+	}
+	// compiler asked for this -- can't think of why or when it will be used, but do the reasonable thing (append format and append args)
+	inline TraceStreamer& operator<<(const TraceStreamer& r)
+	{	if (enabled) {
+			for (size_t ii = argCount; ii < (argCount + (  r.argCount < TRACE_STREAMER_ARGSMAX
+			                                             ? argCount + r.argCount
+			                                             : TRACE_STREAMER_ARGSMAX) ); ++ii) {
+				args[ii] = r.args[ii - argCount];
+			}
+			argCount = argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX;
+
+			msg += r.msg;
+		}
+		return *this;
+	}
+
+	////https://stackoverflow.com/questions/1134388/stdendl-is-of-unknown-type-when-overloading-operator
+	/// https://stackoverflow.com/questions/2212776/overload-handling-of-stdendl
+	typedef std::ostream& (*ostream_manipulator)(std::ostream&);
+
+	inline TraceStreamer& operator<<(ostream_manipulator f)
+	{
+		if (f == (std::basic_ostream<char>& (*)(std::basic_ostream<char>&)) &std::endl)
+			msg += "\n";
+		return *this;
+	}
+
+#  if TRACE_STREAMER_TEMPLATE
+    // This is heavy weight (instantiation of stringstream); hopefully will not be done too often or not at all
+	template<typename T>
+	inline TraceStreamer& operator<<(const T& t)
+	{
+#      if DEBUG_FORCED
+		std::cerr << "WARNING: " << __PRETTY_FUNCTION__ << " TEMPLATE CALLED: Consider implementing a function with this signature!" << std::endl;
+#      endif
+		if (enabled) { std::stringstream s; s << t; msg += s.str(); }
+		return *this;
+	}
+#  endif
+};
+
+#endif /* __cplusplus */
 
 #endif /* TRACE_H_5216 */

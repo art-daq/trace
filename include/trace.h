@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 716 $$Date: 2017-12-12 11:40:21 -0600 (Tue, 12 Dec 2017) $"
+#define TRACE_REV  "$Revision: 719 $$Date: 2017-12-12 11:58:43 -0600 (Tue, 12 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -60,6 +60,7 @@ static inline pid_t trace_gettid(void) { return syscall(TRACE_GETTID); }
 # ifdef __cplusplus
 #  include <string>
 #  include <sstream> /* std::ostringstream */
+#  include <iostream>			// cerr
 #  include <array>
 #  include <iomanip>
 # endif

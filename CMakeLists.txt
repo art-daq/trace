@@ -23,6 +23,7 @@ cet_cmake_env()
 
 cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros
                        EXTRA_C_FLAGS -std=gnu11 -D_GNU_SOURCE)
+set(CMAKE_CXX_FLAGS "-std=c++11 -O2 -pedantic -Wno-variadic-macros")
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions

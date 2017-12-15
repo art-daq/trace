@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 723 $$Date: 2017-12-12 12:57:46 -0600 (Tue, 12 Dec 2017) $";
+ // rev="$Revision: 729 $$Date: 2017-12-15 02:22:57 -0600 (Fri, 15 Dec 2017) $";
  */
 /** 
  * \file tracemf.h
@@ -20,10 +20,11 @@
 // for the "slow" tracing function (if appropriate mask bit is set :)
 #include <stdint.h>				// uint16_t
 #include <string>				// std::string
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...);
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...);
+#define TRACE_LOG_FUN_PROTO \
+static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...);\
+static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
 # undef TRACE_LOG_FUNCTION
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)  mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs, __VA_ARGS__ )
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)  mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
 # include "trace.h"		/* TRACE */
 
 # include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
@@ -71,7 +72,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -80,7 +81,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -91,7 +92,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 
 inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception y)
 {
-	if (x.enabled) { x.msg += y.what(); }
+	x.msg_append( y.what() );
 	return x;
 }
 

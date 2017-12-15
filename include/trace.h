@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 719 $$Date: 2017-12-12 11:58:43 -0600 (Tue, 12 Dec 2017) $"
+#define TRACE_REV  "$Revision: 730 $$Date: 2017-12-15 03:10:23 -0600 (Fri, 15 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -167,8 +167,8 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 #endif /* __KERNEL__ */
 
 
-/* 88,7=192 bytes/ent   96,6=192   128,10=256*/
-#define TRACE_DFLT_MAX_MSG_SZ      128
+/* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
+#define TRACE_DFLT_MAX_MSG_SZ      192
 #define TRACE_DFLT_MAX_PARAMS       10
 #define TRACE_DFLT_NAMTBL_ENTS     127  /* this is for creating new trace_buffer file --
 										   it currently matches the "trace DISABLED" number that
@@ -177,7 +177,7 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 										  40 was the value with 8K pages which gave 127 NAMTBL_ENTS with "trace DISBALED".
 										  Search for trace_created_init(...) call in "DISABLE" case.
 										  Names can have this many characters (not including null terminator) */
-#define TRACE_DFLT_NUM_ENTRIES   50000
+#define TRACE_DFLT_NUM_ENTRIES   100000
 #define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S.%%06d"   /* match default in trace_delta.pl */
 #ifdef __KERNEL__
 # define TRACE_DFLT_NAME        "KERNEL"
@@ -588,7 +588,10 @@ static uint32_t IDXCNT_ADD( uint32_t idxCnt, int32_t add )
     )
 
 #ifndef TRACE_LOG_FUNCTION
-#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)          trace_user( tvp,tid,lvl,insert,nargs,__VA_ARGS__ )
+#  define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)          trace_user( tvp,tid,lvl,insert,nargs TRACE_XTRA_PASSED,__VA_ARGS__ )
+#elif defined(TRACE_LOG_FUN_PROTO)
+/* prototype for TRACE_LOG_FUNCTION as compiled in Streamer class below */
+TRACE_LOG_FUN_PROTO;
 #endif /* TRACE_LOG_FUNCTION */
 
 
@@ -870,7 +873,7 @@ mu2edaq01 :^) tcntl test-threads 0 -l5 & tcntl test-threads 0 -l5 & tcntl test-t
 #endif
 }   /* vtrace_user */
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const char *msg, ... )
+static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ... )
 {
 	va_list ap;
 	va_start( ap, msg );
@@ -879,7 +882,7 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 }   /* trace_user - const char* */
 #ifdef __cplusplus
 SUPPRESS_NOT_USED_WARN
-static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const std::string& msg, ... )
+static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ... )
 {
     va_list ap;
 	va_start( ap, msg );
@@ -1358,7 +1361,7 @@ static void trace_created_init(  struct traceControl_s *t_p
     struct timeval tv;
     TRACE_GETTIMEOFDAY( &tv );
 # ifdef TRACE_DEBUG_INIT
-    trace_user( &tv,0,0,1,"trace_created_init: tC_p=%p",t_p );
+    trace_user( &tv,0,0,1 TRACE_XTRA_PASSED,"trace_created_init: tC_p=%p",t_p );
 # endif
     strncpy( t_p->version_string, TRACE_REV, sizeof(t_p->version_string) );
     t_p->version_string[sizeof(t_p->version_string)-1] = '\0';
@@ -1394,7 +1397,7 @@ static void trace_created_init(  struct traceControl_s *t_p
     t_p->trace_initialized = 1;
 # ifdef TRACE_DEBUG_INIT
     tv.tv_sec=0;
-    trace_user( &tv,0,0,"trace_created_init: tC_p=%p",t_p );
+    trace_user( &tv,0,0,1 TRACE_XTRA_PASSED,"trace_created_init: tC_p=%p",t_p );
 # endif
 }   /* trace_created_init */
 
@@ -1776,7 +1779,9 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 // but will init with same value.
 #define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
 	{static TRACE_THREAD_LOCAL int tid_ =-1;if (tid_ == -1)tid_ = name2TID(std::string(name).c_str()); \
-     static TRACE_THREAD_LOCAL TraceStreamer s; s.init(tid_, lvl, force_s)
+	 bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));\
+	 bool do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));\
+	 static TRACE_THREAD_LOCAL TraceStreamer s; if(do_m||do_s) s.init(tid_, lvl, force_s)
 
 #define TRACE_ENDL ""; s.str();}}
 #define TLOG_ENDL TRACE_ENDL
@@ -1800,13 +1805,15 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 #define TLOG_DBG(lvl,name) TRACE_STREAMER(lvl,name,0)
 #define TLOG_ARB(lvl,name) TRACE_STREAMER(lvl,name,0)
 #define TRACE_STREAMER_ARGSMAX 35
-#define TRACE_STREAMER_MSGMAX 300
+#define TRACE_STREAMER_MSGMAX 0x1800
 #define TRACE_STREAMER_DEBUG 0
 #define TRACE_STREAMER_TEMPLATE 1
 #define TRACE_STREAMER_EXPAND(args) args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7],args[8],args[9] \
                                    ,args[10],args[11],args[12],args[13],args[14],args[15],args[16],args[17],args[18],args[19] \
 								   ,args[20],args[21],args[22],args[23],args[24],args[25],args[26],args[27],args[28],args[29] \
                                    ,args[30],args[31],args[32],args[33],args[34]
+
+#define Min(a,b) (((a)<(b))?(a):(b))
 
 struct TraceStreamer : std::ios {
 	union arg {
@@ -1816,21 +1823,20 @@ struct TraceStreamer : std::ios {
 		long int l;
 		void* p;
 	};
-	std::string msg;
-	arg  args[TRACE_STREAMER_ARGSMAX];
+	char   msg[TRACE_STREAMER_MSGMAX];
+	size_t msg_sz;
+	arg    args[TRACE_STREAMER_ARGSMAX];
 	size_t argCount;
 	int tid_;
 	int lvl_;
 	bool do_s;
 	bool do_m;
-	bool enabled;
 	std::string widthStr;
 	std::string precisionStr;
 public:
 
-	explicit TraceStreamer() : argCount(0)
+	explicit TraceStreamer() : msg_sz(0),argCount(0)
 	{
-		msg.reserve(TRACE_STREAMER_MSGMAX);
 #      if TRACE_STREAMER_DEBUG
 		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl;
 #      endif
@@ -1839,15 +1845,21 @@ public:
 	inline TraceStreamer& init(int tid, int lvl, bool force_s)
 	{
 		TRACE_INIT_CHECK {
-			msg = "";
+			msg[0] = '\0'; msg_sz=0;
 			argCount = 0;
 			tid_ = tid;
 			lvl_ = lvl;
 			do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));
 			do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));
-			enabled = do_s || do_m;
 		}
 		return *this;
+	}
+
+	inline void msg_append( const char *src )
+	{	size_t add = Min(strlen(src),sizeof(msg)-1-msg_sz);
+		strncpy( &msg[msg_sz],src,add);
+		msg_sz+=add;
+		msg[msg_sz]='\0';
 	}
 
 	inline void str()
@@ -1864,32 +1876,35 @@ public:
 
 	inline void format(bool isFloat, bool isUnsigned, std::string length, std::ios::fmtflags flags)
 	{	//See, for example: http://www.cplusplus.com/reference/cstdio/printf/
-		msg += "%";
+		if (msg_sz < (TRACE_STREAMER_MSGMAX-4)) {
+			msg[msg_sz++] = '%';
 
-		// Flags
-		if (flags & left) { msg += "-"; }
-		if (flags & showpos) { msg += "+"; }
-		if (flags & (showpoint | showbase)) { msg += "#"; } // INCLUSIVE OR
+			// Flags
+			if (flags & left) { msg[msg_sz++] = '-'; }
+			if (flags & showpos) { msg[msg_sz++] = '+'; }
+			if (flags & (showpoint | showbase)) { msg[msg_sz++] = '#'; } // INCLUSIVE OR
+		}
 
 		// Width
-		msg += widthStr;
+		msg_append( widthStr.c_str() );
 
 		if (isFloat) {
 			// Precision
-			msg += (precisionStr.size() ? "." + precisionStr : "") + length;
+			msg_append( (precisionStr.size() ? precisionStr.c_str() : ""));
+			msg_append( length.c_str() );
 
-			if ((flags & (fixed | scientific)) == (fixed | scientific)) /*AND*/ { msg += flags & uppercase ? "A" : "a"; }
-			else if (flags & fixed) { msg += flags & uppercase ? "F" : "f"; }
-			else if (flags & scientific) { msg += flags & uppercase ? "E" : "e"; }
-			else { msg += flags & uppercase ? "G" : "g"; }
+			if ((flags & (fixed | scientific)) == (fixed | scientific)) /*AND*/ { msg_append( flags & uppercase ? "A" : "a"); }
+			else if (flags & fixed) { msg_append( flags & uppercase ? "F" : "f"); }
+			else if (flags & scientific) { msg_append( flags & uppercase ? "E" : "e"); }
+			else { msg_append( flags & uppercase ? "G" : "g"); }
 		} else {
-			msg += length;
+			msg_append( length.c_str() );
 			if (isUnsigned) {
-				if (flags & hex) { msg += flags & uppercase ? "X" : "x"; }
-				else if (flags & oct) { msg += "o"; }
-				else { msg += "u"; }
+				if (flags & hex) { msg_append( flags & uppercase ? "X" : "x"); }
+				else if (flags & oct) { msg_append( "o"); }
+				else { msg_append( "u"); }
 			} else
-				msg += "d";
+				msg_append( "d");
 		}
 	}
 
@@ -1907,7 +1922,8 @@ public:
 	inline TraceStreamer& precision(int y)
 	{	if (y != _M_precision) {
 			_M_precision = y;
-			precisionStr = std::to_string(y);
+			if(y) precisionStr = ".";
+			precisionStr += std::to_string(y);
 #          if TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
 #          endif
@@ -1935,79 +1951,61 @@ public:
 	}
 
 	inline TraceStreamer& operator<<(void* const& p) // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
-	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { msg += "%p";    args[argCount++].p = p; }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append( "%p");    args[argCount++].p = p; }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const bool& b)
-	{	if (enabled) {
-			if (_M_flags & boolalpha) {
-				msg += (b ? "true" : "false");
-			} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg += "%d";    args[argCount++].i = b; }
-		}
+	{	if (_M_flags & boolalpha) {
+			msg_append( (b ? "true" : "false"));
+		} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append( "%d");    args[argCount++].i = b; }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const int& r)
-	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"", _M_flags); args[argCount++].i = r; }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"", _M_flags); args[argCount++].i = r; }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const long int& r)
-	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"l",_M_flags); args[argCount++].l = r; }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"l",_M_flags); args[argCount++].l = r; }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const unsigned int& r)
-	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "", _M_flags); args[argCount++].u = r; }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "", _M_flags); args[argCount++].u = r; }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const long unsigned int& r)
-	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = r; }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = r; }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const double& r)
-	{	if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(true, false,"", _M_flags); args[argCount++].d = r; }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(true, false,"", _M_flags); args[argCount++].d = r; }
 		return *this;
 	}
-	inline TraceStreamer& operator<<(const std::string& s)
-	{	if (enabled) { msg += s; }
-		return *this;
-	}
-	inline TraceStreamer& operator<<(char const* s)
-	{	if (enabled) { msg += s; }
-		return *this;
-	}
-	inline TraceStreamer& operator<<(char* s)
-	{	if (enabled) { msg += s; }
-		return *this;
-	}
+	inline TraceStreamer& operator<<(const std::string& s) { msg_append( s.c_str()); return *this; }
+	inline TraceStreamer& operator<<(char const* s)        { msg_append( s); return *this; }
+	inline TraceStreamer& operator<<(char* s)              { msg_append( s); return *this; }
 	inline TraceStreamer& operator<<(std::atomic<unsigned long> const& a)
-	{
-		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = a.load(); }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = a.load(); }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(std::atomic<short int> const& a)
-	{
-		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"h",_M_flags); args[argCount++].i = a.load(); }
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,false,"h",_M_flags); args[argCount++].i = a.load(); }
 		return *this;
 	}
 	inline TraceStreamer& operator<<(std::atomic<bool> const& a)
-	{	if (enabled) {
-			if (_M_flags & boolalpha) {
-				msg += (a.load() ? "true" : "false");
-			} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg += "%d";    args[argCount++].i = a.load(); }
-		}
+	{	if (_M_flags & boolalpha) {
+			msg_append( (a.load() ? "true" : "false"));
+		} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append( "%d");    args[argCount++].i = a.load(); }
 		return *this;
 	}
 	// compiler asked for this -- can't think of why or when it will be used, but do the reasonable thing (append format and append args)
 	inline TraceStreamer& operator<<(const TraceStreamer& r)
-	{	if (enabled) {
-			for (size_t ii = argCount; ii < (argCount + (  r.argCount < TRACE_STREAMER_ARGSMAX
-			                                             ? argCount + r.argCount
-			                                             : TRACE_STREAMER_ARGSMAX) ); ++ii) {
-				args[ii] = r.args[ii - argCount];
-			}
-			argCount = argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX;
-
-			msg += r.msg;
+	{	for (size_t ii = argCount; ii < (argCount + (  r.argCount < TRACE_STREAMER_ARGSMAX
+													 ? argCount + r.argCount
+													 : TRACE_STREAMER_ARGSMAX) ); ++ii) {
+			args[ii] = r.args[ii - argCount];
 		}
+		argCount = argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX;
+		msg_append( r.msg);
 		return *this;
 	}
 
@@ -2016,9 +2014,8 @@ public:
 	typedef std::ostream& (*ostream_manipulator)(std::ostream&);
 
 	inline TraceStreamer& operator<<(ostream_manipulator f)
-	{
-		if (f == (std::basic_ostream<char>& (*)(std::basic_ostream<char>&)) &std::endl)
-			msg += "\n";
+	{	if (f == (std::basic_ostream<char>& (*)(std::basic_ostream<char>&)) &std::endl)
+			msg_append( "\n");
 		return *this;
 	}
 
@@ -2030,7 +2027,7 @@ public:
 #      if DEBUG_FORCED
 		std::cerr << "WARNING: " << __PRETTY_FUNCTION__ << " TEMPLATE CALLED: Consider implementing a function with this signature!" << std::endl;
 #      endif
-		if (enabled) { std::stringstream s; s << t; msg += s.str(); }
+		std::stringstream s; s << t; msg_append( s.str().c_str() );
 		return *this;
 	}
 #  endif

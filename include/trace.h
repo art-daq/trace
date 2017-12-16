@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 740 $$Date: 2017-12-16 10:18:25 -0600 (Sat, 16 Dec 2017) $"
+#define TRACE_REV  "$Revision: 745 $$Date: 2017-12-16 13:48:39 -0600 (Sat, 16 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -1738,7 +1738,9 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
    "static int tid_" is thread safe in so far as multiple threads may init,
    but will init with same value.
 */
-#define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,ipp)				\
+# if   (__cplusplus >= 201103L)
+
+#  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,ipp)				\
 	[](const char* nn,int lvl_,int force_s,int*do_m,int*do_s,limit_info_t**ipp_){ \
 		if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) {				\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
@@ -1747,9 +1749,28 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 			*do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
 			if(ipp_) *ipp_=&_info;										\
 			return (*do_m||*do_s)?tid_:-1;								\
-		} else															\
-			return -1;													\
+		} else							\
+		  return -1;						\
 	}(name,lvl,force,mp,sp,ipp)
+
+# else 
+
+#  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,ipp)		\
+  ({const char* nn=name;int lvl_=lvl,force_s=force,*do_m_=mp,*do_s_=sp;limit_info_t**ipp_=ipp; \
+    int tid__;								\
+    if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) {			\
+      static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
+      static TRACE_THREAD_LOCAL limit_info_t _info;			\
+      *do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
+      *do_s_ = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
+      if(ipp_) *ipp_=&_info;						\
+      tid__ = (*do_m_||*do_s_)?tid_:-1;					\
+    } else								\
+      tid__ = -1;							\
+    tid__;								\
+  })
+
+# endif
 
 // Use C++ "for" statement to create single statement scope for key (static) variable that
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
@@ -1891,8 +1912,13 @@ public:
 	}
 
 	inline TraceStreamer& width(int y)
-	{	if (y != _M_width) {
+	{
+#     ifndef __clang__
+		if (y != _M_width) {
 			_M_width = y;
+#     else
+			{
+#     endif
 			snprintf( widthStr, sizeof(widthStr), "%d", y );
 #          ifdef TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
@@ -1902,8 +1928,13 @@ public:
 	}
 
 	inline TraceStreamer& precision(int y)
-	{	if (y != _M_precision) {
+	{
+#     ifndef __clang__
+		if (y != _M_precision) {
 			_M_precision = y;
+#     else
+			{
+#     endif
 			if(y) snprintf( precisionStr, sizeof(precisionStr), ".%d", y );
 			else  precisionStr[0]='\0';
 #          ifdef TRACE_STREAMER_DEBUG
@@ -1912,16 +1943,16 @@ public:
 		}
 		return *this;
 	}
-
+# ifndef __clang__
 	inline TraceStreamer& operator<<(std::_Setprecision __f)
 	{	precision(__f._M_n);
 		return *this;
 	}
-
 	inline TraceStreamer& operator<<(std::_Setw __f)
 	{	width(__f._M_n);
 		return *this;
 	}
+# endif
 
 	// necessary for std::hex, std::dec
 	typedef std::ios_base& (*manipulator)(std::ios_base&);
@@ -1934,6 +1965,7 @@ public:
 	{	if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append( "%p");    args[argCount++].p = p; }
 		return *this;
 	}
+# ifndef __clang__
 	inline TraceStreamer& operator<<(const bool& b)
 	{	if (_M_flags & boolalpha) {
 			msg_append( (b ? "true" : "false"));
@@ -1964,9 +1996,11 @@ public:
 	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(true, false,"", _M_flags); args[argCount++].d = r; }
 		return *this;
 	}
+# endif
 	inline TraceStreamer& operator<<(const std::string& s) { msg_append( s.c_str()); return *this; }
 	inline TraceStreamer& operator<<(char const* s)        { msg_append( s); return *this; }
 	inline TraceStreamer& operator<<(char* s)              { msg_append( s); return *this; }
+# if !defined(__clang__) && (__cplusplus >= 201103L)
 	inline TraceStreamer& operator<<(std::atomic<unsigned long> const& a)
 	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(false,true, "l",_M_flags); args[argCount++].u = a.load(); }
 		return *this;
@@ -1981,6 +2015,7 @@ public:
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append( "%d");    args[argCount++].i = a.load(); }
 		return *this;
 	}
+# endif
 	// compiler asked for this -- can't think of why or when it will be used, but do the reasonable thing (append format and append args)
 	inline TraceStreamer& operator<<(const TraceStreamer& r)
 	{	for (size_t ii = argCount; ii < (argCount + (  r.argCount < TRACE_STREAMER_ARGSMAX

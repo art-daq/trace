@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 745 $$Date: 2017-12-16 13:48:39 -0600 (Sat, 16 Dec 2017) $"
+#define TRACE_REV  "$Revision: 748 $$Date: 2017-12-16 14:23:11 -0600 (Sat, 16 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -268,6 +268,35 @@ static const char *  TRACE_NAME=NULL;
 			}															\
         }								\
     } while (0)
+
+#if defined(__cplusplus)
+
+/* Note: This supports using a mix of stream syntax and format args, i.e: "string is " << some_str << " and float is %f", some_float
+   Note also how the macro evaluates the first part (the "FMT") only once
+   no matter which destination ("M" and/or "S") is active.
+   Note: "xx" in TRACE_ARGS_FMT(__VA_ARGS__,xx) is just a dummy arg to that macro.
+   THIS IS DEPRECATED. It is nice to have for comparison tests.
+*/
+# define TRACEN_( nam, lvl, ... ) do {									\
+		TRACE_INIT_CHECK {												\
+			static TRACE_THREAD_LOCAL int tid_=-1; struct timeval lclTime;				\
+			if(tid_==-1)tid_=name2TID(nam);	lclTime.tv_sec = 0;			\
+			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));\
+			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl));\
+			if (do_s || do_m) { std::ostringstream ostr__; /*instance creation is heavy weight*/ \
+				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
+				if(do_m) trace( &lclTime,tid_, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
+				               , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+				if(do_s){TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
+						TRACE_LOG_FUNCTION( &lclTime, tid_, lvl, "", TRACE_NARGS(__VA_ARGS__) \
+						                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
+					}													\
+				}														\
+			}															\
+        }																\
+    } while (0)
+
+#endif /* defined(___cplusplus) */
 
 
 /* TRACE_NARGS configured to support 0 - 35 args */

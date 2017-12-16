@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 705 $$Date: 2017-11-17 12:41:32 -0600 (Fri, 17 Nov 2017) $"
+#define TRACE_CNTL_REV "$Revision: 734 $$Date: 2017-12-15 22:58:34 -0600 (Fri, 15 Dec 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -49,6 +49,8 @@ commands:\n\
  lvlset[g] <mskM> <mskS> <mskT>\n\
  lvlclr[g] <mskM> <mskS> <mskT>\n\
  trig <lvlmskM> <postEntries>\n\
+ reset\n\
+ limit_ms <cnt> <on_ms> <off_ms>\n\
 opts:\n\
  -?, -h       show this help\n\
  -f<file>\n\

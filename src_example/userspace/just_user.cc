@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 716 $$Date: 2017-12-12 11:40:21 -0600 (Tue, 12 Dec 2017) $";
+char const *rev="$Revision: 737 $$Date: 2017-12-15 23:30:33 -0600 (Fri, 15 Dec 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -122,15 +122,15 @@ int main( int argc, char *argv[] )
 		TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
 		TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,3 );
 
-		TRACE_( 1, stdstr << " ron" );
+		TLOG_DBG( 1,"TRACE") << stdstr << " ron";
 		TRACE( 1, "ron is my name." );
 
 		// now with args
 		//TRACE_( 1, stdstr << " ron %d", 1 );
 		TRACE( 1, "ron is my name." );
-		TRACE_( 1, "hello - nice for strings: file="<<filename<<" %d %.1f %d",1,1.6,2 );
+		TLOG_DBG( 1,"TRACE")<< "hello - nice for strings: file="<<filename<<" "<<1<<" "<<1.6<<" "<<2;
 		TRACE( 1, "hello - nice for strings: file="+fname+" %d %.1f %d",1,1.6,2 );
-		TRACE_( 1, "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<std::hex<<15 );
+		TLOG_DBG( 1,"TRACE")<< "hello - hopefully no compile warnings "<<1<<" "<<1.6<<" "<<std::hex<<15;
 
 		std::cout<<"\n";
 
@@ -156,7 +156,7 @@ int main( int argc, char *argv[] )
 				if (fgets(buffer, 128, fp) != NULL)
 					result += buffer;
 			}
-			TRACE_( 1, "bashrc: " << result );
+			TLOG_DBG( 1,"TRACE")<< "bashrc: " << result;
 			pclose(fp);
 		}
 
@@ -180,12 +180,6 @@ int main( int argc, char *argv[] )
 		//TRACE_( 1, ostr, 1 ); // an address  (also the 1 param is extra)
 		TRACE( 1, ostr.str(), 1 );
 
-# if 0
-		TRACE_( 1, "print a string: %s %s %s %s <this is after the string>"+stdstr,0LL,1LL,2LL,3LL );
-		TRACE_( 1, "print a string: %s %s %s %s <this is after the string>"+stdstr );
-		TRACE_( 1, "print a string: %s %s %s %s <this is after the string>"+stdstr );
-		TRACE( 1, "print a string: %s %s %s %s <this is after the string>"+stdstr );
-# endif
 
 		std::cout<<"\n";
 
@@ -206,9 +200,9 @@ int main( int argc, char *argv[] )
 		   "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d"
 		   , 41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75 );
 	}
-	else if (strcmp(opt_test,"_")==0) {
+	else if (strcmp(opt_test,"<")==0) {
 		while(opt_loops--) {
-			TRACE_(0,"this is an int: " << 55 );
+			TLOG_DBG(0,"TRACE")<<"this is an int: " << 55;
 		}
 	}
 	else if (strcmp(opt_test,"C")==0) {

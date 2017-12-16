@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 639 $';
-#   $Date: 2017-08-09 22:55:20 -0500 (Wed, 09 Aug 2017) $
+$version = '$Revision: 735 $';
+#   $Date: 2017-12-15 23:03:49 -0600 (Fri, 15 Dec 2017) $
 
 use Time::Local; # timelocal()
 
@@ -396,8 +396,8 @@ for $idx (0..$#col_cntl)
 	{   if (defined $ENV{"TRACE_TIME_FMT"}){$tfmt=$ENV{"TRACE_TIME_FMT"};}else{$tfmt=$TRACE_DFLT_TIME_FMT;}
 	    $tbuf = strftime( $tfmt,localtime() );
 	    $fmtlen=length( sprintf($tbuf,0) ); # add usecs if present
-	    #print STDERR "tfmt=$tfmt tbuf=$tbuf fmtlen=$fmtlen\n";
-	    if($fmtlen){ $fmtlen++; }
+	    #print STDERR "idx=$idx tfmt=$tfmt tbuf=$tbuf fmtlen=$fmtlen\n";
+	    if($idx && $fmtlen){ $fmtlen++; } # add space only if not at beginning (i.e only if not 1st col)
             $sub .= "
             if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
             {   \$seconds = \$1;

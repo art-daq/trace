@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 730 $$Date: 2017-12-15 03:10:23 -0600 (Fri, 15 Dec 2017) $"
+#define TRACE_REV  "$Revision: 740 $$Date: 2017-12-16 10:18:25 -0600 (Sat, 16 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -167,6 +167,7 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 #endif /* __KERNEL__ */
 
 
+#define TRACE_STREAMER_MSGMAX 0x1800
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ      192
 #define TRACE_DFLT_MAX_PARAMS       10
@@ -268,50 +269,6 @@ static const char *  TRACE_NAME=NULL;
         }								\
     } while (0)
 
-#if defined(__cplusplus)
-/* used only in c++0x c++11 environment */
-/* Note: This supports using a mix of stream syntax and format args, i.e: "string is " << some_str << " and float is %f", some_float
-   Note also how the macro evaluates the first part (the "FMT") only once
-   no matter which destination ("M" and/or "S") is active.
-   Note: "xx" in TRACE_ARGS_FMT(__VA_ARGS__,xx) is just a dummy arg to that macro.
-*/
-# define TRACE_( lvl, ... ) do {										\
-		TRACE_INIT_CHECK {												\
-			struct timeval lclTime; lclTime.tv_sec = 0;				\
-			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl));\
-			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl));\
-			if (do_s || do_m) { std::ostringstream ostr__; /*instance creation is heavy weight*/ \
-				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
-				if(do_m) trace( &lclTime,traceTID, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
-				               , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
-				if(do_s){TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
-						TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, "", TRACE_NARGS(__VA_ARGS__) \
-						                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
-					}													\
-				}														\
-			}															\
-        }																\
-    } while (0)
-# define TRACEN_( nam, lvl, ... ) do {									\
-		TRACE_INIT_CHECK {												\
-			static TRACE_THREAD_LOCAL int tid_=-1; struct timeval lclTime;				\
-			if(tid_==-1)tid_=name2TID(nam);	lclTime.tv_sec = 0;			\
-			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));\
-			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl));\
-			if (do_s || do_m) { std::ostringstream ostr__; /*instance creation is heavy weight*/ \
-				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
-				if(do_m) trace( &lclTime,tid_, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
-				               , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
-				if(do_s){TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
-						TRACE_LOG_FUNCTION( &lclTime, tid_, lvl, "", TRACE_NARGS(__VA_ARGS__) \
-						                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
-					}													\
-				}														\
-			}															\
-        }																\
-    } while (0)
-
-#endif /* defined(___cplusplus) */
 
 /* TRACE_NARGS configured to support 0 - 35 args */
 # define TRACE_NARGS(...) TRACE_NARGS_HELP1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
@@ -717,7 +674,7 @@ static void vtrace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const cha
        2) there will be one system call which is most efficient and less likely
 	   to have the output mangled in a multi-threaded environment.
     */
-	char   obuf[0x1800]; char tbuf[0x100]; size_t printed=0;
+	char   obuf[TRACE_STREAMER_MSGMAX]; char tbuf[0x100]; size_t printed=0;
 	char   *cp;
 	struct tm	tm_s;
 	int    quiet_warn=0;
@@ -1775,17 +1732,37 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 #ifdef __cplusplus
 
-// "static int tid_" is thread safe in so far as multiple threads may init,
-// but will init with same value.
-#define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
-	{static TRACE_THREAD_LOCAL int tid_ =-1;if (tid_ == -1)tid_ = name2TID(std::string(name).c_str()); \
-	 bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));\
-	 bool do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));\
-	 static TRACE_THREAD_LOCAL TraceStreamer s; if(do_m||do_s) s.init(tid_, lvl, force_s)
+/* The Streamer instance will be temporary. No class statics can be used --
+   The goal is statics for each TRACE/TLOG and a class static won't do.
+   A lambda expression can by used to hold/create statics for each TLOG.
+   "static int tid_" is thread safe in so far as multiple threads may init,
+   but will init with same value.
+*/
+#define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,ipp)				\
+	[](const char* nn,int lvl_,int force_s,int*do_m,int*do_s,limit_info_t**ipp_){ \
+		if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) {				\
+			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
+			static TRACE_THREAD_LOCAL limit_info_t _info;				\
+			*do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
+			*do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
+			if(ipp_) *ipp_=&_info;										\
+			return (*do_m||*do_s)?tid_:-1;								\
+		} else															\
+			return -1;													\
+	}(name,lvl,force,mp,sp,ipp)
 
-#define TRACE_ENDL ""; s.str();}}
+// Use C++ "for" statement to create single statement scope for key (static) variable that
+// are initialized and then, if enabled, passed to the Streamer class temporary instances.
+#define TRACE_STREAMER(lvl, name, force_s)								\
+	for( int tid=-1,do_m,do_s,*ip;										\
+		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(name,lvl,force_s,&do_m,&do_s,(limit_info_t**)&ip))!=-1); \
+	    ) TraceStreamer{}.init( tid, lvl, do_m, do_s, (limit_info_t*)ip )
+
+#define TRACE_ENDL ""
 #define TLOG_ENDL TRACE_ENDL
 
+// This will help devleper who use too many TLOG_INFO/TLOG_DEBUG
+// to use more TLOG{,_TRACE,_DBG,_ARB} (use more levels)
 #ifdef __OPTIMIZE__
 # define DEBUG_FORCED 0
 #else
@@ -1798,15 +1775,14 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 #define TLVL_DEBUG        3
 #define TLVL_TRACE        4
 #define TLOG_ERROR(name) TRACE_STREAMER(TLVL_ERROR, name, 1)
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled())
-#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled())
-#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled() && DEBUG_FORCED)
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, 1)
+#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, DEBUG_FORCED)
+#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, DEBUG_FORCED)
 #define TLOG_TRACE(name) TRACE_STREAMER(TLVL_TRACE, name,0)
 #define TLOG_DBG(lvl,name) TRACE_STREAMER(lvl,name,0)
 #define TLOG_ARB(lvl,name) TRACE_STREAMER(lvl,name,0)
+#define TLOG(lvl)          TRACE_STREAMER(lvl,"",0)
 #define TRACE_STREAMER_ARGSMAX 35
-#define TRACE_STREAMER_MSGMAX 0x1800
-#define TRACE_STREAMER_DEBUG 0
 #define TRACE_STREAMER_TEMPLATE 1
 #define TRACE_STREAMER_EXPAND(args) args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7],args[8],args[9] \
                                    ,args[10],args[11],args[12],args[13],args[14],args[15],args[16],args[17],args[18],args[19] \
@@ -1829,29 +1805,33 @@ struct TraceStreamer : std::ios {
 	size_t argCount;
 	int tid_;
 	int lvl_;
+    limit_info_t *ip_; // for throttle info
 	bool do_s;
 	bool do_m;
-	std::string widthStr;
-	std::string precisionStr;
+	char widthStr[16];
+	char precisionStr[16];
 public:
 
 	explicit TraceStreamer() : msg_sz(0),argCount(0)
 	{
-#      if TRACE_STREAMER_DEBUG
-		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl;
+#      ifdef TRACE_STREAMER_DEBUG
+		std::cout << "TraceStreamer CONSTRUCTOR\n";
 #      endif
 	}
 
-	inline TraceStreamer& init(int tid, int lvl, bool force_s)
-	{
-		TRACE_INIT_CHECK {
-			msg[0] = '\0'; msg_sz=0;
-			argCount = 0;
-			tid_ = tid;
-			lvl_ = lvl;
-			do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));
-			do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));
-		}
+	inline ~TraceStreamer() {
+		str();
+	}
+
+	// use this method to return a reference (to the temporary, in its intended use)
+	inline TraceStreamer& init(int tid, int lvl, bool dom, bool dos, limit_info_t*ip)
+	{	widthStr[0] = precisionStr[0] = msg[0] = '\0'; msg_sz=0;
+		argCount = 0;
+		tid_ = tid;
+		lvl_ = lvl;
+		ip_  = ip;
+		do_m = dom;
+		do_s = dos;
 		return *this;
 	}
 
@@ -1862,19 +1842,21 @@ public:
 		msg[msg_sz]='\0';
 	}
 
-	inline void str()
+	inline void str() const
 	{
-#      if TRACE_STREAMER_DEBUG
+#      ifdef TRACE_STREAMER_DEBUG
 		std::cout << "Message is " << msg << std::endl;
 #      endif
 		struct timeval lclTime; lclTime.tv_sec = 0;
 		if (do_m) trace(&lclTime, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
 		if (do_s) {
-			TRACE_LIMIT_SLOW(_insert, &lclTime) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, argCount, msg, TRACE_STREAMER_EXPAND(args));
+			char ins[32]; ins[0]='\0';
+			if(limit_do_print(&lclTime,ip_,ins,sizeof(ins)))
+				TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, ins, argCount, msg, TRACE_STREAMER_EXPAND(args));
 		}
 	}
 
-	inline void format(bool isFloat, bool isUnsigned, std::string length, std::ios::fmtflags flags)
+	inline void format(bool isFloat, bool isUnsigned, const char *length, std::ios::fmtflags flags)
 	{	//See, for example: http://www.cplusplus.com/reference/cstdio/printf/
 		if (msg_sz < (TRACE_STREAMER_MSGMAX-4)) {
 			msg[msg_sz++] = '%';
@@ -1886,19 +1868,19 @@ public:
 		}
 
 		// Width
-		msg_append( widthStr.c_str() );
+		msg_append( widthStr );
 
 		if (isFloat) {
 			// Precision
-			msg_append( (precisionStr.size() ? precisionStr.c_str() : ""));
-			msg_append( length.c_str() );
+			msg_append( precisionStr[0] ? precisionStr : "" );
+			msg_append( length );
 
 			if ((flags & (fixed | scientific)) == (fixed | scientific)) /*AND*/ { msg_append( flags & uppercase ? "A" : "a"); }
 			else if (flags & fixed) { msg_append( flags & uppercase ? "F" : "f"); }
 			else if (flags & scientific) { msg_append( flags & uppercase ? "E" : "e"); }
 			else { msg_append( flags & uppercase ? "G" : "g"); }
 		} else {
-			msg_append( length.c_str() );
+			msg_append( length );
 			if (isUnsigned) {
 				if (flags & hex) { msg_append( flags & uppercase ? "X" : "x"); }
 				else if (flags & oct) { msg_append( "o"); }
@@ -1911,8 +1893,8 @@ public:
 	inline TraceStreamer& width(int y)
 	{	if (y != _M_width) {
 			_M_width = y;
-			widthStr = std::to_string(y);
-#          if TRACE_STREAMER_DEBUG
+			snprintf( widthStr, sizeof(widthStr), "%d", y );
+#          ifdef TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
 #          endif
 		}
@@ -1922,9 +1904,9 @@ public:
 	inline TraceStreamer& precision(int y)
 	{	if (y != _M_precision) {
 			_M_precision = y;
-			if(y) precisionStr = ".";
-			precisionStr += std::to_string(y);
-#          if TRACE_STREAMER_DEBUG
+			if(y) snprintf( precisionStr, sizeof(precisionStr), ".%d", y );
+			else  precisionStr[0]='\0';
+#          ifdef TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
 #          endif
 		}
@@ -1932,14 +1914,12 @@ public:
 	}
 
 	inline TraceStreamer& operator<<(std::_Setprecision __f)
-	{
-		precision(__f._M_n);
+	{	precision(__f._M_n);
 		return *this;
 	}
 
 	inline TraceStreamer& operator<<(std::_Setw __f)
-	{
-		width(__f._M_n);
+	{	width(__f._M_n);
 		return *this;
 	}
 
@@ -1977,6 +1957,10 @@ public:
 		return *this;
 	}
 	inline TraceStreamer& operator<<(const double& r)
+	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(true, false,"", _M_flags); args[argCount++].d = r; }
+		return *this;
+	}
+	inline TraceStreamer& operator<<(const float& r)
 	{	if (argCount < TRACE_STREAMER_ARGSMAX) { format(true, false,"", _M_flags); args[argCount++].d = r; }
 		return *this;
 	}

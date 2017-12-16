@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 729 $$Date: 2017-12-15 02:22:57 -0600 (Fri, 15 Dec 2017) $";
+ // rev="$Revision: 740 $$Date: 2017-12-16 10:18:25 -0600 (Sat, 16 Dec 2017) $";
  */
 /** 
  * \file tracemf.h
@@ -21,15 +21,22 @@
 #include <stdint.h>				// uint16_t
 #include <string>				// std::string
 #define TRACE_LOG_FUN_PROTO \
-static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...);\
-static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
-# undef TRACE_LOG_FUNCTION
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)  mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
-# include "trace.h"		/* TRACE */
+  static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...);\
+  static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
+#undef TRACE_LOG_FUNCTION
+#define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)				\
+	mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
+#include "trace.h"		/* TRACE */
+#undef  TLOG_WARNING
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled())
+#undef  TLOG_INFO
+#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled())
+#undef  TLOG_DEBUG
+#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled() && DEBUG_FORCED)
 
-# include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
+#include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 
-# include <string>
+#include <string>
 
 static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {

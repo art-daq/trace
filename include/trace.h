@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 748 $$Date: 2017-12-16 14:23:11 -0600 (Sat, 16 Dec 2017) $"
+#define TRACE_REV  "$Revision: 752 $$Date: 2017-12-18 16:56:03 -0600 (Mon, 18 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -65,7 +65,15 @@ static inline pid_t trace_gettid(void) { return syscall(TRACE_GETTID); }
 #  include <iomanip>
 # endif
 
-# if   defined(__cplusplus)      &&      (__cplusplus >= 201103L)
+/* this first check is for Darwin 15 */
+# if   defined(__cplusplus)      &&      (__cplusplus == 201103L) && defined(__clang_major__) && (__clang_major__ == 7)
+#  include <atomic>		/* atomic<> */
+#  define TRACE_ATOMIC_T              std::atomic<uint32_t>
+#  define TRACE_ATOMIC_INIT           ATOMIC_VAR_INIT(0)
+#  define TRACE_ATOMIC_LOAD(ptr)      atomic_load(ptr)
+#  define TRACE_ATOMIC_STORE(ptr,val) atomic_store(ptr,val)
+#  define TRACE_THREAD_LOCAL
+# elif defined(__cplusplus)      &&      (__cplusplus >= 201103L)
 #  include <atomic>		/* atomic<> */
 #  define TRACE_ATOMIC_T              std::atomic<uint32_t>
 #  define TRACE_ATOMIC_INIT           ATOMIC_VAR_INIT(0)

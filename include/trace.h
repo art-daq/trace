@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 752 $$Date: 2017-12-18 16:56:03 -0600 (Mon, 18 Dec 2017) $"
+#define TRACE_REV  "$Revision: 758 $$Date: 2017-12-19 14:23:13 -0600 (Tue, 19 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -1782,8 +1782,8 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) {				\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
-			*do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
-			*do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
+			*do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
+			*do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))); \
 			if(ipp_) *ipp_=&_info;										\
 			return (*do_m||*do_s)?tid_:-1;								\
 		} else							\

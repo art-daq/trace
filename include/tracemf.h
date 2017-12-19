@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 740 $$Date: 2017-12-16 10:18:25 -0600 (Sat, 16 Dec 2017) $";
+ // rev="$Revision: 758 $$Date: 2017-12-19 14:23:13 -0600 (Tue, 19 Dec 2017) $";
  */
 /** 
  * \file tracemf.h
@@ -46,35 +46,32 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	2) there will be one system call which is most efficient and less likely
 	to have the output mangled in a multi-threaded environment.
 	*/
-	char   obuf[0x1800]; size_t printed = 0;
-	
-    if (printed < (sizeof(obuf)-1)) {
-		size_t max=sizeof(obuf)-1 - printed;
-		strncpy( &obuf[printed], insert, max );
-		if (max < strlen(insert)) {
-			obuf[printed+max] = '\0';
-			printed += max;
-		} else printed += strlen(insert);
-	}
-	if (nargs)
-		printed += vsnprintf(&(obuf[printed])
-							 , (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0
-							 , msg, ap);
-	else /* don't do any parsing for format specifiers in the msg -- tshow will
-		 also know to do this on the memory side of things */
-		printed += snprintf(&(obuf[printed])
-							, (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0
-							, "%s", msg);
+	char   obuf[0x1800]; size_t printed=0;
+	const char *outp;
+
+	if (nargs || (insert && (printed=strlen(insert)))) {
+		// assume insert is smaller than obuf
+		if (printed)
+			strcpy( obuf, insert );
+		if (nargs)
+			vsnprintf( &(obuf[printed]), sizeof(obuf)-1-printed, msg, ap );
+		else /* don't do any parsing for format specifiers in the msg -- tshow will
+				also know to do this on the memory side of things */
+			strncpy( &(obuf[printed]), msg, sizeof(obuf)-1-printed );
+		obuf[sizeof(obuf)-1]='\0';
+		outp = obuf;
+	} else
+		outp = msg;
 
 	char namebuf[TRACE_DFLT_NAM_SZ];
 	snprintf(&namebuf[0], TRACE_DFLT_NAM_SZ, "%s", traceNamLvls_p[TID].name);
 	switch (lvl)
 	{
-	case TLVL_ERROR:  ::mf::LogError(namebuf) << obuf; break;
-	case TLVL_WARNING:  ::mf::LogWarning(namebuf) << obuf; break;
-	case TLVL_INFO:  ::mf::LogInfo(namebuf) << obuf; break;
-	case TLVL_DEBUG:  ::mf::LogDebug{ namebuf, file, line } << obuf; break;
-	default:          ::mf::LogDebug{ namebuf, file, line } << std::to_string(lvl) << ": " << obuf; break;
+	case TLVL_ERROR:  ::mf::LogError(namebuf) << outp; break;
+	case TLVL_WARNING:  ::mf::LogWarning(namebuf) << outp; break;
+	case TLVL_INFO:  ::mf::LogInfo(namebuf) << outp; break;
+	case TLVL_DEBUG:  ::mf::LogDebug{ namebuf, file, line } << outp; break;
+	default:          ::mf::LogDebug{ namebuf, file, line } << std::to_string(lvl) << ": " << outp; break;
 	}
 }
 

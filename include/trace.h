@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 758 $$Date: 2017-12-19 14:23:13 -0600 (Tue, 19 Dec 2017) $"
+#define TRACE_REV  "$Revision: 762 $$Date: 2017-12-19 22:47:31 -0600 (Tue, 19 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -1777,29 +1777,31 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 */
 # if   (__cplusplus >= 201103L)
 
+// Note: the force arg is used directly in the macro definition
 #  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,ipp)				\
-	[](const char* nn,int lvl_,int force_s,int*do_m,int*do_s,limit_info_t**ipp_){ \
+	[](const char* nn,int lvl_,int*do_m,int*do_s,limit_info_t**ipp_){ \
 		if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) {				\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
 			*do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
-			*do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))); \
+			*do_s = traceControl_rwp->mode.bits.S && ((traceNamLvls_p[tid_].S & TLVLMSK(lvl_)) || (force)); \
 			if(ipp_) *ipp_=&_info;										\
 			return (*do_m||*do_s)?tid_:-1;								\
 		} else							\
 		  return -1;						\
-	}(name,lvl,force,mp,sp,ipp)
+	}(name,lvl,mp,sp,ipp)
 
 # else 
 
+// Note: the force arg is used directly in the macro definition
 #  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,ipp)		\
-  ({const char* nn=name;int lvl_=lvl,force_s=force,*do_m_=mp,*do_s_=sp;limit_info_t**ipp_=ipp; \
+  ({const char* nn=name;int lvl_=lvl,*do_m_=mp,*do_s_=sp;limit_info_t**ipp_=ipp; \
     int tid__;								\
     if((traceTID!=-1)||(traceInit(TRACE_NAME)==0)) {			\
       static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
       static TRACE_THREAD_LOCAL limit_info_t _info;			\
       *do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)); \
-      *do_s_ = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl))); \
+      *do_s_ = traceControl_rwp->mode.bits.S && ((traceNamLvls_p[tid_].S & TLVLMSK(lvl)) || (force)); \
       if(ipp_) *ipp_=&_info;						\
       tid__ = (*do_m_||*do_s_)?tid_:-1;					\
     } else								\
@@ -1847,7 +1849,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 								   ,args[20],args[21],args[22],args[23],args[24],args[25],args[26],args[27],args[28],args[29] \
                                    ,args[30],args[31],args[32],args[33],args[34]
 
-#define Min(a,b) (((a)<(b))?(a):(b))
+#define TraceMin(a,b) (((a)<(b))?(a):(b))
 
 struct TraceStreamer : std::ios {
 	union arg {
@@ -1894,7 +1896,7 @@ public:
 	}
 
 	inline void msg_append( const char *src )
-	{	size_t add = Min(strlen(src),sizeof(msg)-1-msg_sz);
+	{	size_t add = TraceMin(strlen(src),sizeof(msg)-1-msg_sz);
 		strncpy( &msg[msg_sz],src,add);
 		msg_sz+=add;
 		msg[msg_sz]='\0';

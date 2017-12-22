@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 737 $$Date: 2017-12-15 23:30:33 -0600 (Fri, 15 Dec 2017) $";
+char const *rev="$Revision: 765 $$Date: 2017-12-22 02:40:05 -0600 (Fri, 22 Dec 2017) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -212,7 +212,7 @@ int main( int argc, char *argv[] )
 	}
 	else if (strcmp(opt_test, "X") == 0) {
 		while (opt_loops--) {
-			TRACE_STREAMER(0, "this is an int",0) << 55 << TLOG_ENDL;
+			TRACE_STREAMER(0, "this is an int",0,0) << 55 << TLOG_ENDL;
 		}
 	}
 # if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L

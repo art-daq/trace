@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 744 $$Date: 2017-12-16 13:48:29 -0600 (Sat, 16 Dec 2017) $"
+#define TRACE_CNTL_REV "$Revision: 767 $$Date: 2017-12-22 04:24:19 -0600 (Fri, 22 Dec 2017) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -520,7 +520,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 'n': printf("%*.*s ",longest_name,longest_name,traceNamLvls_p[myEnt_p->TrcId].name);break;
 			case 'C': printf("%3u ", myEnt_p->cpu); break;
 			case 'l': printf("%2d ", myEnt_p->lvl); break;
-			case 'L': printf("%*s ", longest_lvlstr, _lvlstr[myEnt_p->lvl]); break;
+			case 'L': printf("%*s ", longest_lvlstr, _lvlstr[(myEnt_p->lvl)&LVLBITSMSK]); break;
 			case 'B': printf("%u ", myEnt_p->param_bytes); break;
 			case 'P': printf("%5d ", myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 */
 			case 'R':
@@ -596,7 +596,7 @@ void traceInfo()
 	       "max_params        = %u\n"
 	       "entry_size        = %u\n"
 	       "namLvlTbl_ents    = %u\n"
-	       "namLvlTbl_name_sz = %u\n"
+	       "namLvlTbl_name_sz = %u         not including null terminator\n"
 	       "longest_name      = %u\n"
 	       "wrIdxCnt offset   = %p\n"
 	       "namLvls offset    = 0x%lx\n"
@@ -625,7 +625,7 @@ void traceInfo()
 	       , traceControl_p->num_params
 	       , traceControl_p->siz_entry
 	       , traceControl_p->num_namLvlTblEnts
-	       , (int)sizeof(traceNamLvls_p[0].name)
+	       , (int)sizeof(traceNamLvls_p[0].name)-1
 	       , traceControl_rwp->longest_name
 	       , (void*)&((struct traceControl_s*)0)->rw.wrIdxCnt
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_rwp

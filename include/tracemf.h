@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 758 $$Date: 2017-12-19 14:23:13 -0600 (Tue, 19 Dec 2017) $";
+ // rev="$Revision: 765 $$Date: 2017-12-22 02:40:05 -0600 (Fri, 22 Dec 2017) $";
  */
 /** 
  * \file tracemf.h
@@ -28,17 +28,19 @@
 	mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
 #include "trace.h"		/* TRACE */
 #undef  TLOG_WARNING
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled())
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled(), 0)
 #undef  TLOG_INFO
-#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled())
+#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled(), 0)
 #undef  TLOG_DEBUG
-#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled() && DEBUG_FORCED)
+#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled() && DEBUG_FORCED, 0)
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 
 #include <string>
 
-static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
+static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert
+                          , const char* file, int line
+                          , uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
 	first. There are 2 main reasons that this is done:
@@ -49,7 +51,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	char   obuf[0x1800]; size_t printed=0;
 	const char *outp;
 
-	if (nargs || (insert && (printed=strlen(insert)))) {
+	if ((insert && (printed=strlen(insert))) || nargs) { /* check insert 1st to make sure printed is set */
 		// assume insert is smaller than obuf
 		if (printed)
 			strcpy( obuf, insert );
@@ -63,15 +65,16 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	} else
 		outp = msg;
 
+
 	char namebuf[TRACE_DFLT_NAM_SZ];
 	snprintf(&namebuf[0], TRACE_DFLT_NAM_SZ, "%s", traceNamLvls_p[TID].name);
 	switch (lvl)
 	{
-	case TLVL_ERROR:  ::mf::LogError(namebuf) << outp; break;
-	case TLVL_WARNING:  ::mf::LogWarning(namebuf) << outp; break;
-	case TLVL_INFO:  ::mf::LogInfo(namebuf) << outp; break;
-	case TLVL_DEBUG:  ::mf::LogDebug{ namebuf, file, line } << outp; break;
-	default:          ::mf::LogDebug{ namebuf, file, line } << std::to_string(lvl) << ": " << outp; break;
+	case TLVL_ERROR:   ::mf::LogError(namebuf)   << outp; break;
+	case TLVL_WARNING: ::mf::LogWarning(namebuf) << outp; break;
+	case TLVL_INFO:    ::mf::LogInfo{namebuf}    << outp; break;
+	case TLVL_DEBUG:   ::mf::LogDebug{ namebuf, file, line } << outp; break;
+	default:           ::mf::LogDebug{ namebuf, file, line } << std::to_string(lvl) << ": " << outp; break;
 	}
 }
 
@@ -94,9 +97,9 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 }   /* trace */
 
 
-inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception y)
+inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)
 {
-	x.msg_append( y.what() );
+	x.msg_append( r.what() );
 	return x;
 }
 

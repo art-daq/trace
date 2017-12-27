@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 766 $$Date: 2017-12-22 03:54:51 -0600 (Fri, 22 Dec 2017) $"
+#define TRACE_REV  "$Revision: 770 $$Date: 2017-12-27 16:28:21 -0600 (Wed, 27 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -1837,29 +1837,33 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 # define DEBUG_FORCED 1
 #endif
 
+static inline int         t_arg_fmtnow( const char* nm __attribute__((__unused__)), int fmtnow       ) { return fmtnow;  }
+static inline int         t_arg_fmtnow( const std::string&nm __attribute__((__unused__)), int fmtnow ) { return fmtnow;  }
+static inline int         t_arg_fmtnow( int fmtnow, const char* nm __attribute__((__unused__))       ) { return fmtnow;  }
+static inline int         t_arg_fmtnow( int fmtnow, const std::string&nm __attribute__((__unused__)) ) { return fmtnow;  }
+static inline const char* t_arg_name  ( const char* nm, int fmtnow __attribute__((__unused__))       ) { return nm;       }
+static inline const char* t_arg_name  ( const std::string&nm, int fmtnow __attribute__((__unused__)) ) { return nm.c_str();  }
+static inline const char* t_arg_name  ( int fmtnow __attribute__((__unused__)), const char* nm       ) { return nm?nm:""; }
+static inline const char* t_arg_name  ( int fmtnow __attribute__((__unused__)), const std::string&nm ) { return nm.size()?nm.c_str():""; }
+# define tlog_LVL( a1,...)        a1
+# define tlog_ARG23( a1,a2,a3,...) a2,a3
 #define TLVL_ERROR        0
 #define TLVL_WARNING      1
 #define TLVL_INFO         2
 #define TLVL_DEBUG        3
 #define TLVL_TRACE        4
-#define TLOG_ERROR(name) TRACE_STREAMER(TLVL_ERROR, name, 1,0)
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, 1,0)
-#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, DEBUG_FORCED,0)
-#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, DEBUG_FORCED,0)
-#define TLOG_TRACE(name) TRACE_STREAMER(TLVL_TRACE, name,0,0)
-#define TLOG_DBG(lvl,name) TRACE_STREAMER(lvl,name,0,0)
-#define TLOG_ARB(lvl,name) TRACE_STREAMER(lvl,name,0,0)
-static inline int         t_arg_fmtnow( const char* nm __attribute__((__unused__)), int fmtnow=0   ) { return fmtnow;  }
-static inline int         t_arg_fmtnow( int fmtnow, const char* nm __attribute__((__unused__)) ="" ) { return fmtnow;  }
-static inline const char* t_arg_name  ( const char* nm, int fmtnow __attribute__((__unused__)) =0  ) { return nm;       }
-static inline const char* t_arg_name  ( int fmtnow __attribute__((__unused__)), const char* nm=""  ) { return nm?nm:""; }
-# define tlog_LVL( a1,...)        a1
-# define tlog_ARG23( a1,a2,a3,...) a2,a3
+#define TLOG_ERROR(name)   TRACE_STREAMER(TLVL_ERROR,  &(name)[0], 1,0)
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING,&(name)[0], 1,0)
+#define TLOG_INFO(name)    TRACE_STREAMER(TLVL_INFO,   &(name)[0], DEBUG_FORCED,0)
+#define TLOG_DEBUG(name)   TRACE_STREAMER(TLVL_DEBUG,  &(name)[0], DEBUG_FORCED,0)
+#define TLOG_TRACE(name)   TRACE_STREAMER(TLVL_TRACE,  &(name)[0], 0,0)
+#define TLOG_DBG(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one),t_arg_name(name,0),0,0)
+#define TLOG_ARB(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one),t_arg_name(name,0),0,0)
 //     TLOG(lvl[,"name"][,noDlyFmt])
-# define TLOG(...)  TRACE_STREAMER(               tlog_LVL(__VA_ARGS__,need_at_least_one), \
-								   t_arg_name(  tlog_ARG23(__VA_ARGS__,0,"",need_at_least_one)), \
-								   0,									\
-								   t_arg_fmtnow(tlog_ARG23(__VA_ARGS__,0,"",need_at_least_one)) )
+# define TLOG(...)       TRACE_STREAMER(               tlog_LVL(__VA_ARGS__,need_at_least_one), \
+										t_arg_name(  tlog_ARG23(__VA_ARGS__,0,"",need_at_least_one)), \
+										0,								\
+										t_arg_fmtnow(tlog_ARG23(__VA_ARGS__,0,"",need_at_least_one)) )
 #define TRACE_STREAMER_ARGSMAX 35
 #define TRACE_STREAMER_TEMPLATE 1
 #define TRACE_STREAMER_EXPAND(args) args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7],args[8],args[9] \

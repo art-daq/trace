@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 765 $$Date: 2017-12-22 02:40:05 -0600 (Fri, 22 Dec 2017) $";
+ // rev="$Revision: 772 $$Date: 2017-12-27 17:28:55 -0600 (Wed, 27 Dec 2017) $";
  */
 /** 
  * \file tracemf.h
@@ -28,11 +28,11 @@
 	mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
 #include "trace.h"		/* TRACE */
 #undef  TLOG_WARNING
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, name, mf::isWarningEnabled(), 0)
+#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, &(name)[0], mf::isWarningEnabled(), 0)
 #undef  TLOG_INFO
-#define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, name, mf::isInfoEnabled(), 0)
+#define TLOG_INFO(name)    TRACE_STREAMER(TLVL_INFO,    &(name)[0], mf::isInfoEnabled(), 0)
 #undef  TLOG_DEBUG
-#define TLOG_DEBUG(name) TRACE_STREAMER(TLVL_DEBUG, name, mf::isDebugEnabled() && DEBUG_FORCED, 0)
+#define TLOG_DEBUG(name)   TRACE_STREAMER(TLVL_DEBUG,   &(name)[0], mf::isDebugEnabled() && DEBUG_FORCED, 0)
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 

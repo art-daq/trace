@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 773 $$Date: 2017-12-28 01:24:37 -0600 (Thu, 28 Dec 2017) $"
+#define TRACE_REV  "$Revision: 774 $$Date: 2017-12-28 01:36:02 -0600 (Thu, 28 Dec 2017) $"
 
 #ifndef __KERNEL__
 
@@ -1857,8 +1857,8 @@ static inline const char* t_arg_nmft  ( int fmtnow, int nm __attribute__((__unus
 #define TLOG_INFO(name)    TRACE_STREAMER(TLVL_INFO,   &(name)[0], DEBUG_FORCED,0)
 #define TLOG_DEBUG(name)   TRACE_STREAMER(TLVL_DEBUG,  &(name)[0], DEBUG_FORCED,0)
 #define TLOG_TRACE(name)   TRACE_STREAMER(TLVL_TRACE,  &(name)[0], 0,0)
-#define TLOG_DBG(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,"",need_at_least_one), 0, tlog_ARG3(__VA_ARGS__,"",0,need_at_least_one))
-#define TLOG_ARB(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,"",need_at_least_one), 0, tlog_ARG3(__VA_ARGS__,"",0,need_at_least_one))
+#define TLOG_DBG(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one), 0, tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one))
+#define TLOG_ARB(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one), 0, tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one))
 //     TLOG(lvl[,"name"][,noDlyFmt])
 # define TLOG(...)       TRACE_STREAMER(tlog_LVL( __VA_ARGS__,need_at_least_one), \
 										tlog_ARG2(__VA_ARGS__,0,need_at_least_one), \

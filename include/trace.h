@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 774 $$Date: 2017-12-28 01:36:02 -0600 (Thu, 28 Dec 2017) $"
+#define TRACE_REV  "$Revision: 775 $$Date: 2018-01-04 12:15:25 -0600 (Thu, 04 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1190,16 +1190,21 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		traceControl_rwp->trigActivePost = post_entries?post_entries:1; /* must be at least 1 */
 		traceControl_rwp->triggered      = 0;
 		traceControl_rwp->trigIdxCnt     = 0;
-	} else if (strncmp(cmd,"lvlmsk",6) == 0) { /* TAKES 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
+	} else if (strncmp(cmd,"lvlmsk",6) == 0) { /* TAKES 0, 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
 		uint64_t lvl, lvlm, lvls, lvlt;
 		unsigned ee, doNew=1;
 		if ((cmd[6]=='g')||((cmd[6])&&(cmd[7]=='g'))) {
 			ii=0;        ee=traceControl_p->num_namLvlTblEnts;
 		} else if ((cmd[6]=='G')||((cmd[6])&&(cmd[7]=='G'))) {
 			ii=0;        ee=traceControl_p->num_namLvlTblEnts;
-			doNew=0;
+			doNew=0;  /* Capital G short ciruits the "set for future/new trace ids */
 		} else {
 			ii=traceTID; ee=traceTID+1;
+			switch (cmd[6]) {
+			case 'M': ret = traceNamLvls_p[ii].M; break;
+			case 'S': ret = traceNamLvls_p[ii].S; break;
+			case 'T': ret = traceNamLvls_p[ii].T; break;
+			}
 		}
 		lvl=va_arg(ap,uint64_t); /* "FIRST" ARG SHOULD ALWAYS BE THERE */
 		switch (cmd[6]) {

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 775 $$Date: 2018-01-04 12:15:25 -0600 (Thu, 04 Jan 2018) $"
+#define TRACE_REV  "$Revision: 776 $$Date: 2018-01-05 08:28:42 -0600 (Fri, 05 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -263,7 +263,7 @@ static const char *  TRACE_NAME=NULL;
 		TRACE_INIT_CHECK {												\
 			static TRACE_THREAD_LOCAL int tid_=-1; struct timeval lclTime;					\
 			TSBUFDECL;													\
-			if(tid_==-1)tid_=name2TID(nam);	lclTime.tv_sec = 0;			\
+			if(tid_==-1)tid_=name2TID(&(nam)[0]);	lclTime.tv_sec = 0;			\
 			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl))) { \
 				trace( &lclTime, tid_, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
                       , __VA_ARGS__ );			\
@@ -288,7 +288,7 @@ static const char *  TRACE_NAME=NULL;
 # define TRACEN_( nam, lvl, ... ) do {									\
 		TRACE_INIT_CHECK {												\
 			static TRACE_THREAD_LOCAL int tid_=-1; struct timeval lclTime;				\
-			if(tid_==-1)tid_=name2TID(nam);	lclTime.tv_sec = 0;			\
+			if(tid_==-1)tid_=name2TID(&(nam)[0]);	lclTime.tv_sec = 0;			\
 			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));\
 			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl));\
 			if (do_s || do_m) { std::ostringstream ostr__; /*instance creation is heavy weight*/ \

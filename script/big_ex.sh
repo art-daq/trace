@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 667 $$Date: 2017-11-03 23:04:43 -0500 (Fri, 03 Nov 2017) $'
+ # rev='$Revision: 776 $$Date: 2018-01-05 08:28:42 -0600 (Fri, 05 Jan 2018) $'
 set -u
 opt_depth=15
 opt_std=c++11
@@ -130,8 +130,13 @@ $struct_args;
 
 void sub$next( struct args *aa );
 void sub$nn( struct args *aa )
-{   TRACE( 0,"sub$nn tid=%d loop=%u calling sub$next tC_p=%p %u=tIL_hung_max"
+{
+#if 0
+    TRACE( 0,"sub$nn tid=%d loop=%u calling sub$next tC_p=%p %u=tIL_hung_max"
           ,aa->tid,aa->loop,traceControl_p,traceInitLck_hung_max);
+#else
+    TLOG(0) << "sub$nn tid="<<aa->tid<<" loop="<<aa->loop<<"calling sub$next tC_p="<<traceControl_p<<" "<<traceInitLck_hung_max<<"=tIL_hung_max";
+#endif
     $POTENTIAL_DELAY
     sub$next(aa);
     TRACE( 1, "sub$nn tid=%d after (returned from) call to sub$next",aa->tid );
@@ -317,7 +322,7 @@ test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED;
 if [ "${do_mapcheck-0}" -gt 0 ];then
     export TRACE_FILE TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX
     TRACE_ARGSMAX=4
-    TRACE_MSGMAX=48
+    TRACE_MSGMAX=64
     TRACE_NUMENTS=$check_numents
     TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
     rm -f $TRACE_FILE   # master reset :)

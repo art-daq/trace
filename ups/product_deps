@@ -14,7 +14,7 @@ parent TRACE v3_13_01
 fcldir      -
 
 product		version
-cetbuildtools   v5_14_04   -      only_for_build
+cetbuildtools   v6_01_00   -      only_for_build
 end_product_list
 
 qualifier 	cetbuildtools	notes

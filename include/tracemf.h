@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 772 $$Date: 2017-12-27 17:28:55 -0600 (Wed, 27 Dec 2017) $";
+ // rev="$Revision: 778 $$Date: 2018-01-06 14:52:25 -0600 (Sat, 06 Jan 2018) $";
  */
 /** 
  * \file tracemf.h
@@ -56,18 +56,19 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 		if (printed)
 			strcpy( obuf, insert );
 		if (nargs)
-			vsnprintf( &(obuf[printed]), sizeof(obuf)-1-printed, msg, ap );
-		else /* don't do any parsing for format specifiers in the msg -- tshow will
+			vsnprintf( &(obuf[printed]), sizeof(obuf)-printed, msg, ap ); // man page say obuf will always be terminated
+		else {/* don't do any parsing for format specifiers in the msg -- tshow will
 				also know to do this on the memory side of things */
-			strncpy( &(obuf[printed]), msg, sizeof(obuf)-1-printed );
-		obuf[sizeof(obuf)-1]='\0';
+			strncpy( &(obuf[printed]), msg, sizeof(obuf)-1-printed ); // man page says obuf may not get terminated
+			obuf[sizeof(obuf)-1]='\0';
+		}
 		outp = obuf;
 	} else
 		outp = msg;
 
 
-	char namebuf[TRACE_DFLT_NAM_SZ];
-	snprintf(&namebuf[0], TRACE_DFLT_NAM_SZ, "%s", traceNamLvls_p[TID].name);
+	char namebuf[TRACE_DFLT_NAM_CHR_MAX+1];
+	strcpy( namebuf, traceNamLvls_p[TID].name ); // could just give traceNamLvls_p[TID].name to Log*
 	switch (lvl)
 	{
 	case TLVL_ERROR:   ::mf::LogError(namebuf)   << outp; break;

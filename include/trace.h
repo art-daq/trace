@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 776 $$Date: 2018-01-05 08:28:42 -0600 (Fri, 05 Jan 2018) $"
+#define TRACE_REV  "$Revision: 778 $$Date: 2018-01-06 14:52:25 -0600 (Sat, 06 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -182,10 +182,12 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 #define TRACE_DFLT_NAMTBL_ENTS     127  /* this is for creating new trace_buffer file --
 										   it currently matches the "trace DISABLED" number that
 										   fits into traceControl[1] (see below) */
-#define TRACE_DFLT_NAM_SZ           39 /* Really The hardcoded max name len.
-										  40 was the value with 8K pages which gave 127 NAMTBL_ENTS with "trace DISBALED".
+#define TRACE_DFLT_NAM_CHR_MAX      39 /* Really The hardcoded max name len.
+										  Name buffers should be +1 (for null terminator) - 40 was the value with 
+										  8K pages which gave 127 NAMTBL_ENTS with "trace DISBALED".
 										  Search for trace_created_init(...) call in "DISABLE" case.
-										  Names can have this many characters (including null terminator -so names can be printed from nam tbl) */
+										  Names can have this many characters (and always be null terminated - 
+										  so names can be printed from nam tbl) */
 #define TRACE_DFLT_NUM_ENTRIES   100000
 #define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S.%%06d"   /* match default in trace_delta.pl */
 #ifdef __KERNEL__
@@ -459,7 +461,7 @@ struct traceNamLvls_s
 {   uint64_t      M;
     uint64_t      S;
     uint64_t      T;
-    char          name[TRACE_DFLT_NAM_SZ+1];
+    char          name[TRACE_DFLT_NAM_CHR_MAX+1];
 };
 
 
@@ -1020,19 +1022,19 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 static int32_t name2TID( const char *name )
 {
     uint32_t ii, len;
-	char     valid_name[TRACE_DFLT_NAM_SZ+1];
+	char     valid_name[TRACE_DFLT_NAM_CHR_MAX+1];
 #if defined(__KERNEL__)
     if (traceEntries_p==NULL) return -1;
 #endif
 	//fprintf(stderr,"n2t=%p %s\n",name,name);
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-		if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_SZ)==0) {
+		if (strncmp(traceNamLvls_p[ii].name,name,TRACE_DFLT_NAM_CHR_MAX)==0) {
 			return (ii);
 		}
 	/* only allow "valid" names to be inserted -- above, we assumed the
 	   name was valid, giving the caller the benefit of the doubt, for
 	   efficiency sake, but here we will make sure the name is valid */
-	for (ii=0; name[ii]!='\0' && ii<TRACE_DFLT_NAM_SZ; ++ii) {
+	for (ii=0; name[ii]!='\0' && ii<TRACE_DFLT_NAM_CHR_MAX; ++ii) {
 		if (isgraph(name[ii]))
 			valid_name[ii] = name[ii];
 		else
@@ -1045,7 +1047,7 @@ static int32_t name2TID( const char *name )
     if (!trace_lock(&traceControl_rwp->namelock)) TRACE_PRINT("trace_lock: namelock hung?\n");
     for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii) {
 		if (traceNamLvls_p[ii].name[0] == '\0') {
-			strncpy(traceNamLvls_p[ii].name,valid_name,TRACE_DFLT_NAM_SZ);
+			strncpy(traceNamLvls_p[ii].name,valid_name,TRACE_DFLT_NAM_CHR_MAX);
 			if(trace_lvlS)         /* See also traceInitNames */
 				traceNamLvls_p[ii].S = trace_lvlS;
 			if(trace_lvlM)         /* See also traceInitNames */
@@ -1055,7 +1057,7 @@ static int32_t name2TID( const char *name )
 			trace_unlock( &traceControl_rwp->namelock );
 			return (ii);
 		}
-		if (strncmp(traceNamLvls_p[ii].name,valid_name,TRACE_DFLT_NAM_SZ)==0) {
+		if (strncmp(traceNamLvls_p[ii].name,valid_name,TRACE_DFLT_NAM_CHR_MAX)==0) {
 			trace_unlock( &traceControl_rwp->namelock );
 			return (ii);
 		}
@@ -1080,10 +1082,10 @@ static void trace_namLvlSet( void )
 	   the potential of effecting another process's TRACE-ing. */
 	if ((cp=getenv("TRACE_NAMLVLSET"))) {
 		int                 ign; /* will ignore trace id (index) if present */
-		char                name[TRACE_DFLT_NAM_SZ+1];
+		char                name[TRACE_DFLT_NAM_CHR_MAX+1];
 		unsigned long long  M,S,T=0;
-		while (   ((sts=sscanf(cp,"%d %" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx %llx",&ign,name,&M,&S,&T))&&sts>=4)
-		       || ((sts=sscanf(cp,   "%" MM_STR(TRACE_DFLT_NAM_SZ) "s %llx %llx %llx",     name,&M,&S,&T))&&sts>=3)) {
+		while (   ((sts=sscanf(cp,"%d %" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx %llx %llx",&ign,name,&M,&S,&T))&&sts>=4)
+		       || ((sts=sscanf(cp,   "%" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx %llx %llx",     name,&M,&S,&T))&&sts>=3)) {
 			int tid=name2TID(name);
 			/*fprintf(stderr,"name=%s sts=%d\n",name,sts );*/
 			traceNamLvls_p[tid].M = M;

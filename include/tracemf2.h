@@ -87,18 +87,22 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 		}
 		else printed += strlen(insert);
 	}
+	// could/should check for \n at end of msg, but this implementation is not that important
 	if (nargs)
-		printed += vsnprintf(&(obuf[printed])
-							 , (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0
-							 , msg, ap);
-	else /* don't do any parsing for format specifiers in the msg -- tshow will
-		 also know to do this on the memory side of things */
-		printed += snprintf(&(obuf[printed])
-							, (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0
-							, "%s", msg);
+		vsnprintf( &(obuf[printed])
+		          , (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0
+		          , msg, ap );
+	else { /* don't do any parsing for format specifiers in the msg -- tshow will
+		 also know to do this on the memory side of things because nargs is 
+		 stored in memory trace buffer. */
+		strncpy( &(obuf[printed])
+		        , (printed < (int)sizeof(obuf)) ? sizeof(obuf) - 1 - printed : 0
+		        , msg );
+		obuf[sizeof(obuf)-1] = '\0';
+	}
 
-	char namebuf[TRACE_DFLT_NAM_SZ];
-	snprintf(&namebuf[0], TRACE_DFLT_NAM_SZ, "%s", traceNamLvls_p[TID].name);
+	char namebuf[TRACE_DFLT_NAM_CHR_MAX+1];
+	strcpy( namebuf, traceNamLvls_p[TID].name ); // could just give traceNamLvls_p[TID].name to Log*
 	switch (lvl)
 	{
 	case TLVL_ERROR:  ::mf::LogError(namebuf) << obuf; break;

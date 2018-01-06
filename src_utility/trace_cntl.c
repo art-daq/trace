@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 767 $$Date: 2017-12-22 04:24:19 -0600 (Fri, 22 Dec 2017) $"
+#define TRACE_CNTL_REV "$Revision: 778 $$Date: 2018-01-06 14:52:25 -0600 (Sat, 06 Jan 2018) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -103,7 +103,7 @@ void* thread_func(void *arg)
 	unsigned burst =argsp->burst;
 	int      loops =argsp->loops;
 	int      lp;
-	char tmp[TRACE_DFLT_NAM_SZ];
+	char tmp[PATH_MAX];
 	pid_t tid=trace_gettid();
 
 	if (trace_thread_option & 1) {

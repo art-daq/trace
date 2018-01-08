@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 780 $$Date: 2018-01-08 10:24:05 -0600 (Mon, 08 Jan 2018) $"
+#define TRACE_REV  "$Revision: 781 $$Date: 2018-01-08 15:53:59 -0600 (Mon, 08 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1791,15 +1791,15 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 // Note: the force arg is used directly in the macro definition
 #  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,tvp,ins,ins_sz)	\
-	[](const char* nn,int lvl_,int forc_,int*do_m,int*do_s,timeval*tvp_,char*ins_,size_t sz){ \
+	[](const char* nn,int lvl_,int forc_,int*do_m_,int*do_s_,timeval*tvp_,char*ins_,size_t sz){ \
 		TRACE_INIT_CHECK {				\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
-			*do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
-			*do_s = (   traceControl_rwp->mode.bits.S					\
+			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
+			*do_s_ = (   traceControl_rwp->mode.bits.S					\
 			         && ((traceNamLvls_p[tid_].S & TLVLMSK(lvl_)) || (forc_)) \
 			         && limit_do_print(tvp_,&_info,ins_,sz) );	\
-			return (*do_m||*do_s)?tid_:-1;								\
+			return (*do_m_||*do_s_)?tid_:-1;								\
 		} else							\
 		  return -1;						\
 	}(name,lvl,force,mp,sp,tvp,ins,ins_sz)
@@ -1830,9 +1830,9 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
 // force_s = force slow; force_f = force formating (i.e. if Memory only)
 #define TRACE_STREAMER(lvl, nam_or_fmt,force_s,fmt_or_nam)			\
-	for( int tid=-1,do_m,do_s,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
-		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,force_s,&do_m,&do_s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
-	    ) TraceStreamer{}.init( tid, lvl, do_m, do_s, fmtnow, (timeval*)&tv, (char*)ins )
+	for( int tid=-1,do__m=0,do__s=0,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
+		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,force_s,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
+	    ) TraceStreamer{}.init( tid, lvl, do__m, do__s, fmtnow, (timeval*)&tv, (char*)ins )
 
 #define TRACE_ENDL ""
 #define TLOG_ENDL TRACE_ENDL
@@ -1924,7 +1924,7 @@ public:
 		lvl_ = lvl;
 		do_m = dom;
 		do_s = dos;
-		do_f = (force_f==-1) ? 0 : (do_s || force_f);
+		do_f = (force_f==-1) ? 0 : (dos || force_f);
 		ins_ = ins;
 		lclTime_p = tvp;
 		return *this;

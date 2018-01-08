@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 778 $$Date: 2018-01-06 14:52:25 -0600 (Sat, 06 Jan 2018) $"
+#define TRACE_REV  "$Revision: 779 $$Date: 2018-01-07 18:02:41 -0600 (Sun, 07 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1935,6 +1935,10 @@ public:
 #      ifdef TRACE_STREAMER_DEBUG
 		std::cout << "Message is " << msg << std::endl;
 #      endif
+		while(msg_sz && msg[msg_sz-1]=='\n') {
+			msg[msg_sz-1]='\0';
+			--msg_sz;
+		}
 		if (do_f) {
 			if (do_m) trace(             lclTime_p, tid_, lvl_,       0 TRACE_XTRA_PASSED, msg );
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, 0, msg );

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 779 $$Date: 2018-01-07 18:02:41 -0600 (Sun, 07 Jan 2018) $"
+#define TRACE_REV  "$Revision: 780 $$Date: 2018-01-08 10:24:05 -0600 (Mon, 08 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -688,7 +688,7 @@ static inline int limit_do_print( struct timeval *tvp, limit_info_t *info, char 
 }   /* limit_do_print */
 
 #ifndef TRACE_4_LVLSTRS
-# define TRACE_4_LVLSTRS "err","wrn","inf","dbg"
+# define TRACE_4_LVLSTRS "err","wrn","nfo","dbg"
 #endif
 #ifndef TRACE_60_LVLSTRS
 # define TRACE_60_LVLSTRS       "d04","d05","d06","d07","d08","d09",	\

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 781 $$Date: 2018-01-08 15:53:59 -0600 (Mon, 08 Jan 2018) $"
+#define TRACE_REV  "$Revision: 783 $$Date: 2018-01-09 22:10:43 -0600 (Tue, 09 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -224,9 +224,9 @@ static const char *  TRACE_NAME=NULL;
 
 /* For C, these should go at the beginning of a block b/c they define new local variables */
 #if defined(TRACE_NO_LIMIT_SLOW) || defined(__KERNEL__)
-# define TRACE_LIMIT_SLOW(ins,tvp)  char ins[1]={'\0'};if(1)
+# define TRACE_LIMIT_SLOW(lvl,ins,tvp)  char ins[1]={'\0'};if(1)
 #else
-# define TRACE_LIMIT_SLOW(ins,tvp)  char ins[32]; static TRACE_THREAD_LOCAL limit_info_t _info={/*TRACE_ATOMIC_INIT,*/0,lsFREE,0}; \
+# define TRACE_LIMIT_SLOW(lvl,ins,tvp)  char ins[32]; static TRACE_THREAD_LOCAL limit_info_t _info={/*TRACE_ATOMIC_INIT,*/0,lsFREE,0}; \
                                     if(limit_do_print(tvp,&_info,ins,sizeof(ins)))
 #endif
 
@@ -253,7 +253,7 @@ static const char *  TRACE_NAME=NULL;
 				      , __VA_ARGS__ );	\
 			}															\
 			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl))) { \
-				TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
+				TRACE_LIMIT_SLOW(lvl,_insert,&lclTime) {				\
 					TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl,_insert, TRACE_NARGS(__VA_ARGS__) \
 					                   , __VA_ARGS__ ); \
 				}														\
@@ -271,7 +271,7 @@ static const char *  TRACE_NAME=NULL;
                       , __VA_ARGS__ );			\
 			}															\
 			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl))) {	\
-				TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
+				TRACE_LIMIT_SLOW(lvl,_insert,&lclTime) {				\
 					TRACE_LOG_FUNCTION( &lclTime, tid_, lvl, _insert, TRACE_NARGS(__VA_ARGS__) \
 					                   , __VA_ARGS__ ); \
 				}														\
@@ -297,7 +297,7 @@ static const char *  TRACE_NAME=NULL;
 				ostr__ << TRACE_ARGS_FMT(__VA_ARGS__,xx);					\
 				if(do_m) trace( &lclTime,tid_, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED \
 				               , ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
-				if(do_s){TRACE_LIMIT_SLOW(_insert,&lclTime) {					\
+				if(do_s){TRACE_LIMIT_SLOW(lvl,_insert,&lclTime) {		\
 						TRACE_LOG_FUNCTION( &lclTime, tid_, lvl, "", TRACE_NARGS(__VA_ARGS__) \
 						                   , ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__) ); \
 					}													\
@@ -1789,33 +1789,32 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 # if   (__cplusplus >= 201103L)
 
-// Note: the force arg is used directly in the macro definition
-#  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,tvp,ins,ins_sz)	\
-	[](const char* nn,int lvl_,int forc_,int*do_m_,int*do_s_,timeval*tvp_,char*ins_,size_t sz){ \
+#  define TRACE_STATIC_TID_ENABLED(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz) \
+	[](const char* nn,int lvl_,int s_enabled_,int s_frc_,int*do_m_,int*do_s_,timeval*tvp_,char*ins_,size_t sz){ \
 		TRACE_INIT_CHECK {				\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
 			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
-			*do_s_ = (   traceControl_rwp->mode.bits.S					\
-			         && ((traceNamLvls_p[tid_].S & TLVLMSK(lvl_)) || (forc_)) \
-			         && limit_do_print(tvp_,&_info,ins_,sz) );	\
+			*do_s_ = (   s_enabled_										\
+			          && ( s_frc_ ||(traceControl_rwp->mode.bits.S&&(traceNamLvls_p[tid_].S&TLVLMSK(lvl_))) ) \
+			          && limit_do_print(tvp_,&_info,ins_,sz) );			\
 			return (*do_m_||*do_s_)?tid_:-1;								\
 		} else							\
 		  return -1;						\
-	}(name,lvl,force,mp,sp,tvp,ins,ins_sz)
+	}(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz)
 
 # else 
 
-// Note: the force arg is used directly in the macro definition
-#  define TRACE_STATIC_TID_ENABLED(name,lvl,force,mp,sp,tvp,ins,ins_sz)	\
+// Note: the s_enbld and s_frc args are used directly in the macro definition
+#  define TRACE_STATIC_TID_ENABLED(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz) \
 	({const char* nn=name;int lvl_=lvl,*do_m_=mp,*do_s_=sp;char*ins_=ins;size_t sz=ins_sz; \
 		int tid__;														\
 		TRACE_INIT_CHECK {												\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
 			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
-			*do_s_ = (   traceControl_rwp->mode.bits.S					\
-			          && ((traceNamLvls_p[tid_].S & TLVLMSK(lvl_)) || (force)) \
+			*do_s_ = (   s_enbld										\
+			          && ( s_frc ||(traceControl_rwp->mode.bits.S&&(traceNamLvls_p[tid_].S&TLVLMSK(lvl_))) ) \
 			          && limit_do_print(tvp,&_info,ins_,sz) );			\
 			if(ipp_) *ipp_=(int*)&_info;								\
 			tid__ = (*do_m_||*do_s_)?tid_:-1;							\
@@ -1828,10 +1827,11 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 
 // Use C++ "for" statement to create single statement scope for key (static) variable that
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
-// force_s = force slow; force_f = force formating (i.e. if Memory only)
-#define TRACE_STREAMER(lvl, nam_or_fmt,force_s,fmt_or_nam)			\
+// s_enabled = is_slowpath_enabled; fmtnow = force formating (i.e. if Memory only)
+#define TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)			\
 	for( int tid=-1,do__m=0,do__s=0,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
-		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,force_s,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
+		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,s_enabled,force_s \
+		                                             ,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
 	    ) TraceStreamer{}.init( tid, lvl, do__m, do__s, fmtnow, (timeval*)&tv, (char*)ins )
 
 #define TRACE_ENDL ""
@@ -1859,18 +1859,19 @@ static inline const char* t_arg_nmft  ( int fmtnow, int nm __attribute__((__unus
 #define TLVL_INFO         2
 #define TLVL_DEBUG        3
 #define TLVL_TRACE        4
-#define TLOG_ERROR(name)   TRACE_STREAMER(TLVL_ERROR,  &(name)[0], 1,0)
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING,&(name)[0], 1,0)
-#define TLOG_INFO(name)    TRACE_STREAMER(TLVL_INFO,   &(name)[0], DEBUG_FORCED,0)
-#define TLOG_DEBUG(name)   TRACE_STREAMER(TLVL_DEBUG,  &(name)[0], DEBUG_FORCED,0)
-#define TLOG_TRACE(name)   TRACE_STREAMER(TLVL_TRACE,  &(name)[0], 0,0)
-#define TLOG_DBG(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one), 0, tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one))
-#define TLOG_ARB(...)      TRACE_STREAMER(tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one), 0, tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one))
-//     TLOG(lvl[,"name"][,noDlyFmt])
-# define TLOG(...)       TRACE_STREAMER(tlog_LVL( __VA_ARGS__,need_at_least_one), \
-										tlog_ARG2(__VA_ARGS__,0,need_at_least_one), \
-										0,								\
-										tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one))
+//                                 args are: lvl,         name, fmtnow, s_enabled, s_force, 
+#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR,  &(name)[0], 0,1,0 )
+#define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING,&(name)[0], 0,1,0 )
+#define TLOG_INFO(name)    TRACE_STREAMER( TLVL_INFO,   &(name)[0], 0,1,0 )
+#define TLOG_DEBUG(name)   TRACE_STREAMER( TLVL_DEBUG,  &(name)[0], 0,1,0 )
+#define TLOG_TRACE(name)   TRACE_STREAMER( TLVL_TRACE,  &(name)[0], 0,1,0 )
+// For the following, the 1st arg must be lvl. 
+#define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one), 1,0 )
+#define TLOG_ARB(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one), 1,0 )
+#define TLOG(...)          TRACE_STREAMER( tlog_LVL( __VA_ARGS__,need_at_least_one),tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one), 1,0 )
 #define TRACE_STREAMER_ARGSMAX 35
 #define TRACE_STREAMER_TEMPLATE 1
 #define TRACE_STREAMER_EXPAND(args) args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7],args[8],args[9] \

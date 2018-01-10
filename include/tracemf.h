@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 778 $$Date: 2018-01-06 14:52:25 -0600 (Sat, 06 Jan 2018) $";
+ // rev="$Revision: 783 $$Date: 2018-01-09 22:10:43 -0600 (Tue, 09 Jan 2018) $";
  */
 /** 
  * \file tracemf.h
@@ -27,12 +27,32 @@
 #define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)				\
 	mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
 #include "trace.h"		/* TRACE */
+
+#define SEV_EN(lvl) ((lvl==0)||((lvl==1)&&mf::isWarningEnabled())||((lvl==2)&&mf::isInfoEnabled())||((lvl>=3)&&mf::isDebugEnabled()))
+#define SL_FRC(lvl) ((lvl<=2)||((lvl==3)&&DEBUG_FORCED))
+
+#undef  TLOG_ERROR           // TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)
+#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_WARNING, &(name)[0], 0, 1, 1 )
 #undef  TLOG_WARNING
-#define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, &(name)[0], mf::isWarningEnabled(), 0)
+#define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING, &(name)[0], 0, mf::isWarningEnabled(), 1 )
 #undef  TLOG_INFO
-#define TLOG_INFO(name)    TRACE_STREAMER(TLVL_INFO,    &(name)[0], mf::isInfoEnabled(), 0)
+#define TLOG_INFO(name)    TRACE_STREAMER( TLVL_INFO,    &(name)[0], 0, mf::isInfoEnabled(), 1)
 #undef  TLOG_DEBUG
-#define TLOG_DEBUG(name)   TRACE_STREAMER(TLVL_DEBUG,   &(name)[0], mf::isDebugEnabled() && DEBUG_FORCED, 0)
+#define TLOG_DEBUG(name)   TRACE_STREAMER( TLVL_DEBUG,   &(name)[0], 0, mf::isDebugEnabled(), DEBUG_FORCED)
+#undef  TLOG_TRACE
+#define TLOG_TRACE(name)   TRACE_STREAMER( TLVL_TRACE,   &(name)[0], 0, mf::isDebugEnabled(), 0)
+#undef  TLOG_DBG
+#define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one),  tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
+										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+#undef  TLOG_ARB
+#define TLOG_ARB(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+										  , tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
+										  , SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+#undef  TLOG
+#define TLOG(...)          TRACE_STREAMER( tlog_LVL( __VA_ARGS__,need_at_least_one),tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
+										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 

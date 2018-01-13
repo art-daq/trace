@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 778 $$Date: 2018-01-06 14:52:25 -0600 (Sat, 06 Jan 2018) $"
+#define TRACE_CNTL_REV "$Revision: 786 $$Date: 2018-01-13 13:10:15 -0600 (Sat, 13 Jan 2018) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -43,9 +43,8 @@ commands:\n\
  mode <mode>\n\
  modeM <mode>\n\
  modeS <mode>\n\
- lvlmskM[g] <msk>  mask for Memory buffer\n\
- lvlmskS[g] <msk>  mask for stdout\n\
- lvlmskT[g] <msk>  mask for trigger\n\
+ lvlmsk[M|S|T][g] <msk> M=memory, S=slow/console, T=trig\n\
+ lvlmsk[g]  <Mmsk> <Smask> <Tmask>\n\
  lvlset[g] <mskM> <mskS> <mskT>\n\
  lvlclr[g] <mskM> <mskS> <mskT>\n\
  trig <lvlmskM> <postEntries>\n\
@@ -54,7 +53,8 @@ commands:\n\
 opts:\n\
  -?, -h       show this help\n\
  -f<file>\n\
- -n<name>\n\
+ -n<name>     name. For all commands - not wildcard, created if non-existent\n\
+ -N<name>     name. For lvl*, could be wildcard match spec.\n\
  -V           print version and exit\n\
  -a           for tids, show all\n\
 show opts:\n\
@@ -644,23 +644,25 @@ void traceInfo()
 int main(  int	argc
          , char	*argv[] )
 {
-	int        ret=0;
+	int         ret=0;
 	const char *cmd;
 extern  char       *optarg;        /* for getopt */
 extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
-	int	     do_heading=1;
-	int	     show_opts=0;
-	unsigned ii=0;
-	int      opt_loops=-1;
-	unsigned opt_dly_ms=0;
-	unsigned opt_burst=1;
-	int      opt_all=0;
+	int	        do_heading=1;
+	int	        show_opts=0;
+	unsigned    ii=0;
+	int         opt_loops=-1;
+	unsigned    opt_dly_ms=0;
+	unsigned    opt_burst=1;
+	int         opt_all=0;
+	const char *opt_name=NULL;
 
-	while ((opt=getopt(argc,argv,"?hn:f:x:HqVL:Fl:d:b:a")) != -1)
-	{	switch (opt)
-		{ /* '?' is also what you get w/ "invalid option -- -" */
+	while ((opt=getopt(argc,argv,"?hn:N:f:x:HqVL:Fl:d:b:a")) != -1) {
+		switch (opt) {
+		/*   '?' is also what you get w/ "invalid option -- -"   */
 		case '?': case 'h': printf(USAGE);exit(0);           break;
+		case 'N': opt_name=optarg;                           break;
 		case 'n': setenv("TRACE_NAME",optarg,1);             break;
 		case 'f': setenv("TRACE_FILE",optarg,1);             break;
 		case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
@@ -675,11 +677,14 @@ extern  int        optind;         /* for getopt */
 		case 'a': opt_all=1;                                 break;
 		}
 	}
-	if (argc - optind < 1)
-	{	printf( "Need cmd\n" );
+	if (argc - optind < 1) {
+		printf( "Need cmd\n" );
 		printf( USAGE ); exit( 0 );
 	}
 	cmd = argv[optind++];
+
+	if (opt_name && !(strncmp(cmd,"lvl",3)==0))
+		setenv("TRACE_NAME",opt_name,1);
 
 	if(getenv("LC_NUMERIC"))
 		setlocale(LC_NUMERIC,getenv("LC_NUMERIC")); 
@@ -1166,6 +1171,56 @@ extern  int        optind;         /* for getopt */
 		}
 		else ret=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
 		if (ret == 0) ret=1; else ret=0;
+	} else if (  (strncmp(cmd,"lvlmsk",6)==0)
+	           ||(strncmp(cmd,"lvlset",6)==0)
+	           ||(strncmp(cmd,"lvlclr",6)==0)) {
+		/* lvl msk,set,clr are special primarily in that the -n<name> will no
+		   longer create a non-existent name b/c it could be a wildcard spec.
+		   Way to create a non-existent name:
+		   trace_cntl mode -n<name>
+		   TRACE_NAME=<name> trace_cntl lvlsetM <msk>
+           others? */
+		int sts=0, slen=strlen(&cmd[6]);
+		if (opt_name) {
+			char cmdn[8];
+			if (slen>1 || (slen==1&&!strpbrk(&cmd[6],"MST"))) {
+				printf("invalid command: %s\n", cmd ); printf( USAGE );
+			}
+			strncpy(cmdn,cmd,6);
+			cmdn[6]='n';strcpy(&cmdn[7],&cmd[6]); /* insert the 'n' */
+			switch (argc - optind) {
+			case 0: sts=TRACE_CNTL( cmdn, opt_name );
+				printf("mask=0x%x\n",sts);
+				break;
+			case 1: sts=TRACE_CNTL( cmdn, opt_name, strtoull(argv[optind],NULL,0) );
+				/*printf("previous mask=0x%x\n",sts);*/
+				break;
+			case 3: TRACE_CNTL( cmdn, opt_name, strtoull(argv[optind],NULL,0)
+			                   , strtoull(argv[optind+1],NULL,0)
+			                   , strtoull(argv[optind+2],NULL,0) );
+				break;
+			default:
+				printf("invalid command: %s\n", cmd ); printf( USAGE );
+				break;
+			}
+		} else {
+			if (slen>2 || (slen>=1&&!strpbrk(&cmd[6],"MSTgG"))) {
+				printf("invalid command: %s\n", cmd );printf( USAGE );
+			}
+			switch (argc - optind) {
+			case 0: sts=TRACE_CNTL( cmd );
+				printf("mask=0x%x\n",sts);
+				break;
+			case 1: sts=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
+				break;
+			case 3: TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0)
+			                   , strtoull(argv[optind+1],NULL,0)
+			                   , strtoull(argv[optind+2],NULL,0) );
+				break;
+			default:
+				printf("invalid command: %s\n", cmd ); printf( USAGE ); break;
+			}
+		}
 	}
 	else { /* all other traceCntl commands */
 		int sts=0;

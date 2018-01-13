@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 776 $$Date: 2018-01-05 08:28:42 -0600 (Fri, 05 Jan 2018) $'
+ # rev='$Revision: 785 $$Date: 2018-01-13 10:49:13 -0600 (Sat, 13 Jan 2018) $'
 set -u
 opt_depth=15
 opt_std=c++11
@@ -122,6 +122,7 @@ $do_TRACE_NAME
 # include "trace.h"
 #else
 # define TRACE(...)
+# define TLOG(...) if(0)std::cout /* allow compiler to compile-n-optimize-out */
 #endif
 #include <stdlib.h> /* random (optionally) */
 #include <unistd.h> /* usleep (optionally) */
@@ -135,7 +136,9 @@ void sub$nn( struct args *aa )
     TRACE( 0,"sub$nn tid=%d loop=%u calling sub$next tC_p=%p %u=tIL_hung_max"
           ,aa->tid,aa->loop,traceControl_p,traceInitLck_hung_max);
 #else
-    TLOG(0) << "sub$nn tid="<<aa->tid<<" loop="<<aa->loop<<"calling sub$next tC_p="<<traceControl_p<<" "<<traceInitLck_hung_max<<"=tIL_hung_max";
+    TLOG(0) << "sub$nn tid="<<aa->tid<<" loop="<<aa->loop
+            <<"calling sub$next tC_p="<<traceControl_p<<" "
+            <<traceInitLck_hung_max<<"=tIL_hung_max";
 #endif
     $POTENTIAL_DELAY
     sub$next(aa);
@@ -160,6 +163,7 @@ $do_TRACE_NAME
 # include "trace.h"
 #else
 # define TRACE(...)
+# define TLOG(...) if(0)std::cout /* allow compiler to compile-n-optimize-out */
 #endif
 
 $struct_args;
@@ -199,6 +203,7 @@ ${do_define:+#define TRACE_DEFINE // trace variables are defined in this module}
 # include "trace.h"
 #else
 # define TRACE(...)
+# define TLOG(...) if(0)std::cout /* allow compiler to compile-n-optimize-out */
 #endif
 
 #define USAGE "\

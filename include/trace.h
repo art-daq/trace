@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 785 $$Date: 2018-01-13 10:49:13 -0600 (Sat, 13 Jan 2018) $"
+#define TRACE_REV  "$Revision: 788 $$Date: 2018-01-14 14:01:50 -0600 (Sun, 14 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -27,7 +27,8 @@
 # include <ctype.h>			/* isspace, isgraph */
 # include <sys/uio.h>		/* struct iovec */
 # include <fnmatch.h>		/* fnmatch */
-# define TMATCHCMP(s1,s2) fnmatch(s1,s2,0)
+# define TMATCHCMP(pattern,str_) (fnmatch(pattern,str_,0)==0) /*MAKE MACRO RETURN TRUE IF MATCH*/
+/*# define TMATCHCMP(needle,haystack)   strstr(haystack,needle)*/ /*MAKE MACRO RETURN TRUE IF MATCH*/
 
 # if   defined(__CYGWIN__)
 #  include <windows.h>
@@ -158,7 +159,8 @@ static inline uint32_t cmpxchg( TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_
 # include <linux/spinlock.h>	      /* cmpxchg */
 # include <linux/sched.h>	      /* current (struct task_struct *) */
 # include <linux/ctype.h>	      /* isgraph */
-# define TMATCHCMP(s1,s2)         strcmp(s1,s2)
+/*# define TMATCHCMP(pattern,str_)         (strcmp(pattern,str_)==0)*/ /*MAKE MACRO RETURN TRUE IF MATCH*/
+# define TMATCHCMP(needle,haystack)         strstr(haystack,needle) /*MAKE MACRO RETURN TRUE IF MATCH*/
 # define TRACE_ATOMIC_T               uint32_t
 # define TRACE_ATOMIC_INIT            0
 # define TRACE_ATOMIC_LOAD(ptr)       *(ptr)
@@ -1238,7 +1240,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		ee = traceControl_p->num_namLvlTblEnts;
 		for (ii=0; ii<ee; ++ii) {
 			if (traceNamLvls_p[ii].name[0]
-			    &&(TMATCHCMP(name_spec,traceNamLvls_p[ii].name)==0) )
+			    &&TMATCHCMP(name_spec,traceNamLvls_p[ii].name) )
 				break;
 		}
 		if (ii==ee)
@@ -1248,19 +1250,19 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		case 'M':
 			ret = traceNamLvls_p[ii].M;
 			for ( ; ii<ee; ++ii)
-				if(traceNamLvls_p[ii].name[0]&&(TMATCHCMP(name_spec,traceNamLvls_p[ii].name)==0))
+				if(traceNamLvls_p[ii].name[0]&&TMATCHCMP(name_spec,traceNamLvls_p[ii].name))
 					trace_msk_op( &traceNamLvls_p[ii].M,op,lvl );
 			break;
 		case 'S':
 			ret = traceNamLvls_p[ii].S;
 			for ( ; ii<ee; ++ii)
-				if(traceNamLvls_p[ii].name[0]&&(TMATCHCMP(name_spec,traceNamLvls_p[ii].name)==0))
+				if(traceNamLvls_p[ii].name[0]&&TMATCHCMP(name_spec,traceNamLvls_p[ii].name))
 					trace_msk_op( &traceNamLvls_p[ii].S,op,lvl );
 			break;
 		case 'T':
 			ret = traceNamLvls_p[ii].T;
 			for ( ; ii<ee; ++ii)
-				if(traceNamLvls_p[ii].name[0]&&(TMATCHCMP(name_spec,traceNamLvls_p[ii].name)==0))
+				if(traceNamLvls_p[ii].name[0]&&TMATCHCMP(name_spec,traceNamLvls_p[ii].name))
 					trace_msk_op( &traceNamLvls_p[ii].T,op,lvl );
 			break;
 		default:
@@ -1271,7 +1273,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 			lvls=va_arg(ap,uint64_t);
 			lvlt=va_arg(ap,uint64_t);
 			for ( ; ii<ee; ++ii)
-				if(traceNamLvls_p[ii].name[0]&&(TMATCHCMP(name_spec,traceNamLvls_p[ii].name)==0)) {
+				if(traceNamLvls_p[ii].name[0]&&TMATCHCMP(name_spec,traceNamLvls_p[ii].name)) {
 					trace_msk_op( &traceNamLvls_p[ii].M,op,lvlm );
 					trace_msk_op( &traceNamLvls_p[ii].S,op,lvls );
 					trace_msk_op( &traceNamLvls_p[ii].T,op,lvlt );
@@ -1301,11 +1303,14 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		lvl=va_arg(ap,uint64_t); /* "FIRST" ARG SHOULD ALWAYS BE THERE */
 		switch (cmd[6]) {
 		case 'M': for ( ; ii<ee; ++ii) if(doNew||traceNamLvls_p[ii].name[0])
-										   trace_msk_op( &traceNamLvls_p[ii].M,op,lvl ); break;
+										   trace_msk_op( &traceNamLvls_p[ii].M,op,lvl );
+			break;
 		case 'S': for ( ; ii<ee; ++ii) if(doNew||traceNamLvls_p[ii].name[0])
-										   trace_msk_op( &traceNamLvls_p[ii].S,op,lvl ); break;
+										   trace_msk_op( &traceNamLvls_p[ii].S,op,lvl );
+			break;
 		case 'T': for ( ; ii<ee; ++ii) if(doNew||traceNamLvls_p[ii].name[0])
-										   trace_msk_op( &traceNamLvls_p[ii].T,op,lvl ); break;
+										   trace_msk_op( &traceNamLvls_p[ii].T,op,lvl );
+			break;
 		default:
 			if (nargs != 3) {
 				TRACE_PRINT("need 3 lvlmsks; %d given\n",nargs);va_end(ap); return (-1);

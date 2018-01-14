@@ -4,7 +4,7 @@
 # or COPYING file. If you do not have such a file, one can be obtained by
 # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 # $RCSfile: bitN_to_mask,v $
-# rev="$Revision: 646 $$Date: 2017-10-22 12:33:47 -0500 (Sun, 22 Oct 2017) $";
+# rev="$Revision: 788 $$Date: 2018-01-14 14:01:50 -0600 (Sun, 14 Jan 2018) $";
 
 bitN_to_mask()
 {
@@ -15,6 +15,7 @@ bitN_to_mask()
         case "$op" in
         -f*) eval $op1arg; opts="${opts:+$opts }-f$1"; shift;;
         -n*) eval $op1arg; opts="${opts:+$opts }-n$1"; shift;;
+        -N*) eval $op1arg; opts="${opts:+$opts }-N$1"; shift;;
         *)  xx=`echo "$op" | sed -e "s/'/'\"'\"'/g"`; args="${args-} '$xx'";;
         esac
     done

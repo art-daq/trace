@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 788 $$Date: 2018-01-14 14:01:50 -0600 (Sun, 14 Jan 2018) $"
+#define TRACE_REV  "$Revision: 791 $$Date: 2018-01-23 14:22:27 -0600 (Tue, 23 Jan 2018) $"
 
 #ifndef __KERNEL__
 

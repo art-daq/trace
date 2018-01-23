@@ -1838,7 +1838,6 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 			*do_s_ = (   s_enbld										\
 			          && ( s_frc ||(traceControl_rwp->mode.bits.S&&(traceNamLvls_p[tid_].S&TLVLMSK(lvl_))) ) \
 			          && limit_do_print(tvp,&_info,ins_,sz) );			\
-			if(ip_) *ip_=(int*)&_info;								\
 			tid__ = (*do_m_||*do_s_)?tid_:-1;							\
 		} else															\
 			  tid__ = -1;												\
@@ -1919,7 +1918,6 @@ struct TraceStreamer : std::ios {
 	size_t argCount;
 	int tid_;
 	int lvl_;
-	limit_info_t *ip_; // for throttle info
 	bool do_s, do_m, do_f;
 	char widthStr[16];
 	char precisionStr[16];

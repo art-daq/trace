@@ -1838,7 +1838,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 			*do_s_ = (   s_enbld										\
 			          && ( s_frc ||(traceControl_rwp->mode.bits.S&&(traceNamLvls_p[tid_].S&TLVLMSK(lvl_))) ) \
 			          && limit_do_print(tvp,&_info,ins_,sz) );			\
-			if(ipp_) *ipp_=(int*)&_info;								\
+			if(ip_) *ip_=(int*)&_info;								\
 			tid__ = (*do_m_||*do_s_)?tid_:-1;							\
 		} else															\
 			  tid__ = -1;												\

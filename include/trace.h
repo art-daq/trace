@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 791 $$Date: 2018-01-23 14:22:27 -0600 (Tue, 23 Jan 2018) $"
+#define TRACE_REV  "$Revision: 793 $$Date: 2018-01-26 15:50:34 -0600 (Fri, 26 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -883,6 +883,8 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	va_end( ap );
 }   /* trace_user - const char* */
 #ifdef __cplusplus
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
 static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ... )
 {
@@ -891,6 +893,7 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	vtrace_user( tvp, TrcId, lvl, insert, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace_user - std::string& */
+# pragma clang diagnostic pop
 #endif
 
 
@@ -1006,6 +1009,8 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 }   /* trace */
 
 #ifdef __cplusplus
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
 static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED, const std::string& msg, ... )
@@ -1015,6 +1020,7 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	vtrace( tvp, trcId, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
+# pragma clang diagnostic pop
 #endif
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))

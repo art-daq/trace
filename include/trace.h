@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 793 $$Date: 2018-01-26 15:50:34 -0600 (Fri, 26 Jan 2018) $"
+#define TRACE_REV  "$Revision: 794 $$Date: 2018-01-29 13:57:15 -0600 (Mon, 29 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1966,6 +1966,8 @@ public:
 			msg[msg_sz-1]='\0';
 			--msg_sz;
 		}
+#      pragma clang diagnostic push
+#      pragma clang diagnostic ignored "-Wformat-security"
 		if (do_f) {
 			if (do_m) trace(             lclTime_p, tid_, lvl_,       0 TRACE_XTRA_PASSED, msg );
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, 0, msg );
@@ -1973,6 +1975,7 @@ public:
 			if (do_m) trace( lclTime_p, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, argCount, msg, TRACE_STREAMER_EXPAND(args));
 		}
+#      pragma clang diagnostic pop
 	}
 
 	inline void msg_append( const char *src )

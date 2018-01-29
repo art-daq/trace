@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 783 $$Date: 2018-01-09 22:10:43 -0600 (Tue, 09 Jan 2018) $";
+ // rev="$Revision: 794 $$Date: 2018-01-29 13:57:15 -0600 (Mon, 29 Jan 2018) $";
  */
 /** 
  * \file tracemf.h
@@ -108,6 +108,8 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	va_end(ap);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
 static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
 {
@@ -116,6 +118,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
 	va_end(ap);
 }   /* trace */
+#pragma clang diagnostic pop
 
 
 inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)

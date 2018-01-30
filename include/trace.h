@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 794 $$Date: 2018-01-29 13:57:15 -0600 (Mon, 29 Jan 2018) $"
+#define TRACE_REV  "$Revision: 795 $$Date: 2018-01-30 13:17:40 -0600 (Tue, 30 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -883,8 +883,8 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	va_end( ap );
 }   /* trace_user - const char* */
 #ifdef __cplusplus
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wvarargs"
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
 static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ... )
 {
@@ -893,7 +893,7 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	vtrace_user( tvp, TrcId, lvl, insert, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace_user - std::string& */
-# pragma clang diagnostic pop
+# pragma GCC diagnostic pop
 #endif
 
 
@@ -1009,8 +1009,8 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 }   /* trace */
 
 #ifdef __cplusplus
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wvarargs"
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
 static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED, const std::string& msg, ... )
@@ -1020,7 +1020,7 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	vtrace( tvp, trcId, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
-# pragma clang diagnostic pop
+# pragma GCC diagnostic pop
 #endif
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
@@ -1966,8 +1966,8 @@ public:
 			msg[msg_sz-1]='\0';
 			--msg_sz;
 		}
-#      pragma clang diagnostic push
-#      pragma clang diagnostic ignored "-Wformat-security"
+#      pragma GCC diagnostic push
+#      pragma GCC diagnostic ignored "-Wformat-security"
 		if (do_f) {
 			if (do_m) trace(             lclTime_p, tid_, lvl_,       0 TRACE_XTRA_PASSED, msg );
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, 0, msg );
@@ -1975,7 +1975,7 @@ public:
 			if (do_m) trace( lclTime_p, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, argCount, msg, TRACE_STREAMER_EXPAND(args));
 		}
-#      pragma clang diagnostic pop
+#      pragma GCC diagnostic pop
 	}
 
 	inline void msg_append( const char *src )

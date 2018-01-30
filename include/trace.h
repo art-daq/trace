@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 796 $$Date: 2018-01-30 14:53:56 -0600 (Tue, 30 Jan 2018) $"
+#define TRACE_REV  "$Revision: 797 $$Date: 2018-01-30 16:54:45 -0600 (Tue, 30 Jan 2018) $"
 
 #ifndef __KERNEL__
 
@@ -35,10 +35,9 @@
 static inline pid_t trace_gettid(void) { return GetCurrentThreadId(); }
 static inline int   trace_getcpu(void) { return GetCurrentProcessorNumber(); }
 # else
-#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
-#  endif
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #  include <sys/syscall.h>	/* syscall */
 #  if   defined(__sun__)
 #   define TRACE_GETTID SYS_lwp_self
@@ -52,9 +51,7 @@ static inline int trace_getcpu(void) { return 0; }
 static inline int trace_getcpu(void) { return sched_getcpu(); }
 #  endif
 static inline pid_t trace_gettid(void) { return syscall(TRACE_GETTID); }
-#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-#   pragma GCC diagnostic pop
-#  endif
+#  pragma GCC diagnostic pop
 # endif
 
 # ifndef PATH_MAX
@@ -2023,12 +2020,8 @@ public:
 
 	inline TraceStreamer& width(int y)
 	{
-#     ifndef __clang__
-		if (y != _M_width) {
-			_M_width = y;
-#     else
-			{
-#     endif
+        if (y != std::ios_base::width()) {
+			std::ios_base::width(y);
 			snprintf( widthStr, sizeof(widthStr), "%d", y );
 #          ifdef TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
@@ -2039,12 +2032,8 @@ public:
 
 	inline TraceStreamer& precision(int y)
 	{
-#     ifndef __clang__
-		if (y != _M_precision) {
-			_M_precision = y;
-#     else
-			{
-#     endif
+		if (y != std::ios_base::precision()) {
+			std::ios_base::precision(y);
 			if(y) snprintf( precisionStr, sizeof(precisionStr), ".%d", y );
 			else  precisionStr[0]='\0';
 #          ifdef TRACE_STREAMER_DEBUG

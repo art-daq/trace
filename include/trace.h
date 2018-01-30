@@ -1937,6 +1937,7 @@ public:
 #      ifdef TRACE_STREAMER_DEBUG
 		std::cout << "TraceStreamer CONSTRUCTOR\n";
 #      endif
+        std::ios::init(nullptr);
 	}
 
 	inline ~TraceStreamer() {

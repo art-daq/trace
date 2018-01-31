@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 786 $$Date: 2018-01-13 13:10:15 -0600 (Sat, 13 Jan 2018) $"
+#define TRACE_CNTL_REV "$Revision: 798 $$Date: 2018-01-31 00:04:42 -0600 (Wed, 31 Jan 2018) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -34,6 +34,11 @@ done
 
 #include "trace.h"
 
+#ifdef __APPLE__
+# define TRACE_TID_WIDTH 7
+#else
+# define TRACE_TID_WIDTH 5
+#endif
 
 #define USAGE "\
 %s [opts] <cmd> [command opt/args]\n\
@@ -381,7 +386,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 's': printf("%*s ", buf_slot_width, "slt" ); break;
 			case 'T': if(tfmt_len)printf("%*.*s ", tfmt_len,tfmt_len,&("us_tod"[tfmt_len>=6?0:6-tfmt_len])); break;
 			case 't': printf("       tsc "); break;
-			case 'i': printf("   tid "); break; /* darwin 16 tids are routinely 6 digit */
+			case 'i': printf("%*s ", TRACE_TID_WIDTH, "tid" ); break; /* darwin 16 tids are routinely 7 digit */
 			case 'I': printf("TID "); break;
 			case 'n': printf("%*s ", longest_name,"name");break;
 			case 'C': printf("cpu "); break;
@@ -404,7 +409,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 's': printf("%.*s ", buf_slot_width, TRACE_LONG_DASHES); break;
 			case 'T': if(tfmt_len)printf("%.*s ", tfmt_len, TRACE_LONG_DASHES); break;
 			case 't': printf("---------- "); break;
-			case 'i': printf("------ "); break; /* darwin 16 tids are routinely 6 digit */
+			case 'i': printf("%.*s ", TRACE_TID_WIDTH, TRACE_LONG_DASHES); break; /* darwin 16 tids are routinely 7 digit */
 			case 'I': printf("--- "); break;
 			case 'n': printf("%.*s ", longest_name,TRACE_LONG_DASHES);break;
 			case 'C': printf("--- "); break;
@@ -515,7 +520,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 'T': if(tfmt_len){ strftime(tbuf,sizeof(tbuf),tfmt,localtime(&seconds)); strcat(tbuf," ");
 					  printf(tbuf, useconds); } break;
 			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
-			case 'i': printf("%6d ", myEnt_p->tid); break; /* darwin 16 tids are routinely 6 digit */
+			case 'i': printf("%*d ", TRACE_TID_WIDTH, myEnt_p->tid); break; /* darwin 16 tids are routinely 7 digit */
 			case 'I': printf("%3u ", myEnt_p->TrcId); break;
 			case 'n': printf("%*.*s ",longest_name,longest_name,traceNamLvls_p[myEnt_p->TrcId].name);break;
 			case 'C': printf("%3u ", myEnt_p->cpu); break;

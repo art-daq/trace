@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 795 $$Date: 2018-01-30 13:17:40 -0600 (Tue, 30 Jan 2018) $";
+ // rev="$Revision: 799 $$Date: 2018-01-31 10:27:43 -0600 (Wed, 31 Jan 2018) $";
  */
 /** 
  * \file tracemf.h
@@ -32,7 +32,7 @@
 #define SL_FRC(lvl) ((lvl<=2)||((lvl==3)&&DEBUG_FORCED))
 
 #undef  TLOG_ERROR           // TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)
-#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_WARNING, &(name)[0], 0, 1, 1 )
+#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR, &(name)[0], 0, 1, 1 )
 #undef  TLOG_WARNING
 #define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING, &(name)[0], 0, mf::isWarningEnabled(), 1 )
 #undef  TLOG_INFO

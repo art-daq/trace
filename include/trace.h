@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 797 $$Date: 2018-01-30 16:54:45 -0600 (Tue, 30 Jan 2018) $"
+#define TRACE_REV  "$Revision: 800 $$Date: 2018-02-03 22:20:12 -0600 (Sat, 03 Feb 2018) $"
 
 #ifndef __KERNEL__
 
@@ -36,7 +36,9 @@ static inline pid_t trace_gettid(void) { return GetCurrentThreadId(); }
 static inline int   trace_getcpu(void) { return GetCurrentProcessorNumber(); }
 # else
 #  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#  ifndef __cplusplus
+#   pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#  endif
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #  include <sys/syscall.h>	/* syscall */
 #  if   defined(__sun__)

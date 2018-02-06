@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 800 $$Date: 2018-02-03 22:20:12 -0600 (Sat, 03 Feb 2018) $"
+#define TRACE_REV  "$Revision: 803 $$Date: 2018-02-05 21:45:31 -0600 (Mon, 05 Feb 2018) $"
 
 #ifndef __KERNEL__
 
@@ -35,11 +35,13 @@
 static inline pid_t trace_gettid(void) { return GetCurrentThreadId(); }
 static inline int   trace_getcpu(void) { return GetCurrentProcessorNumber(); }
 # else
-#  pragma GCC diagnostic push
-#  ifndef __cplusplus
-#   pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L)) || (defined(__cplusplus)&&(__cplusplus>=201103L))
+#   pragma GCC diagnostic push
+#   ifndef __cplusplus
+#    pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#   endif
+#   pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #  endif
-#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #  include <sys/syscall.h>	/* syscall */
 #  if   defined(__sun__)
 #   define TRACE_GETTID SYS_lwp_self
@@ -53,7 +55,9 @@ static inline int trace_getcpu(void) { return 0; }
 static inline int trace_getcpu(void) { return sched_getcpu(); }
 #  endif
 static inline pid_t trace_gettid(void) { return syscall(TRACE_GETTID); }
-#  pragma GCC diagnostic pop
+#  if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L)) || (defined(__cplusplus)&&(__cplusplus>=201103L))
+#   pragma GCC diagnostic pop
+#  endif
 # endif
 
 # ifndef PATH_MAX
@@ -882,8 +886,10 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	va_end( ap );
 }   /* trace_user - const char* */
 #ifdef __cplusplus
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wvarargs"
+# if (__cplusplus>=201103L)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wvarargs"
+# endif
 SUPPRESS_NOT_USED_WARN
 static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ... )
 {
@@ -892,7 +898,9 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	vtrace_user( tvp, TrcId, lvl, insert, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace_user - std::string& */
-# pragma GCC diagnostic pop
+# if (__cplusplus>=201103L)
+#  pragma GCC diagnostic pop
+# endif
 #endif
 
 
@@ -995,6 +1003,9 @@ static void vtrace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"   /* b/c of TRACE_XTRA_UNUSED */
+# ifdef __cplusplus
+#  pragma GCC diagnostic ignored "-Wvarargs"
+# endif
 #endif
 
 SUPPRESS_NOT_USED_WARN
@@ -1008,8 +1019,6 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 }   /* trace */
 
 #ifdef __cplusplus
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
 static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
                   TRACE_XTRA_UNUSED, const std::string& msg, ... )
@@ -1019,7 +1028,6 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	vtrace( tvp, trcId, lvl, nargs, msg.c_str(), ap );
 	va_end( ap );	
 }   /* trace */
-# pragma GCC diagnostic pop
 #endif
 
 #if (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
@@ -1936,7 +1944,7 @@ public:
 #      ifdef TRACE_STREAMER_DEBUG
 		std::cout << "TraceStreamer CONSTRUCTOR\n";
 #      endif
-        std::ios::init(nullptr);
+        std::ios::init(0);
 	}
 
 	inline ~TraceStreamer() {
@@ -1966,8 +1974,10 @@ public:
 			msg[msg_sz-1]='\0';
 			--msg_sz;
 		}
+#     if (defined(__cplusplus)&&(__cplusplus>=201103L))
 #      pragma GCC diagnostic push
 #      pragma GCC diagnostic ignored "-Wformat-security"
+#     endif
 		if (do_f) {
 			if (do_m) trace(             lclTime_p, tid_, lvl_,       0 TRACE_XTRA_PASSED, msg );
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, 0, msg );
@@ -1975,7 +1985,9 @@ public:
 			if (do_m) trace( lclTime_p, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
 			if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, argCount, msg, TRACE_STREAMER_EXPAND(args));
 		}
+#     if (defined(__cplusplus)&&(__cplusplus>=201103L))
 #      pragma GCC diagnostic pop
+#     endif
 	}
 
 	inline void msg_append( const char *src )

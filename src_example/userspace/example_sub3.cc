@@ -3,15 +3,17 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_sub3.cc,v $
- // rev="$Revision: 806 $$Date: 2018-02-06 18:30:47 -0600 (Tue, 06 Feb 2018) $";
+ // rev="$Revision: 808 $$Date: 2018-02-07 23:44:55 -0600 (Wed, 07 Feb 2018) $";
 
 #include "trace.h"
-#define TRACE_NAME "example_sub3"
+#define TRACE_NAME strcpy(buffer,"example_sub3")
+static char buffer[15];
 
 void example_sub4( void );
 
 void example_sub3( void )
-{   TRACE( 2, "hello from example_sub3 before calling sub4" );
+{   int mode=TRACE_CNTL("mode");
+	TRACE( 2, "hello from example_sub3 mode=%d before calling sub4",mode );
     example_sub4();
-    TLOG(2) << "hello from example_sub3 after  calling sub4";
+    TLOG(2,TRACE_NAME) << "hello from example_sub3 after  calling sub4";
 }

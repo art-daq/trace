@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 803 $$Date: 2018-02-05 21:45:31 -0600 (Mon, 05 Feb 2018) $"
+#define TRACE_REV  "$Revision: 808 $$Date: 2018-02-07 23:44:55 -0600 (Wed, 07 Feb 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1036,9 +1036,10 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 
 /* Search for name anf insert if not found and not full
  */
-static int32_t name2TID( const char *name )
+static int32_t name2TID( const char *nn )
 {
     uint32_t ii, len;
+	const char *name=(nn&&nn[0])?nn:traceName;
 	char     valid_name[TRACE_DFLT_NAM_CHR_MAX+1];
 #if defined(__KERNEL__)
     if (traceEntries_p==NULL) return -1;
@@ -1827,7 +1828,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 #  define TRACE_STATIC_TID_ENABLED(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz) \
 	[](const char* nn,int lvl_,int s_enabled_,int s_frc_,int*do_m_,int*do_s_,timeval*tvp_,char*ins_,size_t sz){ \
 		TRACE_INIT_CHECK {				\
-			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
+			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=name2TID(nn[0]?nn:TRACE_NAME);} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
 			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
 			*do_s_ = (   s_enabled_										\
@@ -1845,7 +1846,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 	({const char* nn=name;int lvl_=lvl,*do_m_=mp,*do_s_=sp;char*ins_=ins;size_t sz=ins_sz; \
 		int tid__;														\
 		TRACE_INIT_CHECK {												\
-			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=nn[0]?name2TID(nn):traceTID;} \
+			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=name2TID(nn[0]?nn:TRACE_NAME);} \
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
 			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
 			*do_s_ = (   s_enbld										\

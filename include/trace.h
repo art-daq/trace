@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 808 $$Date: 2018-02-07 23:44:55 -0600 (Wed, 07 Feb 2018) $"
+#define TRACE_REV  "$Revision: 812 $$Date: 2018-04-03 11:55:19 -0500 (Tue, 03 Apr 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1867,7 +1867,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 	for( int tid=-1,do__m=0,do__s=0,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
 		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,s_enabled,force_s \
 		                                             ,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
-	    ) TraceStreamer{}.init( tid, lvl, do__m, do__s, fmtnow, (timeval*)&tv, (char*)ins )
+	    ) TraceStreamer().init( tid, lvl, do__m, do__s, fmtnow, (timeval*)&tv, (char*)ins )
 
 #define TRACE_ENDL ""
 #define TLOG_ENDL TRACE_ENDL
@@ -2024,11 +2024,11 @@ public:
 			else                         { APPEND( flags & uppercase ? "G" : "g"); }
 		} else {
 			APPEND( length );
-			if (isUnsigned) {
-				if (flags & hex)      { APPEND( flags & uppercase ? "X" : "x"); }
-				else if (flags & oct) { APPEND( "o"); }
-				else                  { APPEND( "u"); }
-			} else                    { APPEND( "d"); }
+			// this is more of the expected behavior - not necessarily what the standard describes
+			if      (flags & hex) { APPEND( flags & uppercase ? "X" : "x"); }
+			else if (flags & oct) { APPEND( "o"); }
+			else if (isUnsigned)  { APPEND( "u"); }
+			else                  { APPEND( "d"); }
 		}
 		return fmtbuf;
 	}

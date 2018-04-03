@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 799 $$Date: 2018-01-31 10:27:43 -0600 (Wed, 31 Jan 2018) $";
+ // rev="$Revision: 813 $$Date: 2018-04-03 18:20:57 -0500 (Tue, 03 Apr 2018) $";
  */
 /** 
  * \file tracemf.h
@@ -55,6 +55,7 @@
 										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
+#include "cetlib_except/exception.h" // cet::exception
 
 #include <string>
 
@@ -89,6 +90,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 
 	char namebuf[TRACE_DFLT_NAM_CHR_MAX+1];
 	strcpy( namebuf, traceNamLvls_p[TID].name ); // could just give traceNamLvls_p[TID].name to Log*
+
 	switch (lvl)
 	{
 	case TLVL_ERROR:   ::mf::LogError(namebuf)   << outp; break;
@@ -104,7 +106,11 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 {
 	va_list ap;
 	va_start(ap, msg);
-	vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, msg, ap);
+	if(mf::isMessageProcessingSetUp()) {
+		vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, msg, ap);
+	} else {
+		vtrace_user(tvp, TID, lvl, insert, nargs, msg, ap);
+	}
 	va_end(ap);
 }
 
@@ -115,7 +121,11 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 {
 	va_list ap;
 	va_start(ap, msg);
-	vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
+	if(mf::isMessageProcessingSetUp()) {
+		vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
+	} else {
+		vtrace_user(tvp, TID, lvl, insert, nargs, &msg[0], ap);
+	}
 	va_end(ap);
 }   /* trace */
 #pragma GCC diagnostic pop

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 812 $$Date: 2018-04-03 11:55:19 -0500 (Tue, 03 Apr 2018) $"
+#define TRACE_REV  "$Revision: 816 $$Date: 2018-04-04 11:40:08 -0500 (Wed, 04 Apr 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1124,8 +1124,18 @@ static void trace_namLvlSet( void )
 		unsigned cnt; unsigned long long  on_ms, off_ms;
 		sts=sscanf( cp, "%u,%llu,%llu", &cnt, &on_ms, &off_ms );
 		switch (sts) {
-		case 2: off_ms = on_ms;
-		case 3: traceControl_rwp->limit_cnt_limit = cnt;
+		case 2: 
+            off_ms = on_ms;
+		    //fall through after setting default off_ms to on_ms
+#if defined(__cplusplus)&&(__cplusplus>=201703L)
+#if __has_cpp_attribute(fallthrough)
+            [[fallthrough]];
+#else
+            [[gnu:fallthrough]];
+#endif
+#endif
+        case 3: 
+            traceControl_rwp->limit_cnt_limit = cnt;
 			traceControl_rwp->limit_span_on_ms = on_ms;
 			traceControl_rwp->limit_span_off_ms = off_ms;
 			break;

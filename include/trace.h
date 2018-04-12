@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 816 $$Date: 2018-04-04 11:40:08 -0500 (Wed, 04 Apr 2018) $"
+#define TRACE_REV  "$Revision: 817 $$Date: 2018-04-05 13:30:19 -0500 (Thu, 05 Apr 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1877,7 +1877,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 	for( int tid=-1,do__m=0,do__s=0,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
 		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,s_enabled,force_s \
 		                                             ,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
-	    ) TraceStreamer().init( tid, lvl, do__m, do__s, fmtnow, (timeval*)&tv, (char*)ins )
+		 ) TraceStreamer().init( tid, lvl, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval*)&tv, (char*)ins )
 
 #define TRACE_ENDL ""
 #define TLOG_ENDL TRACE_ENDL
@@ -1895,6 +1895,9 @@ static inline const char* t_arg_nmft  ( const std::string&nm, int fmtnow, int *f
 static inline const char* t_arg_nmft  ( int fmtnow, const char* nm,       int *fmtret ) { *fmtret=fmtnow; return nm?nm:""; } // could be addr 0 (null)
 static inline const char* t_arg_nmft  ( int fmtnow, const std::string&nm, int *fmtret ) { *fmtret=fmtnow; return nm.c_str(); }
 static inline const char* t_arg_nmft  ( int fmtnow, int nm __attribute__((__unused__)), int *fmtret ) { *fmtret=fmtnow; return ""; }
+
+static const char* current_trace_file = "";
+static int current_trace_line = 0;
 
 # define tlog_LVL( a1,...)        a1
 # define tlog_ARG2( a1,a2,...)    a2
@@ -1963,7 +1966,7 @@ public:
 	}
 
 	// use this method to return a reference (to the temporary, in its intended use)
-	inline TraceStreamer& init(int tid, int lvl, bool dom, bool dos, int force_f, timeval *tvp, const char *ins)
+	inline TraceStreamer& init(int tid, int lvl, bool dom, bool dos, int force_f, const char* file, int line, timeval *tvp, const char *ins)
 	{	widthStr[0] = precisionStr[0] = msg[0] = '\0'; msg_sz=0;
 		argCount = 0;
 		tid_ = tid;
@@ -1972,6 +1975,8 @@ public:
 		do_s = dos;
 		do_f = (force_f==-1) ? 0 : (dos || force_f);
 		ins_ = ins;
+		current_trace_file = file;
+		current_trace_line = line;
 		lclTime_p = tvp;
 		return *this;
 	}

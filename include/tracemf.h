@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 813 $$Date: 2018-04-03 18:20:57 -0500 (Tue, 03 Apr 2018) $";
+ // rev="$Revision: 817 $$Date: 2018-04-05 13:30:19 -0500 (Thu, 05 Apr 2018) $";
  */
 /** 
  * \file tracemf.h
@@ -20,12 +20,13 @@
 // for the "slow" tracing function (if appropriate mask bit is set :)
 #include <stdint.h>				// uint16_t
 #include <string>				// std::string
+
 #define TRACE_LOG_FUN_PROTO \
-  static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...);\
-  static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
+  static void mftrace_user(struct timeval *, int, uint16_t, const char*, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...);\
+  static void mftrace_user(struct timeval *, int, uint16_t, const char*, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
 #define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)				\
-	mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
+  mftrace_user(tvp, tid, lvl,insert,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
 #include "trace.h"		/* TRACE */
 
 #define SEV_EN(lvl) ((lvl==0)||((lvl==1)&&mf::isWarningEnabled())||((lvl==2)&&mf::isInfoEnabled())||((lvl>=3)&&mf::isDebugEnabled()))
@@ -44,23 +45,23 @@
 #undef  TLOG_DBG
 #define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one),  tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+															,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 #undef  TLOG_ARB
 #define TLOG_ARB(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  , tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-										  , SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+															, SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 #undef  TLOG
 #define TLOG(...)          TRACE_STREAMER( tlog_LVL( __VA_ARGS__,need_at_least_one),tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+															,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 #include "cetlib_except/exception.h" // cet::exception
 
 #include <string>
 
+
 static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert
-                          , const char* file, int line
                           , uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
@@ -91,23 +92,46 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	char namebuf[TRACE_DFLT_NAM_CHR_MAX+1];
 	strcpy( namebuf, traceNamLvls_p[TID].name ); // could just give traceNamLvls_p[TID].name to Log*
 
+# if MESSAGEFACILITY_HEX_VERSION >= 0x20201
+#ifdef mftrace_iteration
+	mf::SetIteration(mftrace_iteration);
+#endif
+#ifdef mftrace_module
+	mf::SetModuleName(mftrace_module);
+#endif
+# elif MESSAGEFACILITY_HEX_VERSION >= 0x20000
+#ifdef mftrace_iteration
+	mf::SetContextIteration(mftrace_iteration);
+#endif
+#ifdef mftrace_module
+	mf::SetContextSinglet(mftrace_module);
+#endif
+# else
+#ifdef mftrace_iteration
+	mf::SetContext(mftrace_iteration);
+#endif
+#ifdef mftrace_module
+	mf::SetModuleName(mftrace_module);
+#endif
+# endif
+
 	switch (lvl)
 	{
-	case TLVL_ERROR:   ::mf::LogError(namebuf)   << outp; break;
-	case TLVL_WARNING: ::mf::LogWarning(namebuf) << outp; break;
-	case TLVL_INFO:    ::mf::LogInfo{namebuf}    << outp; break;
-	case TLVL_DEBUG:   ::mf::LogDebug{ namebuf, file, line } << outp; break;
-	default:           ::mf::LogDebug{ namebuf, file, line } << std::to_string(lvl) << ": " << outp; break;
+	case TLVL_ERROR:   ::mf::LogError(namebuf, current_trace_file, current_trace_line)   << outp; break;
+	case TLVL_WARNING: ::mf::LogWarning(namebuf, current_trace_file, current_trace_line) << outp; break;
+	case TLVL_INFO:    ::mf::LogInfo{namebuf, current_trace_file, current_trace_line}    << outp; break;
+	case TLVL_DEBUG:   ::mf::LogDebug{ namebuf, current_trace_file, current_trace_line } << outp; break;
+	default:           ::mf::LogDebug{ namebuf, current_trace_file, current_trace_line } << std::to_string(lvl) << ": " << outp; break;
 	}
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
 	if(mf::isMessageProcessingSetUp()) {
-		vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, msg, ap);
+		vmftrace_user(tvp, TID, lvl, insert, nargs, msg, ap);
 	} else {
 		vtrace_user(tvp, TID, lvl, insert, nargs, msg, ap);
 	}
@@ -117,18 +141,19 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
 	if(mf::isMessageProcessingSetUp()) {
-		vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
+		vmftrace_user(tvp, TID, lvl, insert, nargs, &msg[0], ap);
 	} else {
 		vtrace_user(tvp, TID, lvl, insert, nargs, &msg[0], ap);
 	}
 	va_end(ap);
 }   /* trace */
 #pragma GCC diagnostic pop
+
 
 
 inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)

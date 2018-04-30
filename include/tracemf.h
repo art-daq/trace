@@ -3,9 +3,9 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 817 $$Date: 2018-04-05 13:30:19 -0500 (Thu, 05 Apr 2018) $";
+ // rev="$Revision: 826 $$Date: 2018-04-30 12:30:56 -0500 (Mon, 30 Apr 2018) $";
  */
-/** 
+/**
  * \file tracemf.h
  * Defines TRACE macros which send "slow" traces to MessageFacility
  *
@@ -16,7 +16,7 @@
 #ifdef __cplusplus
 
 // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
-// The TRACE macro will then use the static vmftrace_user function defined in this file 
+// The TRACE macro will then use the static vmftrace_user function defined in this file
 // for the "slow" tracing function (if appropriate mask bit is set :)
 #include <stdint.h>				// uint16_t
 #include <string>				// std::string
@@ -92,28 +92,31 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	char namebuf[TRACE_DFLT_NAM_CHR_MAX+1];
 	strcpy( namebuf, traceNamLvls_p[TID].name ); // could just give traceNamLvls_p[TID].name to Log*
 
+// Define MESSAGEFACILITY_HEX_VERSION in top-level CMakeLists.txt (see artdaq's CMakeLists.txt!)
+#ifdef MESSAGEFACILITY_HEX_VERSION
 # if MESSAGEFACILITY_HEX_VERSION >= 0x20201
-#ifdef mftrace_iteration
+#  ifdef mftrace_iteration
 	mf::SetIteration(mftrace_iteration);
-#endif
-#ifdef mftrace_module
+#  endif
+#  ifdef mftrace_module
 	mf::SetModuleName(mftrace_module);
-#endif
+#  endif
 # elif MESSAGEFACILITY_HEX_VERSION >= 0x20000
-#ifdef mftrace_iteration
+#  ifdef mftrace_iteration
 	mf::SetContextIteration(mftrace_iteration);
-#endif
-#ifdef mftrace_module
+#  endif
+#  ifdef mftrace_module
 	mf::SetContextSinglet(mftrace_module);
-#endif
+#  endif
 # else
-#ifdef mftrace_iteration
+#  ifdef mftrace_iteration
 	mf::SetContext(mftrace_iteration);
-#endif
-#ifdef mftrace_module
+#  endif
+#  ifdef mftrace_module
 	mf::SetModuleName(mftrace_module);
-#endif
+#  endif
 # endif
+#endif
 
 	switch (lvl)
 	{

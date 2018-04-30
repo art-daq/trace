@@ -1,1 +1,6 @@
 .svn
+*~
+.editorconfig
+bin/*
+obj/*
+*.vcxproj*

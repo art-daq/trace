@@ -84,7 +84,7 @@ static inline pid_t trace_gettid(void) { return syscall(TRACE_GETTID); }
 #  define TRACE_ATOMIC_INIT           ATOMIC_VAR_INIT(0)
 #  define TRACE_ATOMIC_LOAD(ptr)      atomic_load(ptr)
 #  define TRACE_ATOMIC_STORE(ptr,val) atomic_store(ptr,val)
-#  define TRACE_THREAD_LOCAL          thread_local 
+#  define TRACE_THREAD_LOCAL          thread_local
 # elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #  include <stdatomic.h>	      /* atomic_compare_exchange_weak */
 #  define TRACE_ATOMIC_T              /*volatile*/ _Atomic(uint32_t)
@@ -168,7 +168,7 @@ static inline uint32_t cmpxchg( TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_
 # define TRACE_ATOMIC_INIT            0
 # define TRACE_ATOMIC_LOAD(ptr)       *(ptr)
 # define TRACE_ATOMIC_STORE(ptr,val)  *(ptr) = val
-# define TRACE_THREAD_LOCAL 
+# define TRACE_THREAD_LOCAL
 # define TRACE_GETTIMEOFDAY( tvp )    do_gettimeofday( tvp )
 # define TRACE_PRINT                  printk
 # define TRACE_VPRINT                 vprintk
@@ -190,10 +190,10 @@ int trace_sched_switch_hook_add( void );  /* for when compiled into kernel */
 										   it currently matches the "trace DISABLED" number that
 										   fits into traceControl[1] (see below) */
 #define TRACE_DFLT_NAM_CHR_MAX      39 /* Really The hardcoded max name len.
-										  Name buffers should be +1 (for null terminator) - 40 was the value with 
+										  Name buffers should be +1 (for null terminator) - 40 was the value with
 										  8K pages which gave 127 NAMTBL_ENTS with "trace DISBALED".
 										  Search for trace_created_init(...) call in "DISABLE" case.
-										  Names can have this many characters (and always be null terminated - 
+										  Names can have this many characters (and always be null terminated -
 										  so names can be printed from nam tbl) */
 #define TRACE_DFLT_NUM_ENTRIES   100000
 #define TRACE_DFLT_TIME_FMT     "%m-%d %H:%M:%S.%%06d"   /* match default in trace_delta.pl */
@@ -237,7 +237,7 @@ static const char *  TRACE_NAME=NULL;
                                     if(limit_do_print(tvp,&_info,ins,sizeof(ins)))
 #endif
 
-/* helper for TRACEing strings in C - ONLY in C!*/ 
+/* helper for TRACEing strings in C - ONLY in C!*/
 #if defined(__cplusplus)
 /* don't want to instantiate an std::vector as it may cause alloc/delete */
 # define TSBUFDECL     /*std::vector<char> tsbuf__(traceControl_p->siz_msg);*/ /*&(tsbuf__[0])*/
@@ -323,7 +323,7 @@ static const char *  TRACE_NAME=NULL;
 # define TRACE_CNTL( ... ) traceCntl( TRACE_NARGS(__VA_ARGS__), __VA_ARGS__ )
 # define TRACE_ARGS_FMT( first, ... ) first
 /* TRACE_ARGS_ARGS(...) ignores the 1st arg (the "format" arg) and returns the remaining "args", if any.
-   Being able 
+   Being able
    The trick is: the number of args in __VA_ARGS__ "shifts" the appropriate XX*(__VA_ARGS__) macro
    to the DO_THIS postition in the DO_XX macro. Then only that appropriate XX*(__VA_ARGS__) macro is
    evalutated; the others are ignored. The only 2 choices are XXX_X() or XXX_0(); XXX_X is for when there
@@ -389,7 +389,7 @@ static const char *  TRACE_NAME=NULL;
 # else
 #  define TRACE_ENT_TV_FILLER
 # endif
-# define TRACE_TSC32( low )       
+# define TRACE_TSC32( low )
 
 #endif
 
@@ -634,7 +634,7 @@ typedef enum {
 	lsFREE,
 	lsLIMITED
 } limit_state_t;
- 
+
 typedef struct {
     /* choice: whole struct TLS or normal static with member:  TRACE_ATOMIC_T lock;*/
 	uint64_t      span_start_ms;
@@ -707,7 +707,7 @@ static inline int limit_do_print( struct timeval *tvp, limit_info_t *info, char 
 		"d60","d61","d62","d63"
 #endif
 static const char _lvlstr[64][4] = { TRACE_4_LVLSTRS, TRACE_60_LVLSTRS };
- 
+
 SUPPRESS_NOT_USED_WARN
 static void vtrace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const char *msg, va_list ap )
 {
@@ -896,7 +896,7 @@ static void trace_user( struct timeval *tvp, int TrcId, uint16_t lvl, const char
     va_list ap;
 	va_start( ap, msg );
 	vtrace_user( tvp, TrcId, lvl, insert, nargs, msg.c_str(), ap );
-	va_end( ap );	
+	va_end( ap );
 }   /* trace_user - std::string& */
 # if (__cplusplus>=201103L)
 #  pragma GCC diagnostic pop
@@ -1015,7 +1015,7 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
     va_list ap;
 	va_start( ap, msg );
 	vtrace( tvp, trcId, lvl, nargs, msg, ap );
-	va_end( ap );	
+	va_end( ap );
 }   /* trace */
 
 #ifdef __cplusplus
@@ -1026,7 +1026,7 @@ static void trace( struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
     va_list ap;
 	va_start( ap, msg );
 	vtrace( tvp, trcId, lvl, nargs, msg.c_str(), ap );
-	va_end( ap );	
+	va_end( ap );
 }   /* trace */
 #endif
 
@@ -1124,7 +1124,7 @@ static void trace_namLvlSet( void )
 		unsigned cnt; unsigned long long  on_ms, off_ms;
 		sts=sscanf( cp, "%u,%llu,%llu", &cnt, &on_ms, &off_ms );
 		switch (sts) {
-		case 2: 
+		case 2:
             off_ms = on_ms;
 		    //fall through after setting default off_ms to on_ms
 #if defined(__cplusplus)&&(__cplusplus>=201703L)
@@ -1134,7 +1134,7 @@ static void trace_namLvlSet( void )
             [[gnu:fallthrough]];
 #endif
 #endif
-        case 3: 
+        case 3:
             traceControl_rwp->limit_cnt_limit = cnt;
 			traceControl_rwp->limit_span_on_ms = on_ms;
 			traceControl_rwp->limit_span_off_ms = off_ms;
@@ -1255,7 +1255,7 @@ static int traceCntl( int nargs, const char *cmd, ... )
 		if (slen>1 || (slen==1&&!strpbrk(&cmd[6],"MST"))) {
 			TRACE_PRINT("only M,S,or T allowed after lvl...\n");va_end(ap); return (-1);
 		}
-		
+
 		if      (strncmp(&cmd[3],"msk",3) == 0) op=0;
 		else if (strncmp(&cmd[3],"set",3) == 0) op=1;
 		else                                    op=2;
@@ -1427,7 +1427,7 @@ static void trace_created_init(  struct traceControl_s *t_p
     t_p->memlen              = memlen;
 
     TRACE_ATOMIC_STORE( &t_rwp->namelock, (uint32_t)0 );
-    
+
     /*TRACE_CNTL( "reset" );  Can't call traceCntl during Init b/c it does an INIT_CHECK and will call Init */
     TRACE_ATOMIC_STORE( &t_rwp->wrIdxCnt, (uint32_t)0 );
     t_rwp->full = t_rwp->trigIdxCnt = t_rwp->trigActivePost = t_rwp->triggered = 0;
@@ -1485,7 +1485,7 @@ static void tsnprintf( char *obuf, size_t bsz, const char *input )
 				break;
 			case 'U':
 				if (cp_uid==NULL) {
-					sprintf( loguid, "%u", getuid() );	
+					sprintf( loguid, "%u", getuid() );
 					cp_uid = loguid;
 				}
 				for (ii=0; outoff<bsz && cp_uid[ii]!='\0'; ++ii)
@@ -1727,7 +1727,7 @@ static int traceInit( const char *_name )
 			                   , sizeof(traceControl) /*memlen*/
 			                   , 0 /*modeM*/ );
 		}
-		else 
+		else
 		{
 			if (traceControl_p_static == NULL)
 			{
@@ -1849,7 +1849,7 @@ static struct traceEntryHdr_s* idxCnt2entPtr( uint32_t idxCnt )
 		  return -1;						\
 	}(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz)
 
-# else 
+# else
 
 // Note: the s_enbld and s_frc args are used directly in the macro definition
 #  define TRACE_STATIC_TID_ENABLED(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz) \
@@ -1907,13 +1907,13 @@ static int current_trace_line = 0;
 #define TLVL_INFO         2
 #define TLVL_DEBUG        3
 #define TLVL_TRACE        4
-//                                 args are: lvl,         name, fmtnow, s_enabled, s_force, 
+//                                 args are: lvl,         name, fmtnow, s_enabled, s_force,
 #define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR,  &(name)[0], 0,1,0 )
 #define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING,&(name)[0], 0,1,0 )
 #define TLOG_INFO(name)    TRACE_STREAMER( TLVL_INFO,   &(name)[0], 0,1,0 )
 #define TLOG_DEBUG(name)   TRACE_STREAMER( TLVL_DEBUG,  &(name)[0], 0,1,0 )
 #define TLOG_TRACE(name)   TRACE_STREAMER( TLVL_TRACE,  &(name)[0], 0,1,0 )
-// For the following, the 1st arg must be lvl. 
+// For the following, the 1st arg must be lvl.
 #define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one), 1,0 )
 #define TLOG_ARB(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
@@ -2095,7 +2095,9 @@ public:
 		else if (argCount<TRACE_STREAMER_ARGSMAX) { msg_append( "%p");  args[argCount++].p = r; }
 		return *this;
 	}
-# ifndef __clang__
+#ifdef __clang__
+#define _M_flags flags()
+#endif
 	inline TraceStreamer& operator<<(const int& r)
 	{	if(do_f) msg_sz += snprintf( &msg[msg_sz], sizeof(msg)-1-msg_sz, format(false,false,"", _M_flags), r );
 		else if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append(format(false,false,"", _M_flags)); args[argCount++].i = r; }
@@ -2132,11 +2134,10 @@ public:
 		else if (argCount<TRACE_STREAMER_ARGSMAX) { msg_append( "%d");    args[argCount++].i = r; }
 		return *this;
 	}
-# endif
 	inline TraceStreamer& operator<<(const std::string& r) { msg_append( r.c_str()); return *this; }
 	inline TraceStreamer& operator<<(char const* r)        { msg_append( r);         return *this; }
 	inline TraceStreamer& operator<<(char* r)              { msg_append( r);         return *this; }
-# if !defined(__clang__) && (__cplusplus >= 201103L)
+# if (__cplusplus >= 201103L)
 	inline TraceStreamer& operator<<(std::atomic<unsigned long> const& r)
 	{	if(do_f) msg_sz += snprintf( &msg[msg_sz], sizeof(msg)-1-msg_sz, format(false,true, "l",_M_flags), r.load() );
 		else if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append(format(false,true, "l",_M_flags)); args[argCount++].u = r.load(); }

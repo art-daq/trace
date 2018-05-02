@@ -2232,13 +2232,17 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 		//setprecision
 		inline TraceStreamer& operator<<(std::__1::__iom_t5 r)
 		{
-			precision(r.__n_);
+			std::ostringstream ss;
+			ss << r;
+			precision(ss.precision());
 			return *this;
 		}
 		//setwidth
 		inline TraceStreamer& operator<<(std::__1::__iom_t6 r)
 		{
-			width(r.__n_);
+			std::ostringstream ss;
+			ss << r;
+			width(ss.width());
 			return *this;
 		}
 # endif

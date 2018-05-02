@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 829 $$Date: 2018-05-01 16:59:30 -0500 (Tue, 01 May 2018) $"
+#define TRACE_REV  "$Revision: 830 $$Date: 2018-05-02 11:16:21 -0500 (Wed, 02 May 2018) $"
 
 #ifndef __KERNEL__
 
@@ -2226,6 +2226,19 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 		inline TraceStreamer& operator<<(std::_Setw r)
 		{
 			width(r._M_n);
+			return *this;
+		}
+# else
+		//setprecision
+		inline TraceStreamer& operator<<(std::__1::__iom_t5 r)
+		{
+			precision(r.__n_);
+			return *this;
+		}
+		//setwidth
+		inline TraceStreamer& operator<<(std::__1::__iom_t6 r)
+		{
+			width(r.__n_);
 			return *this;
 		}
 # endif

@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 785 $$Date: 2018-01-13 10:49:13 -0600 (Sat, 13 Jan 2018) $'
+ # rev='$Revision: 836 $$Date: 2018-05-17 14:21:59 -0500 (Thu, 17 May 2018) $'
 set -u
 opt_depth=15
 opt_std=c++11
@@ -12,11 +12,13 @@ do_define=1
 do_declare=1
 do_mapcheck=2
 #check_opts='-l5000 -t7 -x3'
-check_opts='-l100 -t256'
+def_threads=256
+def_check='-l200'
 check_numents=2000000  # maybe compute what this should be
 USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
+          `basename $0` ./big_ex.d -O3
           `basename $0` ./big_ex.d --std=  # use compiler default c++ std
           `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x1' --check-numents=16000000
           `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
@@ -37,8 +39,10 @@ Files in the dir will be overwritten.
 --no-define      remvoe #define TRACE_DEFINE from subs (could also do -DTRACE_STATIC)
 --no-declare     remove #define TRACE_DECLARE from main
 --mapcheck[=num] default=$do_mapcheck, the number of check LOOPS
---check-opts=<opts> default=$check_opts  See below.
---check-numents=<ents>
+-t<threads>      default $def_threads
+--check-opts=<opts> default=\"-t$def_threads $def_check\"  See below. Note: thread option added
+--check-numents=<ents>  default=$check_numents
+-O<x>            compile optimization level. default: no -O
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>
@@ -68,12 +72,14 @@ while [ -n "${1-}" ];do
         x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
         d*|-depth)  eval $reqarg; opt_depth=$1; shift;;
         D*)         eval $reqarg; compile_opts="$compile_opts -D$1"; shift;;
+        O*)         eval $reqarg; compile_opts="$compile_opts -O$1"; shift;;
         -std)       eval $reqarg; opt_std=$1;                 shift;;
         std)                      opt_std=$1;                 shift;;
+        t*)         eval $reqarg; opt_threads="$1";                  shift;;
+        -check-opts)eval $reqarg; check_opts=$1; shift;;
         -no-define) do_define= ;;
         -no-declare)do_declare= ;;
         -mapcheck)  test -n "$leq"&&do_mapcheck=$1&&shift||do_mapcheck=1;;
-        -check-opts)eval $reqarg; check_opts=$1; shift;;
         -check-numents)eval $reqarg; check_numents=$1; shift;;
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
@@ -92,6 +98,11 @@ test -n "${do_help-}" && help && exit
 test $opt_depth -ge 1 || { echo "depth option cannot be 0"; exit 1; }
 hash trace_cntl || { echo "trace_cntl program must be in PATH"; exit 1; }
 
+test -z "${opt_threads-}" && opt_threads=$def_threads
+test -z "${check_opts-}" \
+ && check_opts="-t$opt_threads $def_check" \
+ || check_opts="-t$opt_threads $check_opts"
+
 odir=$1
 test -d $odir || mkdir -p $odir
 
@@ -102,7 +113,7 @@ rm -f big_ex_main.cc big_ex_main
 
 # - - - - - - - - - - - Make all the sub modules (except for the last 1) - - -
 
-struct_args='struct args { pid_t tid; unsigned loop; int xtra_options; useconds_t dly_us; }'
+struct_args='struct args { pid_t tid; unsigned loop; int xtra_options; useconds_t dly_us; int thread_idx; }'
 
 echo opt_depth=$opt_depth
 nn=1
@@ -132,17 +143,12 @@ $struct_args;
 void sub$next( struct args *aa );
 void sub$nn( struct args *aa )
 {
-#if 0
-    TRACE( 0,"sub$nn tid=%d loop=%u calling sub$next tC_p=%p %u=tIL_hung_max"
-          ,aa->tid,aa->loop,traceControl_p,traceInitLck_hung_max);
-#else
-    TLOG(0) << "sub$nn tid="<<aa->tid<<" loop="<<aa->loop
-            <<"calling sub$next tC_p="<<traceControl_p<<" "
+    TLOG(2) << "sub$nn tid="<<aa->tid<<" loop="<<aa->loop
+            << " calling sub$next tC_p="<<traceControl_p<<" "
             <<traceInitLck_hung_max<<"=tIL_hung_max";
-#endif
     $POTENTIAL_DELAY
     sub$next(aa);
-    TRACE( 1, "sub$nn tid=%d after (returned from) call to sub$next",aa->tid );
+    TRACE( 3, "sub$nn tid=%d after (returned from) call to sub$next",aa->tid );
 }
 EOF
     nn=`expr $nn + 1`
@@ -169,7 +175,7 @@ $do_TRACE_NAME
 $struct_args;
 
 void sub$last( struct args *aa )
-{   TRACE( 0, "sub$last tid=%d loop=%.4f=dly ret tC_p=%p %u=tIL_hung_max"
+{   TRACE( 2, "sub$last tid=%d loop=%.4f=dly ret tC_p=%p %u=tIL_hung_max"
           , aa->tid,aa->loop+aa->dly_us/10000.0,traceControl_p,traceInitLck_hung_max);
 }
 EOF
@@ -227,19 +233,20 @@ void* thread_func(void *arg)
     long loops=args_p->loop; // initial "loops" from main
     struct args aa=*args_p;  // per thread copy -  initialize from main
     aa.tid=ex_gettid();
+    TLOG(2,"thread"+std::to_string(aa.thread_idx)) << "hello from thread idx " << aa.thread_idx <<" "<<3.14;
     for (unsigned ii=0; ii<loops; ++ii) {
-        TRACE( 0, "tf tid=%d loop=%u calling sub1 tC_p=%p %u=tIL_hung_max",aa.tid,ii,traceControl_p,traceInitLck_hung_max);
+        TRACE( 2, "tf tid=%d loop=%u calling sub1 tC_p=%p %u=tIL_hung_max",aa.tid,ii,traceControl_p,traceInitLck_hung_max);
         aa.loop=ii;
         if (aa.xtra_options & 2) {
             pthread_t thread;
-            TRACE( 1, "tf tid=%d loop xtra_option b1 - before pthread_create of sub-thread",aa.tid );
+            TRACE( 3, "tf tid=%d loop xtra_option b1 - before pthread_create of sub-thread",aa.tid );
             pthread_create(&thread,NULL,(void*(*)(void*))sub1,(void*)&aa);
             pthread_join(thread, NULL);
         }
         else {
-            TRACE( 1, "tf tid=%d loop before call to sub1",aa.tid );
+            TRACE( 3, "tf tid=%d loop before call to sub1",aa.tid );
             sub1(&aa);
-            TRACE( 1, "tf tid=%d loop after (returned from) call to sub1",aa.tid );
+            TRACE( 3, "tf tid=%d loop after (returned from) call to sub1",aa.tid );
         }
     }
     pthread_exit(NULL);
@@ -253,7 +260,7 @@ extern  char        * optarg;        // for getopt
         int           opt;           // for how I use getopt
 	unsigned long loops=500;
         unsigned      ii;
-        struct args   args;
+        struct args * args_p;
         int           xtra_options=1;
 
     while ((opt=getopt(argc,argv,"?hn:f:l:t:x:")) != -1)
@@ -268,16 +275,19 @@ extern  char        * optarg;        // for getopt
         }
     }
     threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
-    args.loop = loops; // the initial "loops"
-    args.xtra_options = xtra_options;
-    args.dly_us=0;
-    TRACE( 0, "b4 pthread_create - loops=%lu tC_p=%p %u=tIL_hung_max", loops, traceControl_p, traceInitLck_hung_max );
+    args_p  = (struct args *)malloc(num_threads*sizeof(struct args));
+    TRACE( 1, "b4 pthread_create - loops=%lu tC_p=%p %u=tIL_hung_max", loops, traceControl_p, traceInitLck_hung_max );
     printf("test-threads - before create loop - loops=%lu num_threads=%u xtra_threads=%d\n",
            loops,num_threads,!!(xtra_options&2));
     for (ii=0; ii<num_threads; ii++)
-    {   int sts=pthread_create(&threads[ii],NULL,thread_func,(void*)&args);
+    {   args_p[ii].loop = loops; // the initial "loops"
+        args_p[ii].xtra_options = xtra_options;
+        args_p[ii].dly_us = 0;
+        args_p[ii].thread_idx = ii;
+        int sts=pthread_create(&threads[ii],NULL,thread_func,(void*)&args_p[ii]);
         if(sts!=0){perror("pthread_create");exit(1);}
     }
+    TLOG(1) << "Main - all " << num_threads << " threads created";
     if (xtra_options & 1)
     {   char          cmd[200];
 	sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = \`cat /proc/%d/maps | grep trace_buffer | wc -l\`", getpid() );
@@ -296,7 +306,7 @@ extern  char        * optarg;        // for getopt
 	system( cmd );
     }
     printf("test-threads - after join loop\n");
-    TRACE( 0, "after pthread_join traceControl_p=%p", traceControl_p );
+    TRACE( 1, "after pthread_join traceControl_p=%p", traceControl_p );
     free( threads );
     return (0);
 }   /* main */
@@ -325,10 +335,11 @@ sts=$?
 test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED; exit 1; }
 
 if [ "${do_mapcheck-0}" -gt 0 ];then
-    export TRACE_FILE TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX
+    export TRACE_FILE TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS
     TRACE_ARGSMAX=4
     TRACE_MSGMAX=64
     TRACE_NUMENTS=$check_numents
+    TRACE_NAMTBLENTS=`expr $opt_threads + 3`
     TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
     rm -f $TRACE_FILE   # master reset :)
     echo check_opts=$check_opts
@@ -359,23 +370,34 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         if [ -f $TRACE_FILE ];then
             trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
             uniq_addrs=`TRACE_SHOW=HxiICLR trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
-            sub10_tids=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`
-            test `echo "$sub10_tids" | wc -l` -eq 1 && sub10_tid=$sub10_tids || sub10_tid=-1
-            uniq_tids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -nu | wc -l`
+            sub10_trc_id=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`
+            sub10_trc_ids=`echo "$sub10_trc_id" | wc -l`
+            test $sub10_trc_ids -eq 1 || sub10_trc_id=-1
+            uniq_thr_ids=`TRACE_SHOW=xi trace_cntl show | awk '{print$1;}' | sort -nu | wc -l`
+            sub10_trc_id_=`trace_cntl tids | awk '/ sub10 /{print$1;}'`
+            last_thr_idx=`expr $opt_threads - 1`
+            _TRACE_=`TRACE_SHOW=n trace_cntl show | grep "_TRACE_ hello from thread idx $last_thr_idx 3.14\$"`
+            delta_min=`TRACE_SHOW=HTm trace_cntl show 500000 500000 | trace_delta.pl -stats | awk '/^  *min /{print$2;}'`
         else
             echo "TRACE_FILE not found - FAIL will result"
-            uniq_addrs=0 sub10_tid=0 uniq_tids=0
+            uniq_addrs=0 sub10_trc_ids=0 sub10_trc_id=-1 sub10_trc_id_=-2 uniq_thr_ids=0
+            _TRACE_=
+            delta_min=-1000
         fi
         uniq2=`expr $uniq_addrs \* 2`
-        echo "  uniq_addrs=$uniq_addrs uniq2=$uniq2 num_maps=$num_maps sub10_tids="$sub10_tids "sub10_tid=$sub10_tid uniq_tids=$uniq_tids"
+        echo "  uniq_addrs=$uniq_addrs uniq2=$uniq2 num_maps=$num_maps sub10_trc_ids="$sub10_trc_ids "sub10_trc_id=$sub10_trc_id uniq_thr_ids=$uniq_thr_ids"
+        fail=
+        test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) || fail="$fail uniq_addrs"
+        test "$sub10_trc_id" -eq $sub10_trc_id_                            || fail="$fail sub10_trc_id"
+        test -n "$_TRACE_" -a `echo "$_TRACE_" | wc -l` -eq 1              || fail="$fail _TRACE_tid"
+        test $delta_min -gt -100                                           || fail="$fail delta_min=$delta_min"
         if [ "$uname" = Linux ];then
-            test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) -a "$sub10_tid" -eq 1\
-                 -a $num_maps -eq $uniq2 -a \( $uniq_tids -eq 1 -o -z "$check_tids" -o $uniq_tids -eq "${check_tids:-0}" \)\
-              && echo "  SUCCESS" || { echo FAIL; exit 1; }
-        else
-            test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) -a "$sub10_tid" -eq 1\
-              && echo "  SUCCESS" || { echo FAIL; exit 1; }
+            # additional checks
+            test $num_maps -eq $uniq2                                      || fail="$fail num_maps"
+            test \( $uniq_thr_ids -eq 1 -o -z "$check_tids" -o $uniq_thr_ids -eq "${check_tids:-0}" \) || fail="$fail uniq_thr_ids"
         fi
+        test -n "$fail" && { echo FAIL - $fail ; exit 1; } || echo "  SUCCESS"
+        #trace_cntl tids
         test "$do_mapcheck" -le 1 && break
         trace_cntl reset
         do_mapcheck=`expr $do_mapcheck - 1`

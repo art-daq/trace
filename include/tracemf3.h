@@ -62,7 +62,7 @@ Fri Apr 18 11:55:38 -0500 2014: %MSG
 			/* 2nd "function" is console */								\
 			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl))) \
 			{   if (lclTime.tv_sec == 0) gettimeofday( &lclTime, NULL ); \
-				TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl, __VA_ARGS__ );	\
+				TRACE_LOG_FUNCTION( &lclTime, traceTID, lvl,"",__FILE__,__LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__ ); \
 			}															\
 			/* 3rnd "function" is network */							\
 			if (traceControl_rwp->mode.mode&(1<<2) && (traceNamLvls_p[traceTID].T & TLVLMSK(lvl))) \

@@ -15,17 +15,17 @@
 
 #ifdef __cplusplus
   // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
-  // The TRACE macro will then use the static vmftrace_user function defined below 
+  // The TRACE macro will then use the static vmftrace_user function defined below
   // for the "slow" tracing function (if appropriate mask bit is set :)
 #undef TRACE_LOG_FUNCTION
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)  mftrace_user(tvp, tid, lvl,insert,__FILE__,__LINE__,nargs TRACE_XTRA_PASSED, __VA_ARGS__ )
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,file,line,nargs,...)  mftrace_user(tvp, tid, lvl,insert,file,line,nargs, __VA_ARGS__ )
 #include "trace.h"		/* TRACE */
 
 // "static int tid_" is thread safe in so far as multiple threads may init,
 // but will init with same value.
 #define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
 	{static TRACE_THREAD_LOCAL int tid_ =-1;if (tid_ == -1)tid_ = name2TID(std::string(name).c_str()); \
-     static TRACE_THREAD_LOCAL TraceStreamer s; s.init(tid_, lvl, force_s)
+	static TRACE_THREAD_LOCAL TraceStreamer s; s.init(tid_, lvl, force_s, __FILE__, __LINE__)
 
 #define TRACE_ENDL ""; s.str();}}
 #define TLOG_ENDL TRACE_ENDL
@@ -93,7 +93,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 		          , (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0
 		          , msg, ap );
 	else { /* don't do any parsing for format specifiers in the msg -- tshow will
-		 also know to do this on the memory side of things because nargs is 
+		 also know to do this on the memory side of things because nargs is
 		 stored in memory trace buffer. */
 		strncpy( &(obuf[printed])
 		        , (printed < (int)sizeof(obuf)) ? sizeof(obuf) - 1 - printed : 0
@@ -114,7 +114,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const char *msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -122,7 +122,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	va_end(ap);
 }
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs TRACE_XTRA_UNUSED, const std::string& msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -153,6 +153,8 @@ struct TraceStreamer : std::ios
 	bool enabled;
 	std::string widthStr;
 	std::string precisionStr;
+	const char *file_;
+	int         line_;
 
 public:
 	explicit TraceStreamer() : argCount(0)
@@ -163,7 +165,7 @@ public:
 #endif
 	}
 
-	inline TraceStreamer& init(int tid, int lvl, bool force_s)
+	inline TraceStreamer& init(int tid, int lvl, bool force_s,const char *file, int line)
 	{
 		TRACE_INIT_CHECK
 		{
@@ -171,6 +173,8 @@ public:
 		argCount = 0;
 		tid_ = tid;
 		lvl_ = lvl;
+		file_ = file;
+        line_ = line;
 		do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));
 		do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));
 		enabled = do_s || do_m;
@@ -188,7 +192,7 @@ public:
 		if (do_m) trace(&lclTime, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
 		if (do_s)
 		{
-			TRACE_LIMIT_SLOW(_insert, &lclTime) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, argCount, msg, TRACE_STREAMER_EXPAND(args));
+			TRACE_LIMIT_SLOW(_insert, &lclTime) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, file_, line_, argCount, msg, TRACE_STREAMER_EXPAND(args));
 		}
 }
 

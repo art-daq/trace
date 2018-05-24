@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 783 $$Date: 2018-01-09 22:10:43 -0600 (Tue, 09 Jan 2018) $";
+char const *rev="$Revision: 836 $$Date: 2018-05-17 14:21:59 -0500 (Thu, 17 May 2018) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -19,7 +19,7 @@ char const *rev="$Revision: 783 $$Date: 2018-01-09 22:10:43 -0600 (Tue, 09 Jan 2
 
 #if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
 void my_log(uint16_t nargs, std::string  msg,...);
-# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,nargs,...)          my_log( nargs, __VA_ARGS__ )
+# define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,file,line,nargs,...)          my_log( nargs, __VA_ARGS__ )
 #endif
 
 #include "trace.h"		/* TRACE */

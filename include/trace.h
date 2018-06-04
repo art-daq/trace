@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 836 $$Date: 2018-05-17 14:21:59 -0500 (Thu, 17 May 2018) $"
+#define TRACE_REV  "$Revision: 849 $$Date: 2018-05-31 13:56:59 -0500 (Thu, 31 May 2018) $"
 
 #ifndef __KERNEL__
 
@@ -183,12 +183,13 @@ int trace_sched_switch_hook_add(void);  /* for when compiled into kernel */
 
 #endif /* __KERNEL__ */
 
-
-#define TRACE_STREAMER_MSGMAX 0x1800
+/* Maximum UDP Datagram Data Length */
+#define TRACE_STREAMER_MSGMAX 65507
+#define TRACE_USER_MSGMAX 0x1800
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ      192
 #define TRACE_DFLT_MAX_PARAMS       10
-#define TRACE_DFLT_NAMTBL_ENTS     127  /* this is for creating new trace_buffer file --
+#define TRACE_DFLT_NAMTBL_ENTS    1022  /* this is for creating new trace_buffer file --
 										   it currently matches the "trace DISABLED" number that
 										   fits into traceControl[1] (see below) */
 #define TRACE_DFLT_NAM_CHR_MAX      39 /* Really The hardcoded max name len.
@@ -746,7 +747,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	   2) there will be one system call which is most efficient and less likely
 	   to have the output mangled in a multi-threaded environment.
 	*/
-	char   obuf[TRACE_STREAMER_MSGMAX]; char tbuf[0x100]; size_t printed = 0;
+	char   obuf[TRACE_USER_MSGMAX]; char tbuf[0x100]; size_t printed = 0;
 	char   *cp;
 	struct tm	tm_s;
 	int    quiet_warn = 0;
@@ -1440,9 +1441,19 @@ static int traceCntl(int nargs, const char *cmd, ...)
 		}
 	}
 	else if (strcmp(cmd, "trig") == 0)
-	{ /* takes 2 args: lvlsMsk, postEntries - optional 3rd arg will suppress warnings */
-		uint64_t lvlsMsk = va_arg(ap, uint64_t);
-		unsigned post_entries = va_arg(ap, uint64_t);
+	{ /* takes 1 or 2 args: postEntries [lvlssk] - optional 3rd arg will suppress warnings */
+		uint64_t lvlsMsk=0;
+		unsigned post_entries=0;
+		if (nargs == 1)
+		{
+			post_entries = va_arg(ap, uint64_t);
+			lvlsMsk = traceNamLvls_p[traceTID].M;
+		}
+		else if (nargs >= 2)
+		{
+			post_entries = va_arg(ap, uint64_t);
+			lvlsMsk = va_arg(ap, uint64_t);
+		}
 		if ((traceNamLvls_p[traceTID].M&lvlsMsk) != lvlsMsk)
 		{
 #  ifndef __KERNEL__

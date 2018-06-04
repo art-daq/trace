@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 798 $$Date: 2018-01-31 00:04:42 -0600 (Wed, 31 Jan 2018) $"
+#define TRACE_CNTL_REV "$Revision: 849 $$Date: 2018-05-31 13:56:59 -0500 (Thu, 31 May 2018) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -48,11 +48,11 @@ commands:\n\
  mode <mode>\n\
  modeM <mode>\n\
  modeS <mode>\n\
- lvlmsk[M|S|T][g] <msk> M=memory, S=slow/console, T=trig\n\
- lvlmsk[g]  <Mmsk> <Smask> <Tmask>\n\
+ lvlmsk[M|S|T][g] <lvlmsk>              # M=memory, S=slow/console, T=trig\n\
+ lvlmsk[g]  <mskM> <mskS> <mskT>\n\
  lvlset[g] <mskM> <mskS> <mskT>\n\
  lvlclr[g] <mskM> <mskS> <mskT>\n\
- trig <lvlmskM> <postEntries>\n\
+ trig <postEntries> [lvlmskTM+] [quiet] # opt 2nd arg is for specified/dflt TID\n\
  reset\n\
  limit_ms <cnt> <on_ms> <off_ms>\n\
 opts:\n\
@@ -249,7 +249,7 @@ void get_arg_sizes(	 char            *ofmt
 			*ofmt++ = *in++;
 			goto chkChr;
 		default:
-			if( !(opts&quiet_)) printf("unknown %c\n",*in);
+			if( !(opts&quiet_)) printf("tshow: unknown format spec char \"%c\" encountered.\n",*in);
 			*ofmt++ = *in++;
 		}
 		++numArgs;
@@ -595,7 +595,7 @@ void traceInfo()
 	       "limit_cnt_limit   = %u\n"
 	       "limit_span_on_ms  = %llu\n"
 	       "limit_span_off_ms = %llu\n"
-	       "traceLevel        = 0x%0*llx 0x%0*llx\n"
+	       "traceLevel        = 0x%0*llx 0x%0*llx 0x%0*llx\n"
 	       "num_entries       = %u\n"
 	       "max_msg_sz        = %u  includes system enforced terminator\n"
 	       "max_params        = %u\n"
@@ -625,6 +625,7 @@ void traceInfo()
 	       , (unsigned long long)traceControl_rwp->limit_span_off_ms
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].M /* sizeof(uint64_t)*2 is "nibbles" */
 	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].S
+	       , (int)sizeof(uint64_t)*2, (unsigned long long)traceNamLvls_p[traceTID].T
 	       , traceControl_p->num_entries
 	       , traceControl_p->siz_msg
 	       , traceControl_p->num_params
@@ -1026,8 +1027,8 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strcmp(cmd,"TRACE") == 0) {	
 		switch (argc - optind) {
-		case 0: printf("\"trace\" cmd rquires at least lvl and fmt arguments."); break;
-		case 1: printf("\"trace\" cmd rquires at least lvl and fmt arguments."); break;
+		case 0: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
+		case 1: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
 		case 2: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1] );
 			break;
 		case 3: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
@@ -1094,9 +1095,9 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strcmp(cmd,"TRACEN") == 0) {	
 		switch (argc - optind) {
-		case 0: printf("\"trace\" cmd rquires at least name, lvl and fmt arguments."); break;
-		case 1: printf("\"trace\" cmd rquires at least name, lvl and fmt arguments."); break;
-		case 2: printf("\"trace\" cmd rquires at least name, lvl and fmt arguments."); break;
+		case 0: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
+		case 1: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
+		case 2: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
 		case 3: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2] );
 			break;
 		case 4: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]

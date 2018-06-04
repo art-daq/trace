@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 843 $$Date: 2018-05-17 15:07:03 -0500 (Thu, 17 May 2018) $";
+ // rev="$Revision: 847 $$Date: 2018-05-29 12:25:57 -0500 (Tue, 29 May 2018) $";
  */
  /**
   * \file tracemf.h
@@ -63,11 +63,11 @@
 #include "cetlib_except/exception.h" // cet::exception
 
 SUPPRESS_NOT_USED_WARN
-static bool __mwe=mf::isWarningEnabled(), __mie=mf::isInfoEnabled(), __mde=true;//mf::isDebugEnabled(); always false in v2_02_01
+static bool __mwe = mf::isWarningEnabled(), __mie = mf::isInfoEnabled(), __mde = true;//mf::isDebugEnabled(); always false in v2_02_01
 
 
 static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert
-                          , const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
+	, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
 	first. There are 2 main reasons that this is done:
@@ -75,11 +75,13 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	2) there will be one system call which is most efficient and less likely
 	to have the output mangled in a multi-threaded environment.
 	*/
-	char   obuf[0x1800]; size_t printed = 0;
+	size_t printed = 0;
 	const char *outp;
 
 	if ((insert && (printed = strlen(insert))) || nargs)
-	{ /* check insert 1st to make sure printed is set */
+	{
+		char   obuf[TRACE_USER_MSGMAX];
+		/* check insert 1st to make sure printed is set */
 // assume insert is smaller than obuf
 		if (printed)
 			strcpy(obuf, insert);

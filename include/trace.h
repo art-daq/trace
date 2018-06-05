@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 849 $$Date: 2018-05-31 13:56:59 -0500 (Thu, 31 May 2018) $"
+#define TRACE_REV  "$Revision: 852 $$Date: 2018-06-05 11:15:57 -0500 (Tue, 05 Jun 2018) $"
 
 #ifndef __KERNEL__
 
@@ -184,7 +184,7 @@ int trace_sched_switch_hook_add(void);  /* for when compiled into kernel */
 #endif /* __KERNEL__ */
 
 /* Maximum UDP Datagram Data Length */
-#define TRACE_STREAMER_MSGMAX 65507
+#define TRACE_STREAMER_MSGMAX 0x2000 /* 0x3400 seems to work for artdaq, but 0x3800 does not. 65507 is way too much for when TraceStreamer is static thread_local */
 #define TRACE_USER_MSGMAX 0x1800
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ      192

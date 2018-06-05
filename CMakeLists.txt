@@ -11,6 +11,27 @@ cmake_minimum_required (VERSION 2.8)
 
 project(TRACE)
 # cetbuildtools contains our cmake modules
+
+if (IS_DIRECTORY $ENV{GCC_FQ_DIR} )
+
+file(READ ${CMAKE_CURRENT_BINARY_DIR}/cetpkg_variable_report filedata)
+#message("Read variable report: ${filedata}")
+string(REGEX MATCHALL "(CETPKG_[^\n]*)" vars "${filedata}")
+foreach(var ${vars})
+    #message("Setting variables in line ${var}")
+    string(REGEX REPLACE "(CETPKG_[^ \t]*)[ \t]*([^ ]*)" "\\1;\\2" thisvar "${var}")
+    list(GET thisvar 0 varname)
+    list(GET thisvar 1 varvalue)
+    #message("set ${varname} to ${varvalue}")
+    set(${varname} ${varvalue})
+endforeach()
+
+configure_file(ups/cetpkg_variable_report.in cetpkg_variable_report)
+set(CMAKE_C_COMPILER "$ENV{GCC_FQ_DIR}/bin/gcc")
+set(CMAKE_CXX_COMPILER "$ENV{GCC_FQ_DIR}/bin/g++")
+
+endif()
+
 set( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
 if( NOT CETBUILDTOOLS_VERSION )
   message( FATAL_ERROR "ERROR: setup cetbuildtools to get the cmake modules" )

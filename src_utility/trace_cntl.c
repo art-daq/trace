@@ -12,7 +12,7 @@ gxx_standards.sh trace_cntl.c
 for std in $standards;do\
   for ll in 0 1 2 3;do echo $std $ll:;TRACE_LVL=$ll ./Trace_test-$std;done;\
 done
-   
+
 */
 #include <stdio.h>		/* printf */
 #ifndef __USE_MISC
@@ -505,7 +505,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 				}
 				else /* (params_sizes[ii].size == 8) */
 				{	*(unsigned long long*)lcl_param_ptr = *(unsigned long long*)ent_param_ptr;
-					lcl_param_ptr += sizeof(long long);			
+					lcl_param_ptr += sizeof(long long);
 				}
 				ent_param_ptr += params_sizes[ii].push;
 			}
@@ -569,7 +569,7 @@ void traceInfo()
 	                                  ,traceControl_p->num_namLvlTblEnts
 	                                  ,traceControl_p->siz_msg
 	                                  ,traceControl_p->num_params
-	                                  ,traceControl_p->num_entries); /* for when buffer is vmalloc (kernel) or file mmapped (user), but not userspace inactive */ 
+	                                  ,traceControl_p->num_entries); /* for when buffer is vmalloc (kernel) or file mmapped (user), but not userspace inactive */
 	tmp = localtime( &tt );
 	if (tmp == NULL) { perror("localtime"); exit(EXIT_FAILURE); }
 	if (strftime(outstr, sizeof(outstr),"%a %b %d %H:%M:%S %Z %Y",tmp) == 0)
@@ -637,7 +637,7 @@ void traceInfo()
 	       , (unsigned long)traceNamLvls_p - (unsigned long)traceControl_rwp
 	       , (unsigned long)traceEntries_p - (unsigned long)traceControl_rwp
 	       , traceControl_p->memlen
-	       , (traceControl_p->memlen != memlen)?"not for mmap":""
+	       , (traceControl_p->memlen != (uint32_t)memlen)?"not for mmap":""
 	       , DFLT_SHOW
 	       );
 }   /* traceInfo */
@@ -693,7 +693,7 @@ extern  int        optind;         /* for getopt */
 		setenv("TRACE_NAME",opt_name,1);
 
 	if(getenv("LC_NUMERIC"))
-		setlocale(LC_NUMERIC,getenv("LC_NUMERIC")); 
+		setlocale(LC_NUMERIC,getenv("LC_NUMERIC"));
 
 	if		(strcmp(cmd,"test1") == 0)
 	{	int loops=1;
@@ -839,7 +839,8 @@ extern  int        optind;         /* for getopt */
 		traceControl_rwp->mode.bits.M = 1;		   // NOTE: TRACE_CNTL("modeM",1LL) hardwired to NOT enable when not mapped!
 
 #      define STRT_FMT "%-50s"
-#	   define END_FMT  "%'10llu us (%5.3f us/TRACE)\n",delta,(double)delta/loops
+		// ELF 6/6/18: GCC v6_3_0 does not like %', removing the '...
+#	   define END_FMT  "%10llu us (%5.3f us/TRACE)\n",delta,(double)delta/loops
 #      define CONTINUE fprintf(stderr,"Continuing with S lvl enabled (stdout redirected to /dev/null).\n");TRACE_CNTL("lvlsetS",4LL);continue
 		for (jj=0; jj<4; ++jj) {
 			if (argc - optind == 1) compares=strtoul(argv[optind],NULL,0);
@@ -866,7 +867,7 @@ extern  int        optind;         /* for getopt */
 				TRACE( 2, "this is one small param: %u", 12345678 );
 			} delta=get_us_timeofday()-mark; fprintf(stderr,END_FMT);
 			if (--compares == 0) { CONTINUE; }
-		
+
 			fprintf(stderr,STRT_FMT,"2 args");fflush(stderr);
 			TRACE_CNTL("reset"); mark = get_us_timeofday();
 			for (ii=0; ii<loops; ++ii) {
@@ -968,7 +969,7 @@ extern  int        optind;         /* for getopt */
 		free( threads );
 	}
 #	endif
-	else if (strcmp(cmd,"show") == 0) 
+	else if (strcmp(cmd,"show") == 0)
 	{	int start=-1, count=-1;
 		const char *ospec=getenv("TRACE_SHOW");
 		if (!ospec) ospec=DFLT_SHOW;
@@ -977,22 +978,22 @@ extern  int        optind;         /* for getopt */
 		if ((argc-optind)>=2) start=strtoul(argv[optind+1],NULL,0);
 		traceShow(ospec,count,start,show_opts);
 	}
-	else if (strncmp(cmd,"info",4) == 0) 
+	else if (strncmp(cmd,"info",4) == 0)
 	{
 		traceInit(NULL);
 		traceInfo();
 	}
-	else if (strcmp(cmd,"unlock") == 0) 
+	else if (strcmp(cmd,"unlock") == 0)
 	{	traceInit(NULL);
 		trace_unlock( &traceControl_rwp->namelock );
 	}
-	else if (strcmp(cmd,"tids") == 0) 
+	else if (strcmp(cmd,"tids") == 0)
 	{	int longest_name=0, namLvlTblEnts_digits;
 		traceInit(NULL);
 		/* calc longest name */
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-			if (strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
-				longest_name = strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
+			if ((int)strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
+				longest_name = (int)strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
 		/*printf("longest_name=%d\n",longest_name);*/
 		namLvlTblEnts_digits=countDigits(traceControl_p->num_namLvlTblEnts-1);
 		if (do_heading) {
@@ -1025,7 +1026,7 @@ extern  int        optind;         /* for getopt */
 			}
 		}
 	}
-	else if (strcmp(cmd,"TRACE") == 0) {	
+	else if (strcmp(cmd,"TRACE") == 0) {
 		switch (argc - optind) {
 		case 0: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
 		case 1: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
@@ -1093,7 +1094,7 @@ extern  int        optind;         /* for getopt */
 			printf( "oops - only able to test/handle up to 11 TRACE params/args - sorry.\n" );
 		}
 	}
-	else if (strcmp(cmd,"TRACEN") == 0) {	
+	else if (strcmp(cmd,"TRACEN") == 0) {
 		switch (argc - optind) {
 		case 0: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
 		case 1: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 860 $$Date: 2018-06-05 17:32:10 -0500 (Tue, 05 Jun 2018) $"
+#define TRACE_REV  "$Revision: 863 $$Date: 2018-06-06 08:51:33 -0500 (Wed, 06 Jun 2018) $"
 
 #ifndef __KERNEL__
 
@@ -2146,12 +2146,12 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 			if (do_f)
 			{
 				if (do_m) trace(lclTime_p, tid_, lvl_, 0 TRACE_XTRA_PASSED, msg);
-				if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, 0, msg);
+				if (do_s) { TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, 0, msg); } /* can be null */
 			}
 			else
 			{
 				if (do_m) trace(lclTime_p, tid_, lvl_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
-				if (do_s) TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, argCount, msg, TRACE_STREAMER_EXPAND(args));
+				if (do_s) { TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, argCount, msg, TRACE_STREAMER_EXPAND(args)); } /* can be null */
 			}
 #     if (defined(__cplusplus)&&(__cplusplus>=201103L))
 #      pragma GCC diagnostic pop

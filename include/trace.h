@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 852 $$Date: 2018-06-05 11:15:57 -0500 (Tue, 05 Jun 2018) $"
+#define TRACE_REV  "$Revision: 860 $$Date: 2018-06-05 17:32:10 -0500 (Tue, 05 Jun 2018) $"
 
 #ifndef __KERNEL__
 
@@ -1184,6 +1184,8 @@ static void trace_namLvlSet(void)
 		sts = sscanf(cp, "%u,%llu,%llu", &cnt, &on_ms, &off_ms);
 		switch (sts)
 		{
+		case 0: /* As a way to temp unset TRACE_LIMIT_MS, allow: TRACE_LIMIT_MS= tinfo */
+			break;
 		case 2:
 			off_ms = on_ms;
 			//fall through after setting default off_ms to on_ms

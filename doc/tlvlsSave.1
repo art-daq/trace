@@ -1,0 +1,133 @@
+.TH "tlvlsSave" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tlvlsSave
+
+.SH SYNOPSIS 
+.br 
+.B tlvlsSave \fI<FILENAME>\fR
+
+
+.SH DESCRIPTION
+The command \fBtlvlsSave\fR basically does the same as: "\fBtlvls > FILENAME\fR." However, the file created can't be accessed between removal and restoration of \fItrace_buffer_USER\fR as it could if the example given for comparison is used.
+
+\".TP 20
+\".B usage: tlvlsSave 
+\"<id>   # where <id> is valid shell variable characters
+
+  \"     # if [id] not given, read stdin
+     
+
+.SH EXAMPLES
+.nf
+.sp
+[madas@localhost trace-v3]$  tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+   0 comfortable-trace 0x000000000000000e 0x0000000000000007 0x0000000000001000
+   1               ron 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+   2              matt 0xdeadbeef7fffffff 0x0000000000000007 0x0000000000000000
+   3              ron2 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+1020             TRACE 0x000000000000000f 0x0000000000001e1c 0x000000000000f00d
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+[madas@localhost trace-v3]$  tlvlsSave Apple
+
+
+[madas@localhost trace-v3]$  rm /tmp/trace_buffer_madas 
+
+
+[madas@localhost trace-v3]$  tlvls
+mode:                       M=1                S=1
+ TID    NAME              maskM              maskS              maskT
+---- ------- ------------------ ------------------ ------------------
+1020   TRACE 0x000000000000000f 0x0000000000000007 0x0000000000000000
+1021 _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+
+
+[madas@localhost trace-v3]$  tlvlsRestore Apple
+
+[madas@localhost trace-v3]$  tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+   0 comfortable-trace 0x000000000000000e 0x0000000000000007 0x0000000000001000
+   1               ron 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+   2              matt 0xdeadbeef7fffffff 0x0000000000000007 0x0000000000000000
+   3              ron2 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+1020             TRACE 0x000000000000000f 0x0000000000001e1c 0x000000000000f00d
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+.fi
+
+
+
+
+
+.nf
+.sp
+
+
+\fB-------------------------
+------OTHER EXAMPLES-----
+-------------------------\fR
+
+examples: export TRACE_MSGMAX=0; tlvlM 0xdeadbeef; tlvls; tlvlsSave test; rm -f /tmp/trace_buffer_madas; tlvls; tlvlsRestore test; tlvls
+
+tlvlsRestore test | sed /TRACE/s/0x./0x7/ | tlvlsRestore; tlvls
+.fi
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+
+
+.ig
+
+tlvlsSave() 
+{
+  if [ $# -ne 1 ];then
+    echo "\
+   usage: tlvlsSave <id>   # where <id> is valid shell variable characters
+          tlvlsRestore [id] # if [id] not given, read stdin
+examples: export TRACE_MSGMAX=0; tlvlM 0xdeadbeef; tlvls; tlvlsSave test; rm -f /tmp/trace_buffer_$USER; tlvls; tlvlsRestore test; tlvls
+          tlvlsRestore test | sed /TRACE/s/0x./0x7/ | tlvlsRestore; tlvls
+"
+  else
+    x=`tlvls -H`
+    eval tlvls_save_$1=\$x
+  fi
+}
+..
+

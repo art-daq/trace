@@ -1,0 +1,65 @@
+
+.TH "trace_cntl freeze" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+trace_cntl freeze, tfreeze
+
+.SH SYNOPSIS 
+.br 
+.B tfreeze [\fIopt\fR]
+
+
+.SH DESCRIPTION
+.\"tfreeze() { trace_cntl modeM 0; }
+After executing this command, \fBtinfo\fR will show that the memory destination has been turned off. Likewise, the \fBtmode\fR command will print a 2, showing that only the slow mode is activated.
+.TP 20
+.I tfreeze
+[\fIopt\fR] -- turns memory destination off -- "freezes" contents
+
+
+.SH EXAMPLE
+.sg
+.ni
+[madas@localhost trace-v3]$  \fBtinfo\fR
+
+\fImode              = 0x3         Slow:ON,  Mem:ON\fR
+
+
+[madas@localhost trace-v3]$  \fBtfreeze ; tinfo\fR
+
+\fImode              = 0x2         Slow:ON,  Mem:off\fR
+.fi
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+
+

@@ -1,0 +1,171 @@
+.\" Manpage for trace. 
+
+.\"Check rpm.8.gz for good examples!! Delete this line when finished editing this man page.
+
+.\" Contact ron@fnal.gov for more information
+.TH TRACE 1 "July 2018" "1.0" "User Commands"
+.SH NAME
+tenv, tinfo, tonMg, toffS, tshow, treset, tdelta, trace_cntl (tcntl)
+.SH SYNOPSIS 
+.br 
+.B trace_cntl (or tcntl)
+[options] <cmd> [command opt/args]
+.br
+.B tonMg
+.br
+.B toffS
+.br
+.B tshow
+.br
+.B treset
+.br
+.B tdelta
+
+
+.SS "DISPLAYING ENVIRONMENT DETAILS"
+.\" I don't like the outcome of this formatting
+.\" .nf
+.\" .sp
+.\" .BI tenv
+.\" ... 
+.\" .fi
+.\" end example of failed formatting
+.br
+.B tenv
+.B tinfo
+
+.\" The short descriptions of these commands actually don't go here, so I need to fix this.
+
+
+.SH DESCRIPTION
+Print trace environment with 
+.BR tenv
+to display current environmental settings. To enable memory TRACEing, one of the first 7 env. vars in the "tenv env list" (see below/next) has to be set, either in the environment or by the program. The first four of these variables effect fundamental parameters of the memory buffer, but only if they cause the creation of the buffer (as opposed to the use of a previously created buffer). An exception to this is the special case of 
+.BR TRACE_MSGMAX=0 
+which causes the default value (128) to be used if creating the memory buffer.
+.PP
+Executing 
+.BR "tinfo"
+in this environment will create the memory buffer file if doesn't exists, then display the info about the file.
+.PP
+The 
+.BR tonMg
+command can be used to turn memory tracing on for all currently defined and also the undefined (future) TRACE names. The 
+.BR toffS 
+command with the \fI-n<name>\fR option can be used to turn of the standard out tracing for a particular trace name. This will be used along with the 
+.BR tshow|grep|tdelta 
+pipeline to see the difference in timing behavior between the threads. Examples of this are on the redmine website given at the end of this man page.
+
+
+.SS TESTS
+tests:  (use trace_cntl show after test)
+ -x<thread_options_mask>    b0=TRACE_CNTL"file", b1=TRACE_CNTL"name", b2=count mappings
+ -l<loops>
+
+
+.SH NOTES
+If you want TRACE to create the standard file (/tmp/trace_buffer_$USER), it is recommended that you put \fITRACE_NAME=TRACE\fR, \fITRACE_MSGMAX=0\fR or \fITRACE_ARGSMAX=10\fR in your environment. \fITRACE_MSGMAX=0\fR will give default of 128.
+.PP
+TRACE environment variables can be set according to values desired by the user by using the command:
+.PP
+\fBexport \fR [\fIVAR\fR]=[\fINUM\fR]
+.PP
+with [\fINUM\fR] being an allowable number and [\fIVAR\fR] being any variable shown by the \fBENVIRONMENT VARIABLES\fR section.
+.SS "Notes on tinfo"
+.PP
+An example of the type of output to expect from the
+.BR tinfo
+command can be found at https://cdcvs.fnal.gov/redmine/projects/trace/wiki/Circular_Memory_Buffer
+
+
+.SS "Notes on compiling"
+.nf
+.sp
+When compiling, use -I option to avoid errors in accessing trace.h and tracemf.h: 
+.PP
+gcc -o [COMMAND] -I/usr/include/TRACE/ [FILE-CONTAINING-TRACE-CODE].c
+
+if there is any confusion regarding generalized explanation above, here is one to copy/paste in you're command line:
+
+gcc -o basictrace -I/usr/include/TRACE/ /usr/share/doc/trace-v3/basic_c.c
+.PP
+Try example given and run ./basictrace in command line.
+.fi
+
+.SH CONVENIENCE FUNCTIONS
+.PP
+In general, the functions support a -f<file> and/or -n<name> option. The function \fBtdelta\fR, however, has different options.
+
+.TS
+tab (@);
+l lx.
+\fBtinfo\fR   [opt]@T{
+-- print info 
+T}
+
+\fBtshow\fR   [opt]@T{
+-- show the buffer (pipe to pager, head or tail)
+T}
+
+.\" ttids, tlvlM, tlvlS, tlvlT have been moved from here and I don't know how to comment out within the .TS tab(@); l lx. thingy.
+
+\fBtmodeM\fR  [opt] <0|1>@T{
+-- disable (0) or enable (1) the memory destination
+T}
+
+\fBtmodeS\fR  [opt] <0|1>@T{
+-- disable (0) or enable (1) the stdout destination
+T}
+
+\fBtfreeze\fR [opt]@T{
+-- turns memory destination off -- "freezes" contents
+T}
+
+\fBtreset\fR  [opt] @T{
+-- clears the memory buffer and trigger parameters
+T}
+
+\fBtonM\fR    [opt] <lvls>@T{
+-- turns levels on (and also the mode) for the S destination
+T}
+
+\fBtonS\fR    [opt] <lvls>@T{
+-- turns levels on (and also the mode) for the M destination
+T}
+
+\fBtoffS\fR   [opt] <lvls>@T{
+-- turns both the stdout and memory desinations off
+T}
+
+\fBtoffM\fR   [opt] <lvls>@T{
+-- turns both the stdout and memory desinations off
+T}
+
+\fBtdelta\fR  [opts] @T{
+-- trace_delta.pl "$@" | less
+T}
+
+\fBtcntl\fR   [opt] @T{
+-- general -- give cmd to trace_cntl i.e: tcntl TRACE 0 "hi"
+T}
+.TE
+
+.\".TP
+.\"\fB\-\-version\fR
+
+.\"output version information and exit
+
+.\" This will underline and the curly brace makes an indented column I think. This is from the man page of man: 
+.\" \fIitalic text\fR@T{
+.\" replace with appropriate argument.
+.\" T}
+
+.SH SEE ALSO
+.PP
+Further details and more examples of how to use TRACE can be found in the wiki on Fermilab's Redmine website, via the following hyperlinks: 
+https://cdcvs.fnal.gov/redmine/projects/trace/wiki/TRACE_Quick_Start
+https://cdcvs.fnal.gov/redmine/projects/trace/wiki/Your_first_TRACE
+.PP
+
+
+.

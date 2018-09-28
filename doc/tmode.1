@@ -1,0 +1,123 @@
+.TH "tmode" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tmode, tmodeM, tmodeS
+.SH SYNOPSIS 
+.br 
+.B tmode
+.br
+.B tmodeM \fI[opt\fR] <0|1>
+.br
+.B tmodeS \fI[opt\fR] <0|1>
+
+.SH DESCRIPTION
+The command \fBtmode\fR will show the mode word. 
+Bit zero of the "mode word" corresponds to memory tracing and is directly accessible via \fBtmodeM\fR. In order to activate another "mode word," one of the first 7 environment variables must be set.
+
+.TP 20
+.I \fBtmodeM\fR
+[\fIopt\fR] <0|1> -- disable (0) or enable (1) the memory destination
+.TP
+.I \fBtmodeS\fR
+[\fIopt\fR] <0|1> -- disable (0) or enable (1) the stdout destination
+
+.SH EXAMPLES
+In this example, the user sets the environment variable 'TRACE_FILE' to a nonsense file '/tmp/trace.trace,' and then displays the TRACE environment. Once TRACE is activated, \fBtmodeM 1\fR is used to enable the memory destination. At this point, stdout and memory destinations are enabled, which is why the commands that follow, \fBtinfo\fR, shows "\fImode = 0x3      Slow: ON   Mem: ON\fR" and \fBtmode\fR, outputs 3 instead of the default 2.
+
+.nf
+.sp
+[madas@localhost trace-v3]$  export TRACE_FILE=/tmp/trace.trace ; tenv
+TRACE_NAMTBLENTS
+TRACE_NUMENTS
+TRACE_ARGSMAX
+TRACE_MSGMAX
+TRACE_NAME
+TRACE_FILE=/tmp/trace.trace
+TRACE_LVLM
+TRACE_ENDL
+TRACE_LIMIT_MS
+TRACE_LVLS
+TRACE_MODE
+TRACE_NAMLVLSET
+TRACE_PRINT_FD
+TRACE_SHOW
+TRACE_TIME_FMT
+
+
+
+[madas@localhost trace-v3]$  \fBtmodeM 1\fR
+
+
+
+[madas@localhost trace-v3]$  tinfo
+trace.h rev       = $Revision: 937 $$Date: 2018-07-09 11:17:57 -0500 (Mon, 09 Jul 2018) $
+revision          = $Revision: 937 $$Date: 2018-07-09 11:17:57 -0500 (Mon, 09 Jul 2018) $
+create time       = Fri Aug 03 14:42:38 CDT 2018
+trace_initialized = 1
+\fBmode              = 0x3         Slow:ON,  Mem:ON\fR
+writeIdxCount     = 0x00000000  entries used: 0
+full              = 0
+nameLock          = 0
+largestMultiple   = 0xfffef920
+trigIdxCnt        = 0x00000000
+triggered         = 0
+trigActivePost    = 0
+limit_cnt_limit   = 0
+limit_span_on_ms  = 0
+limit_span_off_ms = 0
+traceLevel        = 0x000000000000000f 0x0000000000000007 0x0000000000000000
+num_entries       = 100000
+max_msg_sz        = 192  includes system enforced terminator
+max_params        = 10
+entry_size        = 320
+namLvlTbl_ents    = 1022
+namLvlTbl_name_sz = 39         not including null terminator
+longest_name      = 7
+wrIdxCnt offset   = 0x10000
+namLvls offset    = 0xc0
+buffer_offset     = 0x10040
+memlen            = 0x1eb0000          
+default TRACE_SHOW=HxNTPiCnLR others: t(tsc) B(paramBytes) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs) l(lvl int)
+
+
+
+[madas@localhost trace-v3]$  \fBtmode
+3\fR
+.fi
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+.ig tmode()   { trace_cntl mode  "$@"; }
+tmodeM()  { trace_cntl modeM "$@"; }
+tmodeS()  { trace_cntl modeS "$@"; } 
+..
+
+

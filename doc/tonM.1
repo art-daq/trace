@@ -1,0 +1,98 @@
+
+.TH "tonM" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tonM, tonS, tonT, tonMg, tonSg, tonTg
+
+.SH SYNOPSIS 
+.br 
+.B tonM
+.br 
+.B tonS
+.br 
+.B tonT
+.br 
+.B tonMg
+.br 
+.B tonSg
+.br 
+.B tonTg
+
+.SH DESCRIPTION
+The various commands for \fBton[]\fR turn on the requested bit. Technically speaking, the \fBton[]\fR commands take the requested mask setting and use a binary OR operator to "turn on" the desired bits.
+
+\" The ton/toff set of functions are wrappers around tlvl set and tlvl clear. 
+
+.TP 20
+.I \fBtonM\fR
+[opt] <lvls>  -- turns levels on (and also the mode) for the S destination (Slow)
+.TP
+.I \fBtonS\fR
+[opt] <lvls>  -- turns levels on (and also the mode) for the M destination (Memory)
+.TP
+.I \fBtonT\fR
+[opt] <lvls>  -- turns levels on (and also the mode) for the T destination (Trigger)
+
+.SH EXAMPLE
+In the example, \fBtonS\fR is used to turn on bits 2-4, and 9-12, which should result in the hexadecimal code \fI1e1c\fR. However, the output of \fBtlvls\fR as seen in the code is \fI1e1f\fR because of the default 'S' mask setting (hexadecimal - 7, binary - 111). This is corrected in the next step by using \fBtoffS\fR to turn bits 0 and 1 off (resulting in the expected hexadecimal - c, and binary - 1100, as shown):
+
+.nf
+.sp
+[madas@localhost trace-v3]$  \fBtonS 2-4 9-12 ; tlvls\fR
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+1020             TRACE 0x0000000000000000 \fB0x0000000000001e1f\fR 0x0000000000000000
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+
+
+[madas@localhost trace-v3]$  toffS 0-1 ; tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+1020             TRACE 0x0000000000000000 \fB0x0000000000001e1c\fR 0x0000000000000000
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+.fi
+
+.ig 
+tonM()     { trace_cntl lvlset  `bitN_to_mask $*` 0 0; trace_cntl modeM 1; }
+tonS()     { trace_cntl lvlset  0 `bitN_to_mask $*` 0; trace_cntl modeS 1; }
+tonT()     { trace_cntl lvlset  0 0 `bitN_to_mask $*`; }
+tonMg()    { trace_cntl lvlsetg `bitN_to_mask $*` 0 0; trace_cntl modeM 1; }
+tonSg()    { trace_cntl lvlsetg 0 `bitN_to_mask $*` 0; trace_cntl modeS 1; }
+tonTg()    { trace_cntl lvlsetg 0 0 `bitN_to_mask $*`; }
+..
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>

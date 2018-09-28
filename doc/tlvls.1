@@ -1,0 +1,92 @@
+.TH "trace_cntl tids" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tlvls, ttids
+.SH SYNOPSIS 
+.br 
+.B ttids
+.br
+.B tlvls
+
+.SH DESCRIPTION
+\" \fBtlvls\fR()   { \fBtrace_cntl\fR tids "$@"; }   #    args so -f<file> can be used.
+The output of 
+.BR tlvls
+or 
+.BR ttids
+each give the same result, which is a display of current mask bit settings.
+
+.SH EXAMPLE
+.nf
+.sp
+[madas@localhost ~]$  tlvls
+mode:                       M=0                S=1
+ TID    NAME              maskM              maskS              maskT
+---- ------- ------------------ ------------------ ------------------
+1020   TRACE 0x000000000000000f 0x0000000000000007 0x0000000000000000
+1021 _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+.fi
+.PP
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+
+./" lvls()   { trace_cntl tids "$@"; }   #    args so -f<file> can be used. (Darwin's getopt
+./" tlvlM()   { trace_cntl lvlmskM "$@"; }  #  does not :(
+./" tlvlS()   { trace_cntl lvlmskS "$@"; }
+./" tlvlT()   { trace_cntl lvlmskT "$@"; }
+./" tlvlMg()  { trace_cntl lvlmskMg "$@"; }
+./" tlvlSg()  { trace_cntl lvlmskSg "$@"; }
+./" tlvlTg()  { trace_cntl lvlmskTg "$@"; }
+
+
+
+.ig       This was quite wrong wasn't it??  
+Different level masks can be created using \fBexport TRACE_NAME\fR=[\fINAME\fR]. For example:
+.PP
+.nf
+.sp
+[madas@localhost ~]$  export TRACE_NAME=
+
+[madas@localhost ~]$  export TRACE_NAME= 
+
+[madas@localhost ~]$  ttids
+mode:                              M=1                S=1
+TID            NAME              maskM              maskS              maskT
+--- --------------- ------------------ ------------------ ------------------
+  0   		    0x000000000000000f 0x00000000000000ff 0x0000000000000000
+  1		    0x000000000000000f 0x00000000000000ff 0x0000000000000000
+198           TRACE 0x000000000000000f 0x00000000000000ff 0x0000000000000005
+199         _TRACE_ 0x000000000000000f 0x00000000000000ff 0x0000000000000000
+.fi
+..

@@ -1,0 +1,184 @@
+.TH "tshow" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tshow, tdelta
+.SH SYNOPSIS 
+.TP 20
+.I \fBtshow\fR [\fIopt\fR]
+-- show the buffer (pipe to pager, head or tail)
+.TP
+.B tdelta
+
+.SH DESCRIPTION
+If the TRACE environment is not activated, this will be blank. Information displayed by \fBtshow\fR can be controlled by the TRACE_SHOW environment variable. See the last line of \fBtinfo\fR to see default \fITRACE_SHOW\fR (scroll down to EXAMPLES section to see this now). Use \fBexport PAGER=less\fR to make it as if \fBtshow\fR is doing \fBtshow | less\fR without the need to type \fB| less\fR after every \fBtshow\fR. It is common to use \fBtshow | <some filter> | tdelta\fR
+.PP
+The information displayed by \fBtshow\fR, which can be changed by redefining \fITRACE_SHOW\fR (via removing, adding, rearranging letters in \fBTRACE_SHOW=HxNTPiCnLR tshow\fR) is shown below: 
+.TP 20
+.I idx
+-- INDEX, 'N'
+.TP
+.I us_tod
+-- time of day, 'T'
+.TP
+.I pid
+-- PID, 'P'
+.TP
+.I tid
+-- TID, 'i'
+.TP
+.I cpu
+-- CPU, 'C'
+.TP
+.I name
+-- NAME, 'n'
+.TP
+.I lvl
+-- LEVEL, 'L'
+.TP
+.I r
+-- retry index, 'R'
+.TP
+.I msg
+-- MESSAGE (this is always printed last and cannot be removed)
+.TP
+.I ------
+-- Header, 'H' (header will not show if placed anywhere other than first)
+.TP
+.I ---
+-- adding a lowercase 'm' will print only the message format and no declared variables 
+.TP 
+.I ---
+-- unformatted message output, 'x'
+.PP
+The \fBtshow\fR output can be piped into \fBtdelta\fR which converts the time column (\fI-ct 1\fR) and also adds a delta column based on the time column (\fI-d 1\fR).
+\"tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
+
+.SH EXAMPLES
+.nf
+.sp
+[madas@localhost trace-v3]$  tinfo
+
+.fi
+default TRACE_SHOW=HxNTPiCnLR others: t(tsc) B(paramBytes) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs) l(lvl int)
+
+.nf
+.sp
+
+[madas@localhost ~]$  TRACE_SHOW=HxNTPiCnLR tshow
+idx           us_tod   pid   tid cpu       name lvl r msg
+--- ---------------- ----- ----- --- ---------- --- - -----------------------------
+  0 1533916979438131  3461  3461   0      TRACE err . hello;there;
+  1 1533916957553009  3446  3446   1      TRACE err . hello2
+  2 1533916947189702  3431  3431   1      TRACE err . hello
+
+
+.fi
+.PP
+In this next example, the output of \fBtshow\fR has been modified to exclude the header (H), index (N), cpu (C), and retry (R):
+.PP
+.nf
+.sp
+
+
+[madas@localhost ~]$  TRACE_SHOW=xTPinL tshow
+1533916979438131  3461  3461      TRACE err hello;there;
+1533916957553009  3446  3446      TRACE err hello2
+1533916947189702  3431  3431      TRACE err hello
+
+
+.fi
+.PP
+As described in the list from the description, the messages column cannot be removed, but it can be modified by adding lowercase 'm' to print pre-formatting as shown below:
+
+.ng
+.sp
+[madas@localhost ~]$  TRACE_SHOW=HNTPiCnLR tshow
+idx           us_tod   pid   tid cpu       name lvl r msg
+--- ---------------- ----- ----- --- ---------- --- - -----------------------------
+  0 1533921636009247  3671  3671   2      TRACE nfo . the number is 20
+  1 1533921623454505  3663  3663   0      TRACE nfo . the number is 0x20
+  2 1533921532453969  3596  3596   0      TRACE nfo . the number is 7
+
+
+
+[madas@localhost ~]$  TRACE_SHOW=HNTP\fBm\fRiCnLR tshow
+idx           us_tod   pid   tid cpu       name lvl r msg
+--- ---------------- ----- ----- --- ---------- --- - -----------------------------
+  0 1533921636009247  3671  3671   2      TRACE nfo . the number is \fB%x\fR
+  1 1533921623454505  3663  3663   0      TRACE nfo . the number is \fB0x%x\fR
+  2 1533921532453969  3596  3596   0      TRACE nfo . the number is \fB%d\fR
+ 
+
+
+.fi
+
+Piping to \fBtdelta\fR with the options shown by the following example will convert the time to hour:min:sec format and display the delta column:
+.nf
+.sp
+\fBtshow | tdelta -d 1 -ct 1 | less\fR
+
+idx                us_tod     delta   pid   tid cpu       name lvl r msg
+---      ---------------- --------- ----- ----- --- ---------- --- - -----------------------------
+  0 08-10 11:02:59.438131         0  3461  3461   0      TRACE err . hello;there;
+  1 08-10 11:02:37.553009  21885122  3446  3446   1      TRACE err . hello2
+  2 08-10 11:02:27.189702  10363307  3431  3431   1      TRACE err . hello
+
+
+.fi
+.PP
+Just for kicks, this is the output of all columns:
+.PP
+.nf
+.sp
+[madas@localhost ~]$  TRACE_SHOW=HxNTPiCnLRtBsmDI#l tshow | tdelta
+idx           us_tod     delta   pid   tid cpu       name lvl r        tsc B   slt TID args lv msg
+--- ---------------- --------- ----- ----- --- ---------- --- - ---------- -- ----- --- ---- -- -----------------------------
+  0 1533921636009247         0  3671  3671   2      TRACE nfo .  761790393 8     5 1020    1  2 the number is %x
+  1 1533921623454505  12554742  3663  3663   0      TRACE nfo . 2585075804 8     4 1020    1  2 the number is 0x%x
+  2 1533921532453969  91000536  3596  3596   0      TRACE nfo . 2974301698 8     3 1020    1  2 the number is %d
+
+.fi
+This redmine aticle has other examples of how to use \fBtshow, tdelta\fR, and some other TRACE functions: 
+.PP
+https://cdcvs.fnal.gov/redmine/projects/trace/wiki/TRACE_for_DAQInterface_users
+.PP
+So does this one:
+.PP
+https://cdcvs.fnal.gov/redmine/projects/trace/wiki/Circular_Memory_Buffer
+
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+

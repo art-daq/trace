@@ -1,0 +1,21 @@
+.\" Manpage for trace.
+.\" Contact ron@fnal.gov for more information
+.TH trace 1p "July 2018" "1.0" "POSIX Programmer's Manual"
+.SH This is getting real wild and real fun, but I have to start doing real work here soon. 
+.PP 
+Idk if I'm the one who should be writing a POSIX Programmer's Manual. I have to figure out what that even means.
+.SH SYNOPSIS
+.LP
+\fBtenv/fP /fIformat/fP/fB[/fP/fargument/fP/fB.../fP/fB]/fP
+.B tenv
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+I'm no longer missing the trace environment command:
+.\".TP
+.\"\fB\-\-version\fR
+.\"output version information and exit
+
+I just found out about another thing though and I'm uncertain if it is a problem or not. Along with the man pages I have just created, the "bounce" (trace(8)) and "curs_trace" (trace(3x)) man pages come up when using the command: $ man -a trace.
+
+

@@ -1,0 +1,42 @@
+.TH "trace_cntl t" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+trace_cntl t , t
+
+.SH SYNOPSIS 
+.br 
+.B t
+
+
+.SH DESCRIPTION
+.TP 20
+.T 
+
+
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)

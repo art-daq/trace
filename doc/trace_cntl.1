@@ -1,0 +1,119 @@
+.TH "trace_cntl" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+trace_cntl
+.SH SYNOPSIS 
+.br 
+.B trace_cntl \fI[opts] <cmd> [command opt/arg]\fR
+
+
+.SH DESCRIPTION
+By itself, \fBtrace_cntl\fR simply shows the options and commands as stdout displayed on your console. The same thing is displayed here under the following sub-headers.
+
+.SS COMMANDS 
+.TP 12 
+info
+Same as \fBtinfo\fR.
+.TP
+tids
+Same as \fBttids\fR or \fBtlvls\fR.
+.TP
+reset
+ 
+.TP
+show [count [startSlotIndex]]
+.TP
+mode <mode>
+.TP
+modeM <mode>
+.TP
+modeS <mode>
+.TP
+lvlmsk[M|S|T][g] <lvlmsk>              # M=memory, S=slow/console, T=trig
+.TP
+lvlmsk[g]  <mskM> <mskS> <mskT>
+.TP
+lvlset[g] <mskM> <mskS> <mskT>
+.TP
+lvlclr[g] <mskM> <mskS> <mskT>
+.TP
+trig <postEntries> [lvlmskTM+] [quiet] # opt 2nd arg is for specified/dflt TID
+.TP
+reset \" seems to be a duplicate? Or is the following line supposed to be part of this 'reset?'
+.TP
+limit_ms <cnt> <on_ms> <off_ms>
+
+.SS OPTIONS 
+
+.TP 12
+-?, -h
+show this help
+.TP
+-f<file>
+.TP
+-n<name>
+For all commands - not wildcard, created if non-existent
+.TP
+-N<name>
+For lvl*, could 
+be wildcard match spec.
+.TP
+-V
+print version and exit
+.TP
+-a
+for tids, show all
+.SS show opts:
+.TP
+-H
+no header
+.TP
+-L<LC_NUMERIC val>
+i.e. -Len_US
+.TP
+-q
+silence format errors
+.TP
+-F
+show forward, poll for new entries. "count" avoids older entries other options encoded in TRACE_SHOW env.var.
+.SS TESTS
+tests:  (use trace_cntl show after test)
+ -x<thread_options_mask>    b0=TRACE_CNTL"file", b1=TRACE_CNTL"name", b2=count mappings
+ -l<loops>
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+
+.SH SEE ALSO
+
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+
+

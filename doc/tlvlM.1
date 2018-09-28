@@ -1,0 +1,80 @@
+.TH "tlvlM" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tlvlM, tlvlS, tlvlT, tlvlMg, tlvlSg, tlvlTg
+.SH SYNOPSIS
+.br
+.B tlvlM()
+.br
+.B tlvlS()
+.br
+.B tlvlT()
+.br
+.B tlvlMg()
+.br
+.B tlvlSg()
+.br
+.B tlvlTg()
+
+.SH DESCRIPTION
+When new TRACE names are registered/created, the default maskM (Memory) and maskS (Slow) are 0xf and 0x7, respectively. There are basically two main sets of masks: one to cause a trace to be saved into the circulare memory buffer (file) and one to cause a trace to be printed to stdout. The masks can be view via the "ttids" (or "tlvls) function. Including lowercase "g" (i.e.: tlvlMg) is for global variant. Using global will set for everything, including new/future TRACE names.
+.TP 20
+.I \fBtlvlM\fR
+[opt] <msk> -- set the mask -- often -n<name> is helpful. (Memory)
+.TP
+.I \fBtlvlS\fR
+[opt] <msk> -- set the mask -- often -n<name> is helpful (Slow)
+.TP
+.I \fBtlvlT\fR
+[opt] <msk> -- set the mask -- often -n<name> is helpful (Trigger)
+
+
+.SH EXAMPLE
+Here is usage of \fBtlvlT\fR being used to set the "trigger" mask to 14 bits for a TRACE named "comfortable-trace" (\fBtlvls\fR output has been given to display that the difference is shown by the "e" in the emboldened line, which is the 14th digit in Hexadecimal notation):
+.PP
+.nf
+.si
+[madas@localhost trace-v3]$  \fBtlvlT 14 ; tlvls\fR
+mode:                                               M=1                S=1
+ TID             NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+   0 comfortable-trace 0x0000000000000001 0x0000000000000007 \fB0x000000000000000e\fR
+1020             TRACE 0x0000000000000001 0x0000000000000007 0x0000000000000000
+1021           _TRACE_ 0x0000000000000001 0x0000000000000007 0x0000000000000000
+.fi
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+

@@ -1,0 +1,171 @@
+
+.TH "tlvlsRestore" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+tlvlsRestore
+
+.SH SYNOPSIS 
+.br 
+.B tlvlsRestore
+
+
+.SH DESCRIPTION
+To use \fBtlvlsRestore\fR, save TRACE NAMES into a file before removing trace_buffer_USER. NAMES can be "restored" by \fBcat FILENAME | tlvlsRestore\fR. This method allows manipulation of the mask levels within the file created before \fBtlvlsRestore\fR.
+.PP
+The other method of \fRtlvlsRestore\fR does not allow mask level manipulation and requires \fBtlvlsSave\fR. Delcare \fBtlvlsSave FILENAME\fR before removing trace_buffer_USER, then to restore use \fBtlvlsRestore FILENAME\fR.
+
+\".TP 20
+\".B usage: tlvlsRestore 
+\"[id] # where <id> is valid shell variable characters
+
+  \"   # if [id] not given, read stdin
+
+
+.SH EXAMPLES
+The \fBtlvlsRestore\fR command can be used in 2 different ways.
+.PP
+Method 1:
+.nf
+.sp
+[madas@localhost trace-v3]$  tlvls >t.lvls
+.fi
+*With TRACE activated and some names declared, this will create a file named "t.lvls" in your current directory containing the text from the normal output of the tlvls command.
+.nf
+.sp
+[madas@localhost trace-v3]$  rm /tmp/trace_buffer_madas
+.fi
+*This will remove the NAMES from TRACE, but these are the same NAMES that were saved to t.lvls via the previous command. Without the previous command these NAMES would be lost permanently.
+.nf
+.sp
+[madas@localhost trace-v3]$  cat t.lvls  | tlvlsRestore 
+.fi
+*Using this command, the contents of the file will be "placed back into" TRACE. The significant thing here is that before restoring TRACE names by using this command, it is possible to open the t.lvls file and make whatever changes desired, if any. 
+.nf
+.sp
+[madas@localhost trace-v3]$  tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+   0               M=1 0x000000000000000f 0x0000000000000007 0x0000000000000000
+   1              NAME 0x0000000000000000 0x0000000000000000 0x0000000000000000
+   2 comfortable-trace 0x000000000000000e 0x0000000000000007 0x0000000000001000
+   3               ron 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+   4              matt 0x000000007fffffff 0x0000000000000007 0x0000000000000000
+   5              ron2 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+1020             TRACE 0x000000000000000f 0x0000000000001e1c 0x000000000000f00d
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+
+
+
+.fi
+
+.PP
+\fBMethod 2:\fR
+.nf
+.sp
+
+
+[madas@localhost trace-v3]$  tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+   0 comfortable-trace 0x000000000000000e 0x0000000000000007 0x0000000000001000
+   1               ron 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+   2              matt 0xdeadbeef7fffffff 0x0000000000000007 0x0000000000000000
+   3              ron2 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+1020             TRACE 0x000000000000000f 0x0000000000001e1c 0x000000000000f00d
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+[madas@localhost trace-v3]$  tlvlsSave Apple
+
+
+[madas@localhost trace-v3]$  rm /tmp/trace_buffer_madas 
+
+
+[madas@localhost trace-v3]$  tlvls
+mode:                       M=1                S=1
+ TID    NAME              maskM              maskS              maskT
+---- ------- ------------------ ------------------ ------------------
+1020   TRACE 0x000000000000000f 0x0000000000000007 0x0000000000000000
+1021 _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+
+
+[madas@localhost trace-v3]$  tlvlsRestore Apple
+
+
+
+[madas@localhost trace-v3]$  tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+   0 comfortable-trace 0x000000000000000e 0x0000000000000007 0x0000000000001000
+   1               ron 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+   2              matt 0xdeadbeef7fffffff 0x0000000000000007 0x0000000000000000
+   3              ron2 0x00000000001fffff 0x0000000000000007 0x0000000000000000
+1020             TRACE 0x000000000000000f 0x0000000000001e1c 0x000000000000f00d
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+.fi
+.nf
+.sp
+
+
+\fB-------------------------
+------OTHER EXAMPLES-----
+-------------------------\fR
+
+examples: export TRACE_MSGMAX=0; tlvlM 0xdeadbeef; tlvls; tlvlsSave test; rm -f /tmp/trace_buffer_madas; tlvls; tlvlsRestore test; tlvls
+
+tlvlsRestore test | sed /TRACE/s/0x./0x7/ | tlvlsRestore; tlvls
+.fi
+
+.SH AUTHORS
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtoffM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+
+
+.ig
+idk what the heck tlvlsRestore does. "Restore names/levels from previously saved files?"
+ tlvlsRestore() 
+{
+  if [ $# -gt 1 ];then
+    tlvlsSave
+  else
+    test $# -eq 1 && eval x=\$tlvls_save_$1 || x=`cat`
+    echo "$x" | while read id name mskM mskS mskT;do
+      test -t 1 && trace_cntl lvlmsk -n$name $mskM $mskS $mskT || echo $id $name $mskM $mskS $mskT
+    done
+  fi
+} 
+..
+

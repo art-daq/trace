@@ -1,0 +1,95 @@
+
+.TH "toffM" 1 "August 2018" "1.0" "User Commands"
+.SH NAME
+toffM, toffS, toffT, toffMg, toffSg, toffTg
+
+.SH SYNOPSIS 
+.br 
+.B toffM
+.br 
+.B toffS
+.br
+.B toffT
+.br
+.B toffMg
+.br
+.B toffSg
+.br
+.B toffTg
+
+
+.SH DESCRIPTION
+The various commands for \fBtoff[]\fR turns off the requested bit. Technically speaking,  the \fBtoff[]\fR commands take the requested mask setting, invert each bit, then use a binary AND operator to shut the desired bit off, leaving unrequested bits unaffected. 
+.TP 20
+.I \fBtoffS\fR
+[opt]<lvls>  -- turns the stdout destination off
+.TP
+.I \fBtoffM\fR
+[opt]<lvls>  -- turns the memory destination off
+.TP
+.I \fBtoffT\fR
+[opt]<lvls>  -- turns the trigger destination off
+
+.SH EXAMPLES
+In the example, \fBtonS\fR is used to turn on bits 2-4, and 9-12, which should result in the hexadecimal code \fI1e1c\fR. However, the output of \fBtlvls\fR as seen in the code is \fI1e1f\fR because of the default 'S' mask setting (hexadecimal - 7, binary - 111). This is corrected in the next step by using \fBtoffS\fR to turn bits 0 and 1 off (resulting in the expected hexadecimal - c, and binary - 1100, as shown):
+
+.nf
+.sp
+[madas@localhost trace-v3]$  tonS 2-4 9-12 ; tlvls
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+1020             TRACE 0x0000000000000000 \fB0x0000000000001e1f\fR 0x0000000000000000
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+
+
+
+[madas@localhost trace-v3]$  \fBtoffS 0-1 ; tlvls\fR
+mode:                                 M=1                S=1
+ TID              NAME              maskM              maskS              maskT
+---- ----------------- ------------------ ------------------ ------------------
+1020             TRACE 0x0000000000000000 \fB0x0000000000001e1c\fR 0x0000000000000000
+1021           _TRACE_ 0x000000000000000f 0x0000000000000007 0x0000000000000000
+.fi
+
+
+
+.ig
+toffM()    { trace_cntl lvlclr  `bitN_to_mask $*` 0 0; }
+toffS()    { trace_cntl lvlclr  0 `bitN_to_mask $*` 0; }
+toffT()    { trace_cntl lvlclr  0 0 `bitN_to_mask $*`; }
+..
+
+
+.SH SEE ALSO
+.br
+\fBtcntl\fR(1)
+.br
+\fBtmode\fR(1)
+.br
+\fBtshow\fR(1)
+.br
+\fBtinfo\fR(1)
+.br
+\fBttids\fR(1)
+.br
+\fBtlvlM\fR(1)
+.br
+\fBtfreeze\fR(1)
+.br
+\fBtreset\fR(1)
+.br
+\fBtdelta\fR(1)
+.br
+\fBtenv\fR(1)
+.br
+\fBtonM\fR(1)
+.br
+\fBtlvlsSave\fR(1)
+.br
+\fBtlvlsRestore\fR(1)
+
+.SH AUTHOR
+Matthew Adas <madas@fnal.gov>
+.PP
+Ron Rechenmacher <ron@fnal.gov>

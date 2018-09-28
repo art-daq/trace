@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 847 $$Date: 2018-05-29 12:25:57 -0500 (Tue, 29 May 2018) $";
+ // rev="$Revision: 1022 $$Date: 2018-08-30 13:24:15 -0500 (Thu, 30 Aug 2018) $";
  */
  /**
   * \file tracemf.h
@@ -65,7 +65,11 @@
 SUPPRESS_NOT_USED_WARN
 static bool __mwe = mf::isWarningEnabled(), __mie = mf::isInfoEnabled(), __mde = true;//mf::isDebugEnabled(); always false in v2_02_01
 
-
+#if defined(__has_feature)
+#  if __has_feature(thread_sanitizer)
+__attribute__((no_sanitize("thread")))
+#  endif
+#endif
 static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert
 	, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
@@ -77,10 +81,10 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 	*/
 	size_t printed = 0;
 	const char *outp;
+		char   obuf[TRACE_USER_MSGMAX];
 
 	if ((insert && (printed = strlen(insert))) || nargs)
 	{
-		char   obuf[TRACE_USER_MSGMAX];
 		/* check insert 1st to make sure printed is set */
 // assume insert is smaller than obuf
 		if (printed)
@@ -105,25 +109,14 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 // Define MESSAGEFACILITY_HEX_VERSION in top-level CMakeLists.txt (see artdaq's CMakeLists.txt!)
 #ifdef MESSAGEFACILITY_HEX_VERSION
 # if MESSAGEFACILITY_HEX_VERSION >= 0x20201
-#  ifdef mftrace_iteration
-	mf::SetIteration(mftrace_iteration);
-#  endif
-#  ifdef mftrace_module
-	mf::SetModuleName(mftrace_module);
-#  endif
-# elif MESSAGEFACILITY_HEX_VERSION >= 0x20000
-#  ifdef mftrace_iteration
-	mf::SetContextIteration(mftrace_iteration);
-#  endif
-#  ifdef mftrace_module
-	mf::SetContextSinglet(mftrace_module);
+#  ifdef ARTDAQ_DAQDATA_GLOBALS_HH
+	mf::SetIteration(GetMFIteration());
+	mf::SetModuleName(GetMFModuleName());
 #  endif
 # else
-#  ifdef mftrace_iteration
-	mf::SetContext(mftrace_iteration);
-#  endif
-#  ifdef mftrace_module
-	mf::SetModuleName(mftrace_module);
+#  ifdef ARTDAQ_DAQDATA_GLOBALS_HH
+	mf::SetContextIteration(GetMFIteration());
+	mf::SetContextSinglet(GetMFModuleName());
 #  endif
 # endif
 #endif

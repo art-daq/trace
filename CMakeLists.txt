@@ -29,14 +29,14 @@ endforeach()
 configure_file(ups/cetpkg_variable_report.in cetpkg_variable_report)
 set(CMAKE_C_COMPILER "$ENV{GCC_FQ_DIR}/bin/gcc")
 set(CMAKE_CXX_COMPILER "$ENV{GCC_FQ_DIR}/bin/g++")
-
+file(WRITE doc/compiler_info "Built TRACE utilities using GCC: $ENV{GCC_FQ_DIR}/bin/gcc!")
 endif()
 
 set( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
 if( NOT CETBUILDTOOLS_VERSION )
   message( FATAL_ERROR "ERROR: setup cetbuildtools to get the cmake modules" )
 endif()
-set(CMAKE_MODULE_PATH $ENV{CETBUILDTOOLS_DIR}/Modules 
+set(CMAKE_MODULE_PATH $ENV{CETBUILDTOOLS_DIR}/Modules
 		      ${CMAKE_MODULE_PATH})
 
 include(CetCMakeEnv)
@@ -49,6 +49,25 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDO_THREADS -pthread")
 set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -lpthread")
 set(CMAKE_CXX_FLAGS "-std=c++0x -O2 -Wno-variadic-macros")
 cet_report_compiler_flags()
+
+if(DEFINED ENV{USE_ASAN})
+	if($ENV{USE_ASAN} GREATER 0)
+		message("!!! Address Sanitizer Activated!!!")
+		cet_add_compiler_flags(-fsanitize=address -lasan -Wno-unused-command-line-argument)
+	endif()
+endif()
+if(DEFINED ENV{USE_TSAN})
+	if($ENV{USE_TSAN} GREATER 0)
+		message("!!! Thread Sanitizer Activated!!!")
+		cet_add_compiler_flags(-fsanitize=thread -ltsan -Wno-unused-command-line-argument)
+	endif()
+endif()
+if(DEFINED ENV{USE_UBSAN})
+	if($ENV{USE_UBSAN} GREATER 0)
+		message("!!! Undefined Sanitizer Activated!!!")
+		cet_add_compiler_flags(-fsanitize=undefined -lubsan -Wno-unused-command-line-argument)
+	endif()
+endif()
 
 # these are minimum required versions, not the actual product versions
 find_ups_product( cetbuildtools v3_03_00 )

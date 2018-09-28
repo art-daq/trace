@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 861 $$Date: 2018-06-06 08:38:07 -0500 (Wed, 06 Jun 2018) $"
+#define TRACE_CNTL_REV "$Revision: 1021 $$Date: 2018-08-21 23:16:10 -0500 (Tue, 21 Aug 2018) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1177,7 +1177,7 @@ extern  int        optind;         /* for getopt */
 			printf( "%d\n",ret ); /* print the old mode */
 		}
 		else ret=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
-		if (ret == 0) ret=1; else ret=0;
+		if (ret == -1) ret=1; else ret=0;
 	} else if (  (strncmp(cmd,"lvlmsk",6)==0)
 	           ||(strncmp(cmd,"lvlset",6)==0)
 	           ||(strncmp(cmd,"lvlclr",6)==0)) {

@@ -3,8 +3,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 682 $
-#   $Date: 2017-11-09 14:01:41 -0600 (Thu, 09 Nov 2017) $
+#   $Revision: 1016 $
+#   $Date: 2018-08-10 15:32:53 -0500 (Fri, 10 Aug 2018) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -33,6 +33,7 @@ bitN_to_mask()
         case "$op" in
         -f*) eval $op1arg; opts="${opts:+$opts }-f$1"; shift;;
         -n*) eval $op1arg; opts="${opts:+$opts }-n$1"; shift;;
+        -N*) eval $op1arg; opts="${opts:+$opts }-N$1"; shift;;
         *)  xx=`echo "$op" | sed -e "s/'/'\"'\"'/g"`; args="${args-} '$xx'";;
         esac
     done
@@ -52,8 +53,9 @@ bitN_to_mask()
         test $start -le $end && inc=1 || inc=-1
         for ii in `seq $start $inc $end`; do rr="${rr:+$rr }$ii"; done
     done
-    echo $opts
-    echo $rr|awk '{for(i=1;i<NF+1;++i)m=or(m,lshift(1,$i));printf"0x%x\n",m;}'
+    test -n "$opts" && printf -- "$opts "
+    #echo $rr|awk '{for(i=1;i<NF+1;++i)m=or(m,lshift(1,$i));printf"0x%x\n",m;}'
+    echo $rr|perl -e '$_=<STDIN>;@l = split;foreach$w(@l){$rr|=1<<$w}printf"0x%x\n",$rr'
 }
 
 # could implement the "begins with 0x -> mask, otherwise list of bits???

@@ -7,7 +7,7 @@
 #ifndef TRACE_H_5216
 #define TRACE_H_5216
 
-#define TRACE_REV  "$Revision: 863 $$Date: 2018-06-06 08:51:33 -0500 (Wed, 06 Jun 2018) $"
+#define TRACE_REV  "$Revision: 1022 $$Date: 2018-08-30 13:24:15 -0500 (Thu, 30 Aug 2018) $"
 
 #ifndef __KERNEL__
 
@@ -839,6 +839,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 			/*printf("changed \\0 to \\n printed=%d\n",);*/
 		}
 	}
+	if (quiet_warn == -1) perror("writeTracePrintFd");
 # else
 	/* NOTE: even though man pages seem to indicate the single writev should be atomic:
 	   ...
@@ -915,6 +916,7 @@ mu2edaq01 :^) tcntl test-threads 0 -l5 & tcntl test-threads 0 -l5 & tcntl test-t
 		iov[iovcnt].iov_base = (void*)"\n";
 		iov[iovcnt++].iov_len = 1;
 		quiet_warn += writev(tracePrintFd, iov, iovcnt);
+		if (quiet_warn == -1) perror("writevTracePrintFd");
 	}
 # endif
 #endif
@@ -1656,6 +1658,7 @@ static int trace_mmap_file(const char *_file
 		off = lseek(fd, (*memlen) - 1, SEEK_SET);
 		if (off == (off_t)-1) { perror("lseek"); *tC_p = &(traceControl[0]); return (0); }
 		quiet_warn += write(fd, &one_byte, 1);
+		if (quiet_warn < 0) perror("writeOneByte");
 		created = 1;
 	}
 	else
@@ -1984,12 +1987,14 @@ static struct traceEntryHdr_s* idxCnt2entPtr(uint32_t idxCnt)
 		TRACE_INIT_CHECK {				\
 			static TRACE_THREAD_LOCAL int tid_=-1;if(tid_==-1){tid_=name2TID(nn[0]?nn:TRACE_NAME);} \
 			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
-			*do_s_ =   s_enabled_;										\
+			*do_s_ = (   s_enabled_										\
+			          && traceControl_rwp->mode.bits.S					\
+			          && ( s_frc_ ||(traceNamLvls_p[tid_].S&TLVLMSK(lvl_)) ) ); \
 			if(*do_s_){ /* try to avoid TLS lookup of _info - compiler probably does this anyway */	\
-			static TRACE_THREAD_LOCAL limit_info_t _info;				\
-			*do_s_ = (( s_frc_ ||(traceControl_rwp->mode.bits.S&&(traceNamLvls_p[tid_].S&TLVLMSK(lvl_))) ) \
-			          && limit_do_print(tvp_,&_info,ins_,sz) );	}		\
-			return (*do_m_||*do_s_)?tid_:-1;								\
+				static TRACE_THREAD_LOCAL limit_info_t _info;			\
+				*do_s_ = limit_do_print(tvp_,&_info,ins_,sz);			\
+			}															\
+			return (*do_m_||*do_s_)?tid_:-1;							\
 		} else							\
 		  return -1;						\
 	}(name,lvl,s_enbld,s_frc,mp,sp,tvp,ins,ins_sz)
@@ -2005,8 +2010,9 @@ static struct traceEntryHdr_s* idxCnt2entPtr(uint32_t idxCnt)
 			static TRACE_THREAD_LOCAL limit_info_t _info;				\
 			*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
 			*do_s_ = (   s_enbld										\
-					  && ( s_frc ||(traceControl_rwp->mode.bits.S&&(traceNamLvls_p[tid_].S&TLVLMSK(lvl_))) ) \
-					  && limit_do_print(tvp,&_info,ins_,sz) );			\
+			          && traceControl_rwp->mode.bits.S					\
+			          && ( s_frc ||(traceNamLvls_p[tid_].S&TLVLMSK(lvl_)) ) \
+			          && limit_do_print(tvp,&_info,ins_,sz) );			\
 			tid__ = (*do_m_||*do_s_)?tid_:-1;							\
 		} else															\
 			  tid__ = -1;												\
@@ -2018,12 +2024,22 @@ static struct traceEntryHdr_s* idxCnt2entPtr(uint32_t idxCnt)
 // Use C++ "for" statement to create single statement scope for key (static) variable that
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
 // s_enabled = is_slowpath_enabled; fmtnow = force formating (i.e. if Memory only)
-#define TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)			\
+# define TRACE_USE_STATIC_STREAMER 1
+# if TRACE_USE_STATIC_STREAMER == 1
+#  define TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)			\
 	for( int tid=-1,do__m=0,do__s=0,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
 		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,s_enabled,force_s \
 													 ,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
 		 streamer.str()) \
 		streamer.init( tid, lvl, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval*)&tv, (char*)ins )
+# else
+#  define TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)			\
+	for( int tid=-1,do__m=0,do__s=0,fmtnow,ins[32/sizeof(int)], tv[sizeof(timeval)/sizeof(int)]={0}; \
+		 (tid==-1) && ((tid=TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt,fmt_or_nam,&fmtnow),lvl,s_enabled,force_s \
+													 ,&do__m,&do__s,(timeval*)&tv,(char*)ins,sizeof(ins)))!=-1); \
+		 ) \
+		TraceStreamer().init( tid, lvl, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval*)&tv, (char*)ins )
+# endif
 
 #define TRACE_ENDL ""
 #define TLOG_ENDL TRACE_ENDL
@@ -2110,6 +2126,9 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 
 		inline ~TraceStreamer()
 		{
+# if TRACE_USE_STATIC_STREAMER != 1
+			str();
+# endif			
 		}
 
 		// use this method to return a reference (to the temporary, in its intended use)
@@ -2126,8 +2145,16 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 			file_ = file;
 			line_ = line;
 			lclTime_p = tvp;
+# if TRACE_USE_STATIC_STREAMER == 1
+			std::dec(*this);
+			std::noshowbase(*this);
+# endif
 			return *this;
 		}
+
+#ifdef __clang__
+#define _M_flags flags()
+#endif
 
 		inline void str()
 		{
@@ -2156,6 +2183,10 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 #     if (defined(__cplusplus)&&(__cplusplus>=201103L))
 #      pragma GCC diagnostic pop
 #     endif
+
+			// Silence Clang static analyzer "dangling references"
+			ins_ = nullptr;
+			lclTime_p = nullptr;
 		}
 
 		inline void msg_append(const char *src, size_t len = 0)
@@ -2279,19 +2310,35 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 			else if (argCount < TRACE_STREAMER_ARGSMAX) { msg_append("%p",2);  args[argCount++].p = r; }
 			return *this;
 		}
-#ifdef __clang__
-#define _M_flags flags()
-#endif
+
+		inline TraceStreamer& operator<<(const char& r)
+		{
+			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, NULL, _M_flags), r);
+			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;  msg_append(format(false, false, NULL, _M_flags, &f_l), f_l); args[argCount++].i = r; }
+			return *this;
+		}
 		inline TraceStreamer& operator<<(const int& r)
 		{
 			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, NULL, _M_flags), r);
 			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;  msg_append(format(false, false, NULL, _M_flags, &f_l), f_l); args[argCount++].i = r; }
 			return *this;
 		}
+		inline TraceStreamer& operator<<(const short int& r)
+		{
+			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, "h", _M_flags), r);
+			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;  msg_append(format(false, false, "h", _M_flags, &f_l), f_l); args[argCount++].i = r; }
+			return *this;
+		}
 		inline TraceStreamer& operator<<(const long int& r)
 		{
 			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, "l", _M_flags), r);
 			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;  msg_append(format(false, false, "l", _M_flags, &f_l), f_l); args[argCount++].l = r; }
+			return *this;
+		}
+		inline TraceStreamer& operator<<(const short unsigned int& r)
+		{
+			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "h", _M_flags), r);
+			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;  msg_append(format(false, true, "h", _M_flags, &f_l), f_l); args[argCount++].u = r; }
 			return *this;
 		}
 		inline TraceStreamer& operator<<(const unsigned int& r)
@@ -2304,6 +2351,12 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 		{
 			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "l", _M_flags), r);
 			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;   msg_append(format(false, true, "l", _M_flags, &f_l), f_l); args[argCount++].u = r; }
+			return *this;
+		}
+		inline TraceStreamer& operator<<(const long long unsigned int& r)
+		{
+			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "ll", _M_flags), r);
+			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;   msg_append(format(false, true, "ll", _M_flags, &f_l), f_l); args[argCount++].u = r; }
 			return *this;
 		}
 		inline TraceStreamer& operator<<(const double& r)
@@ -2329,6 +2382,12 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 		inline TraceStreamer& operator<<(char const* r) { msg_append(r);         return *this; }
 		inline TraceStreamer& operator<<(char* r) { msg_append(r);         return *this; }
 # if (__cplusplus >= 201103L)
+		inline TraceStreamer& operator<<(const std::atomic<int>& r)
+		{
+			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, NULL, _M_flags), r.load());
+			else if (argCount < TRACE_STREAMER_ARGSMAX) { size_t f_l = 0;  msg_append(format(false, false, NULL, _M_flags, &f_l), f_l); args[argCount++].i = r.load(); }
+			return *this;
+		}
 		inline TraceStreamer& operator<<(std::atomic<unsigned long> const& r)
 		{
 			if (do_f) msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "l", _M_flags), r.load());
@@ -2388,7 +2447,9 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 #  endif
 	};								// struct Streamer
 
+# if TRACE_USE_STATIC_STREAMER == 1
 	static TRACE_THREAD_LOCAL TraceStreamer streamer;
+# endif
 } // unnamed namespace
 
 #endif /* __cplusplus */

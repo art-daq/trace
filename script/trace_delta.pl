@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 735 $';
-#   $Date: 2017-12-15 23:03:49 -0600 (Fri, 15 Dec 2017) $
+$version = '$Revision: 1020 $';
+#   $Date: 2018-08-21 23:11:21 -0500 (Tue, 21 Aug 2018) $
 
 use Time::Local; # timelocal()
 
@@ -549,7 +549,7 @@ if ("$opt_stats")
                    || \$col_cntl[$idx]{\"min\$cpu\"} eq \"\")
             {      \$col_cntl[$idx]{\"min\$cpu\"} = \$col_cntl[$idx]{stat};
             }
-            elsif (\$col_cntl[$idx]{\"max\$cpu\"} < \$col_cntl[$idx]{stat})
+            if (\$col_cntl[$idx]{\"max\$cpu\"} < \$col_cntl[$idx]{stat})
             {      # printf STDOUT \"max new=\$col_cntl[$idx]{stat} old=%d\\n\",\$col_cntl[$idx]{\"max\$cpu\"};
                    \$col_cntl[$idx]{\"max\$cpu\"} = \$col_cntl[$idx]{stat};
             }

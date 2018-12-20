@@ -9,32 +9,26 @@
 // NOTE: this is trace_.c and not trace.c because nfs server has case
 //       insensitive file system.
 
-#include <linux/module.h>	// module_param, THIS_MODULE
-#include <linux/init.h>		// module_init,_exit
-#include <linux/kernel.h>	// KERN_INFO, printk
+#include <linux/delay.h> /* msleep */
+#include <linux/init.h>  // module_init,_exit
 #include <linux/jiffies.h>
-#include <linux/delay.h>	/* msleep */
+#include <linux/kernel.h>  // KERN_INFO, printk
+#include <linux/module.h>  // module_param, THIS_MODULE
 
-#define TRACE_NAME "jones"  /* should, as of 2016.01.26, work */
+#define TRACE_NAME "jones" /* should, as of 2016.01.26, work */
 #include "trace.h"
 
- 
-static int __init init_other_module(void)
-{
-    int  ret=0;          /* SUCCESS */
+static int __init init_other_module(void) {
+  int ret = 0; /* SUCCESS */
 
-    printk(  KERN_INFO "init_other_module called\n" );
+  printk(KERN_INFO "init_other_module called\n");
 
-    TRACE( 0, "init_other_module trace" );
+  TRACE(0, "init_other_module trace");
 
-    return (ret);
-}   // init_other_module
+  return (ret);
+}  // init_other_module
 
-static void __exit exit_other_module(void)
-{
-
-    TRACE( 0, "exit_other_module() called" );
-}   // exit_other_module
+static void __exit exit_other_module(void) { TRACE(0, "exit_other_module() called"); }  // exit_other_module
 
 module_init(init_other_module);
 module_exit(exit_other_module);

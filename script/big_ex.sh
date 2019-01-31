@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 878 $$Date: 2018-06-27 14:13:47 -0500 (Wed, 27 Jun 2018) $'
+ # rev='$Revision: 1031 $$Date: 2019-01-30 17:09:16 -0600 (Wed, 30 Jan 2019) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -343,7 +343,7 @@ extern  char        * optarg;        // for getopt
         args_p[ii].tid = 1;
         thread_func( (void*)&args_p[ii] );
     }
-    TLOG(1) << "Main - all " << num_threads << " threads created";
+    TLOG(1) << "Main - all 0x" << std::hex << num_threads << " threads created";
     if (xtra_options & 1)
     {   char          cmd[200];
 	sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = \`cat /proc/%d/maps | grep trace_buffer | wc -l\`", getpid() );
@@ -388,7 +388,7 @@ wait
 
 vprintf 0 'Compile main\n'
 test -n "${do_shared-}" \
- && { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH; } \
+ && { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}; } \
  || { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.o  -lpthread; sts=$?; }
 
 test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED; exit 1; }

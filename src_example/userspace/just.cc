@@ -3,17 +3,21 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just.cc,v $
-// rev="$Revision: 424 $$Date: 2015-10-19 13:08:36 -0500 (Mon, 19 Oct 2015) $";
+// rev="$Revision: 1030 $$Date: 2019-01-02 17:05:09 -0600 (Wed, 02 Jan 2019) $";
 */
 
 #include <string>
-#include "trace.h" /* TRACE */
+#include "trace.h"		/* TRACE */
+
+void example_sub_( void );
 
 int
-// main(  int	argc
+//main(  int	argc
 //     , char	*argv[] )
-main() {
-  TRACE(0, "hello - hopefully no compile warnings %d %.1f %d", 1, 1.5, 2);
-  TRACE(0, (std::string("hi %d") + " there").c_str(), 2);
-  return (0);
-} /* main */
+main()
+{
+    TRACE( 0, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
+    TRACE( 0, (std::string("hi %d")+" there").c_str(), 2 );
+    example_sub_();
+    return (0);
+}   /* main */

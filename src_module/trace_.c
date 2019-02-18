@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1025 $$Date: 2018-11-02 16:43:50 -0500 (Fri, 02 Nov 2018) $";
+    rev="$Revision: 1042 $$Date: 2019-02-14 15:49:00 -0600 (Thu, 14 Feb 2019) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -616,5 +616,5 @@ module_exit(trace_3_exit);
 
 MODULE_AUTHOR("Ron Rechenmacher");
 MODULE_DESCRIPTION("Third TRACE");
-MODULE_LICENSE("GPL"); /* It is for anyone/everyone, I don't care as long as it works for me, and besides I don't want to taint the kernel */
+MODULE_LICENSE("GPLv2"); /* It is for anyone/everyone, I don't care as long as it works for me, and besides I don't want to taint the kernel */
 #endif  // MODULE */

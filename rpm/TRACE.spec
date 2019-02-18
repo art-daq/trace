@@ -1,170 +1,133 @@
-Name:           trace
-Version:        v3
-Release:        1%{?dist}
-Summary:        Logging tool that allows fast and/or slow logging, dyamically
+# Define the kmod package name here.
+%define kmod_name TRACE
 
-License:        Fermilab
-URL:            https://cdcvs.fnal.gov/redmine/projects/trace
-Source0:        trace-v3.tar
-BuildRequires:	gcc
-BuildRequires:	make
-Requires:	bash
+# If you want to use another kernel version, run this command:
+#  rpmbuild -ba --define 'kversion 3.10.0-957.5.1.el7.x86_64' mykmod.spec
+%{!?kversion: %define kversion 3.10.0-957.el7.%{_target_cpu}}
 
-# Reading articles on rikers.org/rpmbook/node69.html for assistance with this
-# Reading article from university of michigan for assistance with header files
+Name:    %{kmod_name}-kmod
+Version: v3
+Release: 1%{?dist}
+Group:   System Environment/Kernel
+License: GPLv2
+Summary: %{kmod_name} kernel module(s)
+URL:     https://cdcvs.fnal.gov/redmine/projects/trace
 
+BuildRequires: redhat-rpm-config, perl, make, bash, gcc
 
+# Sources.
+Source0:  %{kmod_name}-%{version}.tar.bz2
+Source10: kmodtool-%{kmod_name}.sh
+
+%if 0%{?rhel} > 0
+# Add note on any non whitelisted ABI symbols
+BuildRequires: kernel-abi-whitelists
+%endif
+
+# Magic hidden here.
+%{expand:%(sh %{SOURCE10} rpmtemplate %{kmod_name} %{kversion} "")}
+
+# Disable the building of the debug package(s).
+%define debug_package %{nil}
 
 %description
-Control tracing via environment variables and dynamically from outside program
+This package provides the %{kmod_name} kernel module(s).
 
+It controls tracing via environment variables and dynamically from
+outside program.
+
+It is built to depend upon the specific ABI provided by a range of releases
+of the same variant of the Linux kernel and not on any one specific build.
+
+###########################################################
+%package -n %{kmod_name}-utils
+Summary: Utilities for %{kmod_name} kmod
+Requires: %{kmod_name}-kmod
+Requires: perl, bash
+
+%description -n %{kmod_name}-utils
+Utilities for %{kmod_name} kmod
+
+%files -n %{kmod_name}-utils
+%defattr(0644,root,root,0755)
+%doc %{_mandir}/man1/*
+%doc %{_mandir}/man1p/*
+%doc %{_defaultdocdir}/%{kmod_name}-utils-%{version}/*
+%attr(0755,root,root) %{_bindir}/trace_delta
+%{_sysconfdir}/profile.d/trace.sh
+%{_includedir}/TRACE/*
+
+###########################################################
 %prep
-%setup -q
+# Prep kernel module
+%setup -q -n %{kmod_name}-%{version}
 
+## Write ABI tracking file
+echo "override %{kmod_name} * weak-updates/%{kmod_name}" > kmod-%{kmod_name}.conf
 
+###########################################################
 %build
-make OUT=$PWD all
+%{__mkdir} build
+# Build all (TRACE packages its own implementation of module-build
+%{__make} OUT=${PWD}/build all KDIR=%{_usrsrc}/kernels/%{kversion}
 
+###########################################################
 %install
-## Need to specify files to be installed in %files in order for this section to work. 
-## See: https://www.cyberciti.biz/faq/rhel-centos-linuxrpmbuild-error-installed-but-unpackaged-files-found/
-#############################################################################
-## mkdir $RPM_BUILD_ROOT/usr/include/, give permissions, and cp trace.h   ###
-#############################################################################
-mkdir -p      $RPM_BUILD_ROOT/usr/include/TRACE/
-chmod -R 755  $RPM_BUILD_ROOT/usr/include/TRACE/
-chmod -R 755 ~/rpmbuild/BUILD/%{name}-%{version}/include/*
-cp           ~/rpmbuild/BUILD/%{name}-%{version}/include/trace.h $RPM_BUILD_ROOT/usr/include/TRACE/trace.h
-cp           ~/rpmbuild/BUILD/%{name}-%{version}/include/tracemf.h $RPM_BUILD_ROOT/usr/include/TRACE/tracemf.h
+# Install kernel module
+%{__install} -d %{buildroot}/lib/modules/%{kversion}/extra/%{kmod_name}/
+%{__install} build/module/%{kversion}/%{kmod_name}.ko %{buildroot}/lib/modules/%{kversion}/extra/%{kmod_name}/
+%{__install} -d %{buildroot}%{_sysconfdir}/depmod.d/
+%{__install} kmod-%{kmod_name}.conf %{buildroot}%{_sysconfdir}/depmod.d/
 
-##############################################################################
-## mkdir $RPM_BUILD_ROOT/usr/bin, give permissions, and cp trace_delta.pl  ###
-##############################################################################
-mkdir -p      $RPM_BUILD_ROOT/usr/bin/
-chmod -R 755  $RPM_BUILD_ROOT/usr/bin/
-chmod -R 755 ~/rpmbuild/BUILD/%{name}-%{version}/script/trace_delta.pl
-cp           ~/rpmbuild/BUILD/%{name}-%{version}/script/trace_delta.pl $RPM_BUILD_ROOT/usr/bin/trace_delta.pl
-#####################################################################################
-## using same dir just created in last step, give permissions, and cp trace_cntl  ###
-#####################################################################################
-chmod -R 755 ~/rpmbuild/BUILD/%{name}-%{version}/Linux64bit+3.10-2.17/bin/trace_cntl
-cp           ~/rpmbuild/BUILD/%{name}-%{version}/Linux64bit+3.10-2.17/bin/trace_cntl $RPM_BUILD_ROOT/usr/bin/trace_cntl
-#########################################################################################
-## mkdir $RPM_BUILD_ROOT/usr/etc/profile.d/, give permissions, cp trace.sh.functions  ###
-#########################################################################################
-mkdir -p      $RPM_BUILD_ROOT/etc/profile.d/
-chmod -R 755  $RPM_BUILD_ROOT/etc/profile.d/
-chmod -R 644  ~/rpmbuild/BUILD/%{name}-%{version}/script/trace.sh.functions
-mv            ~/rpmbuild/BUILD/%{name}-%{version}/script/trace.sh.functions $RPM_BUILD_ROOT/etc/profile.d/trace.sh
+## Strip the modules(s).
+find %{buildroot} -type f -name \*.ko -exec %{__strip} --strip-debug \{\} \;
 
-########################################################################################
-## mkdir -p $RPM_BUILD_ROOT/%{_mandir}/man1                                         ####
-##                                                                                  ####
-## this might help for making links within the spec:                                ####  
-## https://stackoverflow.com/questions/7521980/packaging-symlinks-via-rpmbuild      ####
-########################################################################################
-mkdir -p      $RPM_BUILD_ROOT/%{_mandir}/man1
-mkdir -p      $RPM_BUILD_ROOT/%{_mandir}/man1p
-chmod -R 755  $RPM_BUILD_ROOT/%{_mandir}/man*
-chmod -R 755  ~/rpmbuild/BUILD/%{name}-%{version}/doc/t*
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tlvls.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tlvls.1
-#cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/trace.1 $RPM_BUILD_ROOT/%{_mandir}/man1/trace.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tlvlM.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlM.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tmode.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tmode.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/trace_cntl.1 $RPM_BUILD_ROOT/%{_mandir}/man1/trace_cntl.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tenv.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tenv.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tfreeze.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tfreeze.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tinfo.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tinfo.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/treset.1 $RPM_BUILD_ROOT/%{_mandir}/man1/treset.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tshow.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tshow.1
-# cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/t.1 $RPM_BUILD_ROOT/%{_mandir}/man1/t.1
-#### below this is what im working on
+## Sign the modules(s).
+%if %{?_with_modsign:1}%{!?_with_modsign:0}
+## If the module signing keys are not defined, define them here.
+%{!?privkey: %define privkey %{_sysconfdir}/pki/SECURE-BOOT-KEY.priv}
+%{!?pubkey: %define pubkey %{_sysconfdir}/pki/SECURE-BOOT-KEY.der}
+for module in $(find %{buildroot} -type f -name \*.ko);
+do %{__perl} /usr/src/kernels/%{kversion}/scripts/sign-file \
+    sha256 %{privkey} %{pubkey} $module;
+done
+%endif
 
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tonM.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tonM.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/toffM.1 $RPM_BUILD_ROOT/%{_mandir}/man1/toffM.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tlvlsSave.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlsSave.1
-cp            ~/rpmbuild/BUILD/%{name}-%{version}/doc/tlvlsRestore.1 $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlsRestore.1
+# Install headers
+%{__install} -d %{buildroot}%{_includedir}/TRACE
+%{__install} include/trace.h %{buildroot}%{_includedir}/TRACE/trace.h
+%{__install} include/tracemf.h %{buildroot}%{_includedir}/TRACE/tracemf.h
+
+# Install shell profile
+%{__install} -d %{buildroot}%{_sysconfdir}/profile.d/
+%{__install} build/script/trace.sh.functions %{buildroot}%{_sysconfdir}/profile.d/trace.sh
+
+# Install utils
+%{__install} -d %{buildroot}%{_bindir}
+%{__install} build/script/trace_delta.pl %{buildroot}%{_bindir}/trace_delta
+
+# Install manpages
+%{__install} -d %{buildroot}%{_mandir}/man1
+%{__install} doc/t*.1 %{buildroot}%{_mandir}/man1/
+%{__install} -d %{buildroot}%{_mandir}/man1p
+%{__install} doc/t*.1p %{buildroot}%{_mandir}/man1p/
+
+# Install kmod docs
+%{__install} -d %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/
+%{__install} doc/users_guide.txt %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/
+%{__install} -d %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/example_module
+%{__cp} -r src_example/module %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/example_module/
+%{__cp} -r src_example/module1 %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/example_module/
+
+# Install util docs
+%{__install} -d %{buildroot}%{_defaultdocdir}/%{kmod_name}-utils-%{version}/
+%{__install} -d %{buildroot}%{_defaultdocdir}/%{kmod_name}-utils-%{version}/example_util
+%{__cp} -r src_example/userspace %{buildroot}%{_defaultdocdir}/%{kmod_name}-utils-%{version}/example_util
 
 
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tonM.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/toffM.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlsSave.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlsRestore.1
+###########################################################
+%clean
+%{__rm} -rf %{buildroot}
 
-## above this is what im working on
-
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tfreeze.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tinfo.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/treset.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tshow.1
-#gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/t.1
-#gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/t.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tenv.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/trace_cntl.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tmode.1
-
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlM.1
-gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/tlvls.1
-#gzip          $RPM_BUILD_ROOT/%{_mandir}/man1/trace.1
-chmod 644     $RPM_BUILD_ROOT/%{_mandir}/man1/t*.1.gz
-## add more man*
-
-
-#ln -s          /usr/share/man/man1/t.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tinfo.1.gz
-
-ln -s          /usr/share/man/man1/tshow.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tdelta.1.gz
-
-#ln -s          /usr/share/man/man1/t.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/treset.1.gz
-ln -s          /usr/share/man/man1/tonM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tonMg.1.gz
-ln -s          /usr/share/man/man1/tonM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tonS.1.gz
-ln -s          /usr/share/man/man1/tonM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tonT.1.gz
-ln -s          /usr/share/man/man1/tonM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tonSg.1.gz
-ln -s          /usr/share/man/man1/tonM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tonTg.1.gz
-#ln -s          /usr/share/man/man1/t.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tonS.1.gz
-#ln -s          /usr/share/man/man1/t.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/toffS.1.gz
-#ln -s          /usr/share/man/man1/t.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/toffM.1.gz
-
-ln -s          /usr/share/man/man1/tmode.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tmodeM.1.gz
-ln -s          /usr/share/man/man1/tmode.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tmodeS.1.gz
-
-ln -s          /usr/share/man/man1/trace_cntl.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tcntl.1.gz
-#######
-ln -s          /usr/share/man/man1/tlvls.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/ttids.1.gz
-ln -s          /usr/share/man/man1/tlvlM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlS.1.gz
-ln -s          /usr/share/man/man1/tlvlM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlT.1.gz
-ln -s          /usr/share/man/man1/tlvlM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlMg.1.gz
-ln -s          /usr/share/man/man1/tlvlM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlSg.1.gz
-ln -s          /usr/share/man/man1/tlvlM.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tlvlTg.1.gz
-#######
-#ln -s          /usr/share/man/man1/tmode.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tmodeM.1.gz
-#ln -s          /usr/share/man/man1/tmode.1.gz $RPM_BUILD_ROOT/%{_mandir}/man1/tmodeS.1.gz
-
-
-%files
-%doc    ~/rpmbuild/BUILD/trace-v3/README
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/module/s*
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/module1/other_module.c
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/userspace/basic_c.c
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/userspace/example*
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/userspace/inactive_tlvls.c
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/userspace/just*
-%doc    ~/rpmbuild/BUILD/trace-v3/src_example/userspace/no_std.cc
-#%doc    ~/rpmbuild/BUILD/trace-v3
-         /%{_includedir}/TRACE/trace.h
-         /%{_includedir}/TRACE/tracemf.h
-         /%{_bindir}/trace_delta.pl
-         /%{_bindir}/trace_cntl
-         /etc/profile.d/trace.sh
-### You will never need to change anything in this files section when adding new man pages as 
-### long as the file is going to a /usr/share/man/man* subdirectory and starts with t:
-         /%{_mandir}/man*/t*.*.gz
-
-
-
-
-
+###########################################################
 %changelog
-* Mon Jul 30 2018 Matthew Adas <madas@fnal.gov> v3_13_09-1
-* Wed Jun 13 2018 Matthew Adas <madas@fnal.gov> v3_13_09-1
-- TRACE package
-

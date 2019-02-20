@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV  "$Revision: 1031 $$Date: 2019-01-30 17:09:16 -0600 (Wed, 30 Jan 2019) $"
+#define TRACE_REV  "$Revision: 1051 $$Date: 2019-02-19 18:27:23 -0600 (Tue, 19 Feb 2019) $"
 
 #ifndef __KERNEL__
 
@@ -18,7 +18,7 @@
 # include <limits.h>		/* PATH_MAX */
 # include <stdarg.h>		/* va_list */
 # include <stdint.h>		/* uint64_t */
-# include <stdio.h>		/* printf */
+# include <stdio.h>		/* printf, __GLIBC_PREREQ */
 # include <stdlib.h>		/* getenv, setenv, strtoul */
 # include <string.h>		/* strncmp */
 # include <sys/mman.h>		/* mmap */
@@ -27,6 +27,7 @@
 # include <sys/uio.h>		/* struct iovec */
 # include <time.h>		/* struct tm, localtime_r, strftime */
 # include <unistd.h>		/* lseek */
+# include <strings.h>		/* rindex */
 # define TMATCHCMP(pattern,str_) (fnmatch(pattern,str_,0)==0) /*MAKE MACRO RETURN TRUE IF MATCH*/
  /*# define TMATCHCMP(needle,haystack)   strstr(haystack,needle)*/ /*MAKE MACRO RETURN TRUE IF MATCH*/
 
@@ -250,7 +251,7 @@ static const char *  TRACE_NAME = NULL;
 # define TSBUFSIZ__     sizeof(tsbuf__)
 /* The following is what is to be optionally used: i.e.: TRACE(2,TSPRINTF("string=%s store_int=%%d",string),store_int);
    Watch for the case where string has an imbedded "%" */
-# define TPRINTF( ... ) ( tsbuf__[0]?&(tsbuf__[0]):(snprintf(&(tsbuf__[0]),TSBUFSIZ__,__VA_ARGS__),&(tsbuf__[0])) )
+# define TSPRINTF( ... ) ( tsbuf__[0]?&(tsbuf__[0]):(snprintf(&(tsbuf__[0]),TSBUFSIZ__,__VA_ARGS__),&(tsbuf__[0])) )
 #endif
 
    /* Note: anonymous variadic macros were introduced in C99/C++11 (maybe C++0x) */
@@ -972,6 +973,44 @@ static void trace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char 
 # endif
 #endif
 
+/* set defaults first (these wont ever be used in KERNEL) */
+#define TRACE_REGISTER_ATFORK
+#define TRACE_CHK_PID           pid_t chkpid; if( tracePid != (chkpid=getpid()) ){ tracePid=traceTid=chkpid; }
+
+/* now test is defaults need to be changed. GLIBC is relevant for user space   */
+#if defined(__GLIBC_PREREQ)
+/* if undefined __GLIBC_PREREQ is used in a #if (i.e. previous line), some preprocessor will give:
+    error: missing binary operator before token "("
+ */
+# if __GLIBC_PREREQ( 2, 27 )
+#  ifdef __cplusplus
+    extern "C" int __register_atfork(void(*)(void),void(*)(void),void(*)(void));
+#  else
+    extern     int __register_atfork(void(*)(void),void(*)(void),void(*)(void));
+#  endif
+   static void trace_pid_atfork(void){
+	   //traceTid=tracePid=getpid();TRACEN("TRACE",61,"trace_pid_atfork " __BASE_FILE__ );
+	   const char *rp;
+	   char somebuf[120];
+	   somebuf[0]='\0';
+	   traceTid=tracePid=getpid();
+	   TRACEN( "TRACE",61,
+	          ( somebuf[0]
+			   ?&(somebuf[0])
+			   :(snprintf(&(somebuf[0]),sizeof(somebuf),"trace_pid_atfork %s",
+			              (rp=rindex(__BASE_FILE__,'/'))!=NULL
+			              ?rp+1
+			              :__BASE_FILE__)
+			     , &(somebuf[0])
+			     ))
+	          );
+   }
+#  undef  TRACE_REGISTER_ATFORK
+#  define TRACE_REGISTER_ATFORK   __register_atfork(NULL,NULL,trace_pid_atfork)
+#  undef  TRACE_CHK_PID           
+#  define TRACE_CHK_PID           
+# endif
+#endif
 
 static void vtrace(struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	, const char *msg, va_list ap)
@@ -981,44 +1020,61 @@ static void vtrace(struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	uint64_t              * params_p; /* some archs (ie. i386,32 bit arm) pass have 32 bit and 64 bit args; use biggest */
 	unsigned                argIdx;
 	uint16_t                get_idxCnt_retries = 0;
-	uint32_t                myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
-
-#if defined(__KERNEL__)
-	uint32_t desired = IDXCNT_ADD(myIdxCnt, 1);
-	while (cmpxchg(&traceControl_rwp->wrIdxCnt, myIdxCnt, desired) != myIdxCnt)
-	{
-		++get_idxCnt_retries;
-		myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
-		desired = IDXCNT_ADD(myIdxCnt, 1);
-	}
-#elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
-	pid_t    chkpid;
-	uint32_t desired = IDXCNT_ADD(myIdxCnt, 1);
-	while (!atomic_compare_exchange_weak(&traceControl_rwp->wrIdxCnt
-		, &myIdxCnt, desired))
-	{
-		++get_idxCnt_retries;
-		desired = IDXCNT_ADD(myIdxCnt, 1);
-	}
-#else
-	pid_t    chkpid;
-	uint32_t desired = IDXCNT_ADD(myIdxCnt, 1);
-	while (cmpxchg(&traceControl_rwp->wrIdxCnt, myIdxCnt, desired) != myIdxCnt)
-	{
-		++get_idxCnt_retries;
-		myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
-		desired = IDXCNT_ADD(myIdxCnt, 1);
-	}
+	uint32_t                myIdxCnt;
+	uint32_t                desired;
+#ifndef __KERNEL__
+	TRACE_CHK_PID;
 #endif
+	/* I learned ... ---v---v---v---v---v---v---v---v---v---v---
+	   I originally thought I would get this entry idx/slot first (because
+	   there might be a retry which would take time) and then get the time
+	   (which I thought would _always_ be quick). Well, it turns out that
+       getting time can take some time, perhaps similar to getting the idx?
 
-	if (myIdxCnt == traceControl_p->num_entries) {
-		traceControl_rwp->full = 1; /* now we'll know if wrIdxCnt has rolled over */
-	}
+       big_ex.sh on laptop w/ default -t50 -l50  and "time before idx":
+          tshow | tdelta | grep '   -[1-9]' | wc -l ===> 424
+	      tshow | tdelta -stats | tail -5
+                      min     -5332
+                      max     13154
+                      tot  19553408
+                      ave 1.7840616
+                      cnt  10960052
+          tshow | grep '[^ ] [1-9] [^ ]' | wc -l    ===> 26739 # seems doing time 1st synchronizes threads to cause more idx retries
+          tshow | tdelta -stats | grep -C1 '   -[1-9]' | less  # shows - negative times are associated with idx retry
 
+       big_ex.sh on laptop w/ default -t50 -l50  and "idx before time":
+          tshow | tdelta | grep '   -[1-9]' | wc -l ===> 248
+	      tshow | tdelta -stats | tail -5
+                      min     -6164
+                      max      8302
+                      tot  19424406
+                      ave 1.7722914
+                      cnt  10960052
+          tshow | grep '[^ ] [1-9] [^ ]' | wc -l    ===> 16783
+          tshow | tdelta -stats | grep -C1 '   -[1-9]' | less  # does not indicate nearby retries --
+                 -- most like time just took a lot of time to calculate/return (or maybe an
+				 interrupt/context switch??) -- unknown cause.
+
+# just focused on "negatives"
+big_ex.sh ./big_ex.d;\
+TRACE_SHOW=HxtnLR tshow | tdelta -d 0 | grep '\-[1-9]' | wc -l;\
+TRACE_SHOW=HxTnLR tshow | tdelta -d 0 | grep '\-[1-9]' | wc -l
+
+tod,idx,tsc:             ( tod before )
+tsc:    646     739    478   
+tod:    482     371    376
+
+idx,tsc,tod:             ( tod after -- significantly more "negatives" )
+tsc:   1205     840
+tod: 132348  133161
+
+	 */
+	/* ---^---^---^---^---^---^---^---^---^---^---^---^---^---^---^---^--- */
+
+#ifdef __KERNEL__
 	/* There are some places in the kernel where the gettimeofday routine
 	   cannot be called (i.e. kernel/notifier.c routines). For these routines,
 	   add 64 for the level (i.e. 22+64) */
-#ifdef __KERNEL__
 	if (lvl >= 64) { tvp->tv_sec = 1; tvp->tv_usec = 0; }
 	else
 #endif
@@ -1026,12 +1082,58 @@ static void vtrace(struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 			TRACE_GETTIMEOFDAY(tvp);  /* hopefully NOT a system call */
 		}
 
-	myEnt_p = idxCnt2entPtr(myIdxCnt);
-	msg_p = (char*)(myEnt_p + 1);
-	params_p = (uint64_t*)(msg_p + traceControl_p->siz_msg);
+#define TRACE_TSC_EXPERIMENT 0   /* is TSC "consistent" across all core? (only negative is rollover) */
+	/* experiment shows that if time were always retrieved exactly with idx, it
+	   would always increment, but this garuntee would cause TRACE to take near 10x longer, realizing
+	   that regardless of locking, there is always the possibility that a task will be interrupted
+	   between getting the idx and getting the tsc.
+	   big_ex w/o lock: tshow|tdelta  -stats|tail|grep ave: 1.8037151; w/ lock: 15.132927 */
+#if TRACE_TSC_EXPERIMENT == 1
+	if (!trace_lock(&traceControl_rwp->namelock)) {
+		TRACE_PRINT("trace_lock: namelock hung?\n");
+	}
+#endif
+	myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
+	desired = IDXCNT_ADD(myIdxCnt, 1);
+#if defined(__KERNEL__)
+	while (cmpxchg(&traceControl_rwp->wrIdxCnt, myIdxCnt, desired) != myIdxCnt)
+	{
+		++get_idxCnt_retries;
+		myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
+		desired = IDXCNT_ADD(myIdxCnt, 1);
+	}
+#elif (defined(__cplusplus)&&(__cplusplus>=201103L)) || (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L))
+	while (!atomic_compare_exchange_weak(&traceControl_rwp->wrIdxCnt
+		, &myIdxCnt, desired))
+	{
+		++get_idxCnt_retries;
+		desired = IDXCNT_ADD(myIdxCnt, 1);
+	}
+#else
+	while (cmpxchg(&traceControl_rwp->wrIdxCnt, myIdxCnt, desired) != myIdxCnt)
+	{
+		++get_idxCnt_retries;
+		myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
+		desired = IDXCNT_ADD(myIdxCnt, 1);
+	}
+#endif
 
-	//myEnt_p->time = *tvp;  // move to end - reasonable time is indication of complete
+	/* Now, "desired" is the count (and myIdxCnt is the index) */
+	if (desired == traceControl_p->num_entries) {
+		traceControl_rwp->full = 1; /* now we'll know if wrIdxCnt has rolled over */
+	}
+
+	myEnt_p = idxCnt2entPtr(myIdxCnt);
+
+	/*myEnt_p->time = *tvp;   move to end - reasonable time is indication of complete */
 	TRACE_TSC32(myEnt_p->tsc);
+
+#if TRACE_TSC_EXPERIMENT == 1
+	trace_unlock(&traceControl_rwp->namelock);
+#endif
+#undef TRACE_TSC_EXPERIMENT
+
+
 	myEnt_p->lvl = lvl;
 	myEnt_p->nargs = nargs;
 #if defined(__KERNEL__)
@@ -1039,9 +1141,6 @@ static void vtrace(struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	myEnt_p->tid = current->pid;
 	myEnt_p->cpu = raw_smp_processor_id();
 #else
-	if (tracePid != (chkpid = getpid())) { /* "pid/tid not changed after 2nd fork" issue */
-		tracePid = traceTid = chkpid;
-	}
 	myEnt_p->pid = tracePid;
 	myEnt_p->tid = traceTid;
 	myEnt_p->cpu = trace_getcpu(); /* this costs alot :( */
@@ -1049,6 +1148,9 @@ static void vtrace(struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	myEnt_p->TrcId = trcId;
 	myEnt_p->get_idxCnt_retries = get_idxCnt_retries;
 	myEnt_p->param_bytes = sizeof(long);
+
+	msg_p = (char*)(myEnt_p + 1);
+	params_p = (uint64_t*)(msg_p + traceControl_p->siz_msg);
 
 	strncpy(msg_p, msg, traceControl_p->siz_msg);
 	/* emulate stack push - right to left (so that arg1 end up at a lower
@@ -1069,7 +1171,7 @@ static void vtrace(struct timeval *tvp, int trcId, uint16_t lvl, uint16_t nargs
 	{ /* armed, armed/trigger */
 		if (traceControl_rwp->triggered)
 		{ /* triggered */
-			if (IDXCNT_DELTA(myIdxCnt, traceControl_rwp->trigIdxCnt)
+			if (IDXCNT_DELTA(desired, traceControl_rwp->trigIdxCnt)
 				>= traceControl_rwp->trigActivePost)
 			{
 				/* I think there should be an indication in the M buffer */
@@ -1162,7 +1264,15 @@ static int32_t name2TID(const char *nn)
 	{
 		if (traceNamLvls_p[ii].name[0] == '\0')
 		{
+#          if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L)) || (defined(__cplusplus) && (__cplusplus>=201103L))
+#           pragma GCC diagnostic push
+#           pragma GCC diagnostic ignored "-Wpragmas"
+#           pragma GCC diagnostic ignored "-Wstringop-truncation"
+#          endif
 			strncpy(traceNamLvls_p[ii].name, valid_name, TRACE_DFLT_NAM_CHR_MAX);
+#          if (defined(__STDC_VERSION__)&&(__STDC_VERSION__>=201112L)) || (defined(__cplusplus) && (__cplusplus>=201103L))
+#           pragma GCC diagnostic pop
+#          endif
 			if (trace_lvlS) {         /* See also traceInitNames */
 				traceNamLvls_p[ii].S = trace_lvlS;
 			}
@@ -1924,7 +2034,8 @@ static int traceInit(const char *_name)
 #  endif
 	if (traceControl_p == NULL)
 	{
-		/* This stuff should happen once (per PROCESS) */
+		/* This stuff should happen once (per TRACE_DEFINE compilation module) */
+		TRACE_REGISTER_ATFORK;
 
 		/* test for activation. (See below for _name override/default) */
 		if (_name != NULL)
@@ -2148,7 +2259,10 @@ static struct traceEntryHdr_s* idxCnt2entPtr(uint32_t idxCnt)
 
 // Use C++ "for" statement to create single statement scope for key (static) variable that
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
-// s_enabled = is_slowpath_enabled; fmtnow = force formating (i.e. if Memory only)
+// arg1   - lvl;
+// arg2,3 - nam_or_fmt = name or fmtnow (note: fmtnow can be used to force formatting env if Memory only);
+// arg4   - s_enabled = is_slowpath_enabled (b/c one version of message facility had a global "is_enabled");
+// arg5   - force_s = force_slow - override tlvlmskS&lvl==0
 # define TRACE_USE_STATIC_STREAMER 1
 # if TRACE_USE_STATIC_STREAMER == 1
 #  define TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)			\

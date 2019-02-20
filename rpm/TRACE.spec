@@ -3,7 +3,7 @@
 
 # If you want to use another kernel version, run this command:
 #  rpmbuild -ba --define 'kversion 3.10.0-957.5.1.el7.x86_64' mykmod.spec
-%{!?kversion: %define kversion 3.10.0-957.el7.%{_target_cpu}}
+%{!?kversion: %define kversion %(uname -r | sed -e "s/\.`uname -p`//").%{_target_cpu}}
 
 Name:    %{kmod_name}-kmod
 Version: v3
@@ -53,7 +53,10 @@ Utilities for %{kmod_name} kmod
 %doc %{_mandir}/man1/*
 %doc %{_mandir}/man1p/*
 %doc %{_defaultdocdir}/%{kmod_name}-utils-%{version}/*
+%attr(0755,root,root) %{_bindir}/trace_cntl
 %attr(0755,root,root) %{_bindir}/trace_delta
+%attr(0755,root,root) %{_bindir}/bitN_to_mask
+%attr(0755,root,root) %{_bindir}/trace_envvars
 %{_sysconfdir}/profile.d/trace.sh
 %{_includedir}/TRACE/*
 
@@ -100,11 +103,14 @@ done
 
 # Install shell profile
 %{__install} -d %{buildroot}%{_sysconfdir}/profile.d/
-%{__install} build/script/trace.sh.functions %{buildroot}%{_sysconfdir}/profile.d/trace.sh
+%{__install} script/trace_functions.sh %{buildroot}%{_sysconfdir}/profile.d/trace.sh
 
 # Install utils
 %{__install} -d %{buildroot}%{_bindir}
-%{__install} build/script/trace_delta.pl %{buildroot}%{_bindir}/trace_delta
+%{__install} %(echo build/Linux*/bin/trace_cntl) %{buildroot}%{_bindir}/trace_cntl
+%{__install} script/trace_delta %{buildroot}%{_bindir}/trace_delta
+%{__install} script/bitN_to_mask %{buildroot}%{_bindir}/bitN_to_mask
+%{__install} script/trace_envvars %{buildroot}%{_bindir}/trace_envvars
 
 # Install manpages
 %{__install} -d %{buildroot}%{_mandir}/man1

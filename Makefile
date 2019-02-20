@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 558 $$Date: 2017-02-08 16:38:34 -0600 (Wed, 08 Feb 2017) $";
+ # rev="$Revision: 1049 $$Date: 2019-02-19 15:20:09 -0600 (Tue, 19 Feb 2019) $";
 
 # TOP LEVEL Makefile
 
@@ -100,7 +100,15 @@ src_utility: OUT_check
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
 	fi
 
-script ups: OUT_check
+script: OUT_check
+	${FLAVOR_SUBDIR};\
+	test -n "${TRACE_FQ_DIR}"\
+	 && out="${TRACE_FQ_DIR}/bin/"\
+	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin/";\
+	test -d "$$out" || mkdir -p "$$out";\
+	$(MAKE) -C $@ OUT="$$out"
+
+ups: OUT_check
 	test -d "${OUT}/$@" || mkdir "${OUT}/$@"
 	-cp -au $@/[a-zABD-Z]*[^~] "${OUT}/$@"   # filter out CVS dir and backups files
 

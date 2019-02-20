@@ -5,15 +5,29 @@
 	$RCSfile: .emacs.gnu,v $
 	rev="$Revision: 1.33 $$Date: 2019/01/13 02:34:40 $";
 	*/
-/* compile:
+/*
+ compile:
    cd src_example/userspace
    gcc -g -Wall -I$TRACE_INC -std=c11 -o $TRACE_BIN/pid_test pid_test.c -lpthread 2>&1 | head -22
- */
-#include <stdio.h>		// printf
-#include <sys/wait.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>    // pthread_create,join
+   treset;strace -f -e getpid,gettid pid_test
+   tshow | awk '/mypid/{tpid=$3;mypid=gensub(".*mypid: ([0-9]*).*","\\1",1);
+ if(tpid!=mypid){print"No good at ",$1;nogood=1;exit}}
+END{if(!nogood)print"ALL OK"}'
+*/
+#define USAGE "\
+  usage: %s [options]\n\
+example: %s\n\
+options:\n\
+", basename(argv[0]), basename(argv[0])
+
+#include <stdio.h>              // printf
+#include <stdlib.h>             // exit
+#include <pthread.h>		// pthread_self,pthread_create,join
+#include <unistd.h>		// getopt
+#include <getopt.h>
+#include <sys/types.h>          // pid_t
+#include <sys/wait.h>           // waitpid
+#include <libgen.h>             // basename
 #include "trace.h"		// TRACE
 
 typedef void (*fp_t)(pid_t mypid);
@@ -75,12 +89,24 @@ void* thread_func(void *arg)
 int main(  int	argc
          , char	*argv[] )
 {
-	pid_t     mypid=getpid();
-	pthread_t thread_id;
+extern  char        * optarg;        // for getopt
+        int           opt;           // for how I use getopt
+		pid_t         mypid=getpid();
+		pthread_t     thread_id;
+		unsigned long opt_loops=1;
 
+    while ((opt=getopt(argc,argv,"?hl:")) != -1)
+    {   switch (opt)
+        { // '?' is also what you get w/ "invalid option -- -"
+        case '?': case 'h': printf(USAGE);exit(0);    break;
+		case 'l': opt_loops=strtoul(optarg,NULL,0);       break;
+        }
+    }
 	TRACE( 1,"main - mypid: %ld", (long)mypid );
-	pthread_create(&thread_id,NULL,thread_func,(void*)(long)mypid );
-	do_fork( sub1, mypid );
-	pthread_join(thread_id, NULL);
+	for (unsigned ii=0; ii<opt_loops; ++ii) {
+		pthread_create(&thread_id,NULL,thread_func,(void*)(long)mypid );
+		do_fork( sub1, mypid );
+		pthread_join(thread_id, NULL);
+	}
 	return (0);
 }   /* main */

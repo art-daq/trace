@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1021 $$Date: 2018-08-21 23:16:10 -0500 (Tue, 21 Aug 2018) $"
+#define TRACE_CNTL_REV "$Revision: 1045 $$Date: 2019-02-19 11:36:30 -0600 (Tue, 19 Feb 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -285,8 +285,11 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 	int	   	 buf_slot_width;
 	int	   	 opts=(strchr(ospec,'x')?filter_newline_:0);
 	struct traceEntryHdr_s* myEnt_p;
+	struct traceEntryHdr_s  myEnt_cpy; /* I'll copy */
 	char                  * msg_p;
+	char                  * msg_cpy; /* I'll malloc space to copy the msg into */
 	unsigned long         * params_p;
+	unsigned long         * params_cpy; /* I'll malloc space to copy the params into */
 	uint8_t               * local_params;
 	char                  * local_msg;
 	void                  * param_va_ptr;
@@ -303,7 +306,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 	unsigned                longest_lvlstr=0;
 	int                     for_rev=-1; /* default is reverse print */
 	int                     forward_continuous=0; /* continuous==1 will force for_rev=1 */
-
+	
 	opts |= show_opts; /* see enum show_opts_e above */
 	opts |= (strchr(ospec,'D')?indent_:0);
 
@@ -373,6 +376,8 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 
 	buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
 	local_msg     =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
+	msg_cpy       =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
+	params_cpy    =	  (unsigned long*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
 	local_params  =	        (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
 	params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
 
@@ -446,6 +451,14 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 		myEnt_p = idxCnt2entPtr( rdIdx );
 		msg_p	 = (char*)(myEnt_p+1);
 		params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
+		/* not do the copy and reset ptrs to the copies. This avoids */
+		myEnt_cpy = *myEnt_p; /* potential issues with overwrite */
+		myEnt_p = &myEnt_cpy; /* due to the fact that entries can to created much faster than they can be printed */
+		strncpy( msg_cpy, msg_p, traceControl_p->siz_msg );
+		msg_p = msg_cpy;
+		memcpy( params_cpy, params_p, myEnt_p->nargs*sizeof(uint64_t) );
+		params_p = params_cpy;
+		
 		msg_p[traceControl_p->siz_msg - 1] = '\0';
 
 		if (myEnt_p->nargs)
@@ -796,9 +809,9 @@ extern  int        optind;         /* for getopt */
 			  , 1.0,2.0,3.0,4.0, ff[5],6.0,7.0,8.0,9.0,10.0 );
 		TRACE( 4, "hello %d %d %f  %d %d %f	 %d %d there is tabs after 2nd float"
 			  ,	          1, 2,3.3,4, 5, 6.6, 7, 8 );
-		TRACE( 4, TPRINTF("%s:%%d- int=%%d __FILE__=%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,__FILE__)
+		TRACE( 4, TSPRINTF("%s:%%d- int=%%d __FILE__=%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,__FILE__)
 		      , __LINE__, 5 );
-		TRACE( 4, TPRINTF("%s%s%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,":%d- int=%d __FILE__=",__FILE__)
+		TRACE( 4, TSPRINTF("%s%s%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,":%d- int=%d __FILE__=",__FILE__)
 		      , __LINE__, 5 );
 
 #	   ifndef TEST_UNUSED_FUNCTION

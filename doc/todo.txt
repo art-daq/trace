@@ -10,6 +10,7 @@ develop test sweet - threads, 5-in-1, etc.
 
 %u %U on TRACE_FILE for "user" (/tmp/trace_buffer_%u) "uid" (/run/user/%U/trace_buffer)
 
+signal handler - trace_cntl - ignore signal when trace_lock
 
 DONE:
 

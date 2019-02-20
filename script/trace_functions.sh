@@ -1,10 +1,11 @@
+#!/bin/sh
 #   This file (trace.sh.functions) was created by Ron Rechenmacher <ron@fnal.gov> on
 #   Jul 15, 2003. "TERMS AND CONDITIONS" governing this file are in the README
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1016 $
-#   $Date: 2018-08-10 15:32:53 -0500 (Fri, 10 Aug 2018) $
+#   $Revision: 1049 $
+#   $Date: 2019-02-19 15:20:09 -0600 (Tue, 19 Feb 2019) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -22,7 +23,7 @@ tmodeM()  { trace_cntl modeM "$@"; }
 tmodeS()  { trace_cntl modeS "$@"; }
 tfreeze() { trace_cntl modeM 0; }
 treset()  { trace_cntl reset; }
-tdelta()  { test -n "${PAGER-}" && trace_delta.pl "$@" | $PAGER || trace_delta.pl "$@"; }  # ex. tshow | grep xxx | tdelta
+tdelta()  { test -n "${PAGER-}" && trace_delta "$@" | $PAGER || trace_delta "$@"; }  # ex. tshow | grep xxx | tdelta
 
 bitN_to_mask()
 {

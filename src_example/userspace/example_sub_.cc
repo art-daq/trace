@@ -8,7 +8,7 @@
 // A module that just has a single TRACE
 // Simple to compile and look at assemble
 
-#include "trace.h"
+#include "TRACE/trace.h"
 
 void example_sub_( void )
 {

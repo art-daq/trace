@@ -3,11 +3,11 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_sub1.cc,v $
- // rev="$Revision: 808 $$Date: 2018-02-07 23:44:55 -0600 (Wed, 07 Feb 2018) $";
+ // rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
 
 #define TRACE_NAME strcpy(buffer,"example_sub1")
 static char buffer[15];
-#include "trace.h"
+#include "TRACE/trace.h"
 
 void example_sub2( void );
 

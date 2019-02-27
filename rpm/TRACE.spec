@@ -3,21 +3,51 @@
 
 # If you want to use another kernel version, run this command:
 #  rpmbuild -ba --define 'kversion 3.10.0-957.5.1.el7.x86_64' mykmod.spec
+# Default is current running kernel
 %{!?kversion: %define kversion %(uname -r | sed -e "s/\.`uname -p`//").%{_target_cpu}}
 
+# If you want a custom version:
+# rpmbuild -ba --define 'trace_version myversion'
+# If you want a custom revision:
+# rpmbuild -ba --define 'trace_revision myrevision'
+
+###########################################################
+###########################################################
+
 Name:    %{kmod_name}-kmod
-Version: v3
-Release: 1%{?dist}
 Group:   System Environment/Kernel
 License: GPLv2
 Summary: %{kmod_name} kernel module(s)
 URL:     https://cdcvs.fnal.gov/redmine/projects/trace
 
-BuildRequires: redhat-rpm-config, perl, make, bash, gcc
-
-# Sources.
-Source0:  %{kmod_name}-%{version}.tar.bz2
+# Sources
+Source0:  %{kmod_name}.tar.bz2
 Source10: kmodtool-%{kmod_name}.sh
+
+# Determine the UPS Version from source if not specified
+### untar the source, ask and remove the untar'd copy
+%if "x%{?trace_version}" == "x"
+%define trace_version %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;  grep 'parent TRACE ' ups/product_deps 2>/dev/null | grep -v '\#' | awk '{print $3}'; rm -rf %{_builddir}/%{kmod_name}) 
+%endif
+
+# Determine the svn revision from source if not specified
+### untar the source, ask and remove the untar'd copy
+%if "x%{?trace_revision}" == "x"
+%define trace_revision .r%(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ; svn info 2>/dev/null |grep '^Revision: ' | awk '{print $2}'; rm -rf %{_builddir}/%{kmod_name}) 
+%endif
+
+# Determine if source repo is clean
+### untar the source, check and remove the untar'd copy
+%define repo_clean %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ; svn status 2>&1 | wc -l; rm -rf %{_builddir}/%{kmod_name})
+%if %repo_clean != 0
+%define unclean .WITHLOCALCHANGES
+%endif
+
+Version: %{trace_version}
+Release: 1%{?trace_revision}%{?dist}%{?unclean}
+
+BuildRequires: redhat-rpm-config, perl, make, bash, gcc
+BuildRequires: gawk, coreutils, svn, gcc-c++
 
 %if 0%{?rhel} > 0
 # Add note on any non whitelisted ABI symbols
@@ -63,24 +93,26 @@ Utilities for %{kmod_name} kmod
 ###########################################################
 %prep
 # Prep kernel module
-%setup -q -n %{kmod_name}-%{version}
+%setup -q -c -n %{kmod_name}
 
+%{__mkdir_p} build
 ## Write ABI tracking file
-echo "override %{kmod_name} * weak-updates/%{kmod_name}" > kmod-%{kmod_name}.conf
+echo "override %{kmod_name} * weak-updates/%{kmod_name}" > build/kmod-%{kmod_name}.conf
 
 ###########################################################
 %build
-%{__mkdir} build
+%{__mkdir_p} build
 # Build all (TRACE packages its own implementation of module-build
 %{__make} OUT=${PWD}/build all KDIR=%{_usrsrc}/kernels/%{kversion}
 
 ###########################################################
 %install
+rm -rf %{buildroot}
 # Install kernel module
 %{__install} -d %{buildroot}/lib/modules/%{kversion}/extra/%{kmod_name}/
 %{__install} build/module/%{kversion}/%{kmod_name}.ko %{buildroot}/lib/modules/%{kversion}/extra/%{kmod_name}/
 %{__install} -d %{buildroot}%{_sysconfdir}/depmod.d/
-%{__install} kmod-%{kmod_name}.conf %{buildroot}%{_sysconfdir}/depmod.d/
+%{__install} build/kmod-%{kmod_name}.conf %{buildroot}%{_sysconfdir}/depmod.d/
 
 ## Strip the modules(s).
 find %{buildroot} -type f -name \*.ko -exec %{__strip} --strip-debug \{\} \;

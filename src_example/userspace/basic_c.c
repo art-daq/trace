@@ -14,7 +14,7 @@ struct basic_c_s
 };
 
 static struct basic_c_s  before = {{0},{0}};
-#include "trace.h"		/* TRACE */
+#include "TRACE/trace.h"		/* TRACE */
 static struct basic_c_s  after = {{0},{0}};
 
 int main( )

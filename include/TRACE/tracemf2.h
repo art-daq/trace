@@ -19,7 +19,7 @@
   // for the "slow" tracing function (if appropriate mask bit is set :)
 #undef TRACE_LOG_FUNCTION
 # define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,file,line,nargs,...)  mftrace_user(tvp, tid, lvl,insert,file,line,nargs, __VA_ARGS__ )
-#include "trace.h"		/* TRACE */
+#include "TRACE/trace.h"		/* TRACE */
 
 // "static int tid_" is thread safe in so far as multiple threads may init,
 // but will init with same value.

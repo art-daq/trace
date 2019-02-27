@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1045 $$Date: 2019-02-19 11:36:30 -0600 (Tue, 19 Feb 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -32,7 +32,7 @@ done
 #include <locale.h>				/* setlocale */
 #include <string.h>				/* strnlen */
 
-#include "trace.h"
+#include "TRACE/trace.h"
 
 #ifdef __APPLE__
 # define TRACE_TID_WIDTH 7

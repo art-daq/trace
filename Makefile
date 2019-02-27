@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1049 $$Date: 2019-02-19 15:20:09 -0600 (Tue, 19 Feb 2019) $";
+ # rev="$Revision: 1066 $$Date: 2019-02-26 14:42:27 -0600 (Tue, 26 Feb 2019) $";
 
 # TOP LEVEL Makefile
 
@@ -48,7 +48,15 @@ modules: src_module src_example_module
 all: default modules
 	@echo Done with $@
 
-
+rpm_source:
+	@rm -f rpm/TRACE.tar.bz2
+	@tar cf - * .svn .clang* .git* | bzip2 > rpm/TRACE.tar.bz2
+srpm: rpm_source
+	@rpmbuild -bs --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
+	@rm -f rpm/TRACE.tar.bz2
+rpm: rpm_source
+	@rpmbuild -bb --quiet --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
+	@rm -f rpm/TRACE.tar.bz2
 
 src_example_module: src_module      # the example module depends on symbols from the TRACE module
 

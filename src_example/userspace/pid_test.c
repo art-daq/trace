@@ -28,7 +28,7 @@ options:\n\
 #include <sys/types.h>          // pid_t
 #include <sys/wait.h>           // waitpid
 #include <libgen.h>             // basename
-#include "trace.h"		// TRACE
+#include "TRACE/trace.h"		// TRACE
 
 typedef void (*fp_t)(pid_t mypid);
 

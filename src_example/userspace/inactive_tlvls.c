@@ -7,7 +7,7 @@
 	*/
 
 #include <stdio.h>				/* snprintf */
-#include "trace.h"				/* TRACE, TRACE_CNTL */
+#include "TRACE/trace.h"				/* TRACE, TRACE_CNTL */
 
 int
 main(  int	argc

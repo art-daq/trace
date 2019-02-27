@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1045 $$Date: 2019-02-19 11:36:30 -0600 (Tue, 19 Feb 2019) $'
+ # rev='$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -161,7 +161,7 @@ ${do_declare:+# define TRACE_DECLARE // trace variables are defined somewhere el
 ${do_declare:+#endif}
 $do_TRACE_NAME
 #ifndef NO_TRACE
-# include "trace.h"
+# include "TRACE/trace.h"
 #else
 # define TRACE(...)
 # define TLOG(...) if(0)std::cout /* allow compiler to compile-n-optimize-out */
@@ -210,7 +210,7 @@ ${do_declare:+# define TRACE_DECLARE // trace variables are defined somewhere el
 ${do_declare:+#endif}
 $do_TRACE_NAME
 #ifndef NO_TRACE
-# include "trace.h"
+# include "TRACE/trace.h"
 #else
 # define TRACE(...)
 # define TLOG(...) if(0)std::cout /* allow compiler to compile-n-optimize-out */
@@ -263,7 +263,7 @@ static inline pid_t ex_gettid(void) { return GetCurrentThreadId(); }
 #include <libgen.h>             // basename
 ${do_define:+#define TRACE_DEFINE // trace variables are defined in this module}
 #ifndef NO_TRACE
-# include "trace.h"
+# include "TRACE/trace.h"
 #else
 # define TRACE(...)
 # define TLOG(...) if(0)std::cout /* allow compiler to compile-n-optimize-out */
@@ -493,7 +493,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
             show_count=`trace_cntl info | awk '/num_entries/{print$3;}'`
             test $show_count -gt 500000 && show_count=500000
             start_idx=`expr $show_count - 1` # smaller buffers will wrap -- smallish number of unused entries have 0 timestamp which tdelta ignores
-            delta_min=`TRACE_SHOW=HTm trace_cntl show $show_count $start_idx | trace_delta.pl -stats | awk '/^  *min /{print$2;}'`
+            delta_min=`TRACE_SHOW=HTm trace_cntl show $show_count $start_idx | trace_delta -stats | awk '/^  *min /{print$2;}'`
             vprintf 1 'done calculating\n'
         else
             echo "TRACE_FILE not found - FAIL will result"

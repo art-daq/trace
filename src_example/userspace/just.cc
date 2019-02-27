@@ -3,11 +3,11 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just.cc,v $
-// rev="$Revision: 1030 $$Date: 2019-01-02 17:05:09 -0600 (Wed, 02 Jan 2019) $";
+// rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
 */
 
 #include <string>
-#include "trace.h"		/* TRACE */
+#include "TRACE/trace.h"		/* TRACE */
 
 void example_sub_( void );
 

@@ -1,3 +1,4 @@
+#!/bin/sh
 # Define the kmod package name here.
 %define kmod_name TRACE
 
@@ -19,7 +20,7 @@ Group:   System Environment/Kernel
 License: GPLv2
 Summary: %{kmod_name} kernel module(s)
 URL:     https://cdcvs.fnal.gov/redmine/projects/trace
-
+Packager:	Fermilab Real-Time Software Infrastructure
 # Sources
 Source0:  %{kmod_name}.tar.bz2
 Source10: kmodtool-%{kmod_name}.sh
@@ -27,24 +28,28 @@ Source10: kmodtool-%{kmod_name}.sh
 # Determine the UPS Version from source if not specified
 ### untar the source, ask and remove the untar'd copy
 %if "x%{?trace_version}" == "x"
-%define trace_version %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;  grep 'parent TRACE ' ups/product_deps 2>/dev/null | grep -v '\#' | awk '{print $3}'; rm -rf %{_builddir}/%{kmod_name}) 
+%define trace_version %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;\
+                        grep 'parent TRACE ' ups/product_deps 2>/dev/null | grep -v '\#' | awk '{print $3}'; rm -rf %{_builddir}/%{kmod_name}) 
 %endif
 
 # Determine the svn revision from source if not specified
 ### untar the source, ask and remove the untar'd copy
 %if "x%{?trace_revision}" == "x"
-%define trace_revision .r%(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ; svn info 2>/dev/null |grep '^Revision: ' | awk '{print $2}'; rm -rf %{_builddir}/%{kmod_name}) 
+%define trace_revision r%(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;\
+                           svn info 2>/dev/null |grep '^Revision: ' | awk '{print $2}'; rm -rf %{_builddir}/%{kmod_name}) 
 %endif
 
 # Determine if source repo is clean
 ### untar the source, check and remove the untar'd copy
-%define repo_clean %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ; svn status 2>&1 | wc -l; rm -rf %{_builddir}/%{kmod_name})
-%if %repo_clean != 0
+%define repo_clean %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;\
+                     svn diff 2>&1 | wc -l; rm -rf %{_builddir}/%{kmod_name})
+%if "%repo_clean" != "0"
 %define unclean .WITHLOCALCHANGES
 %endif
 
 Version: %{trace_version}
-Release: 1%{?trace_revision}%{?dist}%{?unclean}
+# Add the ".1" as a place where you can increment a value to resolve a packaging issue
+Release: %{?trace_revision}.1%{?dist}%{?unclean}
 
 BuildRequires: redhat-rpm-config, perl, make, bash, gcc
 BuildRequires: gawk, coreutils, svn, gcc-c++
@@ -102,8 +107,9 @@ echo "override %{kmod_name} * weak-updates/%{kmod_name}" > build/kmod-%{kmod_nam
 ###########################################################
 %build
 %{__mkdir_p} build
-# Build all (TRACE packages its own implementation of module-build
-%{__make} OUT=${PWD}/build all KDIR=%{_usrsrc}/kernels/%{kversion}
+# Build all (TRACE packages its own implementation of module-build)
+#  when the distro has gcc 4.9+, (and std is less than c11) then add XTRA_CFLAGS=-std=c11
+%{__make} OUT=${PWD}/build XTRA_CFLAGS=-D_GNU_SOURCE XTRA_CXXFLAGS=-std=c++11 all KDIR=%{_usrsrc}/kernels/%{kversion}
 
 ###########################################################
 %install
@@ -112,7 +118,7 @@ rm -rf %{buildroot}
 %{__install} -d %{buildroot}/lib/modules/%{kversion}/extra/%{kmod_name}/
 %{__install} build/module/%{kversion}/%{kmod_name}.ko %{buildroot}/lib/modules/%{kversion}/extra/%{kmod_name}/
 %{__install} -d %{buildroot}%{_sysconfdir}/depmod.d/
-%{__install} build/kmod-%{kmod_name}.conf %{buildroot}%{_sysconfdir}/depmod.d/
+%{__install} -m644 build/kmod-%{kmod_name}.conf %{buildroot}%{_sysconfdir}/depmod.d/
 
 ## Strip the modules(s).
 find %{buildroot} -type f -name \*.ko -exec %{__strip} --strip-debug \{\} \;
@@ -130,8 +136,8 @@ done
 
 # Install headers
 %{__install} -d %{buildroot}%{_includedir}/TRACE
-%{__install} include/trace.h %{buildroot}%{_includedir}/TRACE/trace.h
-%{__install} include/tracemf.h %{buildroot}%{_includedir}/TRACE/tracemf.h
+%{__install} -m644 include/trace.h %{buildroot}%{_includedir}/TRACE/trace.h
+%{__install} -m644 include/tracemf.h %{buildroot}%{_includedir}/TRACE/tracemf.h
 
 # Install shell profile
 %{__install} -d %{buildroot}%{_sysconfdir}/profile.d/
@@ -152,7 +158,7 @@ done
 
 # Install kmod docs
 %{__install} -d %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/
-%{__install} doc/users_guide.txt %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/
+%{__install} -m644 doc/users_guide.txt %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/
 %{__install} -d %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/example_module
 %{__cp} -r src_example/module %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/example_module/
 %{__cp} -r src_example/module1 %{buildroot}%{_defaultdocdir}/kmod-%{kmod_name}-%{version}/example_module/

@@ -3,6 +3,8 @@ To get started, see the doc/quick-start.txt file.
 Please note that using a version of gcc that supports the c11 and/or c++11
 standard is desirable.
 
+RPM packaging provided by Pat Riehecky on the Scientific Linux team.
+
 tar files with binaries at:
   https://cdcvs.fnal.gov/redmine/projects/trace
   http://oink.fnal.gov/distro/packages/TRACE/

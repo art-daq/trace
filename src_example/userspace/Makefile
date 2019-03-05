@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1030 $
-#  $Date: 2019-01-02 17:05:09 -0600 (Wed, 02 Jan 2019) $
+#  $Revision: 1084 $
+#  $Date: 2019-03-04 09:12:13 -0600 (Mon, 04 Mar 2019) $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -95,10 +95,10 @@ ${OUT}just:         ${OUT}just.o         ${OUT}example_sub_.o
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< ${OUT}example_sub_.o
 
 ifneq ($(executables),)
-include ${out_deps}
+-include ${out_deps}
 endif
 ifneq ($(objects),)
-include $(objects:%.o=${OUT}%.d)
+-include $(objects:%.o=${OUT}%.d)
 endif
 
 

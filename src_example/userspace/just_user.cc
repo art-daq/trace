@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
+char const *rev="$Revision: 1083 $$Date: 2019-03-01 22:13:51 -0600 (Fri, 01 Mar 2019) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -16,6 +16,7 @@ char const *rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 
 #include <typeinfo>				// typeid().name()
 #include <libgen.h>				// basename
 #include <stdlib.h>
+#include <stdint.h>				// uint16_t
 
 #if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
 void my_log(uint16_t nargs, std::string  msg,...);

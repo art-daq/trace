@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1066 $$Date: 2019-02-26 14:42:27 -0600 (Tue, 26 Feb 2019) $";
+ # rev="$Revision: 1075 $$Date: 2019-03-01 09:35:03 -0600 (Fri, 01 Mar 2019) $";
 
 # TOP LEVEL Makefile
 
@@ -48,14 +48,23 @@ modules: src_module src_example_module
 all: default modules
 	@echo Done with $@
 
+clean:
+	rm -f src_example/userspace/*.d src_module/{.*.cmd,*.symvers,*.ko,*.mod.c,*.order}
+	rm -fr Linux64bit+* module big_ex.d src_module/.tmp_versions
+	rm -f make.out
+
 rpm_source:
+	@unclean=`svn status | wc -l`; 
 	@rm -f rpm/TRACE.tar.bz2
-	@tar cf - * .svn .clang* .git* | bzip2 > rpm/TRACE.tar.bz2
+	@tar cf - --exclude=TRACE.tar.bz2 --exclude=.vs --exclude=*.json --exclude=.gdb_history \
+	* .svn .clang* .git* | bzip2 > rpm/TRACE.tar.bz2
 srpm: rpm_source
-	@rpmbuild -bs --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
+	@unset TRACE_FQ_DIR;\
+	rpmbuild -bs --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
 	@rm -f rpm/TRACE.tar.bz2
 rpm: rpm_source
-	@rpmbuild -bb --quiet --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
+	@unset TRACE_FQ_DIR;\
+	rpmbuild -bb --quiet --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
 	@rm -f rpm/TRACE.tar.bz2
 
 src_example_module: src_module      # the example module depends on symbols from the TRACE module

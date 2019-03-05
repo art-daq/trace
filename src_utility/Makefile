@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 416 $
-#  $Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $
+#  $Revision: 1084 $
+#  $Date: 2019-03-04 09:12:13 -0600 (Mon, 04 Mar 2019) $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -87,7 +87,7 @@ all: ${OUT}trace_cntl
 
 ${OUT}trace_cntl: trace_cntl.c
 
-include ${OUT}$(cexesrc:.c=.d)
+-include ${OUT}$(cexesrc:.c=.d)
 ifneq ($(c++exesrc),)
 include ${OUT}$(c++exesrc:.cc=.d)
 endif

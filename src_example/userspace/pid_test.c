@@ -94,6 +94,7 @@ extern  char        * optarg;        // for getopt
 		pid_t         mypid=getpid();
 		pthread_t     thread_id;
 		unsigned long opt_loops=1;
+		unsigned      ii;
 
     while ((opt=getopt(argc,argv,"?hl:")) != -1)
     {   switch (opt)
@@ -103,7 +104,7 @@ extern  char        * optarg;        // for getopt
         }
     }
 	TRACE( 1,"main - mypid: %ld", (long)mypid );
-	for (unsigned ii=0; ii<opt_loops; ++ii) {
+	for (ii=0; ii<opt_loops; ++ii) {
 		pthread_create(&thread_id,NULL,thread_func,(void*)(long)mypid );
 		do_fork( sub1, mypid );
 		pthread_join(thread_id, NULL);

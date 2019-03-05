@@ -1322,6 +1322,7 @@ static int32_t name2TID(const char *nn)
 #if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
 #	pragma GCC diagnostic push
 #	pragma GCC diagnostic ignored "-Wpragmas"
+#   pragma GCC diagnostic ignored "-Wunknown-warning-option"
 #	pragma GCC diagnostic ignored "-Wstringop-truncation"
 #endif
 			strncpy(traceNamLvls_p[ii].name, valid_name, TRACE_DFLT_NAM_CHR_MAX);
@@ -2697,6 +2698,19 @@ public:
 		r(*this);
 		return *this;
 	}
+
+    template<typename T>
+    inline TraceStreamer &operator<<(const T*const &r)
+    {
+    if(do_f)
+        msg_sz += snprintf(&msg[msg_sz],sizeof(msg)-1-msg_sz,"%p", static_cast<const void*>(r));
+    else if(argCount < TRACE_STREAMER_ARGSMAX)
+    {
+        msg_append("%p",2);
+        args[argCount++].p = const_cast<void*>(static_cast<const void*>(r));
+    }
+    return *this;
+    }
 
 	template<typename T>
 	inline TraceStreamer &operator<<(T *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type

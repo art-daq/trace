@@ -6,3 +6,14 @@ cet_script(
 		trace_feature_test.sh
 		trace_functions.sh
 )
+
+include(CetTest)
+
+cet_test_env("TRACE_DIR=${CMAKE_SOURCE_DIR}")
+
+cet_test(big_ex_t HANDBUILT
+  TEST_EXEC big_ex.sh
+  TEST_ARGS test.d
+        )
+
+

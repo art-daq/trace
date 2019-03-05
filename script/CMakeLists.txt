@@ -7,6 +7,8 @@ cet_script(
 		trace_functions.sh
 )
 
+if( DEFINED $ENV{DO_BIGEX_TEXT} )
+
 include(CetTest)
 
 cet_test_env("TRACE_DIR=${CMAKE_SOURCE_DIR}")
@@ -16,4 +18,4 @@ cet_test(big_ex_t HANDBUILT
   TEST_ARGS test.d -t4 -l50
         )
 
-
+endif()

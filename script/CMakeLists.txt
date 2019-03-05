@@ -13,7 +13,7 @@ cet_test_env("TRACE_DIR=${CMAKE_SOURCE_DIR}")
 
 cet_test(big_ex_t HANDBUILT
   TEST_EXEC big_ex.sh
-  TEST_ARGS test.d
+  TEST_ARGS test.d -t4 -l50
         )
 
 

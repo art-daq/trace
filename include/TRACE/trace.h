@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1085 $$Date: 2019-03-05 11:54:28 -0600 (Tue, 05 Mar 2019) $"
+#define TRACE_REV "$Revision: 1091 $$Date: 2019-03-21 22:22:32 -0500 (Thu, 21 Mar 2019) $"
 
 #ifndef __KERNEL__
 
@@ -426,6 +426,20 @@ static const char *TRACE_NAME = NULL;
 												  : "=a"(low) \
 												  :           \
 												  : "edx") /*NOLINT*/
+
+#elif defined(__powerpc__) && !defined(__powerpc64__)
+
+#	define TRACE_XTRA_PASSED , 0, 0, 0, .0, .0, .0, .0, .0, .0, .0, .0
+#	define TRACE_XTRA_UNUSED , long l0 __attribute__((__unused__)), long l1 __attribute__((__unused__)), long l2 __attribute__((__unused__)), double d0 __attribute__((__unused__)), double d1 __attribute__((__unused__)), double d2 __attribute__((__unused__)), double d3 __attribute__((__unused__)), double d4 __attribute__((__unused__)), double d5 __attribute__((__unused__)), double d6 __attribute__((__unused__)), double d7 __attribute__((__unused__))
+#	define TRACE_PRINTF_FMT_ARG_NUM 16
+#	define TRACE_VA_LIST_INIT(addr)              \
+		{                                         \
+			{                                     \
+				8, 8, 0, addr \
+			}                                     \
+		}
+#	define TRACE_ENT_TV_FILLER uint32_t x[2];
+#	define TRACE_TSC32(low)
 
 #else
 

@@ -14,7 +14,7 @@ parent TRACE v3_13_12
 fcldir      -
 
 product		version
-cetbuildtools   v7_02_01   -      only_for_build
+cetbuildtools   v7_12_01   -      only_for_build
 end_product_list
 
 qualifier 	cetbuildtools	notes
@@ -34,7 +34,7 @@ endif ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UP
 envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
 #doing the following would not get undone upon unsetup
-#execute( test $?shell \!= 1 && . ${${UPS_PROD_NAME_UC}_BIN}/trace.sh.functions, NO_UPS_ENV )
+#execute( test $?shell \!= 1 && . ${${UPS_PROD_NAME_UC}_BIN}/trace_functions.sh, NO_UPS_ENV )
 
 if ( test $?shell = 1 )
   addAlias( tnotnull_, set vv=%s && eval test \$\?$vv -eq 1 && eval test -n \"\$$vv\" )
@@ -59,8 +59,8 @@ endif ( test $?shell = 1 )
 	addAlias( tmodeS,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS %s )
 	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 %s )
 	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset %s )
-	addAlias( tdelta,  set__ opts=%s;tnotnull_ PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_delta.pl $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_delta.pl $opts )
-	addAlias( tenv,    ${${UPS_PROD_NAME_UC}_BIN}/trace_envvars.sh %s )
+	addAlias( tdelta,  set__ opts=%s;tnotnull_ PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_delta $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_delta $opts )
+	addAlias( tenv,    ${${UPS_PROD_NAME_UC}_BIN}/trace_envvars %s )
 	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 1 )
 	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS 1 )
 	addAlias( tonT,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 0 `bitN_to_mask %s` )

@@ -1,27 +1,44 @@
-# The parent line must be the first non-comment line in the file
-# This line defines the product name and version
-parent TRACE v3_13_12
+File    = table
+Product = @UPS_PRODUCT_NAME@
 
-# These optional lines define the installed directories where
-# headers, libraries, and executables will be found
-# Use them only if your product does not conform to the defaults
-# Format: directory_type directory_path directory_name
-# The only recognized values of the first field are fcldir, gdmldir, incdir, libdir, and bindir
-# The only recognized values of the second field are product_dir, fq_dir, and -
-# The third field is not constrained.
-# Defaults:
-#incdir  product_dir
-fcldir      -
+#*************************************************
+# Starting Group definition
+Group:
 
-product		version
-cetbuildtools   v7_12_01   -      only_for_build
-end_product_list
+Flavor     = ANY
+Qualifiers = "@UPS_QUALIFIER_STRING@"
 
-qualifier 	cetbuildtools	notes
--nq-		-nq-
-end_qualifier_list
+  Action = GetProducts
 
-table_fragment_begin
+
+Common:
+  Action = setup
+    prodDir()
+    setupEnv()
+    envSet(${UPS_PROD_NAME_UC}_VERSION, @UPS_PROUDCT_VERSION@)
+    exeActionRequired(GetFQDir)
+    envSet(${UPS_PROD_NAME_UC}_INC, ${UPS_PROD_DIR}/include)
+
+    exeActionRequired(GetProducts)
+
+    envSet(${UPS_PROD_NAME_UC}_LIB, ${${UPS_PROD_NAME_UC}_FQ_DIR}/lib)
+    if ( test `uname` = "Darwin" )
+      pathPrepend(DYLD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
+    else()
+      pathPrepend(LD_LIBRARY_PATH, ${${UPS_PROD_NAME_UC}_LIB})
+    endif ( test `uname` = "Darwin" )
+
+    # add the bin directory to the path
+    pathPrepend(PATH, ${${UPS_PROD_NAME_UC}_FQ_DIR}/bin )
+    # dropit -E removes non-existent directories
+    Execute(dropit -E, NO_UPS_ENV, PATH)
+
+    # Prepend CMAKE_PREFIX_PATH for flavour qualified product
+    pathPrepend(CMAKE_PREFIX_PATH, ${${UPS_PROD_NAME_UC}_FQ_DIR})
+    pathPrepend(PKG_CONFIG_PATH, ${${UPS_PROD_NAME_UC}_FQ_DIR})
+    # Prepend ROOT_INCLUDE_PATH for dictionaries
+    pathPrepend(ROOT_INCLUDE_PATH, ${${UPS_PROD_NAME_UC}_INC})
+
 # Copied in from product_deps
 envSet( ${UPS_PROD_NAME_UC}_BIN, ${${UPS_PROD_NAME_UC}_FQ_DIR}/bin )
 if ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )
@@ -34,7 +51,7 @@ endif ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UP
 envSet( ${UPS_PROD_NAME_UC}_VERSION, ${UPS_PROD_VERSION} )
 
 #doing the following would not get undone upon unsetup
-#execute( test $?shell \!= 1 && . ${${UPS_PROD_NAME_UC}_BIN}/trace_functions.sh, NO_UPS_ENV )
+#execute( test $?shell \!= 1 && . ${${UPS_PROD_NAME_UC}_BIN}/trace.sh.functions, NO_UPS_ENV )
 
 if ( test $?shell = 1 )
   addAlias( tnotnull_, set vv=%s && eval test \$\?$vv -eq 1 && eval test -n \"\$$vv\" )
@@ -59,8 +76,8 @@ endif ( test $?shell = 1 )
 	addAlias( tmodeS,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS %s )
 	addAlias( tfreeze, ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 0 %s )
 	addAlias( treset,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl reset %s )
-	addAlias( tdelta,  set__ opts=%s;tnotnull_ PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_delta $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_delta $opts )
-	addAlias( tenv,    ${${UPS_PROD_NAME_UC}_BIN}/trace_envvars %s )
+	addAlias( tdelta,  set__ opts=%s;tnotnull_ PAGER && ${${UPS_PROD_NAME_UC}_BIN}/trace_delta.pl $opts | $PAGER || ${${UPS_PROD_NAME_UC}_BIN}/trace_delta.pl $opts )
+	addAlias( tenv,    ${${UPS_PROD_NAME_UC}_BIN}/trace_envvars.sh %s )
 	addAlias( tonM,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  `bitN_to_mask %s` 0 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeM 1 )
 	addAlias( tonS,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 `bitN_to_mask %s` 0; ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl modeS 1 )
 	addAlias( tonT,    ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlset  0 0 `bitN_to_mask %s` )
@@ -75,14 +92,8 @@ endif ( test $?shell = 1 )
 	addAlias( toffTg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 0 `bitN_to_mask %s` )
 
 	Action = GetFQDir
-	       envSet ( ${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/$(get-directory-name subdir). )
+	       envSet ( ${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/@UPS_PRODUCT_FQ@ )
 
-table_fragment_end
-
-# Preserve tabs and formatting in emacs and vi / vim:
-
-### Local Variables:
-### tab-width: 8
-### End:
-
-# vi:set ts=8 noexpandtab:
+End:
+# End Group definition
+#*************************************************

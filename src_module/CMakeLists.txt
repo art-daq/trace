@@ -22,6 +22,6 @@ if (EXISTS /lib/modules/${KVERS}/build)
 
     add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION ${${product}_inc_dir}/../module)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION module)
 endif()
 #install_source()

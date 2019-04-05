@@ -5,49 +5,29 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 # ======================================================================
+cmake_minimum_required (VERSION 3.11)
 
-# use cmake 2.8 or later
-cmake_minimum_required (VERSION 2.8)
+if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
+  message("WARNING: CMAKE_C_COMPILER and CMAKE_CXX_COMPILER must not be set: clearing!")
+  unset(CMAKE_C_COMPILER)
+  unset(CMAKE_CXX_COMPILER)
+endif()
 
-project(TRACE)
+project(TRACE VERSION 3.14.00)
 # cetbuildtools contains our cmake modules
 
-if (IS_DIRECTORY $ENV{GCC_FQ_DIR} )
-
-file(READ ${CMAKE_CURRENT_BINARY_DIR}/cetpkg_variable_report filedata)
-#message("Read variable report: ${filedata}")
-string(REGEX MATCHALL "(CETPKG_[^\n]*)" vars "${filedata}")
-foreach(var ${vars})
-    #message("Setting variables in line ${var}")
-    string(REGEX REPLACE "(CETPKG_[^ \t]*)[ \t]*([^ ]*)" "\\1;\\2" thisvar "${var}")
-    list(GET thisvar 0 varname)
-    list(GET thisvar 1 varvalue)
-    #message("set ${varname} to ${varvalue}")
-    set(${varname} ${varvalue})
-endforeach()
-
-configure_file(ups/cetpkg_variable_report.in cetpkg_variable_report)
-set(CMAKE_C_COMPILER "$ENV{GCC_FQ_DIR}/bin/gcc")
-set(CMAKE_CXX_COMPILER "$ENV{GCC_FQ_DIR}/bin/g++")
-file(WRITE doc/compiler_info "Built TRACE utilities using GCC: $ENV{GCC_FQ_DIR}/bin/gcc!")
-endif()
-
-set( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
-if( NOT CETBUILDTOOLS_VERSION )
-  message( FATAL_ERROR "ERROR: setup cetbuildtools to get the cmake modules" )
-endif()
-set(CMAKE_MODULE_PATH $ENV{CETBUILDTOOLS_DIR}/Modules
-		      ${CMAKE_MODULE_PATH})
-
+find_package(cetmodules 1.00.00 REQUIRED)
 include(CetCMakeEnv)
-cet_cmake_env()
+cet_cmake_env(PAD_MINOR ON NO_BUILDTYPE UPS_PRODUCT_NAME TRACE)
 
-cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros
-                       EXTRA_C_FLAGS -std=gnu11 -D_GNU_SOURCE -DDO_THREADS -pthread
+cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros -Wno-implicit-fallthrough
+                       EXTRA_C_FLAGS -std=gnu11 -D_GNU_SOURCE -DDO_THREADS
                        EXTRA_CXX_FLAGS -std=c++0x)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DDO_THREADS -pthread")
-set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -lpthread")
-set(CMAKE_CXX_FLAGS "-std=c++0x -O2 -Wno-variadic-macros")
+add_definitions(-DDO_THREADS)
+set(CMAKE_THREAD_PREFER_PTHREAD ON)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 cet_report_compiler_flags()
 
 if(DEFINED ENV{USE_ASAN})
@@ -70,33 +50,32 @@ if(DEFINED ENV{USE_UBSAN})
 endif()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( cetbuildtools v3_03_00 )
 
 include_directories(include)
 
 # We're going to install the source folders directly to make sure to have the correct Makefiles
 # for building kernel modules after deployment.
 FILE(COPY Makefile DESTINATION .)
-INSTALL(FILES Makefile DESTINATION ${product}/${version})
+INSTALL(FILES Makefile DESTINATION .)
 
 # The trace utility
 add_subdirectory(src_utility)
 FILE(COPY src_utility DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY src_utility DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_utility DESTINATION . PATTERN ".svn" EXCLUDE)
 
 # Example Programs
 add_subdirectory(src_example)
 FILE(COPY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY src_example DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
 
 # Kernel Module
 add_subdirectory(src_module)
 FILE(COPY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY src_module DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
 
 # The include directory (aka the core of TRACE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY include DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY include DESTINATION . PATTERN ".svn" EXCLUDE)
 
 # scripts, including the trace_delta.pl script used for tdelta
 add_subdirectory(script)
@@ -105,10 +84,10 @@ add_subdirectory(script)
 add_subdirectory(ups)
 
 # doc - Some documentation...There should be a cet_ function for this...
-FILE(COPY README DESTINATION .)
-INSTALL(FILES README DESTINATION ${product}/${version})
 FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY doc DESTINATION ${product}/${version} PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-# packaging utility - enable building a package tarball
-include(UseCPack)
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
+  "Built TRACE utilities using ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}\n")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
+  DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})

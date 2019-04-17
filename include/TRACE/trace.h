@@ -92,7 +92,7 @@ static inline pid_t trace_gettid(void)
 #		define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
 #		define TRACE_THREAD_LOCAL thread_local
 #	elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && (defined(__clang__) || (defined __GNUC__ && defined __GNUC_MINOR__ && (10000 * __GNUC__ + 1000 * __GNUC_MINOR__) >= 49000))
-#   define TRACE_C11_ATOMICS
+#		define TRACE_C11_ATOMICS
 #		include <stdatomic.h> /* atomic_compare_exchange_weak */
 #		define TRACE_ATOMIC_T /*volatile*/ _Atomic(uint32_t)
 #		define TRACE_ATOMIC_INIT ATOMIC_VAR_INIT(0)

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1049 $
-#   $Date: 2019-02-19 15:20:09 -0600 (Tue, 19 Feb 2019) $
+#   $Revision: 1095 $
+#   $Date: 2019-04-05 10:17:42 -0500 (Fri, 05 Apr 2019) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -60,18 +60,18 @@ bitN_to_mask()
 }
 
 # could implement the "begins with 0x -> mask, otherwise list of bits???
-tonM()     { trace_cntl lvlset  `bitN_to_mask $*` 0 0; trace_cntl modeM 1; }
-tonS()     { trace_cntl lvlset  0 `bitN_to_mask $*` 0; trace_cntl modeS 1; }
-tonT()     { trace_cntl lvlset  0 0 `bitN_to_mask $*`; }
-toffM()    { trace_cntl lvlclr  `bitN_to_mask $*` 0 0; }
-toffS()    { trace_cntl lvlclr  0 `bitN_to_mask $*` 0; }
-toffT()    { trace_cntl lvlclr  0 0 `bitN_to_mask $*`; }
-tonMg()    { trace_cntl lvlsetg `bitN_to_mask $*` 0 0; trace_cntl modeM 1; }
-tonSg()    { trace_cntl lvlsetg 0 `bitN_to_mask $*` 0; trace_cntl modeS 1; }
-tonTg()    { trace_cntl lvlsetg 0 0 `bitN_to_mask $*`; }
-toffMg()   { trace_cntl lvlclrg `bitN_to_mask $*` 0 0; }
-toffSg()   { trace_cntl lvlclrg 0 `bitN_to_mask $*` 0; }
-toffTg()   { trace_cntl lvlclrg 0 0 `bitN_to_mask $*`; }
+tonM()     { trace_cntl lvlset  `bitN_to_mask "$@"` 0 0; trace_cntl modeM 1; }
+tonS()     { trace_cntl lvlset  0 `bitN_to_mask "$@"` 0; trace_cntl modeS 1; }
+tonT()     { trace_cntl lvlset  0 0 `bitN_to_mask "$@"`; }
+toffM()    { trace_cntl lvlclr  `bitN_to_mask "$@"` 0 0; }
+toffS()    { trace_cntl lvlclr  0 `bitN_to_mask "$@"` 0; }
+toffT()    { trace_cntl lvlclr  0 0 `bitN_to_mask "$@"`; }
+tonMg()    { trace_cntl lvlsetg `bitN_to_mask "$@"` 0 0; trace_cntl modeM 1; }
+tonSg()    { trace_cntl lvlsetg 0 `bitN_to_mask "$@"` 0; trace_cntl modeS 1; }
+tonTg()    { trace_cntl lvlsetg 0 0 `bitN_to_mask "$@"`; }
+toffMg()   { trace_cntl lvlclrg `bitN_to_mask "$@"` 0 0; }
+toffSg()   { trace_cntl lvlclrg 0 `bitN_to_mask "$@"` 0; }
+toffTg()   { trace_cntl lvlclrg 0 0 `bitN_to_mask "$@"`; }
 
 tenv()
 {   tcntlexe=`which trace_cntl`

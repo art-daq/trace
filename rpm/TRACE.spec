@@ -52,11 +52,15 @@ Version: %{trace_version}
 Release: %{?trace_revision}.1%{?dist}%{?unclean}
 
 BuildRequires: redhat-rpm-config, perl, make, bash, gcc
-BuildRequires: gawk, coreutils, svn, gcc-c++
+BuildRequires: gawk, coreutils, sed, svn, gcc-c++
+BuildRequires: kernel-devel = %(echo %{kversion} | sed -e 's/.%{_target_cpu}//')
 
 %if 0%{?rhel} > 0
 # Add note on any non whitelisted ABI symbols
 BuildRequires: kernel-abi-whitelists
+%if 0%{?rhel} > 6
+ExcludeArch:	%{ix86}
+%endif
 %endif
 
 # Magic hidden here.

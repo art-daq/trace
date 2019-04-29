@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1091 $$Date: 2019-03-21 22:22:32 -0500 (Thu, 21 Mar 2019) $"
+#define TRACE_REV "$Revision: 1097 $$Date: 2019-04-21 09:35:58 -0500 (Sun, 21 Apr 2019) $"
 
 #ifndef __KERNEL__
 
@@ -75,7 +75,7 @@ static inline pid_t trace_gettid(void)
 #	endif
 
 /* this first check is for Darwin 15 */
-#	if defined(__cplusplus) && (__cplusplus == 201103L) && defined(__clang_major__) && (__clang_major__ == 7)
+#	if defined(__cplusplus) && (__cplusplus == 201103L) && defined(__apple_build_version__) && defined(__clang_major__) && (__clang_major__ == 7)
 #		include <atomic> /* atomic<> */
 #		include <memory> /* std::unique_ptr */
 #		define TRACE_ATOMIC_T std::atomic<uint32_t>
@@ -91,7 +91,8 @@ static inline pid_t trace_gettid(void)
 #		define TRACE_ATOMIC_LOAD(ptr) atomic_load(ptr)
 #		define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
 #		define TRACE_THREAD_LOCAL thread_local
-#	elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+#	elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && (defined(__clang__) || (defined __GNUC__ && defined __GNUC_MINOR__ && (10000 * __GNUC__ + 1000 * __GNUC_MINOR__) >= 49000))
+#		define TRACE_C11_ATOMICS
 #		include <stdatomic.h> /* atomic_compare_exchange_weak */
 #		define TRACE_ATOMIC_T /*volatile*/ _Atomic(uint32_t)
 #		define TRACE_ATOMIC_INIT ATOMIC_VAR_INIT(0)
@@ -664,7 +665,7 @@ static uint32_t trace_lock(TRACE_ATOMIC_T *atomic_addr)
 #if defined(__KERNEL__)
 	while (cmpxchg(atomic_addr, expect, desired) != expect)
 		if (++hung > 100000000) break;
-#elif (defined(__cplusplus) && (__cplusplus >= 201103L)) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L)) || defined(TRACE_C11_ATOMICS)
 	while (!atomic_compare_exchange_weak(atomic_addr, &expect, desired))
 	{
 		expect = 0;
@@ -689,7 +690,7 @@ static void trace_unlock(TRACE_ATOMIC_T *atomic_addr)
 {
 #if defined(__KERNEL__)
 	TRACE_ATOMIC_STORE(atomic_addr, (uint32_t)0);
-#elif (defined(__cplusplus) && (__cplusplus >= 201103L)) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L)) || defined(TRACE_C11_ATOMICS)
 	atomic_store(atomic_addr, (uint32_t)0);
 #else
 	TRACE_ATOMIC_STORE(atomic_addr, (uint32_t)0);
@@ -1168,7 +1169,7 @@ tod: 132348  133161
 		myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
 		desired = IDXCNT_ADD(myIdxCnt, 1);
 	}
-#elif (defined(__cplusplus) && (__cplusplus >= 201103L)) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#elif (defined(__cplusplus) && (__cplusplus >= 201103L)) || defined(TRACE_C11_ATOMICS)
 	while (!atomic_compare_exchange_weak(&traceControl_rwp->wrIdxCnt, &myIdxCnt, desired))
 	{
 		++get_idxCnt_retries;
@@ -2348,7 +2349,7 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 				TRACE_INIT_CHECK                                                                                                     \
 				{                                                                                                                    \
 					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                         \
-					if (tid_ == -1) { tid_ = name2TID(nn[0] ? nn : TRACE_NAME); }                                                    \
+					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                   \
 					*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                              \
 					*do_s_ = (s_enabled_ && traceControl_rwp->mode.bits.S && (s_frc_ || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))));  \
 					if (*do_s_)                                                                                                      \
@@ -2374,7 +2375,7 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 				TRACE_INIT_CHECK                                                                                                                                         \
 				{                                                                                                                                                        \
 					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                             \
-					if (tid_ == -1) { tid_ = name2TID(nn[0] ? nn : TRACE_NAME); }                                                                                        \
+					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                                                       \
 					static TRACE_THREAD_LOCAL limit_info_t _info;                                                                                                        \
 					*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                                                                  \
 					*do_s_ = (s_enbld && traceControl_rwp->mode.bits.S && (s_frc || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))) && limit_do_print(tvp, &_info, ins_, sz)); \

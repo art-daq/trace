@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1049 $';
-#   $Date: 2019-02-19 15:20:09 -0600 (Tue, 19 Feb 2019) $
+$version = '$Revision: 1099 $';
+#   $Date: 2019-04-22 22:25:10 -0500 (Mon, 22 Apr 2019) $
 
 use Time::Local; # timelocal()
 
@@ -619,11 +619,18 @@ if ("$opt_stats")
 			#print STDOUT "\nin stats delta col, data=$data\n";
 			if ($data =~ /^\s*[-]{0,1}\d+/o)
 			{   if ($col_cntl[$idx]{"cnt$cpu"})
-			    {   if    ($ss eq ave) { $col_cntl[$idx]{"${ss}$cpu"} = $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"}; }
+			    {   $max_outchars = $delta_width-1;
+				if    ($ss eq ave) {
+				    if ( $col_cntl[$idx]{"tot$cpu"} =~ /\./ ) { # if non-integer (i.e has a decimal point)
+					$col_cntl[$idx]{"${ss}$cpu"} = sprintf( "%*f", $max_outchars, $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"});
+				    } else {
+				        $col_cntl[$idx]{"${ss}$cpu"} = $col_cntl[$idx]{"tot$cpu"} / $col_cntl[$idx]{"cnt$cpu"};
+				    }
+				    #print STDERR "ave = " . $col_cntl[$idx]{"${ss}$cpu"} . "\n";
+				}
 				else               { $col_cntl[$idx]{"${ss}$cpu"} =~ s/^ *//; } # strip leading spaces
                                 # since we are using strings (to get arbitrarily large i.e. 64bit, numbers,
                                 # we should implement the "out of range" functionality...
-				$max_outchars = $delta_width-1;
 				if (   $col_cntl[$idx]{"${ss}$cpu"} =~ /^\d{1,$max_outchars}\./
 				    || length($col_cntl[$idx]{"${ss}$cpu"}) <= $max_outchars )
 				{   $delta = sprintf( "%*.*s", $delta_width, $max_outchars, $col_cntl[$idx]{"${ss}$cpu"} );

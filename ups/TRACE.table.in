@@ -39,6 +39,8 @@ Common:
     # Prepend ROOT_INCLUDE_PATH for dictionaries
     pathPrepend(ROOT_INCLUDE_PATH, ${${UPS_PROD_NAME_UC}_INC})
 
+    pathPrepend(MANPATH, ${UPS_PROD_DIR}/@CMAKE_INSTALL_DOCDIR@)
+
 # Copied in from product_deps
 envSet( ${UPS_PROD_NAME_UC}_BIN, ${${UPS_PROD_NAME_UC}_FQ_DIR}/bin )
 if ( test `expr "${${UPS_PROD_NAME_UC}_BIN}" : '.*[/.]/'` -eq 0 -a -d "${${UPS_PROD_NAME_UC}_BIN}" )

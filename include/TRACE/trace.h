@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1091 $$Date: 2019-03-21 22:22:32 -0500 (Thu, 21 Mar 2019) $"
+#define TRACE_REV "$Revision: 1097 $$Date: 2019-04-21 09:35:58 -0500 (Sun, 21 Apr 2019) $"
 
 #ifndef __KERNEL__
 
@@ -2349,7 +2349,7 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 				TRACE_INIT_CHECK                                                                                                     \
 				{                                                                                                                    \
 					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                         \
-					if (tid_ == -1) { tid_ = name2TID(nn[0] ? nn : TRACE_NAME); }                                                    \
+					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                   \
 					*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                              \
 					*do_s_ = (s_enabled_ && traceControl_rwp->mode.bits.S && (s_frc_ || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))));  \
 					if (*do_s_)                                                                                                      \
@@ -2375,7 +2375,7 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 				TRACE_INIT_CHECK                                                                                                                                         \
 				{                                                                                                                                                        \
 					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                             \
-					if (tid_ == -1) { tid_ = name2TID(nn[0] ? nn : TRACE_NAME); }                                                                                        \
+					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                                                       \
 					static TRACE_THREAD_LOCAL limit_info_t _info;                                                                                                        \
 					*do_m_ = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                                                                  \
 					*do_s_ = (s_enbld && traceControl_rwp->mode.bits.S && (s_frc || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))) && limit_do_print(tvp, &_info, ins_, sz)); \

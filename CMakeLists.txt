@@ -16,13 +16,28 @@ endif()
 project(TRACE VERSION 3.14.00)
 # cetbuildtools contains our cmake modules
 
-find_package(cetmodules 1.00.00 REQUIRED)
+find_package(cetmodules 1.02.01 REQUIRED)
 include(CetCMakeEnv)
 cet_cmake_env(PAD_MINOR ON NO_BUILDTYPE UPS_PRODUCT_NAME TRACE)
 
-cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros -Wno-implicit-fallthrough
-                       EXTRA_C_FLAGS -std=gnu11 -D_GNU_SOURCE -DDO_THREADS
-                       EXTRA_CXX_FLAGS -std=c++0x)
+# Language standard requests.
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 11)
+
+if ((CMAKE_CXX_COMPILER_ID STREQUAL Clang AND
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 4.0.0) OR
+    (CMAKE_CXX_COMPILER_ID STREQUAL AppleClang AND
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 7.0.0) OR
+    (CMAKE_CXX_COMPILER_ID STREQUAL GNU AND
+     CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 7.1.0))
+  set(IF_FLAG -Wno-implicit-fallthrough)
+else()
+  set(IF FLAG)
+endif()
+
+cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros ${IF_FLAG}
+                       EXTRA_C_FLAGS -D_GNU_SOURCE -DDO_THREADS)
+
 add_definitions(-DDO_THREADS)
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)

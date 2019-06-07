@@ -16,7 +16,7 @@ endif()
 project(TRACE VERSION 3.14.00)
 # cetbuildtools contains our cmake modules
 
-find_package(cetmodules 1.02.01 REQUIRED)
+find_package(cetmodules 1.02.02 REQUIRED)
 include(CetCMakeEnv)
 cet_cmake_env(PAD_MINOR ON NO_BUILDTYPE UPS_PRODUCT_NAME TRACE)
 

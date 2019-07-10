@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1097 $$Date: 2019-04-21 09:35:58 -0500 (Sun, 21 Apr 2019) $"
+#define TRACE_REV "$Revision: 1117 $$Date: 2019-07-10 08:45:34 -0500 (Wed, 10 Jul 2019) $"
 
 #ifndef __KERNEL__
 
@@ -165,8 +165,8 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	endif        /* userspace arch */
 
 #	define TRACE_GETTIMEOFDAY(tvp) gettimeofday(tvp, NULL)
-#	define TRACE_PRINT printf
-#	define TRACE_VPRINT vprintf
+#	define TRACE_PRN printf
+#	define TRACE_VPRN vprintf
 #	define TRACE_INIT_CHECK if ((traceTID != -1) || (traceInit(TRACE_NAME) == 0)) /* See note by traceTID decl/def below */
 
 #else /* __KERNEL__ */
@@ -187,8 +187,8 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	define TRACE_ATOMIC_STORE(ptr, val) *(ptr) = val
 #	define TRACE_THREAD_LOCAL
 #	define TRACE_GETTIMEOFDAY(tvp) do_gettimeofday(tvp)
-#	define TRACE_PRINT printk
-#	define TRACE_VPRINT vprintk
+#	define TRACE_PRN printk
+#	define TRACE_VPRN vprintk
 /*static int trace_no_init_cnt=0;*/
 #	define TRACE_INIT_CHECK if ((traceTID != -1) || ((traceTID = name2TID(TRACE_NAME)) != -1))
 #	ifndef MODULE
@@ -200,7 +200,7 @@ int trace_sched_switch_hook_add(void); /* for when compiled into kernel */
 
 /* Maximum UDP Datagram Data Length */
 #define TRACE_STREAMER_MSGMAX 0x2000 /* 0x3400 seems to work for artdaq, but 0x3800 does not. 65507 is way too much for when TraceStreamer is static thread_local */
-#define TRACE_USER_MSGMAX 0x1800
+#define TRACE_USER_MSGMAX 0x1800     /* Note: currently user msg part will be 10's of bytes less than this depending upon TRACE_PRINT format */
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ 192
 #define TRACE_DFLT_MAX_PARAMS 10
@@ -225,6 +225,10 @@ int trace_sched_switch_hook_add(void); /* for when compiled into kernel */
 static const char *TRACE_NAME = NULL;
 #elif !defined(TRACE_NAME) && defined(__KERNEL__)
 #	define TRACE_NAME TRACE_DFLT_NAME /* kernel doesn't have env.var, so different init path*/
+#endif
+
+#if !defined(TRACE_PRINT) && !defined(__KERNEL__)
+static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have separator */
 #endif
 
 #ifndef TRACE_PRINT_FD
@@ -585,9 +589,8 @@ TRACE_DECL(pid_t tracePid, = 0);
 TRACE_DECL(int tracePrintFd, = 1);
 TRACE_DECL(TRACE_ATOMIC_T traceInitLck, = TRACE_ATOMIC_INIT);
 TRACE_DECL(uint32_t traceInitLck_hung_max, = 0);
-TRACE_DECL(const char *tracePrintFmt, = NULL);  /* hardcoded default below that can only be overridden via env.var */
-TRACE_DECL(const char *tracePrintEndL, = NULL); /* hardcoded default below that can only be overridden via env.var */
-TRACE_DECL(size_t tracePrintEndLen, = -1);
+TRACE_DECL(const char *traceTimeFmt, = NULL);  /* hardcoded default below that can only be overridden via env.var */
+TRACE_DECL(const char *tracePrint_cntl, = NULL); /* hardcoded default below that can only be overridden via env.var */
 static char traceFile_static[PATH_MAX] = {0};
 static struct traceControl_s *traceControl_p_static = NULL;
 #endif
@@ -653,7 +656,8 @@ static uint32_t IDXCNT_ADD(uint32_t idxCnt, int32_t add)
 		 : (cur) - (prv)-traceControl_p->largest_zero_offset)
 
 #ifndef TRACE_LOG_FUNCTION
-#	define TRACE_LOG_FUNCTION(tvp, tid, lvl, insert, file, line, nargs, ...) trace_user(tvp, tid, lvl, insert, nargs, __VA_ARGS__)
+#	define TRACE_LOG_FUNCTION(tvp, tid, lvl, insert, file, line, nargs, ...) \
+	trace_user(tvp, tid, lvl, insert, file, line, nargs, __VA_ARGS__)
 #elif defined(TRACE_LOG_FUN_PROTO)
 /* prototype for TRACE_LOG_FUNCTION as compiled in Streamer class below */
 TRACE_LOG_FUN_PROTO;
@@ -742,7 +746,7 @@ static inline int limit_do_print(struct timeval *tvp, limit_info_t *info, char *
 		{
 			if (insert)
 			{
-				strncpy(insert, "[RATE LIMIT] ", sz);
+				strncpy(insert, "[RATE LIMIT]", sz);
 				/*fprintf( stderr, "[LIMIT (%u/%.1fs) REACHED]\n", traceControl_rwp->limit_cnt_limit, (float)traceControl_rwp->limit_span_on_ms/1000000);*/
 			}
 			info->state = lsLIMITED;
@@ -770,7 +774,7 @@ static inline int limit_do_print(struct timeval *tvp, limit_info_t *info, char *
 		{ /* done limiting, start new timespace */
 			if (insert)
 			{
-				snprintf(insert, sz, "[RESUMING dropped: %u] ", info->cnt);
+				snprintf(insert, sz, "[RESUMING dropped: %u]", info->cnt);
 			}
 			info->state = lsFREE;
 			info->span_start_ms = tnow_ms;
@@ -787,6 +791,24 @@ static inline int limit_do_print(struct timeval *tvp, limit_info_t *info, char *
 	return (do_print);
 } /* limit_do_print */
 
+#ifndef TRACE_ADJUST_FILE
+SUPPRESS_NOT_USED_WARN
+static const char * trace_path_components( const char * in_cp, int n_components )
+{
+	const char *tmp_cp = in_cp+strlen(in_cp);
+	if (n_components <= 0)
+		return (in_cp);
+	for (; tmp_cp != in_cp; --tmp_cp) {
+		if (*tmp_cp == '/' && --n_components == 0)
+			break;
+	}
+	if (*tmp_cp == '/')
+		++tmp_cp;
+	return (tmp_cp);
+}
+#	define TRACE_ADJUST_FILE(FFF) trace_path_components( FFF, 2 )
+#endif
+
 #ifndef TRACE_4_LVLSTRS
 #	define TRACE_4_LVLSTRS "err", "wrn", "nfo", "dbg"
 #endif
@@ -802,12 +824,12 @@ static inline int limit_do_print(struct timeval *tvp, limit_info_t *info, char *
 static const char _lvlstr[64][4] = {TRACE_4_LVLSTRS, TRACE_60_LVLSTRS};
 
 SUPPRESS_NOT_USED_WARN
-static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const char *msg, va_list ap)
+static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
 #ifdef __KERNEL__
 	if (!trace_allow_printk) return;
-	TRACE_VPRINT(msg, ap);
-	if (msg[strlen(msg) - 1] != '\n') TRACE_PRINT("\n");
+	TRACE_VPRN(msg, ap);
+	if (msg[strlen(msg) - 1] != '\n') TRACE_PRN("\n");
 #else
 	/* I format output in a local output buffer (with specific/limited size)
 	   first. There are 2 main reasons that this is done:
@@ -819,201 +841,170 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 	char tbuf[0x100];
 	size_t printed = 0;
 	char *cp;
+	const char *print_cntl;
+	size_t print_cntl_len;
 	struct tm tm_s;
+	int retval=0, msg_printed=0;
 	int quiet_warn = 0;
-	if (tracePrintFmt == NULL)
-	{
-		/* no matter who writes, it should basically be the same thing */
-		if ((cp = getenv("TRACE_TIME_FMT")) != NULL)
-		{
-			tracePrintFmt = cp; /* single write here */
-		}
-		else
-		{
-			tracePrintFmt = TRACE_DFLT_TIME_FMT; /* OR single write here */
-		}
-	}
-	if (tracePrintEndLen == (size_t)-1)
-	{
-		if ((cp = getenv("TRACE_ENDL")) != NULL && *cp != '\0')
-		{
-			tracePrintEndL = cp;
-			tracePrintEndLen = strlen(cp);
-			while (tracePrintEndLen && cp[tracePrintEndLen - 1] == '\n')
-			{ /* strip off ending newlines and adjust endlen */
-				cp[--tracePrintEndLen] = '\0';
+
+	if (tracePrint_cntl == NULL) {
+		if ((cp = getenv("TRACE_PRINT")) != NULL) {
+			tracePrint_cntl = cp;
+			if (strlen(tracePrint_cntl) > 200) {/* cannot see how this could be OK/desirable */
+				fprintf(stderr,"Invalid TRACE_PRINT environment variable value.\n" );
+				tracePrint_cntl = TRACE_PRINT; /* assume this (potentially user supplied) is more valid */
 			}
-		}
-		else
-		{
-			tracePrintEndLen = 0;
-		}
+		} else
+			tracePrint_cntl = TRACE_PRINT;
 	}
-	if (tvp->tv_sec == 0)
-	{
-		TRACE_GETTIMEOFDAY(tvp);
+	
+	obuf[0] = '\0';
+	print_cntl = tracePrint_cntl;
+	if(*print_cntl == '\0')
+		print_cntl = "%m";
+	print_cntl_len = strlen(print_cntl); /* used to make sure end of TRACE_PRINT can be printed even with too large msg */
+	/* NOTE: could count '%' and times 2 and substract that from print_cntl_len */
+#	define PRINTSIZE(printed) (printed < (sizeof(obuf)-print_cntl_len-1))? sizeof(obuf)-print_cntl_len-1-printed: 0
+#	define PRMIN(rr,ss) ( (((size_t)(rr))<(ss)) ? (size_t)(rr) : (ss) )
+	for (; *print_cntl; ++print_cntl) {
+		if (*print_cntl != '%') {
+			if (printed < (sizeof(obuf)-1)) /* -1 to leave room for final \n */
+				obuf[printed++] = *print_cntl;
+			continue;
+		}
+		++print_cntl; /* inc past % */
+		switch (*print_cntl) {
+		case '%': case ' ': case ':': case ';': case '\t': case '\n': case '|': case '[': case ']': case ',': case '-': case '_': /* separators */
+			if (printed < (sizeof(obuf)-1)) /* -1 to leave room for final \n */
+				obuf[printed++] = *print_cntl;
+			continue; /* avoid any further adjustment to "printed" variable */
+		case 's': /* "severity" -- just first charater of level string */
+			if (printed < (sizeof(obuf)-1) && _lvlstr[lvl & LVLBITSMSK]) /* -1 to leave room for final \n */
+				obuf[printed++] = _lvlstr[lvl & LVLBITSMSK][0];
+			continue; /* avoid any further adjustment to "printed" variable */
+		case 'C': /* CPU i.e. core */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%d", trace_getcpu() );
+			break;
+		case 'T': /* Time */
+			if (tvp->tv_sec == 0)
+				TRACE_GETTIMEOFDAY(tvp);
+			if (traceTimeFmt == NULL) {
+				/* no matter who writes, it should basically be the same thing */
+				if ((cp = getenv("TRACE_TIME_FMT")) != NULL)
+					traceTimeFmt = cp; /* single write here */
+				else
+					traceTimeFmt = TRACE_DFLT_TIME_FMT; /* OR single write here */
+			}
+#			if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#				pragma GCC diagnostic push
+#				pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#			endif
+			localtime_r((time_t *)&tvp->tv_sec, &tm_s);
+#			if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#				pragma GCC diagnostic pop
+#			endif
+			strftime(tbuf, sizeof(tbuf), traceTimeFmt, &tm_s);
+			retval = snprintf(&obuf[printed], PRINTSIZE(printed), tbuf, (int)tvp->tv_usec);	/* possibly (probably) add usecs */
+			break;
+		case 'I': /* TrcId */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%d", TrcId );
+			break;
+		case 'i': /* thread id */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%d", traceTid );
+			break;
+		case 'L': /* level string */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s"
+			                    , _lvlstr[lvl & LVLBITSMSK] ? _lvlstr[lvl & LVLBITSMSK] : "" );
+			break;
+		case 'l': /* lvl int */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%u", lvl );
+			break;
+		case 'M': /* msg limit insert */
+			if (insert[0]) {
+				/* space separator only printed if insert is non-empty */
+				retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s ", insert);
+				printed += PRMIN(retval,PRINTSIZE(printed));
+			}
+			/*break; FALL through */
+		case 'm': /* msg */
+			if (nargs) {
+				retval = msg_printed = vsnprintf(&(obuf[printed]), PRINTSIZE(printed), msg, ap);
+			} else {
+				/* don't do any parsing for format specifiers in the msg -- tshow will
+				   also know to do this on the memory side of things */
+				retval = msg_printed = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", msg);
+			}
+			break;
+		case 'f': /* filename */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", TRACE_ADJUST_FILE(file) );
+			break;
+		case 'N': /* trace name - not padded */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s"
+			                    , traceNamLvls_p[TrcId].name );
+			break;
+		case 'n': /* trace name - padded */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%*s"
+			                    , traceControl_rwp->longest_name, traceNamLvls_p[TrcId].name );
+			break;
+		case 'P': /* process id */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%d", tracePid );
+			break;
+		case 't':
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", insert);
+			break;
+		case 'u': /* lineNumber */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%d", line );
+			break;
+		case '#': /* nargs */
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%u", nargs );
+			break;
+		}
+		printed += PRMIN(retval,PRINTSIZE(printed));
 	}
-#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
-#		pragma GCC diagnostic push
-#		pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
-#	endif
-	localtime_r((time_t *)&tvp->tv_sec, &tm_s);
-#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
-#		pragma GCC diagnostic pop
-#	endif
-	strftime(tbuf, sizeof(tbuf), tracePrintFmt, &tm_s);
-	printed = snprintf(obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec);                                    /* possibly (probably) add usecs */
 
-#	if 1
-	printed += snprintf(&(obuf[printed]), sizeof(obuf) - printed, &(" %*s %s %s")[printed == 0 ? 1 : 0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
-						,
-						traceControl_rwp->longest_name, traceNamLvls_p[TrcId].name, _lvlstr[lvl & LVLBITSMSK] ? _lvlstr[lvl & LVLBITSMSK] : "", insert);
-
-	if (nargs)
-	{
-		printed += vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);
-	}
-	else
-	{ /* don't do any parsing for format specifiers in the msg -- tshow will
-		 also know to do this on the memory side of things */
-		printed += snprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, "%s", msg);
-	}
-
-	if (tracePrintEndLen)
-	{
-		if (obuf[printed - 1] == '\n')
-		{ /* roll back any trailing nl at this point */
-			--printed;
+	/* a restriction on the TRACE_PRINT spec is that it must print the message */
+	if (msg_printed == 0) {
+		if (nargs) {
+			retval = msg_printed = vsnprintf(&(obuf[printed]), PRINTSIZE(printed), msg, ap);
+		} else {
+			/* don't do any parsing for format specifiers in the msg -- tshow will
+			   also know to do this on the memory side of things */
+			retval = msg_printed = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", msg);
 		}
-		if (printed >= (sizeof(obuf) - 1 - tracePrintEndLen))
-		{                                                                        /* sizeof(obuf)-1 to leave room for potential nl */
-			strcpy(&obuf[sizeof(obuf) - 1 - tracePrintEndLen], tracePrintEndL);  //NOLINT
-			printed = sizeof(obuf) - 1;
-		}
-		else
-		{
-			strcpy(&obuf[printed], tracePrintEndL);  //NOLINT
-			printed += tracePrintEndLen;
-		}
+		printed += PRMIN(retval,PRINTSIZE(printed));
 	}
-
-	/* why not use writev??? B/c when writing to stdout, only each individual
-	   vector (not the whole array of vectors) is atomic/thread safe */
-	if (printed < (int)sizeof(obuf))
-	{
+	
+	if (printed < (int)sizeof(obuf)) {
 		/* there is room for the \n */
 		/* buf first see if it is needed */
-		if (obuf[printed - 1] != '\n')
-		{
+		if (obuf[printed - 1] != '\n') {
 			obuf[printed++] = '\n'; /* overwriting \0 is OK as we will specify the amount to write */
 									/*printf("added \\n printed=%d\n",printed);*/
 		}
 		/*else printf("already there printed=%d\n",printed);*/
-		quiet_warn += write(tracePrintFd, obuf, printed);
-	}
-	else
-	{
+		quiet_warn = write(tracePrintFd, obuf, printed);
+	} else {
 		/* obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n */
-		if (obuf[sizeof(obuf) - 2] == '\n')
-		{
-			quiet_warn += write(tracePrintFd, obuf, sizeof(obuf) - 1);
-		}
-		else
-		{
+		if (obuf[sizeof(obuf) - 2] == '\n') {
+			quiet_warn = write(tracePrintFd, obuf, sizeof(obuf) - 1);
+		} else {
 			obuf[sizeof(obuf) - 1] = '\n';
-			quiet_warn += write(tracePrintFd, obuf, sizeof(obuf));
+			quiet_warn = write(tracePrintFd, obuf, sizeof(obuf));
 			/*printf("changed \\0 to \\n printed=%d\n",);*/
 		}
 	}
-	if (quiet_warn == -1)
-	{
+	if (quiet_warn == -1) {
 		perror("writeTracePrintFd");
 	}
-#	else
-	/* NOTE: even though man pages seem to indicate the single writev should be atomic:
-	   ...
-	   The data transfers performed by readv() and writev()  are  atomic:  the
-	   data  written  by  writev()  is  written  as a single block that is not
-	   intermingled with output  from  writes  in  other  processes  (but  see
-	   pipe(7) for an exception); analogously, readv() is guaranteed to read a
-	   contiguous block of data from the file, regardless of  read  operations
-	   performed  in  other  threads  or  processes that have file descriptors
-	   referring to the same open file description (see open(2)).
-	   ...
-
-	   The above man page appears to be wrong, at least for SL7 -
-	   Linux mu2edaq01.fnal.gov 3.10.0-514.10.2.el7.x86_64 #1 SMP Thu Mar 2 11:21:24 CST 2017 x86_64 x86_64 x86_64 GNU/Linux
-
-/home/ron/work/tracePrj/trace
-mu2edaq01 :^) tcntl test-threads 0 -l5 & tcntl test-threads 0 -l5 & tcntl test-threads 0 -l5
-[3] 28144
-[4] 28145
-11-13 10:31:23.604651    TRACE wrn 11-13 10:31:23.604651    TRACE wrn before pthread_create - main_tid=28146 loops=5, threads=0, dly_ms=0 traceControl_p=0x613740before pthread_create - main_tid=28147 loops=5, threads=0, dly_ms=0 traceControl_p=0x613740
-
-11-13 10:31:23.604736    TRACE inf 11-13 10:31:23.604736    TRACE inf tidx=0 loop=1 of 5 tid=28146 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message manglingtidx=0 loop=1 of 5 tid=28147 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
-
-11-13 10:31:23.604746    TRACE inf 11-13 10:31:23.604747    TRACE inf tidx=0 loop=1 of 5 tid=28146 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9tidx=0 loop=1 of 5 tid=28147 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
-
-11-13 10:31:23.604762     TRACE inf 11-13 10:31:23.604762     TRACE inf tidx=0 loop=2 of 5 tid=28146 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message manglingtidx=0 loop=2 of 5 tid=28147 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
-
-11-13 10:31:23.604772     TRACE inf 11-13 10:31:23.604773     TRACE inf tidx=0 loop=2 of 5 tid=28146 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9tidx=0 loop=2 of 5 tid=28147 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
-
-11-13 10:31:23.604780     TRACE inf 11-13 10:31:23.604781     TRACE inf tidx=0 loop=3 of 5 tid=28146 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message manglingtidx=0 loop=3 of 5 tid=28147 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
-...
-11-13 10:31:23.604895     TRACE inf tidx=0 loop=4 of 5 tid=28148 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
-11-13 10:31:23.605072     TRACE inf tidx=0 loop=5 of 5 tid=28148 I need to test longer messages. They need to be about 256 characters - longer than the circular memory message buffer size. This will check for message mangling
-11-13 10:31:23.605077     TRACE inf tidx=0 loop=5 of 5 tid=28148 this is the second long message - second0 second1 second2 second3 second4 second5 second6 second7 second8 second9
-11-13 10:31:23.605082     TRACE wrn after pthread_join - main_tid=28148 traceControl_p=0x613740
---2017-11-13_10:31:23--
-	*/
-	{
-		struct iovec iov[6];
-		int iovcnt = 0;
-		printed += snprintf(&(obuf[printed]), sizeof(obuf) - printed, &(" %*s %s ")[printed == 0 ? 1 : 0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
-							,
-							traceControl_rwp->longest_name, traceNamLvls_p[TrcId].name, _lvlstr[lvl & LVLBITSMSK] ? _lvlstr[lvl & LVLBITSMSK] : "");
-		iov[iovcnt].iov_base = obuf;
-		iov[iovcnt++].iov_len = printed;
-		if (insert && insert[0])
-		{
-			iov[iovcnt].iov_base = (void *)insert;
-			iov[iovcnt++].iov_len = strlen(insert);
-		}
-		if (nargs)
-		{
-			int sts;
-			iov[iovcnt].iov_base = &(obuf[printed]);
-			sts = vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);
-			if (obuf[printed + sts - 1] == '\n')
-				iov[iovcnt++].iov_len = sts - 1;
-			else
-				iov[iovcnt++].iov_len = sts;
-		}
-		else
-		{
-			int len = strlen(msg);
-			iov[iovcnt].iov_base = (void *)msg;
-			iov[iovcnt++].iov_len = msg[len - 1] == '\n' ? len - 1 : len;
-		}
-		if (tracePrintEndLen)
-		{
-			iov[iovcnt].iov_base = (void *)tracePrintEndL;
-			iov[iovcnt++].iov_len = tracePrintEndLen;
-		}
-		iov[iovcnt].iov_base = (void *)"\n";
-		iov[iovcnt++].iov_len = 1;
-		quiet_warn += writev(tracePrintFd, iov, iovcnt);
-		if (quiet_warn == -1) perror("writevTracePrintFd");
-	}
-#	endif
+	/*printf("sizeof(obuf)=%zu retval=%d msg_printed=%d printed=%zd\n",sizeof(obuf), retval, msg_printed, printed);*/
 #endif
 } /* vtrace_user */
 SUPPRESS_NOT_USED_WARN
-static void trace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const char *msg, ...)
+static void trace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	vtrace_user(tvp, TrcId, lvl, insert, nargs, msg, ap);
+	vtrace_user(tvp, TrcId, lvl, insert, file, line, nargs, msg, ap);
 	va_end(ap);
 } /* trace_user - const char* */
 #ifdef __cplusplus
@@ -1022,11 +1013,11 @@ static void trace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char 
 #		pragma GCC diagnostic ignored "-Wvarargs"
 #	endif
 SUPPRESS_NOT_USED_WARN
-static void trace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, uint16_t nargs, const std::string &msg, ...)
+static void trace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char *insert, const char* file, int line, uint16_t nargs, const std::string &msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	vtrace_user(tvp, TrcId, lvl, insert, nargs, msg.c_str(), ap);
+	vtrace_user(tvp, TrcId, lvl, insert, file, line, nargs, msg.c_str(), ap);
 	va_end(ap);
 } /* trace_user - std::string& */
 #	if (__cplusplus >= 201103L)
@@ -1157,7 +1148,7 @@ tod: 132348  133161
 #if TRACE_TSC_EXPERIMENT == 1
 	if (!trace_lock(&traceControl_rwp->namelock))
 	{
-		TRACE_PRINT("trace_lock: namelock hung?\n");
+		TRACE_PRN("trace_lock: namelock hung?\n");
 	}
 #endif
 	myIdxCnt = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
@@ -1328,7 +1319,7 @@ static int32_t name2TID(const char *nn)
 	*/
 	if (!trace_lock(&traceControl_rwp->namelock))
 	{
-		TRACE_PRINT("trace_lock: namelock hung?\n");
+		TRACE_PRN("trace_lock: namelock hung?\n");
 	}
 	for (ii = 0; ii < traceControl_p->num_namLvlTblEnts; ++ii)
 	{
@@ -1582,7 +1573,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 		char *name_spec;
 		if (slen > 1 || (slen == 1 && !strpbrk(&cmd[6], "MST")))
 		{
-			TRACE_PRINT("only M,S,or T allowed after lvl...\n");
+			TRACE_PRN("only M,S,or T allowed after lvl...\n");
 			va_end(ap);
 			return (-1);
 		}
@@ -1650,7 +1641,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 			default:
 				if (nargs != 4)
 				{ /* "name" plus 3 lvls */
-					TRACE_PRINT("need 3 lvlmsks; %d given\n", nargs - 1);
+					TRACE_PRN("need 3 lvlmsks; %d given\n", nargs - 1);
 					va_end(ap);
 					return (-1);
 				}
@@ -1745,7 +1736,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 			default:
 				if (nargs != 3)
 				{
-					TRACE_PRINT("need 3 lvlmsks; %d given\n", nargs);
+					TRACE_PRN("need 3 lvlmsks; %d given\n", nargs);
 					va_end(ap);
 					return (-1);
 				}
@@ -1827,7 +1818,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 		}
 		else
 		{
-			TRACE_PRINT("limit needs 0 or 2 or 3 args (cnt,span_of[,span_off]) %d given\n", nargs);
+			TRACE_PRN("limit needs 0 or 2 or 3 args (cnt,span_of[,span_off]) %d given\n", nargs);
 			va_end(ap);
 			return (-1);
 		}
@@ -2148,7 +2139,7 @@ static int traceInit(const char *_name)
 
 	if (!trace_lock(&traceInitLck))
 	{
-		TRACE_PRINT("trace_lock: InitLck hung?\n");
+		TRACE_PRN("trace_lock: InitLck hung?\n");
 	}
 #		ifdef TRACE_DEBUG_INIT
 	printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", traceControl_p, traceControl_p_static, _name, traceTid, traceTID);
@@ -2748,6 +2739,18 @@ public:
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
+			args[argCount++].i = r;
+		}
+		return *this;
+	}
+	inline TraceStreamer &operator<<(const unsigned char &r)
+	{
+		if (do_f)
+			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, NULL, _M_flags), r);
+		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			size_t f_l = 0;
+			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
 			args[argCount++].i = r;
 		}
 		return *this;

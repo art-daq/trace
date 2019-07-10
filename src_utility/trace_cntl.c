@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1114 $$Date: 2019-07-09 16:24:53 -0500 (Tue, 09 Jul 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -37,7 +37,7 @@ done
 #ifdef __APPLE__
 # define TRACE_TID_WIDTH 7
 #else
-# define TRACE_TID_WIDTH 5
+# define TRACE_TID_WIDTH 6
 #endif
 
 #define USAGE "\
@@ -398,7 +398,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 'l': printf("lv "); break;
 			case 'L': printf("lvl "); break;
 			case 'B': printf("B "); break;
-			case 'P': printf("  pid "); break;
+			case 'P': printf("   pid "); break;
 			case 'R': printf("r "); break;
 			case '#': printf("args ");break;
 				/* ignore other unknown chars in ospec */
@@ -421,7 +421,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 'l': printf("-- "); break;
 			case 'L': printf("--- "); break;
 			case 'B': printf("-- "); break;
-			case 'P': printf("----- "); break;
+			case 'P': printf("------ "); break;
 			case 'R': printf("- "); break;
 			case '#': printf("---- ");break;
 				/* ignore other unknown chars in ospec */
@@ -540,12 +540,12 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			case 'l': printf("%2d ", myEnt_p->lvl); break;
 			case 'L': printf("%*s ", longest_lvlstr, _lvlstr[(myEnt_p->lvl)&LVLBITSMSK]); break;
 			case 'B': printf("%u ", myEnt_p->param_bytes); break;
-			case 'P': printf("%5d ", myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 */
+			case 'P': printf("%6d ", myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 or 458752 (on mu2edaq13) */
 			case 'R':
 				if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
 				else							 printf( ". " );
 				break;
-			case 'm': print_just_converted_ofmt=1; break;
+			case 'f': print_just_converted_ofmt=1; break;
 			case '#': printf("%4u ", myEnt_p->nargs); break;
 			}
 		}
@@ -620,7 +620,7 @@ void traceInfo()
 	       "namLvls offset    = 0x%lx\n"
 	       "buffer_offset     = 0x%lx\n"
 	       "memlen            = 0x%x          %s\n"
-	       "default TRACE_SHOW=%s others: t(tsc) B(paramBytes) s(slot) m(convertedMsgfmt_only) D(inDent) I(TID) #(nargs) l(lvl int)\n"
+	       "default TRACE_SHOW=%s others: t(tsc) B(paramBytes) s(slot) f(convertedMsgfmt_only) D(inDent) I(TrcId) #(nargs) l(lvl int)\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr

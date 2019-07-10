@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $'
+ # rev='$Revision: 1116 $$Date: 2019-07-10 08:14:20 -0500 (Wed, 10 Jul 2019) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -221,7 +221,7 @@ $struct_args;
 void* simple_thread_func(void *arg)
 {
     struct args aa=*(struct args *)arg;
-    TLOG(2) << "hello from simple_thread idx " << aa.thread_idx;
+    TLOG(2) << "hello from simple_thread idx " << aa.thread_idx << " tC_p="<<(void*)traceControl_p;
     pthread_exit(NULL);
 }
 
@@ -395,7 +395,7 @@ extern  char        * optarg;        // for getopt
     }
     if (xtra_options & 1)
     {   char          cmd[200];
-	sprintf( cmd, "echo trace_buffer mappings after join '(#1)' = \`cat /proc/%d/maps | grep $TRACE_FILE | wc -l\`", getpid() );
+	sprintf( cmd, "echo trace_buffer mappings after join '(#1)' = \`cat /proc/%d/maps | grep $TRACE_FILE >big_ex_maps;wc -l big_ex_maps\`", getpid() );
 	system( cmd );
 	sprintf( cmd, "echo trace_buffer mappings after join '(#2)' = \`cat /proc/%d/maps | grep $TRACE_FILE | wc -l\`", getpid() );
 	system( cmd );

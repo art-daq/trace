@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1117 $$Date: 2019-07-10 08:45:34 -0500 (Wed, 10 Jul 2019) $"
+#define TRACE_REV "$Revision: 1123 $$Date: 2019-07-11 10:26:04 -0500 (Thu, 11 Jul 2019) $"
 
 #ifndef __KERNEL__
 
@@ -1398,10 +1398,10 @@ static void trace_namLvlSet(void)
 		{
 			fprintf(stderr, "Warning: TRACE_NAMLVLSET in env., but processing did not complete\n");
 		}
-		if ((cp = getenv("TRACE_MODE")))
-		{
-			traceControl_rwp->mode.mode = strtoul(cp, NULL, 0);
-		}
+	}
+	if ((cp = getenv("TRACE_MODE")))
+	{
+		traceControl_rwp->mode.mode = strtoul(cp, NULL, 0);
 	}
 	if ((cp = getenv("TRACE_LIMIT_MS")))
 	{
@@ -2228,7 +2228,7 @@ static int traceInit(const char *_name)
 			}
 		}
 
-		trace_namLvlSet();
+		trace_namLvlSet();		/* more env vars checked */
 	}
 
 	if (_name == NULL)
@@ -2262,8 +2262,8 @@ static int traceInit(const char *_name)
 
 	if ((cp = getenv("TRACE_LVLS")) && (*cp))
 	{
-		TRACE_CNTL("lvlmskSg", strtoull(cp, NULL, 0)); /* set for all current and future (until cmd line tonSg or toffSg) */
-		trace_lvlS = strtoull(cp, NULL, 0);            /* set for future new traceTIDs (from this process) regardless of cmd line tonSg or toffSg - if non-zero! */
+		trace_lvlS = strtoull(cp, NULL, 0); /* set for future new traceTIDs (from this process) regardless of cmd line tonSg or toffSg - if non-zero! */
+		TRACE_CNTL("lvlmskSg", trace_lvlS); /* set for all current and future (until cmd line tonSg or toffSg) */
 	}
 	if (trace_lvlM)
 	{
@@ -2336,7 +2336,7 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 #	if (__cplusplus >= 201103L)
 
 #		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, mp, sp, tvp, ins, ins_sz)                                        \
-			[](const char *nn, int lvl_, int s_enabled_, int s_frc_, int *do_m_, int *do_s_, timeval *tvp_, char *ins_, size_t sz) { \
+			[&](const char *nn, int lvl_, int s_enabled_, int s_frc_, int *do_m_, int *do_s_, timeval *tvp_, char *ins_, size_t sz) { \
 				TRACE_INIT_CHECK                                                                                                     \
 				{                                                                                                                    \
 					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                         \
@@ -2355,7 +2355,7 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 
 #	else  /* (__cplusplus >= 201103L) */
 
-// Note: the s_enbld and s_frc args are used directly in the macro definition
+// Note: the s_enbld, s_frc and tvp args are used directly in the macro definition
 #		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, mp, sp, tvp, ins, ins_sz)                                                                            \
 			({                                                                                                                                                           \
 				const char *nn = name;                                                                                                                                   \

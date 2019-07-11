@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1075 $$Date: 2019-03-01 09:35:03 -0600 (Fri, 01 Mar 2019) $";
+ # rev="$Revision: 1121 $$Date: 2019-07-10 22:28:35 -0500 (Wed, 10 Jul 2019) $";
 
 # TOP LEVEL Makefile
 
@@ -127,7 +127,14 @@ script: OUT_check
 
 ups: OUT_check
 	test -d "${OUT}/$@" || mkdir "${OUT}/$@"
-	-cp -au $@/[a-zABD-Z]*[^~] "${OUT}/$@"   # filter out CVS dir and backups files
+	@${FLAVOR_SUBDIR};\
+	ups_prod_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION */v/;s/)//;s/\./_/g;p}' CMakeLists.txt`;\
+	sed -e "s/@UPS_PRODUCT_NAME@/TRACE/;\
+	s/@UPS_PROUDCT_VERSION@/$$ups_prod_ver/;\
+	s/@UPS_QUALIFIER_STRING@//;\
+	s|@CMAKE_INSTALL_DOCDIR@|doc|;\
+	s/@UPS_PRODUCT_FQ@/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/" $@/TRACE.table.in >"${OUT}/$@/TRACE.table"
+
 
 help:
 	@$(HELP)

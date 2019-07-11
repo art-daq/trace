@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
+ // rev="$Revision: 1122 $$Date: 2019-07-10 23:09:19 -0500 (Wed, 10 Jul 2019) $";
  */
  /**
   * \file tracemf.h
@@ -142,7 +142,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	}
 	else
 	{
-		vtrace_user(tvp, TID, lvl, insert, nargs, msg, ap); // vtrace_user does not use file, line
+		vtrace_user(tvp, TID, lvl, insert, file, line, nargs, msg, ap); // vtrace_user does not use file, line
 	}
 	va_end(ap);
 }
@@ -160,7 +160,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	}
 	else
 	{
-		vtrace_user(tvp, TID, lvl, insert, nargs, &msg[0], ap); // vtrace_user does not use file, line
+		vtrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap); // vtrace_user does not use file, line
 	}
 	va_end(ap);
 }   /* trace */

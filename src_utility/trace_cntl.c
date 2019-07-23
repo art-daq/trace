@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1114 $$Date: 2019-07-09 16:24:53 -0500 (Tue, 09 Jul 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1129 $$Date: 2019-07-19 18:07:15 -0500 (Fri, 19 Jul 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -310,7 +310,7 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 	opts |= show_opts; /* see enum show_opts_e above */
 	opts |= (strchr(ospec,'D')?indent_:0);
 
-	traceInit(NULL); /* init traceControl_p, etc. */
+	traceInit(NULL,1); /* init traceControl_p, etc. */
 
 	/* get the time format and the length of the format (using example time (now) */
 	if((tfmt=getenv("TRACE_TIME_FMT"))==NULL)
@@ -620,7 +620,8 @@ void traceInfo()
 	       "namLvls offset    = 0x%lx\n"
 	       "buffer_offset     = 0x%lx\n"
 	       "memlen            = 0x%x          %s\n"
-	       "default TRACE_SHOW=%s others: t(tsc) B(paramBytes) s(slot) f(convertedMsgfmt_only) D(inDent) I(TrcId) #(nargs) l(lvl int)\n"
+	       "default TRACE_SHOW=%s others: t:tsc B:paramBytes s:slot f:convertedMsgfmt_only D:inDent I:trcId #:nargs l:lvl_int\n"
+	       "default TRACE_PRINT=\"%s\" others: s:severity C:core I:trcId i:threadID f:file N:unpadded_trcName P:pid u:line\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr
@@ -652,6 +653,7 @@ void traceInfo()
 	       , traceControl_p->memlen
 	       , (traceControl_p->memlen != (uint32_t)memlen)?"not for mmap":""
 	       , DFLT_SHOW
+	       , TRACE_PRINT
 	       );
 }   /* traceInfo */
 
@@ -825,7 +827,7 @@ extern  int        optind;         /* for getopt */
 		/* To test normal userspace, can use: TRACE_FILE= trace_cntl test-ro
 		 */
 		setenv("TRACE_FILE","/proc/trace/buffer",0);
-		traceInit(NULL);
+		traceInit(NULL,0);
 		printf("try write to (presumably kernel memory) write-protected 1st page...\n");
 		traceControl_p->trace_initialized = 2;
 		printf("write succeeded.\n");
@@ -993,16 +995,16 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strncmp(cmd,"info",4) == 0)
 	{
-		traceInit(NULL);
+		traceInit(NULL,0);
 		traceInfo();
 	}
 	else if (strcmp(cmd,"unlock") == 0)
-	{	traceInit(NULL);
+	{	traceInit(NULL,0);
 		trace_unlock( &traceControl_rwp->namelock );
 	}
 	else if (strcmp(cmd,"tids") == 0)
 	{	int longest_name=0, namLvlTblEnts_digits;
-		traceInit(NULL);
+		traceInit(NULL,0);
 		/* calc longest name */
 		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
 			if ((int)strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)

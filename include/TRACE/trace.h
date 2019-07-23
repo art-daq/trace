@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1123 $$Date: 2019-07-11 10:26:04 -0500 (Thu, 11 Jul 2019) $"
+#define TRACE_REV "$Revision: 1129 $$Date: 2019-07-19 18:07:15 -0500 (Fri, 19 Jul 2019) $"
 
 #ifndef __KERNEL__
 
@@ -167,7 +167,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	define TRACE_GETTIMEOFDAY(tvp) gettimeofday(tvp, NULL)
 #	define TRACE_PRN printf
 #	define TRACE_VPRN vprintf
-#	define TRACE_INIT_CHECK if ((traceTID != -1) || (traceInit(TRACE_NAME) == 0)) /* See note by traceTID decl/def below */
+#	define TRACE_INIT_CHECK if ((traceTID != -1) || (traceInit(TRACE_NAME,0) == 0)) /* See note by traceTID decl/def below */
 
 #else /* __KERNEL__ */
 
@@ -599,7 +599,7 @@ static struct traceControl_s *traceControl_p_static = NULL;
 /* forward declarations, important functions */
 static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt);
 #if !defined(__KERNEL__) || defined(TRACE_IMPL) /* K=0,IMPL=0; K=0,IMPL=1; K=1,IMPL=1 */
-static int traceInit(const char *_name);
+static int traceInit(const char *_name, int allow_ro);
 static void traceInitNames(struct traceControl_s * /*tC_p*/, struct traceControl_rw * /*tC_rwp*/);
 #	ifdef __KERNEL__                           /*                         K=1,IMPL=1 */
 static int msgmax = TRACE_DFLT_MAX_MSG_SZ;      /* module_param */
@@ -919,13 +919,20 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 		case 'l': /* lvl int */
 			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%u", lvl );
 			break;
-		case 'M': /* msg limit insert */
+		case 'M': /* msg limit insert - fall through to msg*/
 			if (insert[0]) {
 				/* space separator only printed if insert is non-empty */
 				retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s ", insert);
 				printed += PRMIN(retval,PRINTSIZE(printed));
 			}
 			/*break; FALL through */
+#	if defined(__cplusplus) && (__cplusplus >= 201703L)
+#		if __has_cpp_attribute(fallthrough)
+			[[fallthrough]];
+#		else
+			[[gnu:fallthrough]];
+#		endif
+#	endif
 		case 'm': /* msg */
 			if (nargs) {
 				retval = msg_printed = vsnprintf(&(obuf[printed]), PRINTSIZE(printed), msg, ap);
@@ -949,7 +956,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 		case 'P': /* process id */
 			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%d", tracePid );
 			break;
-		case 't':
+		case 't': /* msg limit insert - may be null */
 			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", insert);
 			break;
 		case 'u': /* lineNumber */
@@ -1482,7 +1489,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 	if (strcmp(cmd, "file") == 0)
 	{                                   /* THIS really only makes sense for non-thread local-file-for-module or for non-static implementation w/TLS for file-per-thread */
 		traceFile = va_arg(ap, char *); /* this can still be overridden by env.var.; suggest testing w. TRACE_ARGSMAX=10*/
-		traceInit(TRACE_NAME);          /* will not RE-init as traceControl_p!=NULL skips mmap_file */
+		traceInit(TRACE_NAME,0);          /* will not RE-init as traceControl_p!=NULL skips mmap_file */
 		va_end(ap);
 		return (0);
 	}
@@ -1494,7 +1501,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 		/*printf("nargs=%d name=%s\n",nargs,name);*/
 		if (traceControl_p == NULL)
 		{
-			traceInit(name); /* with traceControl_p==NULL. trace_namLvlSet() will be called */
+			traceInit(name,0); /* with traceControl_p==NULL. trace_namLvlSet() will be called */
 		}
 		else
 		{
@@ -1515,7 +1522,7 @@ static int traceCntl(int nargs, const char *cmd, ...)
 
 	if (strcmp(cmd, "name") == 0)
 	{                                              /* THIS really only makes sense for non-thread local-name-for-module or for non-static implementation w/TLS for name-per-thread */
-		char *tnam = va_arg(ap, char *);           /* this can still be overridden by env.var. IF traceInit(TRACE_NAME) is called; suggest testing w. TRACE_ARGSMAX=10*/
+		char *tnam = va_arg(ap, char *);           /* this can still be overridden by env.var. IF traceInit(TRACE_NAME,0) is called; suggest testing w. TRACE_ARGSMAX=10*/
 		traceName = tnam ? tnam : TRACE_DFLT_NAME; /* doing it this way allows this to be called by kernel module */
 		traceTID = name2TID(traceName);
 	}
@@ -1960,12 +1967,11 @@ static void tsnprintf(char *obuf, size_t bsz, const char *input)
 } /* tsnprintf */
 
 /* RETURN "created" status */
-static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for when file created, out when not */
-						   ,
-						   struct traceControl_s **tC_p, struct traceControl_rw **tC_rwp /* out */
-						   ,
-						   uint32_t msgmax, uint32_t argsmax, uint32_t numents, uint32_t namtblents /* all in for when file created */
-)
+static int trace_mmap_file(  const char *_file, int *memlen /* in/out -- in for when file created, out when not */
+                           , struct traceControl_s **tC_p, struct traceControl_rw **tC_rwp /* out */
+                           , uint32_t msgmax, uint32_t argsmax, uint32_t numents, uint32_t namtblents /* all in for when file created */
+                           , int allow_ro
+                           )
 {
 	int fd;
 	struct traceControl_s *controlFirstPage_p = NULL;
@@ -1975,6 +1981,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 	int created = 0;
 	int stat_try = 0;
 	int quiet_warn = 0;
+	int prot_flags =  PROT_READ | PROT_WRITE;
 
 	tsnprintf(path, PATH_MAX, _file);
 	if ((fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0666)) != -1)  //NOLINT
@@ -2002,10 +2009,19 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 		fd = open(path, O_RDWR);  //NOLINT
 		if (fd == -1)
 		{
-			fprintf(stderr, "TRACE: open(%s)=%d errno=%d pid=%d\n", path, fd, errno, tracePid);
-			*tC_p = &(traceControl[0]);
-			*tC_rwp = &(traceControl[0].rw);
-			return (0);
+			if (allow_ro)
+			{
+				// try read-only for traceShow
+				fd = open(path, O_RDONLY);  //NOLINT
+			}
+			if (fd == -1)
+			{
+				fprintf(stderr, "TRACE: open(%s)=%d errno=%d pid=%d\n", path, fd, errno, tracePid);
+				*tC_p = &(traceControl[0]);
+				*tC_rwp = &(traceControl[0].rw);
+				return (0);
+			}
+			prot_flags = PROT_READ;
 		}
 		/*printf( "trace_mmap_file - fd=%d\n",fd );*/ /*interesting in multithreaded env.*/
 		if (fstat(fd, &statbuf) == -1)
@@ -2067,10 +2083,10 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 	   these two calls]
 	   ???
 	   NEW: mmap from rw portion on */
-	rw_rwp = (struct traceControl_rw *)mmap(NULL, (*memlen) - TRACE_PAGESIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, TRACE_PAGESIZE);
+	rw_rwp = (struct traceControl_rw *)mmap(NULL, (*memlen) - TRACE_PAGESIZE, prot_flags, MAP_SHARED, fd, TRACE_PAGESIZE);
 	if (rw_rwp == (void *)-1)
 	{
-		perror("Error:mmap(NULL,(*memlen)-TRACE_PAGESIZE,PROT_READ|PROT_WRITE,MAP_SHARED,fd,TRACE_PAGESIZE)");
+		perror("Error:mmap(NULL,(*memlen)-TRACE_PAGESIZE,PROT_READ[|PROT_WRITE],MAP_SHARED,fd,TRACE_PAGESIZE)");
 		printf("(*memlen)=%d errno=%d\n", (*memlen) - TRACE_PAGESIZE, errno);
 		close(fd);
 		*tC_p = &(traceControl[0]);
@@ -2128,7 +2144,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 
 #if !defined(__KERNEL__) || defined(TRACE_IMPL)
 
-static int traceInit(const char *_name)
+static int traceInit(const char *_name, int allow_ro)
 {
 	int memlen;
 	uint32_t msgmax_, argsmax_, numents_, namtblents_;
@@ -2203,7 +2219,9 @@ static int traceInit(const char *_name)
 			}
 			else
 			{
-				trace_mmap_file(_file, &memlen, &traceControl_p, &traceControl_rwp, msgmax_, argsmax_, numents_, namtblents_);
+				trace_mmap_file(  _file, &memlen, &traceControl_p, &traceControl_rwp
+				                , msgmax_, argsmax_, numents_, namtblents_
+				                , allow_ro);
 			}
 		}
 
@@ -2644,11 +2662,11 @@ public:
 		if (y != std::ios_base::width())
 		{
 			std::ios_base::width(y);
+		}
 			snprintf(widthStr, sizeof(widthStr), "%d", y);
 #	ifdef TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
 #	endif
-		}
 		return *this;
 	}
 
@@ -2657,6 +2675,7 @@ public:
 		if (y != std::ios_base::precision())
 		{
 			std::ios_base::precision(y);
+		}
 			if (y)
 				snprintf(precisionStr, sizeof(precisionStr), ".%d", y);
 			else
@@ -2664,7 +2683,6 @@ public:
 #	ifdef TRACE_STREAMER_DEBUG
 			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
 #	endif
-		}
 		return *this;
 	}
 #	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4)

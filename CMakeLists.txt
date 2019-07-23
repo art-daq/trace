@@ -33,7 +33,7 @@ if ((CMAKE_CXX_COMPILER_ID STREQUAL Clang AND
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 7.1.0))
   set(IF_FLAG -Wno-implicit-fallthrough)
 else()
-  set(IF FLAG)
+  set(IF_FLAG)
 endif()
 
 cet_set_compiler_flags(DIAGS VIGILANT WERROR EXTRA_FLAGS -O2 -pedantic -Wno-variadic-macros ${IF_FLAG}

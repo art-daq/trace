@@ -1,0 +1,90 @@
+#!/bin/sh
+ # This file (maxents) was created by Ron Rechenmacher <ron@fnal.gov> on
+ # Aug 24, 2019. "TERMS AND CONDITIONS" governing this file are in the README
+ # or COPYING file. If you do not have such a file, one can be obtained by
+ # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+ # $RCSfile: .emacs.gnu,v $
+ # rev="$Revision: 1.34 $$Date: 2019/04/22 15:23:54 $";
+
+
+USAGE="\
+   usage: `basename $0`
+examples: `basename $0` -a10
+"
+VUSAGE=""
+
+opt_args=
+opt_msgmax=
+opt_names=
+
+eval env_opts=\${`basename $0 | sed 's/\.sh$//' | tr 'a-z-' 'A-Z_'`_OPTS-} # can be args too
+eval "set -- $env_opts \"\$@\""
+# Process script arguments and options
+op1chr='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set -- "-$rest" "$@"'
+op1arg='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set -- "$rest"  "$@"'
+reqarg="$op1arg;"'test -z "${1+1}" &&echo opt -$op requires arg. &&echo "$USAGE" &&exit'
+args= do_help= opt_v=0
+while [ -n "${1-}" ];do
+    if expr "x${1-}" : 'x-' >/dev/null;then
+        op=`expr "x$1" : 'x-\(.*\)'`; shift   # done with $1
+        leq=`expr "x$op" : 'x-[^=]*\(=\)'` lev=`expr "x$op" : 'x-[^=]*=\(.*\)'`
+        test -n "$leq"&&eval "set -- \"\$lev\" \"\$@\""&&op=`expr "x$op" : 'x\([^=]*\)'`
+        case "$op" in
+        \?*|h*)     eval $op1chr; do_help=1;;
+        v*)         eval $op1chr; opt_v=`expr $opt_v + 1`;;
+        x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
+        a*|-args)   eval $reqarg; opt_args=$1;         shift;;
+        m*|-msg)    eval $reqarg; opt_msgmax=$1;       shift;;
+	n*|-names)  eval $reqarg; opt_names=$1;        shift;;
+        *)          echo unknown option -$op$leq$lev; do_help=1;; # see dash_opts5.sh for mix {,un}known
+        esac
+    else # allow mix of opts and arg (i.e. opts after args)
+        aa=`echo "$1" | sed -e "s/'/'\"'\"'/g"` args="$args '$aa'"; shift
+    fi
+done
+eval "set -- $args \"\$@\""; unset args aa
+test $# -gt 0 && echo 'Too many arguments. $#='$# && do_help=1
+test -n "${do_help-}" && { echo "$USAGE";test $opt_v -ge 1 && echo "$VUSAGE"; exit; }
+set -u
+
+test -n "$opt_names"  && export TRACE_NAMTBLENTS=$opt_names
+test -n "$opt_args"   && export TRACE_ARGSMAX=$opt_args
+test -n "$opt_msgmax" && export TRACE_MSGMAX=$opt_msgmax
+
+export TRACE_FILE=/tmp/xxx
+rm -f $TRACE_FILE
+
+export TRACE_NUMENTS
+
+entry_size=
+prv_bad= prv_good= try_ents=4000000
+while true;do
+    rm -f $TRACE_FILE
+
+    #echo trying $try_ents
+    if TRACE_NUMENTS=$try_ents trace_cntl mapped 2>/dev/null;then
+	entry_size=`trace_cntl info | awk '/entry_size/{print$3}'`
+        test $opt_v -ge 1 && printf '%7d good - entry_size=%d\n' $try_ents $entry_size
+	if [ -n "$prv_bad" ];then
+            # good with higher prv_bad
+	    prv_good=$try_ents try_ents=`expr \( $try_ents + $prv_bad \) / 2`
+	    test $try_ents -eq $prv_good && break
+        else
+            # good with no higher prv_bad
+            prv_good=$try_ents try_ents=`expr $try_ents \* 2`
+        fi
+    else
+        test $opt_v -ge 1 && printf '%7d no good\n' $try_ents
+	if [ -n "$prv_good" ];then
+	    # bad with lower prv_good
+	    prv_bad=$try_ents try_ents=`expr \( $try_ents + $prv_good \) / 2`
+	    test $try_ents -eq $prv_bad && break
+	else
+            # bad with no lower prv_good
+            prv_bad=$try_ents try_ents=`expr $try_ents / 2`
+        fi
+    fi
+    #sleep .5
+done
+rm -f $TRACE_FILE
+echo "try: TRACE_NUMENTS=$try_ents${opt_args:+ TRACE_ARGSMAX=$opt_args}${opt_msgmax:+ TRACE_MSGMAX=$opt_msgmax} # entry_size=$entry_size"

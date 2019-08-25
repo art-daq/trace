@@ -9,6 +9,6 @@
 ${OUT}% : %
 	cp $< $@
 
-all: ${OUT}bitN_to_mask ${OUT}trace_delta ${OUT}trace_envvars
+all: ${OUT}bitN_to_mask ${OUT}trace_delta ${OUT}trace_envvars ${OUT}trace_maxents
 	echo done with target all
 

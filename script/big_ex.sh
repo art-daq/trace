@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1116 $$Date: 2019-07-10 08:14:20 -0500 (Wed, 10 Jul 2019) $'
+ # rev='$Revision: 1134 $$Date: 2019-08-07 20:58:43 -0500 (Wed, 07 Aug 2019) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -54,6 +54,7 @@ Files in the dir will be overwritten.
 --check-numents=<ents>  default=calculated: ( depth * tlogs_per + 2 ) * threads * loops
 --stack=[num]    stack used in all but last subroutine - default $def_stack
 -O<x>            compile optimization level. default: no -O
+--rerun          Only recompile main program (don't remake and compile all other files)
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>
@@ -98,6 +99,7 @@ while [ -n "${1-}" ];do
         -no-define) do_define= ;;
         -no-declare)do_declare= ;;
         -no-shared) do_shared= ;;
+        -rerun)     opt_rerun=1;;
         -mapcheck)  test -n "$leq"&&do_mapcheck=$1&&shift||do_mapcheck=1;;
         -check-numents)eval $reqarg; check_numents=$1;                 shift;;
         -extra-ents)eval $reqarg; opt_extra_ents=$1;                   shift;;
@@ -134,8 +136,10 @@ test -d $odir || mkdir -p $odir
 
 cd $odir
 # Clean up
-rm -f sub*.cc sub*.o sub*.so
-rm -f big_ex_main.cc big_ex_main
+if [ -z "${opt_rerun-}" ];then
+  rm -f sub*.cc sub*.o sub*.so
+  rm -f big_ex_main.cc big_ex_main
+fi
 
 # set TRACE_FILE now as it is used in constructing source files
 export TRACE_FILE
@@ -148,7 +152,7 @@ struct_args='struct args { pid_t tid; unsigned loop; int xtra_options; useconds_
 echo opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=$check_opts
 flags=$-
 nn=1
-while [ $nn -lt $opt_depth ];do
+while [ -z "${opt_rerun-}" -a $nn -lt $opt_depth ];do
     next=`expr $nn + 1`
     test $nn -eq 1 && POTENTIAL_DELAY='if(aa->xtra_options&4){aa->dly_us=random()%5000;usleep(aa->dly_us);}'\
                    || POTENTIAL_DELAY=
@@ -199,6 +203,8 @@ done
 set -$flags
 
 # - - - - - - - - - - - Make the last sub module - - - - - - - -
+
+if [ -z "${opt_rerun-}" ];then
 
 last=$nn
 expr $nn % 10 >/dev/null && do_TRACE_NAME= || do_TRACE_NAME="\
@@ -429,11 +435,14 @@ done
 set -$flags
 wait
 
+fi # -z "${opt_rerun-}"
+
 vprintf 0 'Compile main\n'
+test $opt_v -gt 0 && set -x
 test -n "${do_shared-}" \
  && { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}; } \
  || { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.o  -lpthread; sts=$?; }
-
+test $opt_v -gt 0 && set +x
 test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED; exit 1; }
 
 test -n "${check_numents-}" \
@@ -445,6 +454,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     TRACE_MSGMAX=64
     TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
     TRACE_NAMTBLENTS=`expr $opt_threads + 3 + $opt_depth / 10`   # extras: jones, TRACE, _TRACE_ "sub10s"
+    vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS" 
     test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset || { rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
     file_entries=`trace_cntl info | awk '/num_entries/{print$3;}'`
     test $file_entries -lt $TRACE_NUMENTS && { echo "file_entries=$file_entries -lt calculated_entries=$TRACE_NUMENTS"; exit; }

@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1129 $$Date: 2019-07-19 18:07:15 -0500 (Fri, 19 Jul 2019) $";
+    rev="$Revision: 1136 $$Date: 2019-08-08 14:17:59 -0500 (Thu, 08 Aug 2019) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -38,6 +38,8 @@ EXPORT_SYMBOL_GPL( traceControl_rwp );
 EXPORT_SYMBOL_GPL( traceEntries_p );
 EXPORT_SYMBOL_GPL( traceNamLvls_p );
 EXPORT_SYMBOL_GPL( trace_allow_printk );
+EXPORT_SYMBOL_GPL( tracePrint_cntl );
+EXPORT_SYMBOL_GPL( trace_print );
 EXPORT_SYMBOL_GPL( trace_lvlS );
 EXPORT_SYMBOL_GPL( trace_lvlM );
 
@@ -55,6 +57,8 @@ module_param(     trace_buffer_numa_node, int, 0444 ); // defined in trace.h
 MODULE_PARM_DESC( trace_buffer_numa_node, "Numa node for trace buffer kernel memory" );
 module_param(     trace_allow_printk, int, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_allow_printk, "whether or not to allow TRACEs to do printk's" );
+module_param_string(trace_print, trace_print, sizeof(trace_print), 0644 ); // defined in trace.h
+MODULE_PARM_DESC( trace_print, "printk print control - default: \"%T %n %L %M\"" );
 module_param(     trace_lvlS, ulong, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_lvlS, "default printk lvl" );
 module_param(     trace_lvlM, ulong, 0644 ); // defined in trace.h
@@ -103,6 +107,13 @@ static int __init trace_lvlM_setup(char *str)
 }
 __setup("trace_lvlM=", trace_lvlM_setup);
 
+static int __init trace_print_setup(char *str)
+{	strncpy(trace_print,str,sizeof(trace_print));
+	trace_print[sizeof(trace_print)-1]='\0';
+	pr_info("setting trace_print to %s\n", trace_print);
+}
+__setup("trace_print=", trace_print_setup);
+
 static ssize_t trace_proc_control_write( struct file *fil, const char __user *src_p
 				      , size_t siz, loff_t *off )
 {
@@ -127,6 +138,11 @@ static ssize_t trace_proc_control_write( struct file *fil, const char __user *sr
         {   sptr+=sizeof("trace_lvlM=")-1;
             trace_lvlM = simple_strtoul(sptr,&sptr,0);
         }
+		else if (strncmp("trace_print=",sptr,sizeof("trace_print=")-1)==0)
+        {   sptr+=sizeof("trace_print=")-1;
+			strncpy(trace_print,sptr,sizeof(trace_print));
+			trace_print[sizeof(trace_print)-1]='\0';
+		}
 	}
 	return siz;
 }
@@ -136,6 +152,8 @@ static ssize_t trace_proc_control_read( struct file *fil, char __user *dst_p
 	char    kernelBuffer[1024];
 	int     cc;
 	cc  = snprintf( &(kernelBuffer[0]), siz,"trace_allow_printk=%d\n", trace_allow_printk );
+	if (*off >= cc) return 0;
+	cc  = snprintf( &(kernelBuffer[0]), siz,"trace_print=%s\n", trace_print );
 	if (*off >= cc) return 0;
 	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlS=0x%lx\n", trace_lvlS );
 	if (*off >= cc) return 0;
@@ -152,7 +170,7 @@ static struct file_operations trace_proc_control_file_ops = {
     .write=   trace_proc_control_write,	   /* write        */
 	.read=    trace_proc_control_read,	   /* read         */
 };
-#endif
+#endif	/* MODULE */
 
 static int trace_proc_buffer_mmap(  struct file              *file
 				  , struct vm_area_struct    *vma )
@@ -568,7 +586,7 @@ trace_3_init(void)
     traceTID = 0;
 
     traceControl_rwp->mode.bits.M = 1;
-    TRACE( 0, "kernel trace buffer initialized" );
+    TRACE( 1, "kernel trace buffer initialized" );
 
     /* 1) create the buffer
        2) create a way to access it (/proc)

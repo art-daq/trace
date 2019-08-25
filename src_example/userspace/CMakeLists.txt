@@ -12,9 +12,14 @@ if ("cxx_lambdas" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
   cet_make_exec(no_std SOURCE no_std.cc)
   cet_make_exec(just SOURCE just.cc example_sub_.cc)
   cet_make_exec(just_user SOURCE just_user.cc)
+  cet_make_exec(TLOG_manipulator SOURCE TLOG_manipulator.cc)
+  cet_make_exec(ex_traceln SOURCE ex_traceln.cc)
+  cet_make_exec(no_trace SOURCE no_trace.cc)
+  cet_make_exec(ptr_address_string SOURCE ptr_address_string.cc)
+  #cet_make_exec(setting_lclTime SOURCE setting_lclTime.cc) # this one is problematic for some compilers
 else()
   message(WARNING "C++ userspace examples not built due to lack of compiler support for CXX lambdas.")
 endif()
 cet_make_exec(basic_c SOURCE basic_c.c)
 
-#install_source()
+#install_source() # handled elsewhere

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1129 $$Date: 2019-07-19 18:07:15 -0500 (Fri, 19 Jul 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1146 $$Date: 2019-08-24 22:23:10 -0500 (Sat, 24 Aug 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -33,18 +33,13 @@ done
 #include <string.h>				/* strnlen */
 
 #include "TRACE/trace.h"
-
-#ifdef __APPLE__
-# define TRACE_TID_WIDTH 7
-#else
-# define TRACE_TID_WIDTH 6
-#endif
+//#define TRACE_NAME basename(__FILE__)  // don't define TRACE_NAME, so ton* (w/o -n or -N) works on default TRACE_NAME "TRACE"
 
 #define USAGE "\
 %s [opts] <cmd> [command opt/args]\n\
 commands:\n\
  info, tids, reset\n\
- show [count [startSlotIndex]]\n\
+ show [opts] [file]...         # Note: -s option invalid with multiple files\n\
  mode <mode>\n\
  modeM <mode>\n\
  modeS <mode>\n\
@@ -55,6 +50,7 @@ commands:\n\
  trig <postEntries> [lvlmskTM+] [quiet] # opt 2nd arg is for specified/dflt TID\n\
  reset\n\
  limit_ms <cnt> <on_ms> <off_ms>\n\
+ sleep [seconds]     # dlft:10 - allows time to look at /proc/fd/ and /proc/maps\n\
 opts:\n\
  -?, -h       show this help\n\
  -f<file>\n\
@@ -66,7 +62,9 @@ show opts:\n\
  -H           no header\n\
  -L<LC_NUMERIC val>  i.e. -Len_US\n\
  -q           silence format errors\n\
- -F           show forward, poll for new entries. \"count\" avoids older entries\n\
+ -F           show forward, poll for new entries. \"count\" (each files) avoids older entries\n\
+ -c<count>    \n\
+ -s<startSlotIndex> \n\
  other options encoded in TRACE_SHOW env.var.\n\
 tests:  (use %s show after test)\n\
  -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings\n\
@@ -83,12 +81,14 @@ tests:  (use %s show after test)\n\
  TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported)\n\
 "
 #define DFLT_TEST_COMPARE_ITERS 1000000
-#define minw(a,b) (b<a?a:b)
+#define minw(a,b) (b<a?a:b)     /* min width -- really max of the 2 numbers - argh */
 
 #ifdef __linux__
-# define DFLT_SHOW         "HxNTPiCnLR"
+//# define DFLT_SHOW         "HxNTPiCnLR"
+# define DFLT_SHOW         "%H%x%N %T %P %i %C %n %L %R %m"
 #else
-# define DFLT_SHOW         "HxNTPinLR"
+//# define DFLT_SHOW         "HxNTPinLR"
+# define DFLT_SHOW         "%H%x%N %T %P %i %n %L %R %m"
 #endif
 #define NUMTHREADS 4
 static int trace_thread_option=0;
@@ -161,18 +161,19 @@ enum show_opts_e {
     forward_       =0x8
 };
 
-void get_arg_sizes(	 char            *ofmt
-				   , char            *ifmt
-				   , int              opts
-				   , int              param_bytes
-				   , struct sizepush *sizes_out
-                   , unsigned         nargs )
+size_t get_arg_sizes(  char            *ofmt
+                     , char            *ifmt
+                     , int              opts
+                     , int              param_bytes
+                     , struct sizepush *sizes_out
+                     , unsigned         nargs )
 {	char    *in;
 	char    *percent_sav;
 	int	     numArgs=0;
 	int	     maxArgs=(nargs<traceControl_p->num_params?nargs:traceControl_p->num_params);
 	int	     modifier=0;
 	int	     filter_newline=opts&filter_newline_;
+	size_t   slen=0;
 
 	/*strcpy( ofmt, ifmt );*/
 	in = ifmt;
@@ -181,23 +182,23 @@ void get_arg_sizes(	 char            *ofmt
 	while (*in)
 	{
 		if (*in != '%')
-		{	if (*in != '\n') *ofmt++ = *in++;
+		{	if (*in != '\n') ofmt[slen++] = *in++;
 			else
-			{	if (filter_newline) { *ofmt++ = ';'; in++; }
-				else                { *ofmt++ = *in++; }
+			{	if (filter_newline) { ofmt[slen++] = ';'; in++; }
+				else                { ofmt[slen++] = *in++; }
 			}
 			continue;
 		}
 		/* found '%' - process it */
-		*ofmt = *in;
-		percent_sav = ofmt;	/* save in case we need to modify it (too many args) */
-		++in; ++ofmt;       /* point to next char */
+		ofmt[slen] = *in;
+		percent_sav = ofmt+slen;	/* save in case we need to modify it (too many args) */
+		++in; ++slen;       /* point to next char */
 		/*printf("next char=%c\n",*in);*/
-		if ((*in=='%')||(*in=='m')) { *ofmt++ = *in++; continue; }/* ingore %% which specified a % char */
+		if ((*in=='%')||(*in=='m')) { ofmt[slen++] = *in++; continue; }/* ingore %% which specified a % char */
 		if (numArgs == maxArgs) { *percent_sav = '*'; continue; }  /* SAFETY - no args beyond max */
 		while (	 ((*in>='0')&&(*in<='9'))
 			   ||(*in=='.')||(*in=='-')||(*in=='#')||(*in=='+')||(*in=='\'')||(*in=='I')||(*in=='"'))
-			*ofmt++ = *in++;
+			ofmt[slen++] = *in++;
  chkChr:
 		switch (*in)
 		{
@@ -209,12 +210,12 @@ void get_arg_sizes(	 char            *ofmt
 			case -1: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* short */
 			case 0:	 sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* int */
 			case 1:	 sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=param_bytes;/* long */
-				if ((param_bytes==8)&&(sizeof(long)==4)) *ofmt++ = 'l';
+				if ((param_bytes==8)&&(sizeof(long)==4)) ofmt[slen++] = 'l';
 				break;
 			case 2:	 sizes_out[numArgs].push=8;          sizes_out[numArgs].size=8;break;/* long long */
 			default: printf("error\n");
 			}
-			*ofmt++ = *in++;
+			ofmt[slen++] = *in++;
 			modifier=0;
 			break;
 		case 'e': case 'E': case 'f': case 'F': case 'g': case 'G': case 'a': case 'A':
@@ -227,37 +228,38 @@ void get_arg_sizes(	 char            *ofmt
 			{	sizes_out[numArgs].push=8;
 				sizes_out[numArgs].size=8;
 			} /* double */
-			*ofmt++ = *in++;
+			ofmt[slen++] = *in++;
 			break;
 
 			/* length modifiers */
-		case 'h':  --modifier; *ofmt++ = *in++; goto chkChr;
-		case 'l':  ++modifier; *ofmt++ = *in++; goto chkChr;
-		case 'L':  ++modifier; *ofmt++ = *in++; goto chkChr;
-		case 'z':  ++modifier; *ofmt++ = *in++; goto chkChr;
+		case 'h':  --modifier; ofmt[slen++] = *in++; goto chkChr;
+		case 'l':  ++modifier; ofmt[slen++] = *in++; goto chkChr;
+		case 'L':  ++modifier; ofmt[slen++] = *in++; goto chkChr;
+		case 'z':  ++modifier; ofmt[slen++] = *in++; goto chkChr;
 
 		case 's': case 'n': case 'p':       /* SAFETY -- CONVERT %s to %p */
-			*ofmt++='p'; in++;
+			ofmt[slen++]='p'; in++;
 			break;
 		case 'm':
-			*ofmt++ = *in++;
+			ofmt[slen++] = *in++;
 			continue;
 			break;
 		case '*':   /* special -- "arg" in an arg */
 			sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;
-			if (++numArgs == maxArgs) { *ofmt++ = *in++; break; }
-			*ofmt++ = *in++;
+			if (++numArgs == maxArgs) { ofmt[slen++] = *in++; break; }
+			ofmt[slen++] = *in++;
 			goto chkChr;
 		default:
 			if( !(opts&quiet_)) printf("tshow: unknown format spec char \"%c\" encountered.\n",*in);
-			*ofmt++ = *in++;
+			ofmt[slen++] = *in++;
 		}
 		++numArgs;
 	}
-	while (*in) *ofmt++ = *in++;
-	*ofmt--='\0';
-	while (*ofmt == '\n') *ofmt-- = '\0';
+	while (*in) ofmt[slen++] = *in++;
+	ofmt[slen]='\0';
+	//while (*ofmt == '\n') *ofmt-- = '\0';
 	if (numArgs < maxArgs) sizes_out[numArgs].push=0;
+	return (slen);
 }	/* get_arg_sizes */
 
 int countDigits(int n)
@@ -266,213 +268,67 @@ int countDigits(int n)
 		: 1;
 }
 
-/* count==-1, start==-1  ==> DEFAULT - reverse print from wrIdx to zero (if not
-                             full) or for num_entrie
-   count>=0,  start==-1  ==> reverse print "count" entries (incuding 0, which
-                             doesn't seem to useful
-   count>=0,  start>=0   ==> reverse print count entries starting at "slot" idx
-                             "start"  I.e. if 8 traces have occurred, these 2
-                             are equivalent:
-                             traceShow( ospec, -1, -1, 0 ) and
-                             traceShow( ospec,  8,  7, 0 )
+/* Return 1 if found, else 0
+   This handles the case of %%<flag> which would be false positive if just
+   searching for %<flag>.
  */
-void traceShow( const char *ospec, int count, int start, int show_opts )
+int strflg( const char *ospec, char flag )
 {
-	uint32_t rdIdx;
-	int32_t max;
-	unsigned printed=0;
-	unsigned ii;
-	int	   	 buf_slot_width;
-	int	   	 opts=(strchr(ospec,'x')?filter_newline_:0);
-	struct traceEntryHdr_s* myEnt_p;
-	struct traceEntryHdr_s  myEnt_cpy; /* I'll copy */
+	for ( ; *ospec; ++ospec)
+	{
+		if (*ospec == '%')
+		{
+			++ospec;
+			if (*ospec == '\0')
+				break;
+			if (*ospec == flag)
+				return (1);
+		}
+	}
+	return (0);
+}
+
+void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
+              , char *local_msg, uint8_t *local_params, struct sizepush *params_sizes
+              , int bufSlot_width, int N_width, int name_width, unsigned printed, uint32_t rdIdx
+              , char *tfmt, int tfmt_len, unsigned longest_lvlstr
+              )
+{
+	unsigned                ii;
 	char                  * msg_p;
-	char                  * msg_cpy; /* I'll malloc space to copy the msg into */
 	unsigned long         * params_p;
-	unsigned long         * params_cpy; /* I'll malloc space to copy the params into */
-	uint8_t               * local_params;
-	char                  * local_msg;
+	size_t                  slen;
+	time_t                  seconds;
+	unsigned                useconds;
 	void                  * param_va_ptr;
-	struct sizepush       * params_sizes;
 	uint8_t               * ent_param_ptr;
 	uint8_t               * lcl_param_ptr;
 	const char            * sp; /*spec ptr*/
+	int                     msg_spec_included;
+	char                    tbuf[0x100], *cp;
 	char                  * indent="                                                                ";
-	char                  * tfmt;
-	int                     tfmt_len;
-	time_t                  tt=time(NULL);
-	char                    tbuf[0x100], ttbuf[0x100];
-	unsigned                longest_name=0;
-	unsigned                longest_lvlstr=0;
-	int                     for_rev=-1; /* default is reverse print */
-	int                     forward_continuous=0; /* continuous==1 will force for_rev=1 */
-	
-	opts |= show_opts; /* see enum show_opts_e above */
-	opts |= (strchr(ospec,'D')?indent_:0);
 
-	traceInit(NULL,1); /* init traceControl_p, etc. */
-
-	/* get the time format and the length of the format (using example time (now) */
-	if((tfmt=getenv("TRACE_TIME_FMT"))==NULL)
-		//tfmt=(char*)TRACE_DFLT_TIME_FMT;
-		tfmt=(char*)"%s%%06d";
-	strftime(ttbuf,sizeof(ttbuf),tfmt,localtime(&tt));
-	tfmt_len=snprintf( tbuf,sizeof(tbuf),ttbuf, 0 );  /* possibly (probably) add usecs (i.e. FMT has %%06d) */
-
-	if (strchr(ospec,'n'))
-		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii) {
-			unsigned ll=0;
-			while (traceNamLvls_p[ii].name[ll]!='\0' && ++ll < sizeof(traceNamLvls_p->name)) ;
-			if (longest_name<ll)
-				longest_name=ll;
-		}
-	if (strchr(ospec,'L')) {
-		unsigned ll;
-		for (ii=0; ii<64; ++ii)
-			if (_lvlstr[ii]!=NULL && (ll=strlen(_lvlstr[ii]))>longest_lvlstr)
-				longest_lvlstr = ll;
-	}
-
-	/* If just a count is given, it will be a way to limit the number printed;
-	   a short hand version of "... | head -count". (so if there are not entries,
-	   none will be printed.
-	   If however, count and start are given, the count (up to numents) will be
-	   printed regardless of how many entries are actually filled with real
-	   data. This gives a way to look at data after a "treset".
-	*/
-	if (start >= 0)
-	{	start++; /* start slot index needs to be turned into a "count" */
-		if ((unsigned)start > traceControl_p->num_entries)
-		{	start = traceControl_p->num_entries;
-			printf("specified start index too large, adjusting to %d\n",start );
-		}
-		rdIdx=start;
-	}
-	else
-	{	/* here, rdIdx stars as a count (see max = rdIdx below), but it is
-		   used as an index after first being decremented (assuming reverse
-		   printing) */
-		rdIdx = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt) % traceControl_p->num_entries;
-	}
-	if ((count>=0) && (start>=0))
-	{
-		if ((unsigned)count > traceControl_p->num_entries)
-		{	max = traceControl_p->num_entries;
-			printf("specified count > num_entrie, adjusting to %d\n",max);
-		} else
-			max = count;
-	} else if (TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt)>=traceControl_p->num_entries) { /* traceControl_p-> may not be being used */
-		max = traceControl_p->num_entries;
-	} else
-		max = rdIdx;
-	if ((count>=0) && (start<0) && (count<max)) max=count;
-	if (opts&forward_) {
-		rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt), -max );
-		/* subtract 1 b/c during loop (below) rdIdx is incremented first */
-		rdIdx = IDXCNT_ADD( rdIdx, -1 );
-		forward_continuous =1;
-		for_rev=1;
-	}
-
-	buf_slot_width= minw( 3, countDigits(traceControl_p->num_entries-1) );
-	local_msg     =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
-	msg_cpy       =	           (char*)malloc( traceControl_p->siz_msg * 3 );/* in case an %ld needs change to %lld */
-	params_cpy    =	  (unsigned long*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
-	local_params  =	        (uint8_t*)malloc( traceControl_p->num_params*sizeof(uint64_t) );
-	params_sizes  = (struct sizepush*)malloc( traceControl_p->num_params*sizeof(struct sizepush) );
-
-	if (ospec[0] == 'H')
-	{	++ospec; /* done with Heading flag */
-		for (sp=ospec; *sp; ++sp)
-		{
-			switch (*sp)
-			{
-			case 'N': printf("%*s ", minw(3,countDigits(max-1)), "idx" ); break;
-			case 's': printf("%*s ", buf_slot_width, "slt" ); break;
-			case 'T': if(tfmt_len)printf("%*.*s ", tfmt_len,tfmt_len,&("us_tod"[tfmt_len>=6?0:6-tfmt_len])); break;
-			case 't': printf("       tsc "); break;
-			case 'i': printf("%*s ", TRACE_TID_WIDTH, "tid" ); break; /* darwin 16 tids are routinely 7 digit */
-			case 'I': printf("TID "); break;
-			case 'n': printf("%*s ", longest_name,"name");break;
-			case 'C': printf("cpu "); break;
-			case 'l': printf("lv "); break;
-			case 'L': printf("lvl "); break;
-			case 'B': printf("B "); break;
-			case 'P': printf("   pid "); break;
-			case 'R': printf("r "); break;
-			case '#': printf("args ");break;
-				/* ignore other unknown chars in ospec */
-			}
-		}
-		printf("msg\n");
-		for (sp=ospec; *sp; ++sp)
-		{
-# define TRACE_LONG_DASHES "------------------------------------------------"
-			switch (*sp)
-			{
-			case 'N': printf("%.*s ", minw(3,countDigits(max-1)), TRACE_LONG_DASHES); break;
-			case 's': printf("%.*s ", buf_slot_width, TRACE_LONG_DASHES); break;
-			case 'T': if(tfmt_len)printf("%.*s ", tfmt_len, TRACE_LONG_DASHES); break;
-			case 't': printf("---------- "); break;
-			case 'i': printf("%.*s ", TRACE_TID_WIDTH, TRACE_LONG_DASHES); break; /* darwin 16 tids are routinely 7 digit */
-			case 'I': printf("--- "); break;
-			case 'n': printf("%.*s ", longest_name,TRACE_LONG_DASHES);break;
-			case 'C': printf("--- "); break;
-			case 'l': printf("-- "); break;
-			case 'L': printf("--- "); break;
-			case 'B': printf("-- "); break;
-			case 'P': printf("------ "); break;
-			case 'R': printf("- "); break;
-			case '#': printf("---- ");break;
-				/* ignore other unknown chars in ospec */
-			}
-		}
-		printf("-----------------------------\n");
-	}
-
-	for (printed=0; printed<(unsigned)max || forward_continuous; ++printed)
-	{	time_t seconds; unsigned useconds;
-		int print_just_converted_ofmt=0;
-		rdIdx = IDXCNT_ADD( rdIdx, for_rev );
-		if (opts&forward_) {
-			uint32_t now, ini;
- forward_check:
-			ini=TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
-			while (rdIdx == (now=TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt)))
-				usleep( 100000 );
-			/* attempt to detect a treset which occurred _while_sleeping_ */
-			uint32_t delta=now-ini;
-			/*fprintf(stderr,"rdIdx=%u now=%u old=%u delta=%u\n",rdIdx,now,ini,delta);*/
-			if (delta > 0x80000000) {
-				rdIdx = 0;
-				goto forward_check;
-			}
-		}
-		myEnt_p = idxCnt2entPtr( rdIdx );
 		msg_p	 = (char*)(myEnt_p+1);
 		params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
-		/* not do the copy and reset ptrs to the copies. This avoids */
-		myEnt_cpy = *myEnt_p; /* potential issues with overwrite */
-		myEnt_p = &myEnt_cpy; /* due to the fact that entries can to created much faster than they can be printed */
-		strncpy( msg_cpy, msg_p, traceControl_p->siz_msg );
-		msg_p = msg_cpy;
-		memcpy( params_cpy, params_p, myEnt_p->nargs*sizeof(uint64_t) );
-		params_p = params_cpy;
 		
 		msg_p[traceControl_p->siz_msg - 1] = '\0';
-
 		if (myEnt_p->nargs)
-			get_arg_sizes(	local_msg, msg_p, opts
-			              , myEnt_p->param_bytes, params_sizes, myEnt_p->nargs );
+			slen = get_arg_sizes(	local_msg, msg_p, opts
+			                     , myEnt_p->param_bytes, params_sizes, myEnt_p->nargs );
 		else {
 			if (opts&filter_newline_) {
-				for (ii=0; msg_p[ii]!='\0' && ii<traceControl_p->siz_msg; ++ii) {
-					local_msg[ii] = (msg_p[ii]!='\n')?msg_p[ii]:';';
-				}
-				if (ii<traceControl_p->siz_msg) local_msg[ii]='\0';
+				for (slen=0; slen<traceControl_p->siz_msg && msg_p[slen]!='\0'; ++slen)
+					local_msg[slen] = (msg_p[slen]!='\n')?msg_p[slen]:';';
 			}
-			else
-				strncpy( local_msg, msg_p, traceControl_p->siz_msg );
+			else {
+				/* strncpy( local_msg, msg_p, traceControl_p->siz_msg ); */
+				for (slen=0; slen<traceControl_p->siz_msg && msg_p[slen]!='\0'; ++slen)
+					local_msg[slen] = msg_p[slen];
+			}
+			if (slen < traceControl_p->siz_msg)
+				local_msg[slen] = '\0';
+			else if (traceControl_p->siz_msg > 0) // if no term in 1st n bytes
+				local_msg[--slen] = '\0';  // adjust strlen and terminate
 		}
 
 		/* determine if args need to be copied */
@@ -524,48 +380,551 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 			}
 			param_va_ptr = (void*)local_params;
 		}
+
+		msg_spec_included = 0;
 		for (sp=ospec; *sp; ++sp)
 		{
+			if (*sp != '%')
+			{
+				printf("%c",*sp );
+				continue;
+			}
+			if (*++sp =='\0')
+			{
+				printf("%%"); // print the trailing/ending %
+				break;
+			}
 			switch (*sp)
 			{
-			case 'N': printf("%*u ", minw(3,countDigits(max-1)), printed ); break;
-			case 's': printf("%*u ", buf_slot_width, rdIdx%traceControl_p->num_entries ); break;
-			case 'T': if(tfmt_len){ strftime(tbuf,sizeof(tbuf),tfmt,localtime(&seconds)); strcat(tbuf," ");
-					  printf(tbuf, useconds); } break;
-			case 't': printf("%10u ", (unsigned)myEnt_p->tsc); break;
-			case 'i': printf("%*d ", TRACE_TID_WIDTH, myEnt_p->tid); break; /* darwin 16 tids are routinely 7 digit */
-			case 'I': printf("%3u ", myEnt_p->TrcId); break;
-			case 'n': printf("%*.*s ",longest_name,longest_name,traceNamLvls_p[myEnt_p->TrcId].name);break;
-			case 'C': printf("%3u ", myEnt_p->cpu); break;
-			case 'l': printf("%2d ", myEnt_p->lvl); break;
-			case 'L': printf("%*s ", longest_lvlstr, _lvlstr[(myEnt_p->lvl)&LVLBITSMSK]); break;
-			case 'B': printf("%u ", myEnt_p->param_bytes); break;
-			case 'P': printf("%6d ", myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 or 458752 (on mu2edaq13) */
-			case 'R':
-				if (myEnt_p->get_idxCnt_retries) printf( "%u ", myEnt_p->get_idxCnt_retries );
-				else							 printf( ". " );
+			case '%': printf("%%"); break;
+			case 'a': printf("%4u", myEnt_p->nargs); break;
+			case 'B': printf("%u", myEnt_p->param_bytes); break;
+			case 'C': printf("%" MM_STR(TRACE_CPU_WIDTH) "u", myEnt_p->cpu); break;
+			case 'D': /* ignore this "control" */ break;
+			case 'e': snprintf(tbuf,sizeof(tbuf),"%s:%d",traceNamLvls_p[myEnt_p->TrcId].name,myEnt_p->linenum);
+				      printf("%*.*s",name_width+1+TRACE_LINENUM_WIDTH,name_width+1+TRACE_LINENUM_WIDTH,tbuf);break;
+			case 'f': printf("%s",local_msg); msg_spec_included=1; break;
+			case 'H': /* ignore this "control" */ break;
+			case 'I': printf("%4u", myEnt_p->TrcId); break;
+			case 'i': printf("%*d", TRACE_TID_WIDTH, myEnt_p->tid); break; /* darwin 16 tids are routinely 7 digit */
+			case 'L': printf("%*s", longest_lvlstr, _lvlstr[(myEnt_p->lvl)&LVLBITSMSK]); break;
+			case 'l': printf("%2d", myEnt_p->lvl); break;
+			case 'm':
+				if (local_msg[slen-1] == '\n')
+					local_msg[--slen] = '\0'; // strip off the trailing newline
+				if (opts&indent_) {
+					int ii=(myEnt_p->lvl>63)?63:myEnt_p->lvl;
+					printf("%s",&indent[63-ii]);
+				}
+				if (myEnt_p->nargs) {
+					va_list ap_=TRACE_VA_LIST_INIT(param_va_ptr);
+					vprintf( local_msg, ap_ );
+				} else
+					printf("%s",local_msg);				
+				msg_spec_included=1;
 				break;
-			case 'f': print_just_converted_ofmt=1; break;
-			case '#': printf("%4u ", myEnt_p->nargs); break;
+			case 'N': printf("%*u", N_width, printed ); break;
+			case 'n': printf("%*.*s",name_width,name_width,traceNamLvls_p[myEnt_p->TrcId].name);break;
+			case 'P': printf("%6d", myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 or 458752 (on mu2edaq13) */
+			case 'R':
+				if (myEnt_p->get_idxCnt_retries) printf( "%u", myEnt_p->get_idxCnt_retries );
+				else							 printf( "." );
+				break;
+			case 's': printf("%*u", bufSlot_width, rdIdx%traceControl_p->num_entries ); break;
+			case 'T': if(tfmt_len){ strftime(tbuf,sizeof(tbuf),tfmt,localtime(&seconds));// strcat(tbuf," ");
+					  if ((cp=strstr(tbuf,"%0")) && *(cp+2)>='1' && *(cp+2)<='5' && *(cp+3)=='d') {
+						  // NOTE: if *(cp+2)==6, don't do anything.
+						  // Example: fmt originally had "%%04d" which got changed by strftime to "%04d";
+						  // grab the character '4' and adjust useconds accordingly.
+						  int div=1;
+						  switch (*(cp+2)){
+						  case '1':div=100000;break;
+						  case '2':div=10000;break;
+						  case '3':div=1000;break;
+						  case '4':div=100;break;
+						  case '5':div=10;break;
+						  }
+						  useconds = (unsigned)((double)useconds/div+0.5); // div, round and cast back to unsigned
+					  }
+					  printf(tbuf, useconds); } break;
+			case 't': printf("%10u", (unsigned)myEnt_p->tsc); break;
+			case 'u': printf("%" MM_STR(TRACE_LINENUM_WIDTH) "u", myEnt_p->linenum); break;
+			case 'x': /* ignore this "control" */ break;
+			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence
 			}
 		}
 
 		/*typedef unsigned long parm_array_t[1];*/
 		/*va_start( ap, params_p[-1] );*/
-		if (!print_just_converted_ofmt && myEnt_p->nargs)
-		{	/* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
-			   Here, I need an initializer so I must have this inside braces { } */
-			va_list ap_=TRACE_VA_LIST_INIT(param_va_ptr);
+		if (!msg_spec_included) {
+			if (local_msg[slen-1] == '\n')
+				local_msg[--slen] = '\0'; // strip off the trailing newline
 			if (opts&indent_) {
 				int ii=(myEnt_p->lvl>63)?63:myEnt_p->lvl;
 				printf("%s",&indent[63-ii]);
 			}
-			vprintf( local_msg, ap_ );
-			printf("\n");
+			if (ospec[0]!='\0' && !strchr(" \t:-|", *(sp-1))) // if the specification does not end in a "separator"
+				printf(" ");
+			if (myEnt_p->nargs)
+			{	/* Ref. http://andrewl.dreamhosters.com/blog/variadic_functions_in_amd64_linux/index.html
+				   Here, I need an initializer so I must have this inside braces { } */
+				va_list ap_=TRACE_VA_LIST_INIT(param_va_ptr);
+				vprintf( local_msg, ap_ );
+			}
+			else
+				printf("%s",local_msg);
 		}
-		else /* print_just_converted_ofmt */
-			printf("%s\n",local_msg);
+		printf("\n");
 		fflush(stdout);
+} /* printEnt */
+
+typedef struct trace_ptrs {
+	struct trace_ptrs      *next;
+	struct trace_ptrs      *prev;
+	const char             *file; /* for debugging */
+	struct traceControl_s  *ro_p;
+	struct traceControl_rw *rw_p;
+	struct traceNamLvls_s  *namlvls_p;
+	struct traceEntryHdr_s *entries_p;
+	uint32_t                rdIdx;
+	int32_t                 max;
+} trace_ptrs_t;
+
+void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file )
+{
+	if (idx == 0)
+		trace_ptrs[idx].prev = NULL;
+	else {
+		trace_ptrs[idx].prev = &trace_ptrs[idx-1];
+		trace_ptrs[idx-1].next = &trace_ptrs[idx];
+	}
+	trace_ptrs[idx].file = file;
+	trace_ptrs[idx].ro_p = traceControl_p;
+	trace_ptrs[idx].rw_p = traceControl_rwp;
+	trace_ptrs[idx].namlvls_p = traceNamLvls_p;
+	trace_ptrs[idx].entries_p = traceEntries_p;
+	
+	trace_ptrs[idx].next = NULL;
+}
+
+/* Designed to work in the code:
+   for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
+       trace_ptrs_discard( t_ptrs, &trace_ptrs_list_start );
+ */
+void trace_ptrs_discard( trace_ptrs_t *tptr, trace_ptrs_t **list_start )
+{
+	trace_ptrs_t *prev=tptr->prev;
+	trace_ptrs_t *next=tptr->next;
+	if(next)
+		next->prev = prev;
+	if(prev)
+		prev->next = next;
+	if(prev==NULL && next==NULL)
+		*list_start=NULL;
+}
+
+void trace_ptrs_restore( trace_ptrs_t *tptr )
+{
+	traceControl_p   = tptr->ro_p;
+	traceControl_rwp = tptr->rw_p;
+	traceNamLvls_p   = tptr->namlvls_p;
+	traceEntries_p   = tptr->entries_p;
+}
+
+/*  rdIdx and wrIdxCnt are BOTH non-modulo.
+	For forward read: simple delta
+	For reverse read: num_entries(or wrIdxCnt) - delta
+
+NOT WORRYING ABOUT wrIdxCnt,rdIdx wrap yet -- Work-In-Progress!!!
+ */
+uint32_t rdIdx_has_lines( uint32_t wrIdxCnt, uint32_t rdIdx, int for_rev )
+{
+    uint32_t lines;
+	if (for_rev == -1) {
+		// READING in reverse -- from large numbers to smaller; reading and writing are on head on collision course
+		if (wrIdxCnt <= traceControl_p->num_entries) {
+			//     0*********<-rw->_______End
+			lines = wrIdxCnt - IDXCNT_DELTA(wrIdxCnt,rdIdx+1);
+			//return ((lines<=wrIdxCnt)?lines:0);
+			return (lines);
+		} else {
+			lines = traceControl_p->num_entries - IDXCNT_DELTA(wrIdxCnt,rdIdx+1);
+			//return ((lines<=traceControl_p->num_entries)?lines:0);
+			return (lines);
+		}
+	} else {
+		// READING forward (i.e from 0 up; read chasing writing; writing may overrun reading)
+		if (wrIdxCnt <= traceControl_p->num_entries) {
+			lines = IDXCNT_DELTA(wrIdxCnt,rdIdx);
+			//return ((lines<=wrIdxCnt)?lines:0);
+			return (lines);
+		} else {
+			lines = IDXCNT_DELTA(wrIdxCnt,rdIdx);
+			//return ((lines<=traceControl_p->num_entries)?lines:0);
+			return (lines);
+		}
+	}
+}
+
+
+int tvcmp( struct timeval *t1, struct timeval *t2)
+{
+	if        (t1->tv_sec  < t2->tv_sec) {
+		return (-1);
+	} else if (t1->tv_sec == t2->tv_sec) {
+		if        (t1->tv_usec < t2->tv_usec) {
+			return (-1);
+		} else if (t1->tv_usec == t2->tv_usec) {
+			return (0);
+		} else
+			return (1);
+	} else
+		return (1);
+}
+
+/* count==-1, slotStart==-1  ==> DEFAULT - reverse print from wrIdx to zero (if not
+                                 full) or for num_entrie
+   count>=0,  slotStart==-1  ==> reverse print "count" entries (incuding 0, which
+                                 doesn't seem to useful
+   count>=0,  slotStart>=0   ==> reverse print count entries starting at "slot" idx
+                                 "slotStart"  I.e. if 8 traces have occurred, these 2
+                                 are equivalent:
+                                 traceShow( ospec, -1, -1, 0 ) and
+                                 traceShow( ospec,  8,  7, 0 )
+ */
+void traceShow( const char *ospec, int count, int slotStart, int show_opts, int argc, char *argv[] )
+{
+	uint32_t rdIdx;
+	int32_t max;
+	unsigned printed=0;
+	unsigned ii;
+	int	   	 bufSlot_width;
+	int	   	 opts=0;
+	struct traceEntryHdr_s* myEnt_p;
+
+	uint8_t               * local_params;
+	char                  * local_msg;
+	struct sizepush       * params_sizes;
+	const char            * sp; /*spec ptr*/
+	char                  * tfmt;
+	int                     tfmt_len;
+	time_t                  tt=time(NULL);
+	char                    tbuf[0x100], ttbuf[0x100];
+	int                     for_rev=-1; /* default is reverse print */
+	int                     forward_continuous=0; /* continuous==1 will force for_rev=1 */
+	int                     msg_spec_included;
+	int						files_to_show=0;
+	int                     memlen_out_unused __attribute__((__unused__));
+	trace_ptrs_t		  * t_ptrs, * trace_ptrs_list_start, *t_ptrs_use;
+	struct timeval        * tv_p_use;
+	int                     name_width=0;
+	unsigned                longest_lvlstr=0;
+	uint32_t                num_entries_total;
+	uint32_t                siz_msg_largest;
+	uint32_t                siz_entry_largest;
+	uint32_t                num_params_largest;
+	int                     N_width;
+
+	if ((slotStart != -1) && (argc >= 2)) {
+		fprintf( stderr, "-s<startSlotIndex> invalid with multiple files\n" );
+		exit(EXIT_FAILURE);
+	} else if ((slotStart != -1) && (show_opts&forward_)) {
+		fprintf( stderr, "-s<startSlotIndex> invalid with -F (Forward/poll mode)\n" );
+		exit(EXIT_FAILURE);
+	}
+	opts |= show_opts; /* see enum show_opts_e above */
+	opts |= (strflg(ospec,'D')?indent_:0);
+	opts |= (strflg(ospec,'x')?filter_newline_:0);
+
+	if (argc == 0) {
+		traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. */
+		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*1);
+		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile );
+	} else {
+		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*argc);
+		memset( trace_ptrs_list_start, 0, sizeof(trace_ptrs_t)*argc );
+		trace_ptrs_list_start[0].prev = NULL;
+		for (ii=0; ii<argc; ++ii) {
+			if (access(argv[ii],R_OK) != 0) {
+				fprintf( stderr, "Warning: cannot access %s\n", argv[ii] );
+				continue;
+			}
+			setenv("TRACE_FILE", argv[ii], 1 );
+# if 1
+			traceControl_p = traceControl_p_static = NULL; // trick to allow traceInit to (re)mmap (another) file
+			traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. NOTE: multiple "register_atfork" will occur, but should be tolerated be this non-forking app */
+# else
+			trace_mmap_file( argv[ii],&memlen_out_unused,&traceControl_p, &traceControl_rwp // NOTE: traceNamLvls_p, traceEntries_p are iniitalized
+			                , 0,0,0,0, 1 );
+# endif
+			if (TRACE_CNTL("mapped")) {
+				int jj;
+				for (jj=0; jj<files_to_show; ++jj) {
+					if (traceControl_p == trace_ptrs_list_start[jj].ro_p)
+						// found
+						break;
+				}
+				if (jj==files_to_show) {
+					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, argv[ii] );
+				}
+			}
+		}
+	}
+
+	/* get the time format and the length of the format (using example time (now) */
+	if((tfmt=getenv("TRACE_TIME_FMT"))==NULL)
+		//tfmt=(char*)TRACE_DFLT_TIME_FMT;
+		tfmt=(char*)"%s%%06d"; // %s - The number of seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC).
+	strftime(ttbuf,sizeof(ttbuf),tfmt,localtime(&tt));
+	tfmt_len=snprintf( tbuf,sizeof(tbuf),ttbuf, 0 );  /* possibly (probably) add usecs (i.e. FMT has %%06d) */
+
+	if (strflg(ospec,'L')) { /* level number 0-63 is 2 digits, 'L' is level string -- need to find longest str */
+		unsigned ll;
+		for (ii=0; ii<64; ++ii)
+			if (_lvlstr[ii]!=NULL && (ll=strlen(_lvlstr[ii]))>longest_lvlstr)
+				longest_lvlstr = ll;
+	}
+
+	if (strflg(ospec,'n') || strflg(ospec,'e'))
+		for (name_width=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
+			if (name_width < t_ptrs->rw_p->longest_name)
+				name_width = t_ptrs->rw_p->longest_name;
+	for (num_entries_total=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
+		num_entries_total += t_ptrs->ro_p->num_entries;
+	for (siz_msg_largest=0, num_params_largest=0, t_ptrs=trace_ptrs_list_start;
+		 t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
+		if (siz_msg_largest < t_ptrs->ro_p->siz_msg)
+			siz_msg_largest = t_ptrs->ro_p->siz_msg;
+		if (num_params_largest < t_ptrs->ro_p->num_params)
+			num_params_largest = t_ptrs->ro_p->num_params;
+		if (siz_entry_largest < t_ptrs->ro_p->siz_entry)
+			siz_entry_largest = t_ptrs->ro_p->siz_entry;
+	}
+
+	/* If just a count is given, it will be a way to limit the number printed;
+	   a short hand version of "... | head -count". (so if there are not entries,
+	   none will be printed.
+	   If however, count and slotStart are given, the count (up to numents) will be
+	   printed regardless of how many entries are actually filled with real
+	   data. This gives a way to look at data after a "treset".
+	*/
+	if (slotStart >= 0) // only applicable with one file
+	{	slotStart++; /* startSlot index needs to be turned into a "count" */
+		if ((unsigned)slotStart > num_entries_total)
+		{	slotStart = num_entries_total;
+			printf("specified slotStart index too large, adjusting to %d\n",slotStart );
+		}
+		trace_ptrs_list_start->rdIdx = slotStart; // in "startSlot mode" rdIdx is not realative to wrIdxCnt
+	}
+	else
+	{	/* here, rdIdx starts as a count (see max = rdIdx below), but it is
+		   used as an index after first being decremented (assuming reverse
+		   printing) */
+		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next)
+			t_ptrs->rdIdx = TRACE_ATOMIC_LOAD(&t_ptrs->rw_p->wrIdxCnt); // % t_ptrs->ro_p->num_entries;
+	}
+
+	if ((count>=0) && (slotStart>=0)) {   // only applicable with one file (the slotStart>=0 part)
+		t_ptrs=trace_ptrs_list_start;
+		if ((unsigned)count > num_entries_total) {
+			count = max = t_ptrs->max = t_ptrs->ro_p->num_entries;
+		} else {
+			max = t_ptrs->max = count;
+		}
+	} else {
+		for (max=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next)
+			if (TRACE_ATOMIC_LOAD(&t_ptrs->rw_p->wrIdxCnt)>=t_ptrs->ro_p->num_entries)
+				//max = traceControl_p->num_entries;
+				max += t_ptrs->max = t_ptrs->ro_p->num_entries;
+			else
+				//max = rdIdx;
+				max += t_ptrs->max = t_ptrs->rdIdx;
+	}
+
+	if ((count>=0) && (slotStart<0) && (count<max))
+		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next)
+			t_ptrs->max=count;
+	if (opts&forward_) {
+		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
+			t_ptrs->rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&t_ptrs->rw_p->wrIdxCnt), -t_ptrs->max );
+			/* subtract 1 b/c during loop (below) rdIdx is incremented first */
+			t_ptrs->rdIdx = IDXCNT_ADD( t_ptrs->rdIdx, -1 );
+		}
+		forward_continuous =1;
+		for_rev=1;
+	}
+
+	//printf("for_rev=%d slotStart=%d count=%d max=%d siz_msg_largest=%u num_params_largest=%u files_to_show=%d\n"
+	//       ,for_rev,slotStart,count,max,siz_msg_largest,num_params_largest, files_to_show);
+
+	N_width = minw(3,countDigits(max-1));
+	bufSlot_width= minw( 3, countDigits(num_entries_total-1) );
+
+	myEnt_p       = (struct traceEntryHdr_s *)malloc( siz_entry_largest );
+	local_msg     =	                   (char*)malloc( siz_msg_largest * 3 );/* in case an %ld needs change to %lld */
+	local_params  =	                (uint8_t*)malloc( num_params_largest*sizeof(uint64_t) );
+	params_sizes  =         (struct sizepush*)malloc( num_params_largest*sizeof(struct sizepush) );
+
+	if (strflg(ospec,'H'))
+	{
+		msg_spec_included=0;
+# define TRACE_MSG_DASHES  "--------------------------"
+# define TRACE_LONG_DASHES "------------------------------------------------"
+		for (sp=ospec; *sp; ++sp) {
+			if (*sp != '%') {
+				printf("%c",*sp );
+				continue;
+			}
+			if (*++sp =='\0') {
+				printf("%%"); // print the trailing/ending %
+				break;
+			}
+			switch (*sp) {
+			case '%': printf("%%"); break;
+			case 'a': printf("args");break;
+			case 'B': printf("B"); break;
+			case 'C': printf("cpu"); break;
+			case 'D': /* ignore this "control" */ break;
+			case 'e': printf("%*s", name_width+1+TRACE_LINENUM_WIDTH,"trcname:ln#");break; // +1 for ':'
+			case 'f': printf("%-*s", (int)strlen(TRACE_MSG_DASHES),"msg"); msg_spec_included=1; break;
+			case 'H': /* ignore this "control" */ break;
+			case 'I': printf(" TID"); break;
+			case 'i': printf("%" MM_STR(TRACE_TID_WIDTH) "s", "tid" ); break; /* darwin 16 tids are routinely 7 digit */
+			case 'L': printf("lvl"); break;
+			case 'l': printf("lv"); break;
+			case 'm': printf("%-*s", (int)strlen(TRACE_MSG_DASHES),"msg"); msg_spec_included=1; break;
+			case 'N': printf("%*s", N_width, "idx" ); break;
+			case 'n': printf("%*s", name_width,"trcname");break;
+			case 'P': printf("%" MM_STR(TRACE_TID_WIDTH) "s","pid"); break;
+			case 'R': printf("r"); break;
+			case 's': printf("%*s", bufSlot_width, "slt" ); break;
+			case 'T': if(tfmt_len)printf("%*.*s", tfmt_len,tfmt_len,&("us_tod"[tfmt_len>=6?0:6-tfmt_len])); break;
+			case 't': printf("       tsc"); break;
+			case 'u': printf("%" MM_STR(TRACE_LINENUM_WIDTH) "s", "ln#");break;
+			case 'x': /* ignore this "control" */ break;
+			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence
+			}
+		}
+		if (!msg_spec_included) {
+			if (!strchr(" \t:-|", *(sp-1))) // if the specification does not end in a "separator"
+				printf(" ");
+			printf("%-*s\n", (int)strlen(TRACE_MSG_DASHES),"msg");
+		}
+		else if (*(sp-1) != '\n')
+			printf("\n");
+
+		msg_spec_included=0; // reset for the ---- processing
+		for (sp=ospec; *sp; ++sp) {
+			if (*sp != '%') {
+				if (strchr(" \t\n",*sp))
+					printf("%c",*sp );
+				else
+					printf("-");
+				continue;
+			}
+			if (*++sp =='\0') {
+				printf("%%"); // print the trailing/ending %
+				break;
+			}
+			switch (*sp) {
+			case '%': printf("-"); break;
+			case 'a': printf("----");break;
+			case 'B': printf("--"); break;
+			case 'C': printf("---"); break;
+			case 'D': /* ignore this "control" */ break;
+			case 'e': printf("%.*s", name_width+1+TRACE_LINENUM_WIDTH,TRACE_LONG_DASHES);break;
+			case 'f': printf(TRACE_MSG_DASHES); msg_spec_included=1; break;
+			case 'H': /* ignore this "control" */ break;
+			case 'I': printf("----"); break;
+			case 'i': printf("%." MM_STR(TRACE_TID_WIDTH) "s", TRACE_LONG_DASHES); break; /* darwin 16 tids are routinely 7 digit */
+			case 'L': printf("---"); break;
+			case 'l': printf("--"); break;
+			case 'm': printf(TRACE_MSG_DASHES); msg_spec_included=1; break;
+			case 'N': printf("%.*s", N_width, TRACE_LONG_DASHES); break;
+			case 'n': printf("%.*s", name_width,TRACE_LONG_DASHES);break;
+			case 'P': printf("%." MM_STR(TRACE_TID_WIDTH) "s", TRACE_LONG_DASHES); break;
+			case 'R': printf("-"); break;
+			case 's': printf("%.*s", bufSlot_width, TRACE_LONG_DASHES); break;
+			case 'T': if(tfmt_len)printf("%.*s", tfmt_len, TRACE_LONG_DASHES); break;
+			case 't': printf("----------"); break;
+			case 'u': printf("%." MM_STR(TRACE_LINENUM_WIDTH) "s", TRACE_LONG_DASHES);break;
+			case 'x': /* ignore this "control" */ break;
+			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence
+			}
+		}
+		if (!msg_spec_included) {
+			if (!strchr(" \t:-|", *(sp-1))) // if the specification does not end in a "separator"
+				printf(" ");
+			printf(TRACE_MSG_DASHES "\n");
+		}
+		else if (*(sp-1) != '\n')
+			printf("\n");
+
+	}
+
+	// Change count to idx
+	for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
+		rdIdx = IDXCNT_ADD( t_ptrs->rdIdx, for_rev );
+		t_ptrs->rdIdx = rdIdx;
+	}
+
+	printed=0;
+	while (1) {
+		uint32_t lines;
+		/* loop trhough the files looking for
+		   a) ones that have something to print and
+		   b) the one that is earliest or latest depending on for_rev
+		 */
+		if (count>=0 && printed>=count && !forward_continuous) /* yes, can elect to print zero lines w/ -c0 */
+			break;
+		
+ forward_check:
+		t_ptrs_use = 0;
+		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
+			traceControl_p = t_ptrs->ro_p; // used in rdIdx_has_lines
+ reset_check:
+			if (slotStart >= 0) {
+				// "startSlot mode"
+				t_ptrs_use=t_ptrs;
+			} else if ((lines=rdIdx_has_lines(t_ptrs->rw_p->wrIdxCnt,t_ptrs->rdIdx,for_rev))) {
+				if (lines > traceControl_p->num_entries) {  // reset detect
+					t_ptrs->rdIdx = 0;
+					goto reset_check;
+				}
+				trace_ptrs_restore( t_ptrs ); // for idxCnt2entPtr to get time
+				if(!t_ptrs_use) {
+					t_ptrs_use=t_ptrs;
+					tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+				} else {
+					// Compare differently depending on whether forward or reverse.
+					// Race condition -- rdIdx might have just changed and time could be being overwritten :(
+					// Frozen trace buffers are the safest!
+					if (tvcmp(tv_p_use,&idxCnt2entPtr(t_ptrs->rdIdx)->time) == for_rev) {
+						t_ptrs_use=t_ptrs;
+						tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+					}
+				}
+			} else if (!forward_continuous)  // not strictly needed, but a little efficiency gain
+				trace_ptrs_discard( t_ptrs, &trace_ptrs_list_start );
+		}
+		if (t_ptrs_use == NULL && !forward_continuous) {
+			break;
+		} else if (t_ptrs_use==NULL && forward_continuous) {
+			usleep( 100000 );
+			goto forward_check;
+		}
+
+		// had (possibly just changed) t_ptrs_use->rdIdx for a while -- race condition -
+		// could be being written to as we are copying :( -- frozen buffers are the safest
+		trace_ptrs_restore( t_ptrs_use );
+		memcpy( myEnt_p, idxCnt2entPtr(t_ptrs_use->rdIdx), traceControl_p->siz_entry );
+
+		printEnt(  ospec, opts, myEnt_p
+		         , local_msg, local_params, params_sizes
+		         , bufSlot_width, N_width, name_width, printed, t_ptrs_use->rdIdx
+		         , tfmt, tfmt_len, longest_lvlstr );
+		++printed;
+		t_ptrs_use->rdIdx = IDXCNT_ADD( t_ptrs_use->rdIdx, for_rev );
 	}
 }	/*traceShow*/
 
@@ -573,8 +932,8 @@ void traceShow( const char *ospec, int count, int start, int show_opts )
 void traceInfo()
 {
 	uint32_t       used;
-	TRACE_ATOMIC_T wrCopy;
-	TRACE_ATOMIC_T nameLockCopy;
+	uint32_t       wrCopy;
+	uint32_t       nameLockCopy;
 	char           outstr[200];
 	struct tm      *tmp;
 	time_t         tt=(time_t)traceControl_p->create_tv_sec;
@@ -588,8 +947,8 @@ void traceInfo()
 	if (strftime(outstr, sizeof(outstr),"%a %b %d %H:%M:%S %Z %Y",tmp) == 0)
 	{   perror("strftime"); exit(EXIT_FAILURE);
 	}
-	TRACE_ATOMIC_STORE( &nameLockCopy, TRACE_ATOMIC_LOAD(&traceControl_rwp->namelock) );
-	TRACE_ATOMIC_STORE( &wrCopy,       TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt) );
+	nameLockCopy = TRACE_ATOMIC_LOAD(&traceControl_rwp->namelock);
+	wrCopy       = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
 	used = ((traceControl_rwp->full)
 		?traceControl_p->num_entries
 		:TRACE_ATOMIC_LOAD(&wrCopy) ); /* if not full this shouldn't be > traceControl_p->num_entries */
@@ -602,6 +961,7 @@ void traceInfo()
 	       "full              = %d\n"
 	       "nameLock          = %u\n"
 	       "largestMultiple   = 0x%08x\n"
+	       "largestZeroOffset = 0x%08x\n"
 	       "trigIdxCnt        = 0x%08x\n"
 	       "triggered         = %d\n"
 	       "trigActivePost    = %u\n"
@@ -620,8 +980,8 @@ void traceInfo()
 	       "namLvls offset    = 0x%lx\n"
 	       "buffer_offset     = 0x%lx\n"
 	       "memlen            = 0x%x          %s\n"
-	       "default TRACE_SHOW=%s others: t:tsc B:paramBytes s:slot f:convertedMsgfmt_only D:inDent I:trcId #:nargs l:lvl_int\n"
-	       "default TRACE_PRINT=\"%s\" others: s:severity C:core I:trcId i:threadID f:file N:unpadded_trcName P:pid u:line\n"
+	       "default TRACE_SHOW=\"%s\" others: a:nargs B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum s:slot t:tsc u:line\n"
+	       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# f:file I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName P:pid s:severity t:insert u:line\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string
 	       , outstr
@@ -631,6 +991,7 @@ void traceInfo()
 	       , traceControl_rwp->full
 	       , nameLockCopy
 	       , traceControl_p->largest_multiple
+	       , traceControl_p->largest_zero_offset
 	       , traceControl_rwp->trigIdxCnt
 	       , traceControl_rwp->triggered
 	       , traceControl_rwp->trigActivePost
@@ -673,18 +1034,20 @@ extern  int        optind;         /* for getopt */
 	int	        do_heading=1;
 	int	        show_opts=0;
 	unsigned    ii=0;
+	char        test_name[0x100];
 	int         opt_loops=-1;
 	unsigned    opt_dly_ms=0;
 	unsigned    opt_burst=1;
 	int         opt_all=0;
+	int         opt_count=-1, opt_start=-1;
 	const char *opt_name=NULL;
 
-	while ((opt=getopt(argc,argv,"?hn:N:f:x:HqVL:Fl:d:b:a")) != -1) {
+	while ((opt=getopt(argc,argv,"?hn:N:f:x:HqVL:Fl:d:b:ac:s:")) != -1) {
 		switch (opt) {
 		/*   '?' is also what you get w/ "invalid option -- -"   */
 		case '?': case 'h': printf(USAGE);exit(0);           break;
 		case 'N': opt_name=optarg;                           break;
-		case 'n': setenv("TRACE_NAME",optarg,1);             break;
+		case 'n': setenv("TRACE_NAME",optarg,1);             break;/*note: TRACE_CNTL "file" or "name" doesn't allow setting the other (order becomes dependent)*/
 		case 'f': setenv("TRACE_FILE",optarg,1);             break;
 		case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
 		case 'H': do_heading=0;                              break;
@@ -696,6 +1059,8 @@ extern  int        optind;         /* for getopt */
 		case 'd': opt_dly_ms=strtoul(optarg,NULL,0);         break;
 		case 'b': opt_burst=strtoul(optarg,NULL,0);          break;
 		case 'a': opt_all=1;                                 break;
+		case 'c': opt_count=strtoul(optarg,NULL,0);          break;
+		case 's': opt_start=strtoul(optarg,NULL,0);          break;
 		}
 	}
 	if (argc - optind < 1) {
@@ -707,15 +1072,16 @@ extern  int        optind;         /* for getopt */
 	if (opt_name && !(strncmp(cmd,"lvl",3)==0))
 		setenv("TRACE_NAME",opt_name,1);
 
-	if(getenv("LC_NUMERIC"))
-		setlocale(LC_NUMERIC,getenv("LC_NUMERIC"));
+	if(getenv("LC_NUMERIC"))                        // IFF LC_NUMERIC is set in the environment (i.e to "en_US.UTF-8")...
+		setlocale(LC_NUMERIC,getenv("LC_NUMERIC")); // this is needed for (e.g.) %'d to produce output with thousands grouped
 
 	if		(strcmp(cmd,"test1") == 0)
-	{	int loops=1;
+	{	int loops=1, trace_cnt;
+		setenv("TRACE_NAME",basename(__FILE__),0); // allow this to be overridden by -n and env.var. (and define TRACE_NAME)
 		if (opt_loops > -1) loops=opt_loops;
-		for (; loops; --loops)
-		{	TRACE( 2, "Hello %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
-				  , loops, 'c',2.5,(short)5,(long long)5000000000LL,15 );
+		for (trace_cnt=1; trace_cnt<=loops; ++trace_cnt)
+		{	TRACE( 2, "Hi %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
+				  , trace_cnt, 'c',2.5,(short)5,(long long)5000000000LL,15 );
 		}
 	}
 	else if (strcmp(cmd,"test") == 0)
@@ -776,12 +1142,12 @@ extern  int        optind;         /* for getopt */
 		printf("myIdx=0x%08x\n", myIdx );
 		for (ii=0; ii<6; ++ii)
 		{	desired = IDXCNT_ADD(myIdx,1);
-			printf( "myIdx==>myIdx+1: 0x%08x 0x%08x\n",myIdx, desired );
+			printf( "myIdx==>IDXCNT_ADD(myIdx,1): 0x%08x 0x%08x\n",myIdx, desired );
 			myIdx = desired;
 		}
 		for (ii=0; ii<6; ++ii)
 		{	desired = IDXCNT_ADD(myIdx,-1);
-			printf( "myIdx==>myIdx-1: 0x%08x 0x%08x\n",myIdx, desired );
+			printf( "myIdx==>IDXCNT_ADD(myIdx,-1): 0x%08x 0x%08x\n",myIdx, desired );
 			myIdx = desired;
 		}
 		printf("myIdx=0x%08x\n", myIdx );
@@ -791,18 +1157,38 @@ extern  int        optind;         /* for getopt */
 		printf("myIdx=0x%08x\n", myIdx );
 		for (ii=0; ii<6; ++ii)
 		{	desired = IDXCNT_ADD(myIdx,xx);
-			printf( "myIdx==>myIdx+5: 0x%08x 0x%08x\n",myIdx, desired );
+			printf( "myIdx==>IDXCNT_ADD(myIdx,5): 0x%08x 0x%08x\n",myIdx, desired );
 			myIdx = desired;
 		}
 		for (ii=0; ii<6; ++ii)
 		{	desired = IDXCNT_ADD(myIdx,-xx);  /* NOTE: this will not work if xx is of type uint32_t; it must be of int32_t */
-			printf( "myIdx==>myIdx-5: 0x%08x 0x%08x\n",myIdx, desired );
+			printf( "myIdx==>IDXCNT_ADD(myIdx,-5): 0x%08x 0x%08x\n",myIdx, desired );
 			myIdx = desired;
 		}
 		printf("myIdx=0x%08x\n", myIdx );
 
+		printf("For forward read... simple delta\n");
+		printf("IDXCNT_DELTA(wr=5,rd=4)=%u\n",IDXCNT_DELTA(5,4));
+		printf("IDXCNT_DELTA(wr=5,rd=0)=%u\n",IDXCNT_DELTA(5,0));
+		printf("IDXCNT_DELTA(wr=5,rd=IDXCNT_ADD(0,-1)=0x%08x)=%u\n",IDXCNT_ADD(0,-1),IDXCNT_DELTA(5,IDXCNT_ADD(0,-1)));
+		printf("For reverse read... numents(or wrIdxCnt) - delta\n");
+		printf("(num_entries=%u) - IDXCNT_DELTA(wr=IDXCNT_ADD(num_entries,10),rd=IDXCNT_ADD(num_entries,5)) = %u\n"
+		       ,traceControl_p->num_entries
+		       ,traceControl_p->num_entries - IDXCNT_DELTA(IDXCNT_ADD(traceControl_p->num_entries,10),IDXCNT_ADD(traceControl_p->num_entries,5)) );
+		printf("rdIdx_has_lines(IDXCNT_ADD(num_entries,10),IDXCNT_ADD(num_entries,5),-1) = %u\n"
+		       ,rdIdx_has_lines( IDXCNT_ADD(traceControl_p->num_entries,10)
+			                    ,IDXCNT_ADD(traceControl_p->num_entries,5),-1) );
+		printf("(num_entries=%u) - IDXCNT_DELTA(wr=IDXCNT_ADD(num_entries,10+num_entries)=%u,rd=IDXCNT_ADD(num_entries,5)) = %u\n"
+		       ,traceControl_p->num_entries
+		       ,IDXCNT_ADD(traceControl_p->num_entries,10+traceControl_p->num_entries)
+		       ,traceControl_p->num_entries - IDXCNT_DELTA( IDXCNT_ADD(traceControl_p->num_entries,10+traceControl_p->num_entries)
+			                                               ,IDXCNT_ADD(traceControl_p->num_entries,5) ) );
+		printf("rdIdx_has_lines(IDXCNT_ADD(num_entries,10+num_entries),IDXCNT_ADD(num_entries,5),-1) = %u\n"
+		       ,rdIdx_has_lines( IDXCNT_ADD(traceControl_p->num_entries,10+traceControl_p->num_entries)
+			                    ,IDXCNT_ADD(traceControl_p->num_entries,5),-1) );
 
-		TRACE( 1, "hello %d\nthere\n", 1 );
+		printf("\n");
+		TRACE( 1, "hello %d\n\tthere\n", 1 );
 		TRACE( 2, "hello %d %d", 1, 2 );
 		TRACE( 3, "hello %d %d %d", 1,2,3 );
 		TRACE( 3, "hello %d %d %d %d %d %d %d %d %d %d %d"
@@ -819,8 +1205,19 @@ extern  int        optind;         /* for getopt */
 #	   ifndef TEST_UNUSED_FUNCTION
 		TRACE_CNTL( "trig", (uint64_t)-1, 5LL );
 #	   endif
-		for (ii=0; ii<20; ++ii)
+		for (ii=0; ii<20; ++ii) {
+			if (ii%5 == 0) {
+				/* this shows how TRACE (which does not have a "name" argument)
+				   could "TRACE with different names." The other trace macros
+				   (TRACEN,TRACEN_,TLOG) can't do this. (They can have a name per thread.)
+				   This is just a technical detail -- I have yet to think of a
+				   real use for this feature/functionality.
+				*/
+				sprintf(test_name,"%s_%d","TRACE",ii);
+				TRACE_CNTL("name", test_name); /* this is a realatively slow operation */
+			}
 			TRACE( 2, "ii=%u", ii );
+		}
 	}
 	else if (strcmp(cmd,"test-ro") == 0)
 	{
@@ -985,13 +1382,11 @@ extern  int        optind;         /* for getopt */
 	}
 #	endif
 	else if (strcmp(cmd,"show") == 0)
-	{	int start=-1, count=-1;
+	{
 		const char *ospec=getenv("TRACE_SHOW");
 		if (!ospec) ospec=DFLT_SHOW;
-		if ((do_heading==0) && (ospec[0]=='H')) ++ospec;
-		if ((argc-optind)>=1) count=strtoul(argv[optind],  NULL,0);
-		if ((argc-optind)>=2) start=strtoul(argv[optind+1],NULL,0);
-		traceShow(ospec,count,start,show_opts);
+		if ((do_heading==0) && (strncmp("%H",ospec,2)==0)) ospec+=2;
+		traceShow(ospec,opt_count,opt_start,show_opts, argc-optind, &argv[optind]);
 	}
 	else if (strncmp(cmd,"info",4) == 0)
 	{
@@ -1003,12 +1398,10 @@ extern  int        optind;         /* for getopt */
 		trace_unlock( &traceControl_rwp->namelock );
 	}
 	else if (strcmp(cmd,"tids") == 0)
-	{	int longest_name=0, namLvlTblEnts_digits;
+	{	uint32_t longest_name;
+		int      namLvlTblEnts_digits;
 		traceInit(NULL,0);
-		/* calc longest name */
-		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-			if ((int)strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
-				longest_name = (int)strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
+		longest_name = traceControl_rwp->longest_name;
 		/*printf("longest_name=%d\n",longest_name);*/
 		namLvlTblEnts_digits=countDigits(traceControl_p->num_namLvlTblEnts-1);
 		if (do_heading) {
@@ -1042,13 +1435,14 @@ extern  int        optind;         /* for getopt */
 		}
 	}
 	else if (strcmp(cmd,"TRACE") == 0) {
+#   define ARG(n) strchr(argv[optind+n],'.')?strtod(argv[optind+n],0):strtoull(argv[optind+n],0,0)
 		switch (argc - optind) {
 		case 0: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
 		case 1: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
 		case 2: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1] );
 			break;
 		case 3: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0) );
+		              ,ARG(2) );
 			break;
 		case 4: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
 		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0) );
@@ -1259,7 +1653,11 @@ extern  int        optind;         /* for getopt */
 		if (sts < 0) {
 			printf("invalid command: %s\n", cmd );
 			printf( USAGE );
-		}
+			ret=1;
+		} else if (sts==0)
+			ret=1;
+		else
+			ret=0;
 	}
 	return (ret);
 }	/* main */

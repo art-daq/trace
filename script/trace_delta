@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1099 $';
-#   $Date: 2019-04-22 22:25:10 -0500 (Mon, 22 Apr 2019) $
+$version = '$Revision: 1146 $';
+#   $Date: 2019-08-24 22:23:10 -0500 (Sat, 24 Aug 2019) $
 
 use Time::Local; # timelocal()
 
@@ -80,7 +80,7 @@ $line = <>;
 #
 #   PROCESS OPTIONS
 #
-if ("$opt_dw" ne "") { $delta_width = $opt_dw; } else { $delta_width = 10; }
+if ("$opt_dw" ne "") { $delta_width = $opt_dw; } else { $delta_width = 12; } # seems 12 is needed to display -4294967042 instead of ***********
 
 #
 # example: col_spec_to_re( cpu ) will return something like "........(.....)"
@@ -221,37 +221,43 @@ sub get_delta_data
     #print STDERR "delta_d = $delta_d\n";
     if    ($delta_d =~ /^\s*[\d.]+\s*$/o)
     {   $ret = $delta_d;
+	#print STDERR "get_delta_data start - return input: $ret\n";
     }
-    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
-    {   # convert to float seconds
+    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}$/o)
+    {   # convert to float seconds  e.g. 2019-12-23 13:22:57.123456
         $year=$1; $month=$2; $date=$3; $hour=$4; $minute=$5; $seconds=$6;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "time_then = $time_then\n";
+	#print STDERR "get_delta_data1 time_then = $time_then\n";
 	$ret = $time_then . $7;
     }
-    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
-    {   # convert to float seconds
-        $year=1970; $month=$1; $date=$2; $hour=$3; $minute=$4; $seconds=$5;
+    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}$/o)
+    {   # convert to float seconds  e.g. 12-23 13:22:57.123456
+        $year=1970; $month=$1; $date=$2; $hour=$3; $minute=$4; $seconds=$5;  # year doesn't matter to get delta
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "time_then = $time_then\n";
+	#print STDERR "get_delta_data2 time_then = $time_then\n";
 	$ret = $time_then . $6;
     }
-    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d\d\d\d\d\d)$/o)
-    {   # convert to float seconds
+    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}$/o)   # string that ends with .123456
+    {   # convert to float seconds  e.g. 13:22:57.123456
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "time_then = $time_then\n";
+	#print STDERR "get_delta_data3 time_then = $time_then\n";
 	$ret = $time_then . $4;
     }
-    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}/o)
-    {   # convert to: IF "." is present, float seconds, else just integer seconds
+    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}/o)  # handles a "." and other stuff at end of string
+    {   # convert to: float or int seconds e.g. 13:22:57xyz or 13:22:57.123.xyz
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "time_then = $time_then\n";
+	#print STDERR "get_delta_data4 time_then = $time_then\n";
 	$ret = $time_then . $4;
+    }
+    elsif ($delta_d =~ /^\s*([\d.]+)/o)
+    {   $ret = $1;         # e.g. 1234blah or 1234.56blah
+	#print STDERR "get_delta_data penultimate - return numbers: $ret\n";
     }
     else
-    {   $ret = $delta_d;
+    {   $ret = $delta_d;   # e.g. blah
+	#print STDERR "get_delta_data last - return input: $ret\n";
     }
     #print STDERR "ret=$ret\n";
     return $ret;

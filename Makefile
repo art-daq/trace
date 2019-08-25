@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1121 $$Date: 2019-07-10 22:28:35 -0500 (Wed, 10 Jul 2019) $";
+ # rev="$Revision: 1136 $$Date: 2019-08-08 14:17:59 -0500 (Thu, 08 Aug 2019) $";
 
 # TOP LEVEL Makefile
 
@@ -87,11 +87,15 @@ src_example_user: OUT_check
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}";\
 	test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	$(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="${CPPFLAGS}" TRACE_INC=$$PWD/include;\
-	if [ `uname -m` = x86_64 -a -n '${32ON64}' ];then\
+	sts=$$?;\
+	if [ $$sts -eq 0 -a `uname -m` = x86_64 -a -n '${32ON64}' ];then\
 	    out=`echo "$$out" | sed 's/64bit//'`;\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
 	    $(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32;\
+	else\
+	    exit $$sts;\
 	fi
+
 src_example_module: OUT_check
 	test -n "${KDIR}"\
 	  && modsubdir=module/`cat ${KDIR}/include/config/kernel.release`\
@@ -133,7 +137,7 @@ ups: OUT_check
 	s/@UPS_PROUDCT_VERSION@/$$ups_prod_ver/;\
 	s/@UPS_QUALIFIER_STRING@//;\
 	s|@CMAKE_INSTALL_DOCDIR@|doc|;\
-	s/@UPS_PRODUCT_FQ@/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/" $@/TRACE.table.in >"${OUT}/$@/TRACE.table"
+	s/@UPS_PRODUCT_FQ@/\`ups flavor -4\`/" $@/TRACE.table.in >"${OUT}/$@/TRACE.table"
 
 
 help:

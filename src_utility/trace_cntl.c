@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1152 $$Date: 2019-08-25 19:20:11 -0500 (Sun, 25 Aug 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1159 $$Date: 2019-08-26 11:17:22 -0500 (Mon, 26 Aug 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -951,7 +951,7 @@ void traceInfo()
 	wrCopy       = TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
 	used = ((traceControl_rwp->full)
 		?traceControl_p->num_entries
-		:TRACE_ATOMIC_LOAD(&wrCopy) ); /* if not full this shouldn't be > traceControl_p->num_entries */
+		:wrCopy ); /* Race Condition - if not full this shouldn't be > traceControl_p->num_entries */
 	printf("trace.h rev       = %s\n"
 	       "revision          = %s\n"
 	       "create time       = %s\n"

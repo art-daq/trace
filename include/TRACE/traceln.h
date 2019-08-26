@@ -63,7 +63,7 @@
 __attribute__((no_sanitize("thread")))
 #  endif
 #endif
-static void vlntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert
+static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__)), uint16_t lvl, const char* insert
 	, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)

@@ -11,7 +11,7 @@
 # include <sstream>				// std::ostringstream
 
 #define NO_TRACE
-#ifdef NO_TRACE
+#ifndef NO_TRACE
 
 # include <iostream>			// std::cout
 # define TLOG(...)      if(0)std::cout
@@ -61,11 +61,11 @@ int main( int argc, char *argv[] )
 	for (std::stringstream ss;
 		 2<=2 && ss.str().size()==0;
 		 ss.str().back()!='\n'&&ss << "\n", write(1,&ss.str()[0],ss.str().size()) )
-		ss << "hello";
+		ss << "hello from " << argv[0];
 
 	if(2<=2){
 		char obuf[20];
-		int nn=snprintf(obuf,sizeof(obuf),"hello %d",1);
+		int nn=snprintf(obuf,sizeof(obuf),"hello argc=%d",argc);
 		if(nn>=(int)sizeof(obuf)){/*truncated(but still terminated)*/
 			obuf[sizeof(obuf)-2]='\n';
 			nn=sizeof(obuf)-1;

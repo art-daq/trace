@@ -19,9 +19,7 @@
 #define VAL(X) QUOTE(X) << " = " << X
 
 
-int
-main(  int	argc
-     , char	*argv[] )
+int main()
 {
 	int delayBetweenDataRequests = 1000; // some example variable
 #   define FFF "/x/srcs/this/that/then"

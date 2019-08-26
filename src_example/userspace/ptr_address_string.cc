@@ -42,7 +42,7 @@ ron@mu2edaq01 :^) treset; ptr_address_string
 # define TRACE_NAME "ptr_address_string"
 #endif
 
-int main(  int argc, char *argv[] )
+int main()
 {
 	const char *real_msg="hello";
 	int *ip=(int*)malloc(sizeof(int));

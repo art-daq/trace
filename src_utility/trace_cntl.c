@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1146 $$Date: 2019-08-24 22:23:10 -0500 (Sat, 24 Aug 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1152 $$Date: 2019-08-25 19:20:11 -0500 (Sun, 25 Aug 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -597,7 +597,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	uint32_t rdIdx;
 	int32_t max;
 	unsigned printed=0;
-	unsigned ii;
+	int      ii;
 	int	   	 bufSlot_width;
 	int	   	 opts=0;
 	struct traceEntryHdr_s* myEnt_p;
@@ -621,7 +621,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	unsigned                longest_lvlstr=0;
 	uint32_t                num_entries_total;
 	uint32_t                siz_msg_largest;
-	uint32_t                siz_entry_largest;
+	uint32_t                siz_entry_largest=0;
 	uint32_t                num_params_largest;
 	int                     N_width;
 
@@ -687,7 +687,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 	if (strflg(ospec,'n') || strflg(ospec,'e'))
 		for (name_width=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
-			if (name_width < t_ptrs->rw_p->longest_name)
+			if (name_width < (int)t_ptrs->rw_p->longest_name)
 				name_width = t_ptrs->rw_p->longest_name;
 	for (num_entries_total=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
 		num_entries_total += t_ptrs->ro_p->num_entries;
@@ -875,11 +875,11 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		   a) ones that have something to print and
 		   b) the one that is earliest or latest depending on for_rev
 		 */
-		if (count>=0 && printed>=count && !forward_continuous) /* yes, can elect to print zero lines w/ -c0 */
+		if (count>=0 && (int)printed>=count && !forward_continuous) /* yes, can elect to print zero lines w/ -c0 */
 			break;
 		
  forward_check:
-		t_ptrs_use = 0;
+		t_ptrs_use = 0; tv_p_use = 0;
 		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
 			traceControl_p = t_ptrs->ro_p; // used in rdIdx_has_lines
  reset_check:
@@ -1180,11 +1180,11 @@ extern  int        optind;         /* for getopt */
 			                    ,IDXCNT_ADD(traceControl_p->num_entries,5),-1) );
 		printf("(num_entries=%u) - IDXCNT_DELTA(wr=IDXCNT_ADD(num_entries,10+num_entries)=%u,rd=IDXCNT_ADD(num_entries,5)) = %u\n"
 		       ,traceControl_p->num_entries
-		       ,IDXCNT_ADD(traceControl_p->num_entries,10+traceControl_p->num_entries)
-		       ,traceControl_p->num_entries - IDXCNT_DELTA( IDXCNT_ADD(traceControl_p->num_entries,10+traceControl_p->num_entries)
+		       ,IDXCNT_ADD(traceControl_p->num_entries,(int)(10+traceControl_p->num_entries))
+		       ,traceControl_p->num_entries - IDXCNT_DELTA( IDXCNT_ADD(traceControl_p->num_entries,(int)(10+traceControl_p->num_entries))
 			                                               ,IDXCNT_ADD(traceControl_p->num_entries,5) ) );
 		printf("rdIdx_has_lines(IDXCNT_ADD(num_entries,10+num_entries),IDXCNT_ADD(num_entries,5),-1) = %u\n"
-		       ,rdIdx_has_lines( IDXCNT_ADD(traceControl_p->num_entries,10+traceControl_p->num_entries)
+		       ,rdIdx_has_lines( IDXCNT_ADD(traceControl_p->num_entries,(int)(10+traceControl_p->num_entries))
 			                    ,IDXCNT_ADD(traceControl_p->num_entries,5),-1) );
 
 		printf("\n");

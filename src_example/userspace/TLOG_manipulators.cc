@@ -10,8 +10,8 @@
 #include "TRACE/trace.h"
 
 int
-main(  int	argc
-     , char	*argv[] )
+main(  int	argc    __attribute__((__unused__))
+     , char	*argv[] __attribute__((__unused__)) )
 {
 	for (unsigned ii=0; ii<2; ++ii)
 		TLOG(TLVL_INFO) << "ii+10=" << ii+10 << " "

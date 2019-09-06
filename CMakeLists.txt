@@ -13,7 +13,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
   unset(CMAKE_CXX_COMPILER)
 endif()
 
-project(TRACE VERSION 3.15.00)
+project(TRACE VERSION 3.15.01)
 # cetbuildtools contains our cmake modules
 
 find_package(cetmodules 1.02.02 REQUIRED)

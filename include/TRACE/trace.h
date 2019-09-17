@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1146 $$Date: 2019-08-24 22:23:10 -0500 (Sat, 24 Aug 2019) $"
+#define TRACE_REV "$Revision: 1175 $$Date: 2019-09-17 10:55:44 -0500 (Tue, 17 Sep 2019) $"
 
 #ifndef __KERNEL__
 
@@ -305,17 +305,18 @@ static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have
 		TRACE_INIT_CHECK(TRACE_NAME)									\
 		{                                                                                                                            \
 			struct timeval lclTime;                                                                                                  \
+			uint16_t lvl_=lvl;											\
 			TSBUFDECL;                                                                                                               \
 			lclTime.tv_sec = 0;                                                                                                      \
-			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl)))                                        \
+			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl_)))                                       \
 			{                                                                                                                        \
-				trace(&lclTime, traceTID, lvl, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
+				trace(&lclTime, traceTID, lvl_, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
 			}                                                                                                                        \
-			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl)))                                        \
+			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl_)))                                       \
 			{                                                                                                                        \
-				TRACE_LIMIT_SLOW(lvl, _insert, &lclTime)                                                                             \
+				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                            \
 				{                                                                                                                    \
-					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__);\
 				}                                                                                                                    \
 			}                                                                                                                        \
 		}                                                                                                                            \
@@ -328,18 +329,19 @@ static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have
 		{                                                                                                                        \
 			static TRACE_THREAD_LOCAL int tid_ = -1;                                                                             \
 			struct timeval lclTime;                                                                                              \
+			uint16_t lvl_=lvl;											\
 			TSBUFDECL;                                                                                                           \
 			if (tid_ == -1) tid_ = name2TID(&(nam)[0]);                                                                          \
 			lclTime.tv_sec = 0;                                                                                                  \
-			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl)))                                        \
+			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)))                                       \
 			{                                                                                                                    \
-				trace(&lclTime, tid_, lvl, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
+				trace(&lclTime, tid_, lvl_, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
 			}                                                                                                                    \
-			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl)))                                        \
+			if (traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl_)))                                       \
 			{                                                                                                                    \
-				TRACE_LIMIT_SLOW(lvl, _insert, &lclTime)                                                                         \
+				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                        \
 				{                                                                                                                \
-					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__);\
 				}                                                                                                                \
 			}                                                                                                                    \
 		}                                                                                                                        \
@@ -360,20 +362,21 @@ static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have
 			{                                                                                                                                                                  \
 				static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                                       \
 				struct timeval lclTime;                                                                                                                                        \
+				uint16_t lvl_=lvl;										\
 				if (tid_ == -1) tid_ = name2TID(&(nam)[0]);                                                                                                                    \
 				lclTime.tv_sec = 0;                                                                                                                                            \
-				bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));                                                                          \
-				bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl));                                                                          \
+				bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                                                                         \
+				bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl_));                                                                         \
 				if (do_s || do_m)                                                                                                                                              \
 				{                                                                                                                                                              \
 					std::ostringstream ostr__; /*instance creation is heavy weight*/                                                                                           \
 					ostr__ << TRACE_ARGS_FMT(__VA_ARGS__, xx);                                                                                                                 \
-					if (do_m) trace(&lclTime, tid_, lvl, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
+					if (do_m) trace(&lclTime, tid_, lvl_, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
 					if (do_s)                                                                                                                                                  \
 					{                                                                                                                                                          \
-						TRACE_LIMIT_SLOW(lvl, _insert, &lclTime)                                                                                                               \
+						TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                                                              \
 						{                                                                                                                                                      \
-							TRACE_LOG_FUNCTION(&lclTime, tid_, lvl, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
+							TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__));\
 						}                                                                                                                                                      \
 					}                                                                                                                                                          \
 				}                                                                                                                                                              \
@@ -2499,15 +2502,15 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 #	define TRACE_USE_STATIC_STREAMER 1
 #	if TRACE_USE_STATIC_STREAMER == 1
 #		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                                                           \
-			for (int tid = -1, do__m = 0, do__s = 0, fmtnow, ins[32 / sizeof(int)], tv[sizeof(timeval) / sizeof(int)] = {0};                                                                              \
-				 (tid == -1) && ((tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &fmtnow), lvl, s_enabled, force_s, &do__m, &do__s, (timeval *)&tv, (char *)ins, sizeof(ins))) != -1); \
+			for (int lvl_ = lvl, tid = -1, do__m = 0, do__s = 0, fmtnow, ins[32 / sizeof(int)], tv[sizeof(timeval) / sizeof(int)] = {0}; \
+				 (tid == -1) && ((tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &fmtnow), lvl_, s_enabled, force_s, &do__m, &do__s, (timeval *)&tv, (char *)ins, sizeof(ins))) != -1); \
 				 streamer.str())                                                                                                                                                                          \
-			streamer.init(tid, lvl, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval *)&tv, (char *)ins)
+			streamer.init(tid, lvl_, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval *)&tv, (char *)ins)
 #	else
 #		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                                                            \
-			for (int tid = -1, do__m = 0, do__s = 0, fmtnow, ins[32 / sizeof(int)], tv[sizeof(timeval) / sizeof(int)] = {0};                                                                               \
-				 (tid == -1) && ((tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &fmtnow), lvl, s_enabled, force_s, &do__m, &do__s, (timeval *)&tv, (char *)ins, sizeof(ins))) != -1);) \
-			TraceStreamer().init(tid, lvl, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval *)&tv, (char *)ins)
+			for (int lvl_ = lvl, tid = -1, do__m = 0, do__s = 0, fmtnow, ins[32 / sizeof(int)], tv[sizeof(timeval) / sizeof(int)] = {0};	\
+				 (tid == -1) && ((tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &fmtnow), lvl_, s_enabled, force_s, &do__m, &do__s, (timeval *)&tv, (char *)ins, sizeof(ins))) != -1);) \
+			TraceStreamer().init(tid, lvl_, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval *)&tv, (char *)ins)
 #	endif
 
 #	define TRACE_ENDL ""

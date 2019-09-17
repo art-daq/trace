@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1159 $$Date: 2019-08-26 11:17:22 -0500 (Mon, 26 Aug 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1174 $$Date: 2019-09-17 02:40:36 -0500 (Tue, 17 Sep 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -412,10 +412,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case 'm':
 				if (local_msg[slen-1] == '\n')
 					local_msg[--slen] = '\0'; // strip off the trailing newline
-				if (opts&indent_) {
-					int ii=(myEnt_p->lvl>63)?63:myEnt_p->lvl;
-					printf("%s",&indent[63-ii]);
-				}
+				if (opts&indent_)
+					printf("%s",&indent[LVLBITSMSK-(myEnt_p->lvl&LVLBITSMSK)]);
 				if (myEnt_p->nargs) {
 					va_list ap_=TRACE_VA_LIST_INIT(param_va_ptr);
 					vprintf( local_msg, ap_ );
@@ -459,10 +457,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 		if (!msg_spec_included) {
 			if (local_msg[slen-1] == '\n')
 				local_msg[--slen] = '\0'; // strip off the trailing newline
-			if (opts&indent_) {
-				int ii=(myEnt_p->lvl>63)?63:myEnt_p->lvl;
-				printf("%s",&indent[63-ii]);
-			}
+			if (opts&indent_)
+				printf("%s",&indent[LVLBITSMSK-(myEnt_p->lvl&LVLBITSMSK)]);
 			if (ospec[0]!='\0' && !strchr(" \t:-|", *(sp-1))) // if the specification does not end in a "separator"
 				printf(" ");
 			if (myEnt_p->nargs)
@@ -505,7 +501,7 @@ void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file )
 	trace_ptrs[idx].entries_p = traceEntries_p;
 	
 	trace_ptrs[idx].next = NULL;
-}
+} /* trace_ptrs_store */
 
 /* Designed to work in the code:
    for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
@@ -521,7 +517,7 @@ void trace_ptrs_discard( trace_ptrs_t *tptr, trace_ptrs_t **list_start )
 		prev->next = next;
 	if(prev==NULL && next==NULL)
 		*list_start=NULL;
-}
+} /* trace_ptrs_discard */
 
 void trace_ptrs_restore( trace_ptrs_t *tptr )
 {
@@ -529,7 +525,7 @@ void trace_ptrs_restore( trace_ptrs_t *tptr )
 	traceControl_rwp = tptr->rw_p;
 	traceNamLvls_p   = tptr->namlvls_p;
 	traceEntries_p   = tptr->entries_p;
-}
+} /* trace_ptrs_restore */
 
 /*  rdIdx and wrIdxCnt are BOTH non-modulo.
 	For forward read: simple delta
@@ -564,7 +560,7 @@ uint32_t rdIdx_has_lines( uint32_t wrIdxCnt, uint32_t rdIdx, int for_rev )
 			return (lines);
 		}
 	}
-}
+} /* rdIdx_has_lines */
 
 
 int tvcmp( struct timeval *t1, struct timeval *t2)
@@ -580,7 +576,7 @@ int tvcmp( struct timeval *t1, struct timeval *t2)
 			return (1);
 	} else
 		return (1);
-}
+} /* tvcmp */
 
 /* count==-1, slotStart==-1  ==> DEFAULT - reverse print from wrIdx to zero (if not
                                  full) or for num_entrie
@@ -1052,7 +1048,7 @@ extern  int        optind;         /* for getopt */
 		case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
 		case 'H': do_heading=0;                              break;
 		case 'q': show_opts|=quiet_;                         break;
-		case 'V': printf( TRACE_CNTL_REV ); exit(0);         break;
+		case 'V': printf( "%s\n",TRACE_CNTL_REV ); exit(0);  break;
 		case 'L': setlocale(LC_NUMERIC,optarg);              break;
         case 'F': show_opts|=forward_;                       break;
 		case 'l': opt_loops=strtoul(optarg,NULL,0);          break;

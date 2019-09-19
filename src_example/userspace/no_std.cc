@@ -3,9 +3,11 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: no_std.cc,v $
- // rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
+ // rev="$Revision: 1188 $$Date: 2019-09-19 13:42:25 -0500 (Thu, 19 Sep 2019) $";
 
-#define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)
+// comfirm there are no warning when TRACE_LOG_FUNCTION is, well, something we may not expect (e.g. blank)
+
+#define TRACE_LOG_FUNCTION(tvp,tid,lvl,...)    /* no stdout or stderr (depending on TRACE_PRINT_FD */
 #include "TRACE/trace.h"              /* TRACE */
 
 int

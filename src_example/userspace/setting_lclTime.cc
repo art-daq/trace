@@ -14,15 +14,22 @@
 
 int main(  int argc, char *argv[] )
 {
-	struct timeval programStart, *tvp;
+	struct timeval programStart, programEnd;
 
 	// The execution time of these lines of code (especially if just memory tracing) would be within  afew microseconds.
 	gettimeofday( &programStart, NULL);  // this can now be used to get latencies elsewhere in the program.
 	TRACE( 1, "TRACE programStart usecs=%ld", (lclTime=programStart, lclTime.tv_usec) );
-    // need extra shenanigans (tvp) as tv is actually an int array which can't be access directly w/o breaking strict-aliasing rules
-	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp=(timeval*)tv)=programStart, programStart.tv_usec);
 
-	// NOTE: you can only get the time for TRACEs if both memory and slow path are enabled. Can't get time from TLOG
+#  if 1
+	// need extra shenanigans (tvp) to avoid: warning: operation on '_tlog_.main(int, char**)::_T_::tv' may be undefined [-Wsequence-point]
+	struct timeval *tvp;
+	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp=&_tlog_.tv)=programStart, programStart.tv_usec);
+#  else
+	TLOG(1) << "TLOG  programStart usecs=" << (_tlog_.tv=programStart, programStart.tv_usec);
+#  endif
+
+	// NOTE: you can only get the time for TRACEs _IFF_both_memory_and_slow_path_are_enabled. Can't get time from TLOG
+	TRACE( 1, "TRACE programEnd usecs=%ld - if zero, both mem/slow are not enabled", (programEnd=lclTime, lclTime.tv_sec) );
 
 	return (0);
 }   // main

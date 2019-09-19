@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1174 $$Date: 2019-09-17 02:40:36 -0500 (Tue, 17 Sep 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1188 $$Date: 2019-09-19 13:42:25 -0500 (Thu, 19 Sep 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -825,7 +825,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			switch (*sp) {
 			case '%': printf("-"); break;
 			case 'a': printf("----");break;
-			case 'B': printf("--"); break;
+			case 'B': printf("-"); break;
 			case 'C': printf("---"); break;
 			case 'D': /* ignore this "control" */ break;
 			case 'e': printf("%.*s", name_width+1+TRACE_LINENUM_WIDTH,TRACE_LONG_DASHES);break;
@@ -1065,7 +1065,7 @@ extern  int        optind;         /* for getopt */
 	}
 	cmd = argv[optind++];
 
-	if (opt_name && !(strncmp(cmd,"lvl",3)==0))
+	if (opt_name && !(strncmp(cmd,"lvl",3)==0)) // name (which may be wildcard) will get added to lvl command below
 		setenv("TRACE_NAME",opt_name,1);
 
 	if(getenv("LC_NUMERIC"))                        // IFF LC_NUMERIC is set in the environment (i.e to "en_US.UTF-8")...
@@ -1123,14 +1123,14 @@ extern  int        optind;         /* for getopt */
 		/* NOTE: using setenv method works in threading env where as additional
 		   threads initializing via TRACE will disable/undo the levels
 		   set by the initialization via TRACE_CNTL("lvlsetS",0xffLL) */
-		setenv("TRACE_LVLS","0xff",0);/*does TRACE_CNTL("lvlsetS",0xffLL);TRACE_CNTL("modeS",1LL);*/
+		setenv("TRACE_LVLS","0xff",0);/*does TRACE_CNTL("lvlsetS",0xffLL);TRACE_CNTL("modeS",1);*/
 		/* NOTE/Recall - _LVLS does not "activate" like TRACE_{FILE,NAME,MSGMAX,NUMENTS,NAMTBLENTS} */
 
 		/* _at_least_ set bit 0 (lvl=0) in the "M" mask and turn on the "M" mode
 		   bit -- this is what is on by default when the file is created */
 		/*                    Mem    Slow Trig */
 		TRACE_CNTL( "lvlset", 0xfLL, 0LL, 0LL );
-		TRACE_CNTL( "modeM", 1LL );
+		TRACE_CNTL( "modeM", 1 );
 
 		TRACE( 2, "hello" );
 
@@ -1199,7 +1199,7 @@ extern  int        optind;         /* for getopt */
 		      , __LINE__, 5 );
 
 #	   ifndef TEST_UNUSED_FUNCTION
-		TRACE_CNTL( "trig", (uint64_t)-1, 5LL );
+		TRACE_CNTL( "trig", -1, 5LL );
 #	   endif
 		for (ii=0; ii<20; ++ii) {
 			if (ii%5 == 0) {
@@ -1243,8 +1243,8 @@ extern  int        optind;         /* for getopt */
 		dup2( fd, 1 );   /* redirect stdout to /dev/null */
         setlocale(LC_NUMERIC,"en_US");  /* make ' printf flag work -- setting LC_NUMERIC in env does not seem to work */
 
-		TRACE_CNTL("mode",3LL);
-		traceControl_rwp->mode.bits.M = 1;		   // NOTE: TRACE_CNTL("modeM",1LL) hardwired to NOT enable when not mapped!
+		TRACE_CNTL("mode",3);
+		traceControl_rwp->mode.bits.M = 1;		   // NOTE: TRACE_CNTL("modeM",1) hardwired to NOT enable when not mapped!
 
 #      define STRT_FMT "%-50s"
 		// ELF 6/6/18: GCC v6_3_0 does not like %', removing the '...
@@ -1431,69 +1431,69 @@ extern  int        optind;         /* for getopt */
 		}
 	}
 	else if (strcmp(cmd,"TRACE") == 0) {
-#   define ARG(n) strchr(argv[optind+n],'.')?strtod(argv[optind+n],0):strtoull(argv[optind+n],0,0)
+#   define ARG(n) strchr(argv[optind+n],'.')?strtod(argv[optind+n],0):strtoul(argv[optind+n],0,0)
 		switch (argc - optind) {
 		case 0: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
 		case 1: printf("\"trace\" cmd requires at least lvl and fmt arguments."); break;
-		case 2: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1] );
+		case 2: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1] );
 			break;
-		case 3: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,ARG(2) );
+		case 3: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0) );
 			break;
-		case 4: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0) );
+		case 4: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0) );
 			break;
-		case 5: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0) );
+		case 5: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0) );
 			break;
-		case 6: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0) );
+		case 6: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0) );
 			break;
-		case 7: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0) );
+		case 7: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0) );
 			break;
-		case 8: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0) );
+		case 8: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0),strtoul(argv[optind+7],NULL,0) );
 			break;
-		case 9: TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
-		              ,strtoull(argv[optind+8],NULL,0) );
+		case 9: TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0),strtoul(argv[optind+7],NULL,0)
+		              ,strtoul(argv[optind+8],NULL,0) );
 			break;
-		case 10:TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
-		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0) );
+		case 10:TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0),strtoul(argv[optind+7],NULL,0)
+		              ,strtoul(argv[optind+8],NULL,0),strtoul(argv[optind+9],NULL,0) );
 			break;
-		case 11:TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
-		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0)
-		              ,strtoull(argv[optind+10],NULL,0) );
+		case 11:TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0),strtoul(argv[optind+7],NULL,0)
+		              ,strtoul(argv[optind+8],NULL,0),strtoul(argv[optind+9],NULL,0)
+		              ,strtoul(argv[optind+10],NULL,0) );
 			break;
-		case 12:TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
-		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0)
-		              ,strtoull(argv[optind+10],NULL,0),strtoull(argv[optind+11],NULL,0) );
+		case 12:TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0),strtoul(argv[optind+7],NULL,0)
+		              ,strtoul(argv[optind+8],NULL,0),strtoul(argv[optind+9],NULL,0)
+		              ,strtoul(argv[optind+10],NULL,0),strtoul(argv[optind+11],NULL,0) );
 			break;
-		case 13:TRACE( strtoull(argv[optind+0],NULL,0),argv[optind+1]
-		              ,strtoull(argv[optind+2],NULL,0),strtoull(argv[optind+3],NULL,0)
-		              ,strtoull(argv[optind+4],NULL,0),strtoull(argv[optind+5],NULL,0)
-		              ,strtoull(argv[optind+6],NULL,0),strtoull(argv[optind+7],NULL,0)
-		              ,strtoull(argv[optind+8],NULL,0),strtoull(argv[optind+9],NULL,0)
-		              ,strtoull(argv[optind+10],NULL,0),strtoull(argv[optind+11],NULL,0)
-		              ,strtoull(argv[optind+12],NULL,0) );
+		case 13:TRACE( strtoul(argv[optind+0],NULL,0),argv[optind+1]
+		              ,strtoul(argv[optind+2],NULL,0),strtoul(argv[optind+3],NULL,0)
+		              ,strtoul(argv[optind+4],NULL,0),strtoul(argv[optind+5],NULL,0)
+		              ,strtoul(argv[optind+6],NULL,0),strtoul(argv[optind+7],NULL,0)
+		              ,strtoul(argv[optind+8],NULL,0),strtoul(argv[optind+9],NULL,0)
+		              ,strtoul(argv[optind+10],NULL,0),strtoul(argv[optind+11],NULL,0)
+		              ,strtoul(argv[optind+12],NULL,0) );
 			break;
 		default:
 			printf( "oops - only able to test/handle up to 11 TRACE params/args - sorry.\n" );
@@ -1504,65 +1504,65 @@ extern  int        optind;         /* for getopt */
 		case 0: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
 		case 1: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
 		case 2: printf("\"trace\" cmd requires at least name, lvl and fmt arguments."); break;
-		case 3: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2] );
+		case 3: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2] );
 			break;
-		case 4: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		               ,strtoull(argv[optind+3],NULL,0) );
+		case 4: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		               ,strtoul(argv[optind+3],NULL,0) );
 			break;
-		case 5: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		               ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0) );
+		case 5: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		               ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0) );
 			break;
-		case 6: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0) );
+		case 6: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0) );
 			break;
-		case 7: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0) );
+		case 7: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0) );
 			break;
-		case 8: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0) );
+		case 8: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0) );
 			break;
-		case 9: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0),strtoull(argv[optind+8],NULL,0) );
+		case 9: TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0),strtoul(argv[optind+8],NULL,0) );
 			break;
-		case 10: TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0),strtoull(argv[optind+8],NULL,0)
-		              ,strtoull(argv[optind+9],NULL,0) );
+		case 10:TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0),strtoul(argv[optind+8],NULL,0)
+		              ,strtoul(argv[optind+9],NULL,0) );
 			break;
-		case 11:TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0),strtoull(argv[optind+8],NULL,0)
-		              ,strtoull(argv[optind+9],NULL,0),strtoull(argv[optind+10],NULL,0) );
+		case 11:TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0),strtoul(argv[optind+8],NULL,0)
+		              ,strtoul(argv[optind+9],NULL,0),strtoul(argv[optind+10],NULL,0) );
 			break;
-		case 12:TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0),strtoull(argv[optind+8],NULL,0)
-		              ,strtoull(argv[optind+9],NULL,0),strtoull(argv[optind+10],NULL,0)
-		              ,strtoull(argv[optind+11],NULL,0) );
+		case 12:TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0),strtoul(argv[optind+8],NULL,0)
+		              ,strtoul(argv[optind+9],NULL,0),strtoul(argv[optind+10],NULL,0)
+		              ,strtoul(argv[optind+11],NULL,0) );
 			break;
-		case 13:TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0),strtoull(argv[optind+8],NULL,0)
-		              ,strtoull(argv[optind+9],NULL,0),strtoull(argv[optind+10],NULL,0)
-		              ,strtoull(argv[optind+11],NULL,0),strtoull(argv[optind+12],NULL,0) );
+		case 13:TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0),strtoul(argv[optind+8],NULL,0)
+		              ,strtoul(argv[optind+9],NULL,0),strtoul(argv[optind+10],NULL,0)
+		              ,strtoul(argv[optind+11],NULL,0),strtoul(argv[optind+12],NULL,0) );
 			break;
-		case 14:TRACEN( argv[optind],strtoull(argv[optind+1],NULL,0),argv[optind+2]
-		              ,strtoull(argv[optind+3],NULL,0),strtoull(argv[optind+4],NULL,0)
-		              ,strtoull(argv[optind+5],NULL,0),strtoull(argv[optind+6],NULL,0)
-		              ,strtoull(argv[optind+7],NULL,0),strtoull(argv[optind+8],NULL,0)
-		              ,strtoull(argv[optind+9],NULL,0),strtoull(argv[optind+10],NULL,0)
-		              ,strtoull(argv[optind+11],NULL,0),strtoull(argv[optind+12],NULL,0)
-		              ,strtoull(argv[optind+13],NULL,0) );
+		case 14:TRACEN( argv[optind],strtoul(argv[optind+1],NULL,0),argv[optind+2]
+		              ,strtoul(argv[optind+3],NULL,0),strtoul(argv[optind+4],NULL,0)
+		              ,strtoul(argv[optind+5],NULL,0),strtoul(argv[optind+6],NULL,0)
+		              ,strtoul(argv[optind+7],NULL,0),strtoul(argv[optind+8],NULL,0)
+		              ,strtoul(argv[optind+9],NULL,0),strtoul(argv[optind+10],NULL,0)
+		              ,strtoul(argv[optind+11],NULL,0),strtoul(argv[optind+12],NULL,0)
+		              ,strtoul(argv[optind+13],NULL,0) );
 			break;
 		default:
 			printf( "oops - only able to test/handle up to 11 TRACEN params/args - sorry.\n" );
@@ -1581,7 +1581,7 @@ extern  int        optind;         /* for getopt */
 			ret=TRACE_CNTL( cmd );
 			printf( "%d\n",ret ); /* print the old mode */
 		}
-		else ret=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
+		else ret=TRACE_CNTL( cmd, strtoul(argv[optind],NULL,0) );
 		if (ret == -1) ret=1; else ret=0;
 	} else if (  (strncmp(cmd,"lvlmsk",6)==0)
 	           ||(strncmp(cmd,"lvlset",6)==0)

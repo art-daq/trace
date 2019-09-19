@@ -1,0 +1,56 @@
+ // This file (trace_lvl.cc) was created by Ron Rechenmacher <ron@fnal.gov> on
+ // Sep 17, 2019. "TERMS AND CONDITIONS" governing this file are in the README
+ // or COPYING file. If you do not have such a file, one can be obtained by
+ // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+ // $RCSfile: .emacs.gnu,v $
+ // rev="$Revision: 1.34 $$Date: 2019/04/22 15:23:54 $";
+
+
+// test TRACE(lvl++,...) and TLOG( 
+
+// g++ -Wall -g -o trace_lvl{,.cc} -I$TRACE_INC && ./trace_lvl
+
+#include <stdio.h>		// printf
+#include "TRACE/trace.h"
+
+void sub1(int lvl)
+{
+	TRACE( lvl++&1?lvl:2, "trace lvl=%d", lvl-1 );
+    if (lvl > 110)
+		return;
+	sub1(lvl);
+}
+
+void sub2(int lvl)
+{
+	TLOG(lvl++&1?lvl:2) << "log lvl=" << lvl-1;
+    if (lvl > 110)
+		return;
+	sub2(lvl);
+}
+
+int
+main(  int	argc
+     , char	*argv[] )
+{
+
+	// The following is just shoved in here as a place to help develop the TRACE_STREAMER macro
+#define lvl        2
+#define nam_or_fmt 0
+#define fmt_or_nam ""
+#define s_enabled  1
+#define force_s    0
+static TRACE_THREAD_LOCAL TraceStreamer steamer;
+	for (struct _T_ {int lvl__, tid, do__m, do__s, fmtnow; char ins[32]; struct timeval tv;
+		_T_(int llv):lvl__(llv),tid(-1),do__m(0),do__s(0){tv.tv_sec=0;}} _xx(lvl);
+		 (_xx.tid == -1) && ((_xx.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_xx.fmtnow), _xx.lvl__, s_enabled, force_s,
+		                                                         &_xx.do__m, &_xx.do__s, &_xx.tv, _xx.ins, sizeof(_xx.ins))) != -1);
+		 steamer.str())
+		steamer.init(_xx.tid, _xx.lvl__, _xx.do__m, _xx.do__s, _xx.fmtnow, __FILE__, __LINE__, &_xx.tv, _xx.ins) << "hello";
+
+
+	sub1(2);
+	usleep( 1000000 );
+	sub2(2);
+	return (0);
+}   // main

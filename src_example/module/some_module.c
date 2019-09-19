@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: some_module.c,v $
-    rev="$Revision: 1136 $$Date: 2019-08-08 14:17:59 -0500 (Thu, 08 Aug 2019) $";
+    rev="$Revision: 1179 $$Date: 2019-09-18 13:48:45 -0500 (Wed, 18 Sep 2019) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -32,7 +32,7 @@ static void my_work_function( struct work_struct *w )
     else if (count == 20) {
 		count++;
 		TRACE( 1, "my_work_function modeM 0 (freeze)" );
-		TRACE_CNTL( "modeM", (uint64_t)0 );
+		TRACE_CNTL( "modeM", 0 );
     }
     if (!stop_requested)
 	queue_work( wq, &my_work );    
@@ -47,8 +47,8 @@ static int __init init_some_module(void)
     TRACE_CNTL( "name", "johnson" );
     TRACE_CNTL( "lvlmskM", (uint64_t)0xf );
     TRACE_CNTL( "lvlmskS", (uint64_t)3 );
-    TRACE_CNTL( "mode",   (uint64_t)3 );
-	TRACE_CNTL( "limit_ms", 3ULL, 40ULL, 40ULL );
+    TRACE_CNTL( "mode",   3 );
+	TRACE_CNTL( "limit_ms", 3, 40, 40 );
     TRACE( 0, "init_some_module trace" );
 
     wq = create_singlethread_workqueue("mywork");

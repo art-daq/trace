@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1136 $$Date: 2019-08-08 14:17:59 -0500 (Thu, 08 Aug 2019) $";
+    rev="$Revision: 1187 $$Date: 2019-09-19 08:12:36 -0500 (Thu, 19 Sep 2019) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -59,10 +59,12 @@ module_param(     trace_allow_printk, int, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_allow_printk, "whether or not to allow TRACEs to do printk's" );
 module_param_string(trace_print, trace_print, sizeof(trace_print), 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_print, "printk print control - default: \"%T %n %L %M\"" );
-module_param(     trace_lvlS, ulong, 0644 ); // defined in trace.h
+#  if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,1)
+module_param(     trace_lvlS, ullong, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_lvlS, "default printk lvl" );
-module_param(     trace_lvlM, ulong, 0644 ); // defined in trace.h
+module_param(     trace_lvlM, ullong, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_lvlM, "default memory lvl" );
+#  endif
 #else
 # define KSTRVAL( str, parm, xx,fmt )				\
 	unsigned long val;\

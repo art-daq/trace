@@ -7,8 +7,9 @@
 
 // g++ -g -O0 -Wall -std=c++11 -o trace_disabled{,.cc} && ./trace_disabled
 
-# include <unistd.h>			// write
-# include <sstream>				// std::ostringstream
+#include <stdio.h>				// snprintf
+#include <unistd.h>				// write
+#include <sstream>				// std::ostringstream
 
 #define NO_TRACE
 #ifndef NO_TRACE
@@ -27,19 +28,23 @@
 # define TRACE_DEBUG_LVL 2
 # define TRACE_MSG_MAX   0x200
 # define TARG1(a1, ...) a1
-# define TLOG(...)      for( std::ostringstream ss; \
-	                         TARG1(__VA_ARGS__,need_at_least_one)<=TRACE_DEBUG_LVL && ss.str().size()==0; \
-							 ss.str().back()!='\n'&&ss << "\n", write(1,&ss.str()[0],ss.str().size()) )	\
-		                    ss
+# define TLOG(...) \
+	for(struct _S_{int once; std::string ss; std::ostringstream oss; _S_():once(0){}} _xx; \
+		TARG1(__VA_ARGS__,need_at_least_one)<=TRACE_DEBUG_LVL && _xx.once==0; \
+		_xx.once=1,														\
+			_xx.ss=_xx.oss.str(),										\
+			_xx.ss.size() && _xx.ss[_xx.ss.size()-1]!='\n' && (_xx.ss.append("\n"),1), \
+			write(1,&_xx.ss[0],_xx.ss.size()) )							\
+		_xx.oss
 # define TRACE(lvl,...) do if(lvl<=TRACE_DEBUG_LVL){ /*wrap in do...while(0) for certain 'if' syntax */ \
 							char obuf[TRACE_MSG_MAX]; \
 							int nn=snprintf(obuf,sizeof(obuf),__VA_ARGS__);	\
 							if(nn>=(int)sizeof(obuf)){/*truncated(but still terminated)*/ \
 								obuf[sizeof(obuf)-2]='\n';				\
 								nn=sizeof(obuf)-1;						\
-							} else if(obuf[nn-1]!='\n' && nn==(sizeof(obuf)-1)) \
+							} else if(nn>0 && obuf[nn-1]!='\n' && nn==(sizeof(obuf)-1)) \
 								obuf[nn-1]='\n';						\
-							else if(obuf[nn-1]!='\n')					\
+							else if(nn>0 && obuf[nn-1]!='\n')					\
 								obuf[nn++]='\n';						\
 							write(1,obuf,nn);							\
 						} while(0)
@@ -57,11 +62,14 @@
 
 int main( int argc, char *argv[] )
 {
-	
-	for (std::stringstream ss;
-		 2<=2 && ss.str().size()==0;
-		 ss.str().back()!='\n'&&ss << "\n", write(1,&ss.str()[0],ss.str().size()) )
-		ss << "hello from " << argv[0];
+
+	for (struct _S_ {int once; std::string ss; std::ostringstream oss; _S_():once(0){}} _xx;
+		 2<=2 && _xx.once==0;
+		 _xx.once=1,
+			 _xx.ss=_xx.oss.str(),
+			 _xx.ss.size() && _xx.ss[_xx.ss.size()-1]!='\n' && (_xx.ss.append("\n"),1),
+			 write(1,&_xx.ss[0],_xx.ss.size()) )
+		_xx.oss << "hello from " << argv[0];
 
 	if(2<=2){
 		char obuf[20];
@@ -77,6 +85,9 @@ int main( int argc, char *argv[] )
 	}
 
 	TLOG(2) << "hi " << 2 << " there\n";
+#  ifdef TEST_EMPTY_MESSAGE
+	TLOG(2);
+#  endif
 	TRACE( 2, "hi %d there", 3 );
 	TRACEN_( "notUsed", 2, "hi %d there " << "joe", 55 ); 
 	if (1)
@@ -88,5 +99,6 @@ int main( int argc, char *argv[] )
 	else
 		TRACE( 2, "in if else" );
 	TLOG(3,"name") << "don't see this";
+
 	return (0);
 }   // main

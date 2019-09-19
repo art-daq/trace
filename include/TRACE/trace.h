@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1175 $$Date: 2019-09-17 10:55:44 -0500 (Tue, 17 Sep 2019) $"
+#define TRACE_REV "$Revision: 1188 $$Date: 2019-09-19 13:42:25 -0500 (Thu, 19 Sep 2019) $"
 
 #ifndef __KERNEL__
 
@@ -419,7 +419,7 @@ static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have
 
 #	define TRACE_XTRA_PASSED
 #	define TRACE_XTRA_UNUSED
-#	define TRACE_PRINTF_FMT_ARG_NUM 5
+#	define TRACE_PRINTF_FMT_ARG_NUM 6
 #	define TRACE_VA_LIST_INIT(addr) (va_list) addr
 #	define TRACE_ENT_TV_FILLER
 #	define TRACE_TSC32(low) __asm__ __volatile__("rdtsc;movl %%eax,%0" \
@@ -429,7 +429,7 @@ static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have
 
 #	define TRACE_XTRA_PASSED
 #	define TRACE_XTRA_UNUSED
-#	define TRACE_PRINTF_FMT_ARG_NUM 5
+#	define TRACE_PRINTF_FMT_ARG_NUM 6
 #	define TRACE_VA_LIST_INIT(addr) (va_list) addr
 #	define TRACE_ENT_TV_FILLER uint32_t x[2];
 #	define TRACE_TSC32(low) __asm__ __volatile__("rdtsc;movl %%eax,%0" \
@@ -470,7 +470,7 @@ static const char *TRACE_PRINT = "%T %n %L %M";    /* Msg Limit Insert will have
 
 #	define TRACE_XTRA_PASSED
 #	define TRACE_XTRA_UNUSED
-#	define TRACE_PRINTF_FMT_ARG_NUM 5
+#	define TRACE_PRINTF_FMT_ARG_NUM 6
 #	define TRACE_VA_LIST_INIT(addr) \
 		{                            \
 			addr                     \
@@ -598,8 +598,8 @@ static TRACE_THREAD_LOCAL int traceTID = -1; /* idx into lvlTbl, namTbl -- alway
 thread_local -- this will cause the most traceInit calls (but not much work, hopefully),
 which will ensure that a module (not thread) can be assigned it's own trace name/id. */
 
-TRACE_DECL(unsigned long trace_lvlS, = 0);
-TRACE_DECL(unsigned long trace_lvlM, = 0);
+TRACE_DECL(uint64_t trace_lvlS, = 0);
+TRACE_DECL(uint64_t trace_lvlM, = 0);
 TRACE_DECL(const char *tracePrint_cntl, = NULL); /* hardcoded default below that can only be overridden via env.var */
 
 #if defined(__KERNEL__)
@@ -963,7 +963,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 			                    , _lvlstr[lvl & LVLBITSMSK] ? _lvlstr[lvl & LVLBITSMSK] : "" );
 			break;
 		case 'l': /* lvl int */
-			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%u", lvl );
+			retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%2u", lvl );
 			break;
 		case 'M': /* msg limit insert - fall through to msg*/
 			if (insert[0]) {
@@ -1333,7 +1333,7 @@ tod: 132348  133161
 			if (IDXCNT_DELTA(desired, traceControl_rwp->trigIdxCnt) >= traceControl_rwp->trigActivePost)
 			{
 				/* I think there should be an indication in the M buffer */
-				TRACE_CNTL("modeM", (uint64_t)0); /* calling traceCntl here eliminates the "defined but not used" warning for modules which do not use TRACE_CNTL */
+				TRACE_CNTL("modeM", 0); /* calling traceCntl here eliminates the "defined but not used" warning for modules which do not use TRACE_CNTL */
 				traceControl_rwp->trigActivePost = 0;
 				/* triggered and trigIdxCnt should be cleared when
 				   "armed" (when trigActivePost is set) */
@@ -1547,23 +1547,43 @@ static inline void trace_msk_op(uint64_t *v1, int op, uint64_t v2)
 	}
 }
 
-/* NOTE: because of how this is call from a macro on both 64 and 32 bit
-   systems AND THE WAY IT IS CALLED FROM THE trace_cntl programg,
-   all argument, EXCEPT for the "name", "file", and "lvl*" commands, should be
-   64bits -- they can either be cast (uint64_t) or "LL" constants.
-   See the trace_cntl.c tests for examples.
+/* 
+passing _name: because this method will have to make sure trace is initialize
+and to avoid compiling in a (default) name into (hard-coding) the function in
+this header file, _name is passed. _name will then take on the value used when
+compiling calling of traceCntl via the TRACE_CNTL macro.
+
+cmd		   		arg	      	  	  notes
+------          ---------		--------------
+file			char*				1
+namlvlset		optional char*		1
+mapped			n/a
+name			char*				1
+mode			UL					1
+lvlmskn[MST]	ULL					2
+lvlsetn[MST]	ULL					2
+lvlclrn[MST]	ULL					2
+lvlmsk[MST][gG]	ULL					2
+lvlset[MST][gG]	ULL					2
+lvlclr[MST][gG]	ULL					2
+trig			UL [ULL]			1,2
+reset			n/a
+limit_ms		UL UL [UL]			1
+
+Note 1: 4 bytes on 32, 8 bytes on 64
+Note 2: 8 bytes (LL or ULL) on both 32 and 64 bit machines
+
+find . -name \*.[ch] -o -name \*.cc | xargs grep -n 'TRACE_CNTL('
+for cc in file namlvl mapped name mode lvl trig reset limit_ms; do
+  echo === $cc ===
+  find . -name \*.[ch] -o -name \*.cc | xargs grep -n "TRACE_CNTL( *\"$cc"
+done
  */
 static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 {
 	long ret = 0;
 	va_list ap;
 	unsigned ii;
-#if 0 && !defined(__KERNEL__)
-	va_start(ap, cmd);
-	for (ii = 0; ii < nargs; ++ii) /* nargs is number of args AFTER cmd */
-		printf("arg%u=0x%llx\n", ii + 1, va_arg(ap, unsigned long long));
-	va_end(ap);
-#endif
 
 	va_start(ap, cmd);
 
@@ -1624,7 +1644,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 				ret = traceControl_rwp->mode.mode;
 				if (nargs == 1)
 				{
-					uint32_t mode = va_arg(ap, uint64_t);
+					uint32_t mode = va_arg(ap, long); // 4 bytes on 32, 8 on 64
 					union trace_mode_u tmp;
 					tmp.mode = mode;
 #ifndef __KERNEL__
@@ -1646,7 +1666,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 #endif
 				if (nargs == 1)
 				{
-					uint32_t mode = va_arg(ap, uint64_t);
+					uint32_t mode = va_arg(ap, long); // 4 bytes on 32, 8 on 64
 					traceControl_rwp->mode.bits.M = mode;
 				}
 				break;
@@ -1654,7 +1674,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 				ret = traceControl_rwp->mode.bits.S;
 				if (nargs == 1)
 				{
-					uint32_t mode = va_arg(ap, uint64_t);
+					uint32_t mode = va_arg(ap, long); // 4 bytes on 32, 8 on 64
 					traceControl_rwp->mode.bits.S = mode;
 				}
 				break;
@@ -1663,14 +1683,14 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		}
 	}
 	else if ((strncmp(cmd, "lvlmskn", 7) == 0) || (strncmp(cmd, "lvlsetn", 7) == 0) || (strncmp(cmd, "lvlclrn", 7) == 0))
-	{ /* TAKES 0, 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
+	{ /* TAKES 2 or 4 args: name,lvlX or name,lvlM,lvlS,lvlT */
 		uint64_t lvl, lvlm, lvls, lvlt;
 		unsigned ee;
 		int op, slen = strlen(&cmd[7]);
 		char *name_spec;
 		if (slen > 1 || (slen == 1 && !strpbrk(&cmd[6], "MST")))
 		{
-			TRACE_PRN("only M,S,or T allowed after lvl...\n");
+			TRACE_PRN("only M,S,or T allowed after lvl...n\n");
 			va_end(ap);
 			return (-1);
 		}
@@ -1683,7 +1703,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		{
 			op = 1;
 		}
-		else
+		else // must be clr
 		{
 			op = 2;
 		}
@@ -1757,7 +1777,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		}
 	}
 	else if ((strncmp(cmd, "lvlmsk", 6) == 0) || (strncmp(cmd, "lvlset", 6) == 0) || (strncmp(cmd, "lvlclr", 6) == 0))
-	{ /* TAKES 0, 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
+	{ /* TAKES 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
 		uint64_t lvl, lvlm, lvls, lvlt;
 		unsigned ee, doNew = 1, op;
 		if (strncmp(&cmd[3], "msk", 3) == 0)
@@ -1853,17 +1873,17 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		}
 	}
 	else if (strcmp(cmd, "trig") == 0)
-	{ /* takes 1 or 2 args: postEntries [lvlssk] - optional 3rd arg will suppress warnings */
+	{ /* takes 1 or 2 args: postEntries [lvlmsk] - optional 3rd arg will suppress warnings */
 		uint64_t lvlsMsk = 0;
 		unsigned post_entries = 0;
 		if (nargs == 1)
 		{
-			post_entries = va_arg(ap, uint64_t);
+			post_entries = va_arg(ap, unsigned long); // 4 bytes on 32, 8 on 64
 			lvlsMsk = traceNamLvls_p[traceTID].M;
 		}
 		else if (nargs >= 2)
 		{
-			post_entries = va_arg(ap, uint64_t);
+			post_entries = va_arg(ap, unsigned long); // 4 bytes on 32, 8 on 64
 			lvlsMsk = va_arg(ap, uint64_t);
 		}
 		if ((traceNamLvls_p[traceTID].M & lvlsMsk) != lvlsMsk)
@@ -1894,7 +1914,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		traceControl_rwp->triggered = 0;
 	}
 	else if (strcmp(cmd, "limit_ms") == 0)
-	{ /* 2 or 3 args: limit_cnt, span_on_ms, [span_off_ms] */
+	{ /* 0, 2 or 3 args: limit_cnt, span_on_ms, [span_off_ms] */
 		if (nargs == 0)
 		{
 			ret = traceControl_rwp->limit_cnt_limit;
@@ -1902,11 +1922,11 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		else if (nargs >= 2 && nargs <= 3)
 		{
 			ret = traceControl_rwp->limit_cnt_limit;
-			traceControl_rwp->limit_cnt_limit = va_arg(ap, uint64_t);
-			traceControl_rwp->limit_span_on_ms = va_arg(ap, uint64_t);
+			traceControl_rwp->limit_cnt_limit = va_arg(ap, long); // 4 bytes on 32, 8 on 64
+			traceControl_rwp->limit_span_on_ms = va_arg(ap, long); // 4 bytes on 32, 8 on 64
 			if (nargs == 3)
 			{
-				traceControl_rwp->limit_span_off_ms = va_arg(ap, uint64_t);
+				traceControl_rwp->limit_span_off_ms = va_arg(ap, long); // 4 bytes on 32, 8 on 64
 			}
 			else
 			{
@@ -2501,16 +2521,21 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 // arg5   - force_s = force_slow - override tlvlmskS&lvl==0
 #	define TRACE_USE_STATIC_STREAMER 1
 #	if TRACE_USE_STATIC_STREAMER == 1
-#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                                                           \
-			for (int lvl_ = lvl, tid = -1, do__m = 0, do__s = 0, fmtnow, ins[32 / sizeof(int)], tv[sizeof(timeval) / sizeof(int)] = {0}; \
-				 (tid == -1) && ((tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &fmtnow), lvl_, s_enabled, force_s, &do__m, &do__s, (timeval *)&tv, (char *)ins, sizeof(ins))) != -1); \
-				 streamer.str())                                                                                                                                                                          \
-			streamer.init(tid, lvl_, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval *)&tv, (char *)ins)
+#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                      \
+			for (struct _T_ {int lvl__, tid, do__m, do__s, fmtnow; char ins[32]; struct timeval tv; \
+			                     _T_(int llv):lvl__(llv),tid(-1),do__m(0),do__s(0){tv.tv_sec=0;}} _tlog_(lvl); \
+			(_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.fmtnow), _tlog_.lvl__, s_enabled, force_s, \
+			                                                        &_tlog_.do__m, &_tlog_.do__s, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1); \
+				 streamer.str())										\
+			streamer.init(_tlog_.tid, _tlog_.lvl__, _tlog_.do__m, _tlog_.do__s, _tlog_.fmtnow, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins)
 #	else
-#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                                                            \
-			for (int lvl_ = lvl, tid = -1, do__m = 0, do__s = 0, fmtnow, ins[32 / sizeof(int)], tv[sizeof(timeval) / sizeof(int)] = {0};	\
-				 (tid == -1) && ((tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &fmtnow), lvl_, s_enabled, force_s, &do__m, &do__s, (timeval *)&tv, (char *)ins, sizeof(ins))) != -1);) \
-			TraceStreamer().init(tid, lvl_, do__m, do__s, fmtnow, __FILE__, __LINE__, (timeval *)&tv, (char *)ins)
+#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                      \
+			for (struct _T_ {int lvl__, tid, do__m, do__s, fmtnow; char ins[32]; struct timeval tv; \
+			                     _T_(int llv):lvl__(llv),tid(-1),do__m(0),do__s(0){tv.tv_sec=0;}} _tlog_(lvl); \
+			(_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.fmtnow), _tlog_.lvl__, s_enabled, force_s, \
+			                                                        &_tlog_.do__m, &_tlog_.do__s, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1); \
+			     )														\
+			TraceStreamer().init(_tlog_.tid, _tlog_.lvl__, _tlog_.do__m, _tlog_.do__s, _tlog_.fmtnow, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins)
 #	endif
 
 #	define TRACE_ENDL ""

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1136 $$Date: 2019-08-08 14:17:59 -0500 (Thu, 08 Aug 2019) $";
+ # rev="$Revision: 1178 $$Date: 2019-09-18 07:30:12 -0500 (Wed, 18 Sep 2019) $";
 
 # TOP LEVEL Makefile
 
@@ -91,7 +91,7 @@ src_example_user: OUT_check
 	if [ $$sts -eq 0 -a `uname -m` = x86_64 -a -n '${32ON64}' ];then\
 	    out=`echo "$$out" | sed 's/64bit//'`;\
 	    test -d "$$out/bin/" || mkdir -p "$$out/bin/";\
-	    $(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS=-m32;\
+	    $(MAKE) -C src_example userspace OUT="$$out/bin/" CPPFLAGS="-m32 ${CPPFLAGS}" TRACE_INC=$$PWD/include LDFLAGS="-m32  -lpthread";\
 	else\
 	    exit $$sts;\
 	fi

@@ -30,8 +30,8 @@ void sub2(int lvl)
 }
 
 int
-main(  int	argc
-     , char	*argv[] )
+main(/*  int	argc
+		 , char	*argv[]*/ )
 {
 
 	// The following is just shoved in here as a place to help develop the TRACE_STREAMER macro

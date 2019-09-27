@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1188 $$Date: 2019-09-19 13:42:25 -0500 (Thu, 19 Sep 2019) $"
+#define TRACE_REV "$Revision: 1194 $$Date: 2019-09-27 10:32:52 -0500 (Fri, 27 Sep 2019) $"
 
 #ifndef __KERNEL__
 
@@ -1318,6 +1318,8 @@ tod: 132348  133161
 		{
 			nargs = traceControl_p->num_params;
 		}
+		else if (nargs < traceControl_p->num_params)
+			++nargs; // one xtra for one long double on x86_64
 		for (argIdx = 0; argIdx < nargs; ++argIdx)
 		{
 			params_p[argIdx] = va_arg(ap, uint64_t); /* this will usually copy 2x and 32bit archs, but they might be all %f or %g args */
@@ -2599,22 +2601,26 @@ static inline const char *t_arg_nmft(int fmtnow, int nm __attribute__((__unused_
 
 #	define TraceMin(a, b) (((a) < (b)) ? (a) : (b))
 
+#	ifdef TRACE_STREAMER_DEBUG
+#	  define T_STREAM_DBG std::cout
+#	else
+#	  define T_STREAM_DBG if(0)std::cout
+#	endif
+
+//typedef unsigned long long trace_ptr_t;
+//typedef void* trace_ptr_t;
+typedef void* trace_ptr_t;
+
 namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 
 struct TraceStreamer : std::ios
 {
-	union arg
-	{
-		int i;
-		double d;
-		long unsigned int u;
-		long int l;
-		void *p;
-	};
+	typedef unsigned long long arg; // room for 64 bit args (i.e double on 32 or 64bit machines)
 	char msg[TRACE_STREAMER_MSGMAX];
 	size_t msg_sz;
 	arg args[TRACE_STREAMER_ARGSMAX];
 	size_t argCount;
+	void    * param_va_ptr;
 	int tid_;
 	int lvl_;
 	bool do_s, do_m, do_f;
@@ -2628,11 +2634,9 @@ struct TraceStreamer : std::ios
 
 public:
 	explicit TraceStreamer()
-		: msg_sz(0), argCount(0)
+		: msg_sz(0), argCount(0), param_va_ptr(args)
 	{
-#	ifdef TRACE_STREAMER_DEBUG
-		std::cout << "TraceStreamer CONSTRUCTOR\n";
-#	endif
+		T_STREAM_DBG << "TraceStreamer CONSTRUCTOR\n";
 		std::ios::init(0);
 	}
 
@@ -2648,7 +2652,7 @@ public:
 	{
 		widthStr[0] = precisionStr[0] = msg[0] = '\0';
 		msg_sz = 0;
-		argCount = 0;
+		argCount = 0; param_va_ptr=args;
 		tid_ = tid;
 		lvl_ = lvl;
 		do_m = dom;
@@ -2671,9 +2675,7 @@ public:
 
 	inline void str()
 	{
-#	ifdef TRACE_STREAMER_DEBUG
-		std::cout << "Message is " << msg << std::endl;
-#	endif
+		T_STREAM_DBG << "Message is " << msg << std::endl;
 		while (msg_sz && msg[msg_sz - 1] == '\n')
 		{
 			msg[msg_sz - 1] = '\0';
@@ -2690,7 +2692,8 @@ public:
 		}
 		else
 		{
-			if (do_m) trace(lclTime_p, tid_, lvl_, line_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args));
+			if (do_m) { va_list ap=TRACE_VA_LIST_INIT((void*)args);
+				        vtrace(lclTime_p, tid_, lvl_, line_, argCount, msg, ap); }
 			if (do_s) { TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, argCount, msg, TRACE_STREAMER_EXPAND(args)); } /* can be null */
 		}
 #	if (defined(__cplusplus) && (__cplusplus >= 201103L))
@@ -2713,7 +2716,7 @@ public:
 		msg[msg_sz] = '\0';
 	}
 
-	// assum fmtbuf is big enough
+	// Return a format string (e.g "%d") - assume class fmtbuf char[] is big enough.
 	inline char *format(bool isFloat, bool isUnsigned, const char *length, std::ios::fmtflags flags, size_t *len = NULL)
 	{  //See, for example: http://www.cplusplus.com/reference/cstdio/printf/
 		size_t oo = 0;
@@ -2786,9 +2789,7 @@ public:
 			std::ios_base::width(y);
 		}
 			snprintf(widthStr, sizeof(widthStr), "%d", y);
-#	ifdef TRACE_STREAMER_DEBUG
-			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
-#	endif
+			T_STREAM_DBG << "TraceStreamer widthStr is now " << widthStr << std::endl;
 		return *this;
 	}
 
@@ -2802,9 +2803,7 @@ public:
 				snprintf(precisionStr, sizeof(precisionStr), ".%d", y);
 			else
 				precisionStr[0] = '\0';
-#	ifdef TRACE_STREAMER_DEBUG
-			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
-#	endif
+			T_STREAM_DBG << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
 		return *this;
 	}
 #	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4)
@@ -2848,158 +2847,249 @@ public:
     template<typename T>
     inline TraceStreamer &operator<<(const T*const &r)
     {
-    if(do_f)
-        msg_sz += snprintf(&msg[msg_sz],sizeof(msg)-1-msg_sz,"%p", static_cast<const void*>(r));
-    else if(argCount < TRACE_STREAMER_ARGSMAX)
-    {
-        msg_append("%p",2);
-        args[argCount++].p = const_cast<void*>(static_cast<const void*>(r));
-    }
+		if(do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg)-1-msg_sz;
+			int rr = snprintf(&msg[msg_sz],ss,"%p", static_cast<const void*>(r));
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf T1 rr=" << rr << " ss="<<ss<<"\n";
+		} else if(argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			msg_append("%p",2);
+			T*const* vp = (T*const*)param_va_ptr; // This could be problematic if sizeof(T) < sizeof(long)
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check T1 (const T*const &r) msg_sz="<<std::dec<<msg_sz<<"\n";
+		}
     return *this;
     }
 
 	template<typename T>
 	inline TraceStreamer &operator<<(T *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, "%p", static_cast<void *>(r));
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r));
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf T2 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			msg_append("%p", 2);
-			args[argCount++].p = static_cast<void *>(r);
+			T** vp = (T**)param_va_ptr; // This could be problematic if sizeof(T) < sizeof(long)
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check T2 (T *const &r) msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 
 	inline TraceStreamer &operator<<(const char &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, NULL, _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 1 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].i = r;
+			long* vp = (long*)param_va_ptr; // note: char gets pushed onto stack as sizeof(long)
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 1 (const char &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const unsigned char &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, NULL, _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg)-1-msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 2 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].i = r;
+			unsigned long* vp = (unsigned long*)param_va_ptr; // Note: char gets pushed as sizeof(long)
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 2 (const unsigned char &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, NULL, _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 3 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].i = r;
+			long* vp = (long*)param_va_ptr; // int goes to long
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 3 (const int &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const short int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, "h", _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 4 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, "h", _M_flags, &f_l), f_l);
-			args[argCount++].i = r;
+			long* vp = (long*)param_va_ptr; // Note: shorts get pushed onto stack as sizeof(long)
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 4 (const short int &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const long int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, "l", _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "l", _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 5 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, "l", _M_flags, &f_l), f_l);
-			args[argCount++].l = r;
+			long int* vp = (long int*)param_va_ptr;
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 5 (const long int &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const short unsigned int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "h", _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "h", _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 6 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, true, "h", _M_flags, &f_l), f_l);
-			args[argCount++].u = r;
+			unsigned long* vp = (unsigned long*)param_va_ptr; // NOTE: shorts get pushed onto stack as sizeof(long)
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 6 (const short unsigned int &r) " << r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const unsigned int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, NULL, _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 7 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].u = r;
+			unsigned long* vp = (unsigned long*)param_va_ptr; // int goes to long
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 7 (const unsigned int &r) " << r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const long unsigned int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "l", _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 8 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, true, "l", _M_flags, &f_l), f_l);
-			args[argCount++].u = r;
+			long unsigned int* vp = (long unsigned int*)param_va_ptr;
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 8 (const long unsiged int &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const long long unsigned int &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "ll", _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 9 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, true, "ll", _M_flags, &f_l), f_l);
-			args[argCount++].u = r;
+			long long unsigned int* vp = (long long unsigned int*)param_va_ptr;
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 9 (const long long unsiged int &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const double &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(true, false, NULL, _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 10 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(true, false, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].d = r;
+			double* vp = (double*)param_va_ptr;
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 10 (const double &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(const float &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(true, false, NULL, _M_flags), r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 11 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(true, false, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].d = r;
+			double* vp = (double*)param_va_ptr;  // note: floats get pushed onto stack as double
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 11 (const float &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
@@ -3007,12 +3097,19 @@ public:
 	{
 		if (_M_flags & boolalpha)
 			msg_append(r ? "true" : "false", r ? 4 : 5);
-		else if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, "%d", r);
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		else if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, "%d", r);
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 12 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			msg_append("%d", 2);
-			args[argCount++].i = r;
+			long* vp = (long *)param_va_ptr;  // note: bool is pushed as long
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 12 (const bool &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
@@ -3030,36 +3127,57 @@ public:
 #	if (__cplusplus >= 201103L)
 	inline TraceStreamer &operator<<(const std::atomic<int> &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, NULL, _M_flags), r.load());
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r.load());
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 13 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
-			args[argCount++].i = r.load();
+			long * vp = (long*)param_va_ptr; // note: int goes to long
+			++argCount;
+			*vp++ = r.load();
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 13 (const std::atomic<int> &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(std::atomic<unsigned long> const &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, true, "l", _M_flags), r.load());
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r.load());
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 14 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			msg_append(format(false, true, "l", _M_flags));
-			args[argCount++].u = r.load();
+			unsigned long* vp = (unsigned long*)param_va_ptr;
+			++argCount;
+			*vp++ = r.load();
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 14 (std::atomic<unsigned long> const &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
 	inline TraceStreamer &operator<<(std::atomic<short int> const &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, format(false, false, "h", _M_flags), r.load());
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r.load());
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 15 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			size_t f_l = 0;
 			msg_append(format(false, false, "h", _M_flags, &f_l), f_l);
-			args[argCount++].i = r.load();
+			long * vp = (long*)param_va_ptr; // note: shorts get pushed as long
+			++argCount;
+			*vp++ = r.load();
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 15 (std::atomic<short int> const &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
@@ -3070,12 +3188,19 @@ public:
 			bool rr = r.load();
 			msg_append(rr ? "true" : "false", rr ? 4 : 5);
 		}
-		else if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, "%d", r.load());
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		else if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, "%d", r.load());
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 16 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			msg_append("%d", 2);
-			args[argCount++].i = r.load();
+			long * vp = (long*)param_va_ptr; // note: bool goes to long
+			++argCount;
+			*vp++ = r.load();
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 16 (std::atomic<bool> const &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n";
 		}
 		return *this;
 	}
@@ -3083,12 +3208,23 @@ public:
 	template<typename T>
 	inline TraceStreamer &operator<<(std::unique_ptr<T> const &r)
 	{
-		if (do_f)
-			msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, "%p", static_cast<void *>(r.get()));
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		if (do_f || argCount >= traceControl_p->num_params) {
+			size_t ss=sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r.get()));
+			msg_sz += SNPRINTED( rr, ss );
+			T_STREAM_DBG << "streamer snprintf 17 rr=" << rr << " ss="<<ss<<"\n";
+		} else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
 			msg_append("%p", 2);
-			args[argCount++].p = static_cast<void *>(r.get());
+			trace_ptr_t * vp = (trace_ptr_t*)param_va_ptr; // address is unsigned long
+			++argCount;
+			*vp++ = (trace_ptr_t)(void*)(r.get());
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 17 (std::unique_ptr<T> const &r) "<< r.get()
+						 << " sizeof(r.get())=" << sizeof(r.get())
+						 << " (unsigned long)r.get()=0x" << std::hex << (trace_ptr_t)(void*)(r.get())
+						 << " sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t)
+						 << " msg_sz="<<std::dec<<msg_sz<< "\n"; // ALERT: without ".get()" - error: no match for 'operator<<' (operand types are 'std::basic_ostream<char>' and 'const std::unique_ptr<std::__cxx11::basic_string<char> >')
 		}
 		return *this;
 	}
@@ -3145,12 +3281,19 @@ public:
 template<>
 inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
 {
-	if (do_f)
-		msg_sz += snprintf(&msg[msg_sz], sizeof(msg) - 1 - msg_sz, "%p", r);
-	else if (argCount < TRACE_STREAMER_ARGSMAX)
+	if (do_f || argCount >= traceControl_p->num_params) {
+		size_t ss=sizeof(msg) - 1 - msg_sz;
+		int rr = snprintf(&msg[msg_sz], ss, "%p", r);
+		msg_sz += SNPRINTED( rr, ss );
+		T_STREAM_DBG << "streamer snprintf 18 rr=" << rr << " ss="<<ss<<"\n";
+	} else if (argCount < TRACE_STREAMER_ARGSMAX)
 	{
 		msg_append("%p", 2);
-		args[argCount++].p = r;
+		trace_ptr_t* vp = (trace_ptr_t*)param_va_ptr; // note: addresses are unsigned long
+		++argCount;
+		*vp++ = (trace_ptr_t)r;
+		param_va_ptr = vp;
+		T_STREAM_DBG << "streamer check 18 (void *const &r) "<< r << " msg_sz="<<std::dec<<msg_sz<<"\n"; // ALERT: without ".get()" - error: no match for 'operator<<' (operand types are 'std::basic_ostream<char>' and 'const std::unique_ptr<std::__cxx11::basic_string<char> >')
 	}
 	return *this;
 }

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1188 $$Date: 2019-09-19 13:42:25 -0500 (Thu, 19 Sep 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1194 $$Date: 2019-09-27 10:32:52 -0500 (Fri, 27 Sep 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -148,11 +148,27 @@ uint64_t get_us_timeofday()
 	return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
 }
 
-
+//                  32bit      64bit
+//                --------   --------
+//    char         1 byte     1 bytes   * always pushed as long - 4 on 32, 8 on 64
+//    short        2 bytes    2 bytes   * always pushed as long - 4 on 32, 8 on 64
+//    int          4 bytes    4 bytes 
+//    float        4 bytes    4 bytes   * always pushed as double/8 on both 32 and 64
+//    long         4 bytes    8 bytes
+//    void *       4 bytes    8 bytes
+//    double       8 bytes    8 bytes
+//    long long    8 bytes    8 bytes
+//    long double 12 bytes   16 bytes   * 80 bit extended precision in 96; 128 bits
+//
+// used to direct the copying of the trace entry parameters block as a part of "show"
 struct sizepush
-{	unsigned size:16;
-	unsigned push:16;
-};
+{	unsigned size:16;    // size (number of bytes) an arg is when it's not pushed as determined by a combination of the traced fmt and fundamental param size of the executed TRACE statement (myEnt_p->param_bytes)
+	unsigned push:16;    // size (number of bytes) an arg was pushed onto stack and copied into the trace entry parameters block
+	unsigned positive;       // 1=%d%p 0=%u
+};// For example, '%hd' w/param_bytes=4  size=2, push=4
+//                '%hd' w/param_bytes=8  size=2, push=8
+// usually args are ints size=sizeof(int) and pushed as long (the fundamental
+// size of the arch addresses) push=sizeof(long) (which is usually sizeof (void*))
 
 enum show_opts_e {
 	filter_newline_=0x1,
@@ -193,6 +209,7 @@ size_t get_arg_sizes(  char            *ofmt
 		ofmt[slen] = *in;
 		percent_sav = ofmt+slen;	/* save in case we need to modify it (too many args) */
 		++in; ++slen;       /* point to next char */
+		sizes_out[numArgs].positive = 0;
 		/*printf("next char=%c\n",*in);*/
 		if ((*in=='%')||(*in=='m')) { ofmt[slen++] = *in++; continue; }/* ingore %% which specified a % char */
 		if (numArgs == maxArgs) { *percent_sav = '*'; continue; }  /* SAFETY - no args beyond max */
@@ -215,20 +232,24 @@ size_t get_arg_sizes(  char            *ofmt
 			case 2:	 sizes_out[numArgs].push=8;          sizes_out[numArgs].size=8;break;/* long long */
 			default: printf("error\n");
 			}
+			if (strchr("di",*in))
+				sizes_out[numArgs].positive = 1;
 			ofmt[slen++] = *in++;
 			modifier=0;
 			break;
 		case 'e': case 'E': case 'f': case 'F': case 'g': case 'G': case 'a': case 'A':
 			if (modifier)
-			{	sizes_out[numArgs].push=(param_bytes==4)?12:16;
+			{	/* long double */
+				sizes_out[numArgs].push=(param_bytes==4)?12:16;
 				sizes_out[numArgs].size=(param_bytes==4)?12:16;
 				modifier=0;
-			}/* long double */
-			else
-			{	sizes_out[numArgs].push=8;
+			} else
+			{	/* double */
+				sizes_out[numArgs].push=8;
 				sizes_out[numArgs].size=8;
-			} /* double */
+			}
 			ofmt[slen++] = *in++;
+			modifier=0;
 			break;
 
 			/* length modifiers */
@@ -238,14 +259,25 @@ size_t get_arg_sizes(  char            *ofmt
 		case 'z':  ++modifier; ofmt[slen++] = *in++; goto chkChr;
 
 		case 's': case 'n': case 'p':       /* SAFETY -- CONVERT %s to %p */
-			ofmt[slen++]='p'; in++;
+			// for 's', first need to remove "-.0123456789" b/c %p take no flags
+			if (*in=='s')
+				while (strchr("-.0123456789",ofmt[slen-1]))
+					--slen;
+			sizes_out[numArgs].push=param_bytes; sizes_out[numArgs].size=param_bytes;
+			if ((param_bytes==8)&&(sizeof(long)==4)) { // traced on 64, showing on 32
+				strcpy(&ofmt[slen-1],"0x%llx"); // overwrite the original '%'
+				slen+=5;
+			} else 
+				ofmt[slen++]='p';
+			in++;
 			break;
-		case 'm':
+		case 'm':    // (Glibc extension.)  Print output of strerror(errno).  No argument is required.
 			ofmt[slen++] = *in++;
 			continue;
 			break;
 		case '*':   /* special -- "arg" in an arg */
-			sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;
+			sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4/*int*/;
+			sizes_out[numArgs].positive = 1;
 			if (++numArgs == maxArgs) { ofmt[slen++] = *in++; break; }
 			ofmt[slen++] = *in++;
 			goto chkChr;
@@ -339,7 +371,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			param_va_ptr = (void*)params_p;
 		}
 		else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
-		{	void *xx = &(myEnt_p->time);
+		{	// Entry made by 32bit program, being readout by 64bit
+			void *xx = &(myEnt_p->time);
 			unsigned *ptr=(unsigned*)xx;
 			seconds	 = *ptr++;
 			useconds = *ptr;
@@ -348,8 +381,20 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			for (ii=0; ii<myEnt_p->nargs && params_sizes[ii].push!=0; ++ii)
 			{
 				if      (params_sizes[ii].push == 4)
-				{	*(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
+				{	if (params_sizes[ii].positive) {
+						*(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
+						//printf( "converting from 0x%x\n", *(int*)ent_param_ptr );
+					} else {
+						*(unsigned long*)lcl_param_ptr = (unsigned long)*(unsigned*)ent_param_ptr;
+						//printf( "converting to 0x%lx\n", *(unsigned long*)lcl_param_ptr );
+					}
 					lcl_param_ptr += sizeof(long);
+				}
+				else if (params_sizes[ii].push == 12) // i.e. long double
+				{
+					typedef _Complex float __attribute__((mode(XC))) _float80;
+					*(long double*)lcl_param_ptr =		 *(long double*)(_float80*)ent_param_ptr;
+					lcl_param_ptr += sizeof(long double);
 				}
 				else /* (params_sizes[ii].push == 8) */
 				{	*(long*)lcl_param_ptr =		 *(long*)ent_param_ptr;
@@ -360,7 +405,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			param_va_ptr = (void*)local_params;
 		}
 		else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
-		{	void *xx=&myEnt_p->time;
+		{	// Entry made by 64bit program, being shown by 32bit
+			void *xx=&myEnt_p->time;
 			long long *ptr=(long long*)xx;
 			seconds	 = (unsigned)*ptr++;
 			useconds = (unsigned)*ptr;
@@ -368,11 +414,15 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			lcl_param_ptr = local_params;
 			for (ii=0; ii<myEnt_p->nargs && params_sizes[ii].push!=0; ++ii)
 			{
-				if      (params_sizes[ii].size == 4)
+				if      (params_sizes[ii].size == 4) // i.e. char, short, int
 				{	*(unsigned*)lcl_param_ptr = (unsigned)*(unsigned long long*)ent_param_ptr;
 					lcl_param_ptr += sizeof(long);
 				}
-				else /* (params_sizes[ii].size == 8) */
+				else if (params_sizes[ii].size == 16) // i.e. long double
+				{	*(long double*)lcl_param_ptr = *(long double*)(__float128*)ent_param_ptr;
+					lcl_param_ptr += sizeof(long double);
+				}
+				else // (params_sizes[ii].size == 8) i.e. 
 				{	*(unsigned long long*)lcl_param_ptr = *(unsigned long long*)ent_param_ptr;
 					lcl_param_ptr += sizeof(long long);
 				}
@@ -1073,11 +1123,17 @@ extern  int        optind;         /* for getopt */
 
 	if		(strcmp(cmd,"test1") == 0)
 	{	int loops=1, trace_cnt;
+		char msg_str[200];
+		char addr_str[100];
+		void *vp=addr_str;
 		setenv("TRACE_NAME",basename(__FILE__),0); // allow this to be overridden by -n and env.var. (and define TRACE_NAME)
 		if (opt_loops > -1) loops=opt_loops;
+		sprintf( addr_str, "%p", vp );
+		sprintf( msg_str,"Hi %%d. \"c 2.5 -5 5000000000 0x87654321 2.6 %p\" ", vp );
+		strcat( msg_str, "should be repeated here: %c %.1f %hd %lld %p %.1Lf %s" );
 		for (trace_cnt=1; trace_cnt<=loops; ++trace_cnt)
-		{	TRACE( 2, "Hi %d. \"c 2.5 5 5000000000 15\" should be repeated here: %c %.1f %hd %lld %d"
-				  , trace_cnt, 'c',2.5,(short)5,(long long)5000000000LL,15 );
+		{	TRACE( 2, msg_str, trace_cnt
+				  , 'c',2.5,(short)-5,(long long)5000000000LL,(void*)0x87654321,(long double)2.6, addr_str );
 		}
 	}
 	else if (strcmp(cmd,"test") == 0)

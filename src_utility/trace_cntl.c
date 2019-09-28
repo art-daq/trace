@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1197 $$Date: 2019-09-27 19:37:57 -0500 (Fri, 27 Sep 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1198 $$Date: 2019-09-27 23:01:25 -0500 (Fri, 27 Sep 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -420,8 +420,11 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				}
 				else if (params_sizes[ii].size == 16) // i.e. long double
 				{
-					typedef _Complex float __attribute__((mode(TC))) _float128;
-					*(long double*)lcl_param_ptr = *(long double*)(_float128*)ent_param_ptr;
+# ifdef __APPLE__   // Basically mixed 32/64 env w/ long double is not supported on Mac/clang; shouldn't be a big deal
+					*(long double*)lcl_param_ptr = 0.0;
+# else
+					*(long double*)lcl_param_ptr = *(long double*)(__float128*)ent_param_ptr;
+# endif
 					lcl_param_ptr += sizeof(long double);
 				}
 				else // (params_sizes[ii].size == 8) i.e. 

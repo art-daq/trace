@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1194 $$Date: 2019-09-27 10:32:52 -0500 (Fri, 27 Sep 2019) $"
+#define TRACE_REV "$Revision: 1201 $$Date: 2019-09-28 23:06:37 -0500 (Sat, 28 Sep 2019) $"
 
 #ifndef __KERNEL__
 
@@ -2692,8 +2692,7 @@ public:
 		}
 		else
 		{
-			if (do_m) { va_list ap=TRACE_VA_LIST_INIT((void*)args);
-				        vtrace(lclTime_p, tid_, lvl_, line_, argCount, msg, ap); }
+			if (do_m) trace(lclTime_p, tid_, lvl_, line_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args) );
 			if (do_s) { TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, argCount, msg, TRACE_STREAMER_EXPAND(args)); } /* can be null */
 		}
 #	if (defined(__cplusplus) && (__cplusplus >= 201103L))

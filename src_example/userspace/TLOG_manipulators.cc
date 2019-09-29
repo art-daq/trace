@@ -48,18 +48,23 @@ main(  int	argc    __attribute__((__unused__))
 	const double                     ten=10;
 	const float                      ele=11;
 	const bool                       twe=12;
+#  if defined(__cplusplus) && (__cplusplus >= 201103L)
 	const std::atomic<int>           tht(13);
     std::atomic<unsigned long> const fot(14);
     std::atomic<short int> const     fit(15);
     std::atomic<bool>          const sit(16);
 	std::unique_ptr<int> const       sEt(new int(17));
+#  endif
 	void *const                      eit((void*)18);
 	const char *space="                    ";
 	TLOG(2) << '1' <<" " << two <<" " << thr <<" " << fou <<" " << fiv <<" "
 			<< six <<" " << sev <<" " << eig <<" " << nin <<" " << ten <<" " << ele;
 	for (unsigned ii=0; ii<strlen(space); ii+=(ii+1))
-		TLOG(2) << ten <<" " << ele <<" " << twe <<" " << tht <<&space[strlen(space)-1-ii] << fot <<" "
-				<< fit <<" " << sit <<" " << (void*)0x12345 <<" " << sEt <<" " << eit <<" " << 99;
-	TLOG(3) << (void*)0x12345678 <<" " << sEt <<" " << eit <<" sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t);
+		TLOG(2) << ten <<" " << ele <<" " << twe <<&space[strlen(space)-1-ii]
+#  if defined(__cplusplus) && (__cplusplus >= 201103L)
+				<< tht <<" " << fot <<" " << fit <<" " << sit <<" " << sEt <<" "
+#  endif
+				<< (void*)0x12345 <<" " << eit <<" " << 99;
+	TLOG(3) << (void*)0x12345678 <<" " << eit <<" sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t);
 	return (0);
 }   // main

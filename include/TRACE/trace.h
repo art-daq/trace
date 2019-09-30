@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1201 $$Date: 2019-09-28 23:06:37 -0500 (Sat, 28 Sep 2019) $"
+#define TRACE_REV "$Revision: 1205 $$Date: 2019-09-30 12:14:46 -0500 (Mon, 30 Sep 2019) $"
 
 #ifndef __KERNEL__
 
@@ -2528,8 +2528,8 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 			                     _T_(int llv):lvl__(llv),tid(-1),do__m(0),do__s(0){tv.tv_sec=0;}} _tlog_(lvl); \
 			(_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.fmtnow), _tlog_.lvl__, s_enabled, force_s, \
 			                                                        &_tlog_.do__m, &_tlog_.do__s, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1); \
-				 streamer.str())										\
-			streamer.init(_tlog_.tid, _tlog_.lvl__, _tlog_.do__m, _tlog_.do__s, _tlog_.fmtnow, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins)
+				 __streamer.str())										\
+			__streamer.init(_tlog_.tid, _tlog_.lvl__, _tlog_.do__m, _tlog_.do__s, _tlog_.fmtnow, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins)
 #	else
 #		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                      \
 			for (struct _T_ {int lvl__, tid, do__m, do__s, fmtnow; char ins[32]; struct timeval tv; \
@@ -2692,7 +2692,13 @@ public:
 		}
 		else
 		{
-			if (do_m) trace(lclTime_p, tid_, lvl_, line_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args) );
+			if (do_m)
+#	if (defined(__cplusplus) && (__cplusplus >= 201103L))
+				{	va_list ap=TRACE_VA_LIST_INIT((void*)args); // warning: extended initializer lists only available with [since] -std=c++11 ...
+					vtrace(lclTime_p, tid_, lvl_, line_, argCount, msg, ap); }
+#   else
+				trace(lclTime_p, tid_, lvl_, line_, argCount TRACE_XTRA_PASSED, msg, TRACE_STREAMER_EXPAND(args) );
+#   endif
 			if (do_s) { TRACE_LOG_FUNCTION(lclTime_p, tid_, lvl_, ins_, file_, line_, argCount, msg, TRACE_STREAMER_EXPAND(args)); } /* can be null */
 		}
 #	if (defined(__cplusplus) && (__cplusplus >= 201103L))
@@ -3298,7 +3304,7 @@ inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++..
 }
 
 #	if TRACE_USE_STATIC_STREAMER == 1
-static TRACE_THREAD_LOCAL TraceStreamer streamer;
+static TRACE_THREAD_LOCAL TraceStreamer __streamer;
 #	endif
 }  // unnamed namespace
 

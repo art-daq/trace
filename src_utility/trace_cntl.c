@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1210 $$Date: 2019-10-03 23:27:58 -0500 (Thu, 03 Oct 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1219 $$Date: 2019-10-04 15:34:29 -0500 (Fri, 04 Oct 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -328,7 +328,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 {
 	unsigned                uu;
 	char                  * msg_p;
-	unsigned long         * params_p;
+	uint64_t              * params_p;
 	size_t                  slen;
 	time_t                  seconds;
 	unsigned                useconds;
@@ -507,8 +507,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case 't': printf("%10u", (unsigned)myEnt_p->tsc); break;
 			case 'u': printf("%" MM_STR(TRACE_LINENUM_WIDTH) "u", myEnt_p->linenum); break;
 			case 'x': /* ignore this "control" */ break;
-			case 'X': params_p=(unsigned long*)param_va_ptr;
-				      for (uu=0; uu<myEnt_p->nargs; ++uu) printf( "0x%0*lx ", __SIZEOF_LONG__*2, params_p[uu] );
+			case 'X': params_p=(uint64_t*)param_va_ptr;
+				      for (uu=0; uu<myEnt_p->nargs; ++uu) printf( "0x%016llx ", (unsigned long long)params_p[uu] );
 					  msg_spec_included=1;
 					  break;
 			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence

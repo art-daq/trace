@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1212 $$Date: 2019-10-04 00:33:36 -0500 (Fri, 04 Oct 2019) $"
+#define TRACE_REV "$Revision: 1215 $$Date: 2019-10-04 14:33:28 -0500 (Fri, 04 Oct 2019) $"
 
 #ifndef __KERNEL__
 
@@ -2591,7 +2591,7 @@ struct tstreamer_flags { unsigned do_m:1; unsigned do_s:1; int fmtnow:2; tstream
 #	else
 #		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                      \
 			for (struct _T_ {int lvl__, tid; tstreamer_flags flgs; char ins[32]; struct timeval tv; \
-			                     _T_(int llv):lvl__(llv),tid(-1),do__m(0),do__s(0){tv.tv_sec=0;} } _tlog_(lvl);	\
+			                     _T_(int llv):lvl__(llv),tid(-1){tv.tv_sec=0;} } _tlog_(lvl);	\
 				 (_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs), _tlog_.lvl__, s_enabled, force_s, \
 																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);)   \
 			TraceStreamer().init(_tlog_.tid, _tlog_.lvl__, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)

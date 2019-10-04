@@ -41,12 +41,12 @@ main(/*  int	argc
 #define s_enabled  1
 #define force_s    0
 static TRACE_THREAD_LOCAL TraceStreamer steamer;
-	for (struct _T_ {int lvl__, tid, do__m, do__s, fmtnow; char ins[32]; struct timeval tv;
-		_T_(int llv):lvl__(llv),tid(-1),do__m(0),do__s(0){tv.tv_sec=0;}} _xx(lvl);
-		 (_xx.tid == -1) && ((_xx.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_xx.fmtnow), _xx.lvl__, s_enabled, force_s,
-		                                                         &_xx.do__m, &_xx.do__s, &_xx.tv, _xx.ins, sizeof(_xx.ins))) != -1);
+ for (struct _T_ {int lvl__, tid; tstreamer_flags flgs; char ins[32]; struct timeval tv;
+		_T_(int llv):lvl__(llv),tid(-1){tv.tv_sec=0;}} _xx(lvl);
+		 (_xx.tid == -1) && ((_xx.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_xx.flgs), _xx.lvl__, s_enabled, force_s,
+		                                                         &_xx.flgs, &_xx.tv, _xx.ins, sizeof(_xx.ins))) != -1);
 		 steamer.str())
-		steamer.init(_xx.tid, _xx.lvl__, _xx.do__m, _xx.do__s, _xx.fmtnow, __FILE__, __LINE__, &_xx.tv, _xx.ins) << "hello";
+		steamer.init(_xx.tid, _xx.lvl__, _xx.flgs, __FILE__, __LINE__, &_xx.tv, _xx.ins, &TRACE_LOG_FUNCTION) << "hello";
 
 
 	sub1(2);

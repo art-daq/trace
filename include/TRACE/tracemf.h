@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1170 $$Date: 2019-09-03 14:31:07 -0500 (Tue, 03 Sep 2019) $";
+ // rev="$Revision: 1208 $$Date: 2019-10-02 15:07:23 -0500 (Wed, 02 Oct 2019) $";
  */
  /**
   * \file tracemf.h
@@ -25,8 +25,7 @@
   static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
   static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
-#define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,file,line,nargs,...)		\
-	mftrace_user(tvp, tid, lvl,insert, file, line, nargs, __VA_ARGS__ )
+#define TRACE_LOG_FUNCTION mftrace_user
 #include "TRACE/trace.h"		/* TRACE */
 
 #define MFBOOL_WARNING __mwe

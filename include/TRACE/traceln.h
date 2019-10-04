@@ -25,8 +25,7 @@
   static void lntrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
   static void lntrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
-#define TRACE_LOG_FUNCTION(tvp,tid,lvl,insert,file,line,nargs,...)		\
-	lntrace_user(tvp, tid, lvl,insert, file, line, nargs, __VA_ARGS__ )
+#define TRACE_LOG_FUNCTION lntrace_user
 #include "TRACE/trace.h"		/* TRACE */
 
 

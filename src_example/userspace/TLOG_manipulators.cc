@@ -65,6 +65,10 @@ main(  int	argc    __attribute__((__unused__))
 				<< tht <<" " << fot <<" " << fit <<" " << sit <<" " << sEt <<" "
 #  endif
 				<< (void*)0x12345 <<" " << eit <<" " << 99;
-	TLOG(3) << (void*)0x12345678 <<" " << eit <<" sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t);
+	TLOG(3) << (void*)0x12345678 <<" " << eit <<" sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t)
+			<<" " << (long double)3.0                      <<" " << 3
+			<<" " << reinterpret_cast<const void*>(0x1234) <<" " << reinterpret_cast<const void*>(0x5678)
+			<<" " << reinterpret_cast<long* const>(0x1234) <<" " << reinterpret_cast<long* const>(0x5678)
+		;
 	return (0);
 }   // main

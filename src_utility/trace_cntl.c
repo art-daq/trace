@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1201 $$Date: 2019-09-28 23:06:37 -0500 (Sat, 28 Sep 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1210 $$Date: 2019-10-03 23:27:58 -0500 (Thu, 03 Oct 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -326,7 +326,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
               , char *tfmt, int tfmt_len, unsigned longest_lvlstr
               )
 {
-	unsigned                ii;
+	unsigned                uu;
 	char                  * msg_p;
 	unsigned long         * params_p;
 	size_t                  slen;
@@ -378,10 +378,10 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			useconds = *ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
-			for (ii=0; ii<myEnt_p->nargs && params_sizes[ii].push!=0; ++ii)
+			for (uu=0; uu<myEnt_p->nargs && params_sizes[uu].push!=0; ++uu)
 			{
-				if      (params_sizes[ii].push == 4)
-				{	if (params_sizes[ii].positive) {
+				if      (params_sizes[uu].push == 4)
+				{	if (params_sizes[uu].positive) {
 						*(long*)lcl_param_ptr = (long)*(int*)ent_param_ptr;
 						//printf( "converting from 0x%x\n", *(int*)ent_param_ptr );
 					} else {
@@ -390,7 +390,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 					}
 					lcl_param_ptr += sizeof(long);
 				}
-				else if (params_sizes[ii].push == 12) // i.e. long double
+				else if (params_sizes[uu].push == 12) // i.e. long double
 				{
 # if defined(__arm__) || defined(__powerpc__)
 					*(long double*)lcl_param_ptr = 0.0; // __arm__: error: unable to emulate 'XC'; 
@@ -400,11 +400,11 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 # endif
 					lcl_param_ptr += sizeof(long double);
 				}
-				else /* (params_sizes[ii].push == 8) */
+				else /* (params_sizes[uu].push == 8) */
 				{	*(long*)lcl_param_ptr =		 *(long*)ent_param_ptr;
 					lcl_param_ptr += sizeof(long);
 				}
-				ent_param_ptr += params_sizes[ii].push;
+				ent_param_ptr += params_sizes[uu].push;
 			}
 			param_va_ptr = (void*)local_params;
 		}
@@ -416,13 +416,13 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			useconds = (unsigned)*ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
-			for (ii=0; ii<myEnt_p->nargs && params_sizes[ii].push!=0; ++ii)
+			for (uu=0; uu<myEnt_p->nargs && params_sizes[uu].push!=0; ++uu)
 			{
-				if      (params_sizes[ii].size == 4) // i.e. char, short, int
+				if      (params_sizes[uu].size == 4) // i.e. char, short, int
 				{	*(unsigned*)lcl_param_ptr = (unsigned)*(unsigned long long*)ent_param_ptr;
 					lcl_param_ptr += sizeof(long);
 				}
-				else if (params_sizes[ii].size == 16) // i.e. long double
+				else if (params_sizes[uu].size == 16) // i.e. long double
 				{
 # if defined(__APPLE__) || defined(__arm__) || defined(__powerpc__)  // Basically mixed 32/64 env w/ long double is not supported on Mac/clang; shouldn't be a big deal
 					*(long double*)lcl_param_ptr = 0.0;
@@ -431,11 +431,11 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 # endif
 					lcl_param_ptr += sizeof(long double);
 				}
-				else // (params_sizes[ii].size == 8) i.e. 
+				else // (params_sizes[uu].size == 8) i.e. 
 				{	*(unsigned long long*)lcl_param_ptr = *(unsigned long long*)ent_param_ptr;
 					lcl_param_ptr += sizeof(long long);
 				}
-				ent_param_ptr += params_sizes[ii].push;
+				ent_param_ptr += params_sizes[uu].push;
 			}
 			param_va_ptr = (void*)local_params;
 		}
@@ -507,12 +507,14 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case 't': printf("%10u", (unsigned)myEnt_p->tsc); break;
 			case 'u': printf("%" MM_STR(TRACE_LINENUM_WIDTH) "u", myEnt_p->linenum); break;
 			case 'x': /* ignore this "control" */ break;
+			case 'X': params_p=(unsigned long*)param_va_ptr;
+				      for (uu=0; uu<myEnt_p->nargs; ++uu) printf( "0x%0*lx ", __SIZEOF_LONG__*2, params_p[uu] );
+					  msg_spec_included=1;
+					  break;
 			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence
 			}
 		}
 
-		/*typedef unsigned long parm_array_t[1];*/
-		/*va_start( ap, params_p[-1] );*/
 		if (!msg_spec_included) {
 			if (local_msg[slen-1] == '\n')
 				local_msg[--slen] = '\0'; // strip off the trailing newline
@@ -857,6 +859,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 't': printf("       tsc"); break;
 			case 'u': printf("%" MM_STR(TRACE_LINENUM_WIDTH) "s", "ln#");break;
 			case 'x': /* ignore this "control" */ break;
+			case 'X': printf("%-*s", (int)strlen(TRACE_MSG_DASHES),"msg"); msg_spec_included=1; break;
 			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence
 			}
 		}
@@ -904,6 +907,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 't': printf("----------"); break;
 			case 'u': printf("%." MM_STR(TRACE_LINENUM_WIDTH) "s", TRACE_LONG_DASHES);break;
 			case 'x': /* ignore this "control" */ break;
+			case 'X': printf(TRACE_MSG_DASHES); msg_spec_included=1; break;
 			default:  printf("%%%c",*sp);break; // print unknown %<blah> sequence
 			}
 		}
@@ -1035,7 +1039,7 @@ void traceInfo()
 	       "namLvls offset    = 0x%lx\n"
 	       "buffer_offset     = 0x%lx\n"
 	       "memlen            = 0x%x          %s\n"
-	       "default TRACE_SHOW=\"%s\" others: a:nargs B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum s:slot t:tsc u:line\n"
+	       "default TRACE_SHOW=\"%s\" others: a:nargs B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum s:slot t:tsc u:line X:examineArgData\n"
 	       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# f:file I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName P:pid s:severity t:insert u:line\n"
 	       , TRACE_REV
 	       , traceControl_p->version_string

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1219 $$Date: 2019-10-04 15:34:29 -0500 (Fri, 04 Oct 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1222 $$Date: 2019-10-04 17:29:18 -0500 (Fri, 04 Oct 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -341,7 +341,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 	char                  * indent="                                                                ";
 
 		msg_p	 = (char*)(myEnt_p+1);
-		params_p = (unsigned long*)(msg_p+traceControl_p->siz_msg);
+		params_p = (uint64_t*)(msg_p+traceControl_p->siz_msg);
 		
 		msg_p[traceControl_p->siz_msg - 1] = '\0';
 		if (myEnt_p->nargs)

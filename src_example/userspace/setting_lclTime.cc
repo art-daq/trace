@@ -12,7 +12,7 @@
 #include <TRACE/trace.h>		// TRACE, TLOG
 #include <sys/time.h>			// gettimeofday, struct timeval
 
-int main(  int argc, char *argv[] )
+int main( /*int argc, char *argv[]*/ )
 {
 	struct timeval programStart, programEnd;
 

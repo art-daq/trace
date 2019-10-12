@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1215 $$Date: 2019-10-04 14:33:28 -0500 (Fri, 04 Oct 2019) $"
+#define TRACE_REV "$Revision: 1230 $$Date: 2019-10-10 12:28:50 -0500 (Thu, 10 Oct 2019) $"
 
 #ifndef __KERNEL__
 
@@ -252,7 +252,7 @@ static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have se
 #endif
 
 #ifndef TRACE_PRINT_FD
-#	define TRACE_PRINT_FD 1
+#	define TRACE_PRINT_FD 1,1
 #endif
 
 /* 64bit sparc (nova.fnal.gov) has 8K pages (ref. ~/src/sysconf.c). This
@@ -614,7 +614,7 @@ TRACE_DECL(TRACE_THREAD_LOCAL const char *traceName, = TRACE_DFLT_NAME);
 TRACE_DECL(TRACE_THREAD_LOCALX const char *traceFile, = "/tmp/trace_buffer_%u"); /*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
 TRACE_DECL(TRACE_THREAD_LOCAL pid_t traceTid, = 0);                              /* thread id */
 TRACE_DECL(pid_t tracePid, = 0);
-TRACE_DECL(int tracePrintFd, = 1);
+TRACE_DECL(int tracePrintFd[2], = {TRACE_PRINT_FD});
 TRACE_DECL(TRACE_ATOMIC_T traceInitLck, = TRACE_ATOMIC_INIT);
 TRACE_DECL(uint32_t traceInitLck_hung_max, = 0);
 TRACE_DECL(const char *traceTimeFmt, = NULL); /* hardcoded default below that can only be overridden via env.var */
@@ -990,6 +990,10 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 			case 'l': /* lvl int */
 				retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%2u", lvl);
 				break;
+#if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
+#endif
 			case 'M': /* msg limit insert - fall through to msg*/
 				if (insert[0])
 				{
@@ -998,7 +1002,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 					printed += SNPRINTED(retval, PRINTSIZE(printed));
 				}
 				/*break; FALL through */
-#if defined(__cplusplus) && (__cplusplus >= 201703L)
+#if defined(__cplusplus) && (__GNUC__ >= 7)  //(__cplusplus >= 201703L) warning happen even with c++11
 #	if __has_cpp_attribute(fallthrough)
 				[[fallthrough]];
 #	else
@@ -1006,6 +1010,9 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 #	endif
 #endif
 			case 'm': /* msg */
+#if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
+#	pragma GCC diagnostic pop
+#endif
 				if (nargs)
 				{
 					retval = msg_printed = vsnprintf(&(obuf[printed]), PRINTSIZE(printed), msg, ap);
@@ -1116,7 +1123,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 		printed += SNPRINTED(retval, PRINTSIZE(printed));
 	}
 
-	if (printed < (int)ROOM_FOR_NL)
+	if (printed < ROOM_FOR_NL)
 	{ /* SHOULD/COULD BE AN ASSERT */
 		/* there is room for the \n */
 		/* buf first see if it is needed */
@@ -1130,7 +1137,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 #if defined(__KERNEL__)
 		printk(obuf);
 #else
-		quiet_warn = write(tracePrintFd, obuf, printed);
+		quiet_warn = write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, printed);
 		if (quiet_warn == -1)
 			perror("writeTracePrintFd");
 #endif
@@ -1145,7 +1152,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 #if defined(__KERNEL__)
 		printk(obuf);
 #else
-		quiet_warn = write(tracePrintFd, obuf, sizeof(obuf) - 1);
+		quiet_warn = write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, sizeof(obuf) - 1);
 		if (quiet_warn == -1)
 			perror("writeTracePrintFd");
 #endif
@@ -1563,10 +1570,14 @@ static void trace_namLvlSet(void)
 		{
 			case 0: /* As a way to temp unset TRACE_LIMIT_MS, allow: TRACE_LIMIT_MS= tinfo */
 				break;
+#if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
+#endif
 			case 2:
 				off_ms = on_ms;
 				//fall through after setting default off_ms to on_ms
-#	if defined(__cplusplus) && (__cplusplus >= 201703L)
+#	if defined(__cplusplus) && (__GNUC__ >= 7)  //(__cplusplus >= 201703L) warning happen even with c++11
 #		if __has_cpp_attribute(fallthrough)
 				[[fallthrough]];
 #		else
@@ -1574,6 +1585,9 @@ static void trace_namLvlSet(void)
 #		endif
 #	endif
 			case 3:
+#if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
+#	pragma GCC diagnostic pop
+#endif
 				traceControl_rwp->limit_cnt_limit = cnt;
 				traceControl_rwp->limit_span_on_ms = on_ms;
 				traceControl_rwp->limit_span_off_ms = off_ms;
@@ -2370,7 +2384,9 @@ static int traceInit(const char *_name, int allow_ro)
 		/* TRACE_LVLS and TRACE_PRINT_FD can be used when active or inactive */
 		if ((cp = getenv("TRACE_PRINT_FD")) && (*cp))
 		{
-			tracePrintFd = strtoul(cp, NULL, 0);
+			int sts = sscanf(cp,"%d,%d",&tracePrintFd[0],&tracePrintFd[1]);
+			if (sts == 1)
+				tracePrintFd[1] = tracePrintFd[0];
 		}
 
 		if (!activate)
@@ -3149,7 +3165,8 @@ struct TraceStreamer : std::ios
 	}
 	inline TraceStreamer &operator<<(const double &r)
 	{
-		double *vp = (double *)param_va_ptr;
+		unsigned long nvp = (unsigned long)param_va_ptr;
+		double *vp = (double*)nvp;
 		if (do_f || (vp+1) > (double *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;

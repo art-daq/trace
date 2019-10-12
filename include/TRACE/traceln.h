@@ -135,19 +135,19 @@ static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__
 									/*printf("added \\n printed=%d\n",printed);*/
 		}
 		/*else printf("already there printed=%d\n",printed);*/
-		quiet_warn += write(tracePrintFd, obuf, printed);
+		quiet_warn += write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, printed);
 	}
 	else
 	{
 		/* obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n */
 		if (obuf[sizeof(obuf) - 2] == '\n')
 		{
-			quiet_warn += write(tracePrintFd, obuf, sizeof(obuf) - 1);
+			quiet_warn += write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, sizeof(obuf) - 1);
 		}
 		else
 		{
 			obuf[sizeof(obuf) - 1] = '\n';
-			quiet_warn += write(tracePrintFd, obuf, sizeof(obuf));
+			quiet_warn += write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, sizeof(obuf));
 			/*printf("changed \\0 to \\n printed=%d\n",);*/
 		}
 	}
@@ -166,8 +166,10 @@ static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	va_end(ap);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvarargs"
+#if __GNUC__ >= 6
+#	pragma GCC diagnostic push
+#	pragma GCC diagnostic ignored "-Wvarargs"
+#endif
 SUPPRESS_NOT_USED_WARN
 static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
 {
@@ -176,8 +178,9 @@ static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	vlntrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
 	va_end(ap);
 }   /* trace */
+#if __GNUC__ >= 6
 #pragma GCC diagnostic pop
-
+#endif
 
 #endif
 #endif /* TRACELN_H */

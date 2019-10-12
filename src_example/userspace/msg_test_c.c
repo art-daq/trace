@@ -31,9 +31,7 @@ char *create_ascii_msg( char *buf, size_t bufsiz )
 	return (buf);
 }
 
-int
-main(  int	argc
-     , char	*argv[] )
+int main( /*int argc, char *argv[]*/ )
 {
 	unsigned ii, xx;
 	char *no_args_msg;

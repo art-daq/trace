@@ -9,31 +9,29 @@
 #include <stdio.h>				/* snprintf */
 #include "TRACE/trace.h"				/* TRACE, TRACE_CNTL */
 
-int
-main(  int	argc
-     , char	*argv[] )
+int main( /*int argc, char *argv[]*/ )
 {
-	int ii, longest_name=0;
+	unsigned uu, longest_name=0;
 	char name[15];
-	for (ii=0; ii<70; ++ii) {
-		snprintf(name,sizeof(name),"name%d",ii);
+	for (uu=0; uu<70; ++uu) {
+		snprintf(name,sizeof(name),"name%u",uu);
 		TRACE_CNTL("name",name);
-		TRACE_CNTL("lvlset",4L<<(ii%62),0L,0L);
+		TRACE_CNTL("lvlset",4L<<(uu%62),0L,0L);
 		TRACE( 2, "trace not enabled by default" );
 	}
 
 	/* print the internal namLvlTbl */
-	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-		if (strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
-			longest_name = strnlen(traceNamLvls_p[ii].name,sizeof(traceNamLvls_p[0].name));
-	for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
-		if (traceNamLvls_p[ii].name[0] != '\0')
-			printf("%4d %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
-			       , ii
-			       , longest_name, longest_name, traceNamLvls_p[ii].name
-			       , (unsigned long long)traceNamLvls_p[ii].M
-			       , (unsigned long long)traceNamLvls_p[ii].S
-			       , (unsigned long long)traceNamLvls_p[ii].T
+	for (uu=0; uu<traceControl_p->num_namLvlTblEnts; ++uu)
+		if (strnlen(traceNamLvls_p[uu].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
+			longest_name = strnlen(traceNamLvls_p[uu].name,sizeof(traceNamLvls_p[0].name));
+	for (uu=0; uu<traceControl_p->num_namLvlTblEnts; ++uu)
+		if (traceNamLvls_p[uu].name[0] != '\0')
+			printf("%4u %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
+			       , uu
+			       , longest_name, longest_name, traceNamLvls_p[uu].name
+			       , (unsigned long long)traceNamLvls_p[uu].M
+			       , (unsigned long long)traceNamLvls_p[uu].S
+			       , (unsigned long long)traceNamLvls_p[uu].T
 			       );
 	return (0);
 }   /* main */

@@ -166,7 +166,7 @@ static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	va_end(ap);
 }
 
-#if __GNUC__ >= 6
+#if ( __GNUC__ >= 6 ) || ( __cplusplus >= 201103L )
 #	pragma GCC diagnostic push
 #	pragma GCC diagnostic ignored "-Wvarargs"
 #endif
@@ -178,9 +178,9 @@ static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	vlntrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
 	va_end(ap);
 }   /* trace */
-#if __GNUC__ >= 6
+#if ( __GNUC__ >= 6 ) || ( __cplusplus >= 201103L )
 #pragma GCC diagnostic pop
 #endif
 
-#endif
+#endif /* __cplusplus */
 #endif /* TRACELN_H */

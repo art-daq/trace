@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1222 $$Date: 2019-10-04 17:29:18 -0500 (Fri, 04 Oct 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1239 $$Date: 2019-11-14 02:21:36 -0600 (Thu, 14 Nov 2019) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1394,7 +1394,7 @@ extern  int        optind;         /* for getopt */
 	{	pthread_t *threads;
 		unsigned   num_threads=NUMTHREADS;
 		args_t    *argsp, args0;
-		int        loops=2;
+		int        loops=2, sts=0;
 		pid_t      main_tid=trace_gettid();
 		if (opt_loops > -1)
 			loops=opt_loops;
@@ -1428,9 +1428,9 @@ extern  int        optind;         /* for getopt */
 		if (trace_thread_option & 4)
 		{   char          cmd[200];
 		    sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
-		    system( cmd );
+		    sts = system( cmd );
 		    sprintf( cmd, "echo trace_buffer mappings before join '(#2)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
-		    system( cmd );
+		    sts = system( cmd );
 		}
 		for (ii=0; ii<num_threads; ii++)
 		{	pthread_join(threads[ii], NULL);
@@ -1438,11 +1438,12 @@ extern  int        optind;         /* for getopt */
 		if (trace_thread_option & 4)
 		{   char          cmd[200];
 		    sprintf( cmd, "echo trace_buffer mappings after join '(#1)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
-		    system( cmd );
+		    sts = system( cmd );
 		    sprintf( cmd, "echo trace_buffer mappings after join '(#2)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
-		    system( cmd );
+		    sts = system( cmd );
 		}
-		TRACE( 1, "after pthread_join - main_tid=%u traceControl_p=%p", main_tid, (void*)traceControl_p );
+		TRACE( 1, "after pthread_join - main_tid=%u traceControl_p=%p sts=%d"
+		      , main_tid, (void*)traceControl_p, sts );
 		free( threads );
 	}
 #	endif

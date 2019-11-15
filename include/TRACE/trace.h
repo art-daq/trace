@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1230 $$Date: 2019-10-10 12:28:50 -0500 (Thu, 10 Oct 2019) $"
+#define TRACE_REV "$Revision: 1240 $$Date: 2019-11-14 08:37:14 -0600 (Thu, 14 Nov 2019) $"
 
 #ifndef __KERNEL__
 
@@ -171,7 +171,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 
 #else /* __KERNEL__ */
 
-#	include <linux/time.h>                                      /* do_gettimeofday */
+#	include <linux/ktime.h>                                      /* do_gettimeofday */
 /*# include <linux/printk.h>	         printk, vprintk */
 #	include <linux/kernel.h>                                    /* printk, vprintk */
 #	include <linux/mm.h>                                        /* kmalloc OR __get_free_pages */
@@ -179,6 +179,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	include <linux/spinlock.h>                                  /* cmpxchg */
 #	include <linux/sched.h>                                     /* current (struct task_struct *) */
 #	include <linux/ctype.h>                                     /* isgraph */
+#	include <linux/version.h>                                   /* KERNEL_VERSION */
 /*# define TMATCHCMP(pattern,str_)         (strcmp(pattern,str_)==0)*/ /*MAKE MACRO RETURN TRUE IF MATCH*/
 #	define TMATCHCMP(needle, haystack) strstr(haystack, needle) /*MAKE MACRO RETURN TRUE IF MATCH*/
 #	define TRACE_ATOMIC_T uint32_t
@@ -186,7 +187,11 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	define TRACE_ATOMIC_LOAD(ptr) *(ptr)
 #	define TRACE_ATOMIC_STORE(ptr, val) *(ptr) = val
 #	define TRACE_THREAD_LOCAL
-#	define TRACE_GETTIMEOFDAY(tvp) do_gettimeofday(tvp)
+#   if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,1)
+#     define TRACE_GETTIMEOFDAY(tvp) ({struct timespec64 ts; ktime_get_real_ts64(&ts); (tvp)->tv_sec=ts.tv_sec; (tvp)->tv_usec=ts.tv_nsec/1000;})
+#   else
+#	  define TRACE_GETTIMEOFDAY(tvp) do_gettimeofday(tvp)
+#   endif
 #	define TRACE_PRN printk
 #	define TRACE_VPRN vprintk
 /*static int trace_no_init_cnt=0;*/
@@ -1055,13 +1060,14 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 #	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
 #		pragma GCC diagnostic push
 #		pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
+#		pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #	endif
 				localtime_r((time_t *)&tvp->tv_sec, &tm_s);
+				if (strftime(tbuf, sizeof(tbuf), traceTimeFmt, &tm_s) == 0)
+					tbuf[0] = '\0';
 #	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
 #		pragma GCC diagnostic pop
 #	endif
-				if (strftime(tbuf, sizeof(tbuf), traceTimeFmt, &tm_s) == 0)
-					tbuf[0] = '\0';
 				useconds = (int)tvp->tv_usec;
 				if ((cp = strstr(tbuf, "%0")) && *(cp + 2) >= '1' && *(cp + 2) <= '5' && *(cp + 3) == 'd')
 				{
@@ -1089,7 +1095,14 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 					}
 					useconds = (unsigned)((double)useconds / div + 0.5);  // div, round and cast back to unsigned
 				}
+#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#	endif
 				retval = snprintf(&obuf[printed], PRINTSIZE(printed), tbuf, useconds); /* possibly (probably) add usecs */
+#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
+#		pragma GCC diagnostic pop
+#	endif
 #endif /* __KERNEL__ */
 				break;
 			case 't': /* msg limit insert - may be null */
@@ -1209,6 +1222,10 @@ static void trace_pid_atfork(void)
 	char somebuf[120];
 	somebuf[0] = '\0';
 	traceTid = tracePid = getpid();
+#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wformat-security"
+#	endif
 	TRACEN("TRACE", 61,
 		   (somebuf[0]
 				? &(somebuf[0])
@@ -1217,6 +1234,9 @@ static void trace_pid_atfork(void)
 								? rp + 1
 								: __BASE_FILE__),
 				   &(somebuf[0]))));
+#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
+#		pragma GCC diagnostic pop
+#	endif
 }
 #		undef TRACE_REGISTER_ATFORK
 #		define TRACE_REGISTER_ATFORK __register_atfork(NULL, NULL, trace_pid_atfork)

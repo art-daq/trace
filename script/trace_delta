@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1146 $';
-#   $Date: 2019-08-24 22:23:10 -0500 (Sat, 24 Aug 2019) $
+$version = '$Revision: 1236 $';
+#   $Date: 2019-11-01 14:15:03 -0500 (Fri, 01 Nov 2019) $
 
 use Time::Local; # timelocal()
 
@@ -404,8 +404,10 @@ for $idx (0..$#col_cntl)
 	    $fmtlen=length( sprintf($tbuf,0) ); # add usecs if present
 	    #print STDERR "idx=$idx tfmt=$tfmt tbuf=$tbuf fmtlen=$fmtlen\n";
 	    if($idx && $fmtlen){ $fmtlen++; } # add space only if not at beginning (i.e only if not 1st col)
+	    # The following works for usec tod (i.e. 1572562867261620) or float sec
+	    # w/ usec or w/ nano but only delta usec. Can have junk (i.e. ':') at end.
             $sub .= "
-            if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
+            if (\$data =~ /^\\s*(\\d+)\\.?(\\d\\d\\d\\d\\d\\d)/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
                 \$str = strftime( \"".$tfmt."\", localtime(\$seconds) );
@@ -506,7 +508,7 @@ for $idx (0..$#col_cntl)
 	    #print STDERR "tfmt=$tfmt tbuf=$tbuf fmtlen=$fmtlen\n";
 	    if($fmtlen){ $fmtlen++; }
 	    $sub .= "
-            if (\$data =~ /^\\s*(\\d+)(\\d\\d\\d\\d\\d\\d)\$/o)
+            if (\$data =~ /^\\s*(\\d+)\\.?(\\d\\d\\d\\d\\d\\d)/o)
             {   \$seconds = \$1;
                 \$useconds = \$2;
                 \$str = strftime( \"".$tfmt."\", localtime(\$seconds) );

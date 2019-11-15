@@ -27,6 +27,14 @@ svn co http://cdcvs.fnal.gov/subversion/trace-svn/trunk trace
 : setup specific compiler
 PRODUCTS=/products:~ron/p
 
+=================== cetmodules =====================================
+
+setup cetmodules v1_04_00
+mkdir trace.build
+cd trace.build
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/p -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWANT_UP:BOOL=ON ..trace
+make
+
 ============================ different compilers ============================
 setup gcc; qual=
 

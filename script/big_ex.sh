@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1134 $$Date: 2019-08-07 20:58:43 -0500 (Wed, 07 Aug 2019) $'
+ # rev='$Revision: 1247 $$Date: 2020-02-06 11:41:23 -0600 (Thu, 06 Feb 2020) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -14,7 +14,7 @@ do_mapcheck=2
 do_shared=1
 #check_opts='-l5000 -t7 -x3'
 opt_tlogs_per=150   # default for subs besides last
-def_threads=50
+def_threads=`expr $(nproc) \* 91 / 100`   # 
 def_loops=50
 def_process_forks=0
 def_stack=0x4000
@@ -34,8 +34,9 @@ examples: `basename $0` ./big_ex.d
                                                     #- \"Resource temporarily unavailable\" from pthread_create
           TRACE_LIMIT_MS=4,1,4000 `basename $0` ./big_ex.d
 If directory does not exist, it will be created.
-Files in the dir will be overwritten.
--d, --depth=   defalut is $opt_depth, but a better test might be 500. MIN 10
+Files in the dir will be overwritten (unless... see --rerun below).
+-v               more verbose
+-d, --depth=     defalut is $opt_depth, but a better test might be 500. MIN 10
 -DTRACE_DECLARE  add -DTRACE_DECLARE to compile line
 -DTRACE_STATIC   add -DTRACE_STATIC to compile line
 --std=<c++std>,-std=<c++std)   both single and double - work default=$opt_std
@@ -487,23 +488,23 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
 
         if [ -f $TRACE_FILE ];then
             trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
-            uniq_addrs=`TRACE_SHOW=HxiICLR trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
+            uniq_addrs=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
             vprintf 1 'Calculating sub10_trc_ids...\n'
-            sub10_trc_id=`TRACE_SHOW=HxiICLR trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`
+            sub10_trc_id=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`
             sub10_trc_ids=`echo "$sub10_trc_id" | wc -l`
             test $sub10_trc_ids -eq 1 || sub10_trc_id=-1
             vprintf 1 'Calculating uniq_thr_ids...\n'
-            uniq_thr_ids=`TRACE_SHOW=xin trace_cntl show | grep -v KERNEL | awk '{print$1;}' | sort -nu | wc -l`
+            uniq_thr_ids=`TRACE_SHOW='%x%i %n' trace_cntl show | grep -v KERNEL | awk '{print$1;}' | sort -nu | wc -l`
             vprintf 1 'Calculating uniq_pids...\n'
-            uniq_pids=`   TRACE_SHOW=xPn trace_cntl show | grep -v KERNEL | awk '{print$1;}' | sort -nu | wc -l`
+            uniq_pids=`   TRACE_SHOW='%x%P %n' trace_cntl show | grep -v KERNEL | awk '{print$1;}' | sort -nu | wc -l`
             sub10_trc_id_=`trace_cntl tids | awk '/ sub10 /{print$1;}'`
             last_thr_idx=`expr $opt_threads - 1`
-            _TRACE_=`TRACE_SHOW=n trace_cntl show | grep "_TRACE_"`
+            _TRACE_=`TRACE_SHOW=%n trace_cntl show | grep "_TRACE_"`
             vprintf 1 'Calculating delta_min...\n'
             show_count=`trace_cntl info | awk '/num_entries/{print$3;}'`
             test $show_count -gt 500000 && show_count=500000
             start_idx=`expr $show_count - 1` # smaller buffers will wrap -- smallish number of unused entries have 0 timestamp which tdelta ignores
-            delta_min=`TRACE_SHOW=HTm trace_cntl show $show_count $start_idx | trace_delta -stats | awk '/^  *min /{print$2;}'`
+            delta_min=`TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx | trace_delta -stats | awk '/^  *min /{print$2;}'`
             vprintf 1 'done calculating\n'
         else
             echo "TRACE_FILE not found - FAIL will result"

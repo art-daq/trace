@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1240 $$Date: 2019-11-14 08:37:14 -0600 (Thu, 14 Nov 2019) $"
+#define TRACE_REV "$Revision: 1252 $$Date: 2020-02-14 09:07:19 -0600 (Fri, 14 Feb 2020) $"
 
 #ifndef __KERNEL__
 
@@ -171,7 +171,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 
 #else /* __KERNEL__ */
 
-#	include <linux/ktime.h>                                      /* do_gettimeofday */
+#	include <linux/ktime.h>                                     /* do_gettimeofday */
 /*# include <linux/printk.h>	         printk, vprintk */
 #	include <linux/kernel.h>                                    /* printk, vprintk */
 #	include <linux/mm.h>                                        /* kmalloc OR __get_free_pages */
@@ -187,11 +187,11 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	define TRACE_ATOMIC_LOAD(ptr) *(ptr)
 #	define TRACE_ATOMIC_STORE(ptr, val) *(ptr) = val
 #	define TRACE_THREAD_LOCAL
-#   if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,1)
-#     define TRACE_GETTIMEOFDAY(tvp) ({struct timespec64 ts; ktime_get_real_ts64(&ts); (tvp)->tv_sec=ts.tv_sec; (tvp)->tv_usec=ts.tv_nsec/1000;})
-#   else
-#	  define TRACE_GETTIMEOFDAY(tvp) do_gettimeofday(tvp)
-#   endif
+#	if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 1)
+#		define TRACE_GETTIMEOFDAY(tvp) ({struct timespec64 ts; ktime_get_real_ts64(&ts); (tvp)->tv_sec=ts.tv_sec; (tvp)->tv_usec=ts.tv_nsec/1000; })
+#	else
+#		define TRACE_GETTIMEOFDAY(tvp) do_gettimeofday(tvp)
+#	endif
 #	define TRACE_PRN printk
 #	define TRACE_VPRN vprintk
 /*static int trace_no_init_cnt=0;*/
@@ -256,8 +256,8 @@ static const char *TRACE_NAME = NULL;
 static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have separator */
 #endif
 
-#ifndef TRACE_PRINT_FD
-#	define TRACE_PRINT_FD 1,1
+#ifndef TRACE_PRINT_FD          /* 2 (or 1) file descriptor(s) can be specified: */
+#	define TRACE_PRINT_FD 1, 1  /* 1st for error lvl (lvl=0), 2nd for non-error; if 1 specified, it's used for both */
 #endif
 
 /* 64bit sparc (nova.fnal.gov) has 8K pages (ref. ~/src/sysconf.c). This
@@ -1150,7 +1150,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 #if defined(__KERNEL__)
 		printk(obuf);
 #else
-		quiet_warn = write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, printed);
+		quiet_warn = write(lvl ? tracePrintFd[0] : tracePrintFd[1], obuf, printed);
 		if (quiet_warn == -1)
 			perror("writeTracePrintFd");
 #endif
@@ -1165,7 +1165,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint16_t lvl, const char
 #if defined(__KERNEL__)
 		printk(obuf);
 #else
-		quiet_warn = write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, sizeof(obuf) - 1);
+		quiet_warn = write(lvl ? tracePrintFd[0] : tracePrintFd[1], obuf, sizeof(obuf) - 1);
 		if (quiet_warn == -1)
 			perror("writeTracePrintFd");
 #endif
@@ -1222,10 +1222,10 @@ static void trace_pid_atfork(void)
 	char somebuf[120];
 	somebuf[0] = '\0';
 	traceTid = tracePid = getpid();
-#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
-#		pragma GCC diagnostic push
-#		pragma GCC diagnostic ignored "-Wformat-security"
-#	endif
+#		if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
+#			pragma GCC diagnostic push
+#			pragma GCC diagnostic ignored "-Wformat-security"
+#		endif
 	TRACEN("TRACE", 61,
 		   (somebuf[0]
 				? &(somebuf[0])
@@ -1234,9 +1234,9 @@ static void trace_pid_atfork(void)
 								? rp + 1
 								: __BASE_FILE__),
 				   &(somebuf[0]))));
-#	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
-#		pragma GCC diagnostic pop
-#	endif
+#		if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
+#			pragma GCC diagnostic pop
+#		endif
 }
 #		undef TRACE_REGISTER_ATFORK
 #		define TRACE_REGISTER_ATFORK __register_atfork(NULL, NULL, trace_pid_atfork)
@@ -1557,13 +1557,18 @@ static void trace_namLvlSet(void)
 		char name[TRACE_DFLT_NAM_CHR_MAX + 1];
 		unsigned long long M, S, T = 0;
 		while (((sts = sscanf(cp, "%d %" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx %llx %llx", &ign, name, &M, &S, &T)) && sts >= 4)  //NOLINT
-			   || ((sts = sscanf(cp, "%" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx %llx %llx", name, &M, &S, &T)) && sts >= 3))       //NOLINT
+			   || ((sts = sscanf(cp, "%" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx %llx %llx", name, &M, &S, &T)) && sts >= 3)        //NOLINT
+		       || ((sts = sscanf(cp, "%" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx", name, &S)) && sts == 2))                         //NOLINT
+			// The last case is for when TRACE will remain "inactive" (not tracing to mem and not using lvls from trace file) -- just concerned about slow path
 		{
 			int tid = name2TID(name);
-			/*fprintf(stderr,"name=%s sts=%d\n",name,sts );*/
-			traceNamLvls_p[tid].M = M;
+			/*fprintf(stderr,"name=%s tid=%d\n",name,tid );*/
 			traceNamLvls_p[tid].S = S;
-			traceNamLvls_p[tid].T = T;
+			if (sts > 2) // note: if sts==2, M will be set to S as previous sscanf will have set M; this check filters this effect out.
+			{
+				traceNamLvls_p[tid].M = M;
+				traceNamLvls_p[tid].T = T;
+			}
 			cp = strchr(cp, '\n');
 			if (cp == NULL)
 			{
@@ -1590,10 +1595,10 @@ static void trace_namLvlSet(void)
 		{
 			case 0: /* As a way to temp unset TRACE_LIMIT_MS, allow: TRACE_LIMIT_MS= tinfo */
 				break;
-#if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
-#	pragma GCC diagnostic push
-#	pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
-#endif
+#	if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
+#	endif
 			case 2:
 				off_ms = on_ms;
 				//fall through after setting default off_ms to on_ms
@@ -1605,9 +1610,9 @@ static void trace_namLvlSet(void)
 #		endif
 #	endif
 			case 3:
-#if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
-#	pragma GCC diagnostic pop
-#endif
+#	if defined(__STDC_VERSION__) && (__GNUC__ >= 7)
+#		pragma GCC diagnostic pop
+#	endif
 				traceControl_rwp->limit_cnt_limit = cnt;
 				traceControl_rwp->limit_span_on_ms = on_ms;
 				traceControl_rwp->limit_span_off_ms = off_ms;
@@ -2357,6 +2362,7 @@ static int traceInit(const char *_name, int allow_ro)
 	int activate = 0;
 	const char *_file;
 	const char *cp;
+	int traceControl_p_was_NULL=0;
 
 	if (!trace_lock(&traceInitLck))
 	{
@@ -2369,6 +2375,7 @@ static int traceInit(const char *_name, int allow_ro)
 	{
 		/* This stuff should happen once (per TRACE_DEFINE compilation module) */
 		TRACE_REGISTER_ATFORK;
+		traceControl_p_was_NULL=1;
 
 		/* test for activation. (See below for _name override/default) */
 		if (_name != NULL)
@@ -2404,7 +2411,7 @@ static int traceInit(const char *_name, int allow_ro)
 		/* TRACE_LVLS and TRACE_PRINT_FD can be used when active or inactive */
 		if ((cp = getenv("TRACE_PRINT_FD")) && (*cp))
 		{
-			int sts = sscanf(cp,"%d,%d",&tracePrintFd[0],&tracePrintFd[1]);
+			int sts = sscanf(cp, "%d,%d", &tracePrintFd[0], &tracePrintFd[1]);
 			if (sts == 1)
 				tracePrintFd[1] = tracePrintFd[0];
 		}
@@ -2451,8 +2458,6 @@ static int traceInit(const char *_name, int allow_ro)
 				traceControl_p_static = traceControl_p;
 			}
 		}
-
-		trace_namLvlSet(); /* more env vars checked */
 	}
 
 	if (_name == NULL)
@@ -2493,6 +2498,10 @@ static int traceInit(const char *_name, int allow_ro)
 	{
 		TRACE_CNTL("lvlmskMg", trace_lvlM); /* all current and future (until cmdline tonMg/toffMg) (and new from this process regardless of cmd line tonSg or toffSg) */
 	}
+	if (traceControl_p_was_NULL)
+		trace_namLvlSet(); /* more env vars checked - I want this to be done once,
+							  but after TRACE_LVLS and/or TRACE_LVLM processing.
+						      This is b/c this processing can be more specific than */
 
 #	else /* ifndef __KERNEL__ */
 
@@ -2561,50 +2570,57 @@ static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
    1 = do msg formating in streamer for both slow and/or mem
    0 = format in streamer for slow and mem if slow path enabled
   -1 = don't format in streamer, even if slow enabled -- pass args to mem and slow output function  */
-struct tstreamer_flags { unsigned do_m:1; unsigned do_s:1; int fmtnow:2; tstreamer_flags():do_m(0),do_s(0),fmtnow(0){}};
+struct tstreamer_flags
+{
+	unsigned do_m : 1;
+	unsigned do_s : 1;
+	int fmtnow : 2;
+	tstreamer_flags()
+		: do_m(0), do_s(0), fmtnow(0) {}
+};
 
 #	if (__cplusplus >= 201103L)
 
-#		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)                                         \
-			[&](const char *nn, int lvl_, int s_enabled_, int s_frc_, tstreamer_flags *flgsp_, timeval *tvp_, char *ins_, size_t sz) { \
-				TRACE_INIT_CHECK(TRACE_NAME)                                                                                          \
-				{                                                                                                                     \
-					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                          \
-					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                    \
-					flgsp_->do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                               \
-					flgsp_->do_s = (s_enabled_ && traceControl_rwp->mode.bits.S && (s_frc_ || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))));   \
-					if (flgsp_->do_s)                                                                                                       \
-					{ /* try to avoid TLS lookup of _info - compiler probably does this anyway */                                     \
-						static TRACE_THREAD_LOCAL limit_info_t _info;                                                                 \
-						flgsp_->do_s = limit_do_print(tvp_, &_info, ins_, sz);                                                              \
-					}                                                                                                                 \
-					return (flgsp_->do_m || flgsp_->do_s) ? tid_ : -1;                                                                            \
-				}                                                                                                                     \
-				else return -1;                                                                                                       \
+#		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)                                              \
+			[&](const char *nn, int lvl_, int s_enabled_, int s_frc_, tstreamer_flags *flgsp_, timeval *tvp_, char *ins_, size_t sz) {    \
+				TRACE_INIT_CHECK(TRACE_NAME)                                                                                              \
+				{                                                                                                                         \
+					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                              \
+					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                        \
+					flgsp_->do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                             \
+					flgsp_->do_s = (s_enabled_ && traceControl_rwp->mode.bits.S && (s_frc_ || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_)))); \
+					if (flgsp_->do_s)                                                                                                     \
+					{ /* try to avoid TLS lookup of _info - compiler probably does this anyway */                                         \
+						static TRACE_THREAD_LOCAL limit_info_t _info;                                                                     \
+						flgsp_->do_s = limit_do_print(tvp_, &_info, ins_, sz);                                                            \
+					}                                                                                                                     \
+					return (flgsp_->do_m || flgsp_->do_s) ? tid_ : -1;                                                                    \
+				}                                                                                                                         \
+				else return -1;                                                                                                           \
 			}(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)
 
 #	else /* (__cplusplus >= 201103L) */
 
 // Note: the s_enbld, s_frc and tvp args are used directly in the macro definition
-#		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)                                                                            \
-			({                                                                                                                                                           \
-				const char *nn = name;                                                                                                                                   \
-				int lvl_ = lvl; \
-				tstreamer_flags *flgsp_ = flgsp;						\
-				char *ins_ = ins;                                                                                                                                        \
-				size_t sz = ins_sz;                                                                                                                                      \
-				int tid__;                                                                                                                                               \
-				TRACE_INIT_CHECK(TRACE_NAME)                                                                                                                             \
-				{                                                                                                                                                        \
-					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                             \
-					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                                                       \
-					static TRACE_THREAD_LOCAL limit_info_t _info;                                                                                                        \
+#		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)                                                                                   \
+			({                                                                                                                                                                 \
+				const char *nn = name;                                                                                                                                         \
+				int lvl_ = lvl;                                                                                                                                                \
+				tstreamer_flags *flgsp_ = flgsp;                                                                                                                               \
+				char *ins_ = ins;                                                                                                                                              \
+				size_t sz = ins_sz;                                                                                                                                            \
+				int tid__;                                                                                                                                                     \
+				TRACE_INIT_CHECK(TRACE_NAME)                                                                                                                                   \
+				{                                                                                                                                                              \
+					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                                   \
+					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                                                             \
+					static TRACE_THREAD_LOCAL limit_info_t _info;                                                                                                              \
 					flgsp_->do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                                                                  \
 					flgsp_->do_s = (s_enbld && traceControl_rwp->mode.bits.S && (s_frc || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))) && limit_do_print(tvp, &_info, ins_, sz)); \
-					tid__ = (flgsp_->do_m || flgsp_->do_s) ? tid_ : -1;                                                                                                              \
-				}                                                                                                                                                        \
-				else tid__ = -1;                                                                                                                                         \
-				tid__;                                                                                                                                                   \
+					tid__ = (flgsp_->do_m || flgsp_->do_s) ? tid_ : -1;                                                                                                        \
+				}                                                                                                                                                              \
+				else tid__ = -1;                                                                                                                                               \
+				tid__;                                                                                                                                                         \
 			})
 
 #	endif /* else (__cplusplus >= 201103L) */
@@ -2615,21 +2631,24 @@ struct tstreamer_flags { unsigned do_m:1; unsigned do_s:1; int fmtnow:2; tstream
 // arg2,3 - nam_or_fmt = name or fmtnow (note: fmtnow can be used to force formatting env if Memory only);
 // arg4   - s_enabled = is_slowpath_enabled (b/c one version of message facility had a global "is_enabled");
 // arg5   - force_s = force_slow - override tlvlmskS&lvl==0
-#	define TRACE_USE_STATIC_STREAMER 1
+#	ifndef TRACE_USE_STATIC_STREAMER
+#		define TRACE_USE_STATIC_STREAMER 1
+#	endif
 #	if TRACE_USE_STATIC_STREAMER == 1
-#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                      \
-			for (struct _T_ {int lvl__, tid; tstreamer_flags flgs; char ins[32]; struct timeval tv; \
-			                     _T_(int llv):lvl__(llv),tid(-1){tv.tv_sec=0;} } _tlog_(lvl);	\
+#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
+			for (struct _T_ {int lvl__, tid; tstreamer_flags flgs; char ins[32]; struct timeval tv; void* stmr__; \
+			                     _T_(int llv):lvl__(llv),tid(-1), stmr__(&__streamer){tv.tv_sec=0;} \
+								 ~_T_(){if(stmr__ != (void*)&__streamer) delete (TraceStreamer*)stmr__;} } _tlog_(lvl); \
 				 (_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs), _tlog_.lvl__, s_enabled, force_s, \
-																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);    \
-				 __streamer.str())                                                                                                                                   \
-			__streamer.init(_tlog_.tid, _tlog_.lvl__, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)
+																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);\
+			     __streamer.str())														\
+			*((TraceStreamer*)(_tlog_.stmr__ = (void*)&((TraceStreamer*)_tlog_.stmr__)->init(_tlog_.tid, _tlog_.lvl__, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)))
 #	else
-#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                      \
+#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
 			for (struct _T_ {int lvl__, tid; tstreamer_flags flgs; char ins[32]; struct timeval tv; \
-			                     _T_(int llv):lvl__(llv),tid(-1){tv.tv_sec=0;} } _tlog_(lvl);	\
+			                     _T_(int llv):lvl__(llv),tid(-1){tv.tv_sec=0;} } _tlog_(lvl);                                                                                                                       \
 				 (_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs), _tlog_.lvl__, s_enabled, force_s, \
-																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);)   \
+																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);)                 \
 			TraceStreamer().init(_tlog_.tid, _tlog_.lvl__, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)
 #	endif
 
@@ -2726,8 +2745,12 @@ struct TraceStreamer : std::ios
 	const char *file_;
 	int line_;
 	trace_log_function_type user_fun_ptr_;
+#	if TRACE_USE_STATIC_STREAMER == 1
+	bool inUse_;
+#	endif
 
-		public : explicit TraceStreamer()
+public:
+	explicit TraceStreamer()
 		: msg_sz(0), argCount(0), param_va_ptr(args)
 	{
 		T_STREAM_DBG << "TraceStreamer CONSTRUCTOR\n";
@@ -2737,32 +2760,45 @@ struct TraceStreamer : std::ios
 	inline ~TraceStreamer()
 	{
 #	if TRACE_USE_STATIC_STREAMER != 1
-		str();
-#	endif
+			str();
+#   endif
 	}
 
 	// use this method to return a reference (to the temporary, in its intended use)
-	inline TraceStreamer &init(int tid, int lvl, tstreamer_flags flgs, const char *file, int line, timeval *tvp, const char *ins, trace_log_function_type user_fun_ptr)
+	inline TraceStreamer &init(int tid, int lvl, tstreamer_flags flgs, const char *file, int line,
+	                           timeval *tvp, const char *ins, trace_log_function_type user_fun_ptr)
 	{
-		widthStr[0] = precisionStr[0] = msg[0] = '\0';
-		msg_sz = 0;
-		argCount = 0;
-		param_va_ptr = args;
-		tid_ = tid;
-		lvl_ = lvl;
-		do_m = flgs.do_m; // m=memory, aka "fast", but not to be confused with "format"
-		do_s = flgs.do_s;
-		do_f = (flgs.fmtnow == -1) ? 0 : (flgs.do_s || flgs.fmtnow); // here "f" is "format", not "fast"
-		ins_ = ins;
-		file_ = file;
-		line_ = line;
-		lclTime_p = tvp;
-		user_fun_ptr_ = user_fun_ptr;
+#   if TRACE_USE_STATIC_STREAMER == 1
+		if (!inUse_)
+		{
+			inUse_ = true;
+#   endif
+			widthStr[0] = precisionStr[0] = msg[0] = '\0';
+			msg_sz = 0;
+			argCount = 0;
+			param_va_ptr = args;
+			tid_ = tid;
+			lvl_ = lvl;
+			do_m = flgs.do_m;  // m=memory, aka "fast", but not to be confused with "format"
+			do_s = flgs.do_s;
+			do_f = (flgs.fmtnow == -1) ? 0 : (flgs.do_s || flgs.fmtnow);  // here "f" is "format", not "fast"
+			ins_ = ins;
+			file_ = file;
+			line_ = line;
+			lclTime_p = tvp;
+			user_fun_ptr_ = user_fun_ptr;
 #	if TRACE_USE_STATIC_STREAMER == 1
-		std::dec(*this);
-		std::noshowbase(*this);
+			std::dec(*this);
+			std::noshowbase(*this);
 #	endif
-		return *this;
+			return *this;
+#   if TRACE_USE_STATIC_STREAMER == 1
+		}
+		else
+		{
+			return (new TraceStreamer())->init(tid, lvl, flgs, file, line, tvp, ins, user_fun_ptr);
+		}
+#   endif
 	}
 
 #	ifdef __clang__
@@ -2809,6 +2845,9 @@ struct TraceStreamer : std::ios
 		// Silence Clang static analyzer "dangling references"
 		ins_ = 0;
 		lclTime_p = 0;
+#   if TRACE_USE_STATIC_STREAMER == 1
+		inUse_ = false;
+#   endif
 	}
 
 	inline void msg_append(const char *src, size_t len = 0)
@@ -2953,8 +2992,8 @@ struct TraceStreamer : std::ios
 	template<typename T>
 	inline TraceStreamer &operator<<(const T *const &r)
 	{
-		T ** const vp = (T ** const)param_va_ptr;
-		if (do_f || (vp+1) > (T ** const)&args[traceControl_p->num_params])
+		T **const vp = (T * *const) param_va_ptr;
+		if (do_f || (vp + 1) > (T * *const) & args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<const void *>(r));
@@ -2965,8 +3004,8 @@ struct TraceStreamer : std::ios
 		{
 			msg_append("%p", 2);
 			++argCount;
-			*vp = (T * const)r;
-			param_va_ptr = vp+1;
+			*vp = (T *const)r;
+			param_va_ptr = vp + 1;
 			T_STREAM_DBG << "streamer check T1 (const T*const &r) msg_sz=" << std::dec << msg_sz << "\n";
 		}
 		return *this;
@@ -2975,8 +3014,8 @@ struct TraceStreamer : std::ios
 	template<typename T>
 	inline TraceStreamer &operator<<(T *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
 	{
-		T ** const vp = (T ** const)param_va_ptr;
-		if (do_f || (vp+1) > (T ** const)&args[traceControl_p->num_params])
+		T **const vp = (T * *const) param_va_ptr;
+		if (do_f || (vp + 1) > (T * *const) & args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r));
@@ -2987,8 +3026,8 @@ struct TraceStreamer : std::ios
 		{
 			msg_append("%p", 2);
 			++argCount;
-			*vp = (T * const)r;
-			param_va_ptr = vp+1;
+			*vp = (T *const)r;
+			param_va_ptr = vp + 1;
 			T_STREAM_DBG << "streamer check T2 (T *const &r) msg_sz=" << std::dec << msg_sz << "\n";
 		}
 		return *this;
@@ -2997,7 +3036,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const char &r)
 	{
 		long *vp = (long *)param_va_ptr;  // note: char gets pushed onto stack as sizeof(long)
-		if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
@@ -3018,7 +3057,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const unsigned char &r)
 	{
 		unsigned long *vp = (unsigned long *)param_va_ptr;  // Note: char gets pushed as sizeof(long)
-		if (do_f || (vp+1) > (unsigned long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
@@ -3039,7 +3078,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const int &r)
 	{
 		long *vp = (long *)param_va_ptr;  // int goes to long
-		if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
@@ -3060,7 +3099,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const short int &r)
 	{
 		long *vp = (long *)param_va_ptr;  // Note: shorts get pushed onto stack as sizeof(long)
-		if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r);
@@ -3081,7 +3120,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const long int &r)
 	{
 		long int *vp = (long int *)param_va_ptr;
-		if (do_f || (vp+1) > (long int *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long int *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "l", _M_flags), r);
@@ -3102,7 +3141,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const short unsigned int &r)
 	{
 		unsigned long *vp = (unsigned long *)param_va_ptr;  // NOTE: shorts get pushed onto stack as sizeof(long)
-		if (do_f || (vp+1) > (unsigned long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "h", _M_flags), r);
@@ -3123,7 +3162,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const unsigned int &r)
 	{
 		unsigned long *vp = (unsigned long *)param_va_ptr;  // int goes to long
-		if (do_f || (vp+1) > (unsigned long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
@@ -3144,7 +3183,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const long unsigned int &r)
 	{
 		long unsigned int *vp = (long unsigned int *)param_va_ptr;
-		if (do_f || (vp+1) > (long unsigned int *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long unsigned int *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r);
@@ -3165,7 +3204,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const long long unsigned int &r)
 	{
 		long long unsigned int *vp = (long long unsigned int *)param_va_ptr;
-		if (do_f || (vp+1) > (long long unsigned int *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long long unsigned int *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);
@@ -3186,8 +3225,8 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const double &r)
 	{
 		unsigned long nvp = (unsigned long)param_va_ptr;
-		double *vp = (double*)nvp;
-		if (do_f || (vp+1) > (double *)&args[traceControl_p->num_params])
+		double *vp = (double *)nvp;
+		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
@@ -3209,11 +3248,11 @@ struct TraceStreamer : std::ios
 	{
 		unsigned long nvp = (unsigned long)param_va_ptr;
 		long double *vp;
-		if (sizeof(long double)==16 && (nvp&0xf))
-			vp = (long double *)((nvp+15)&~0xf); // alignment requirement
+		if (sizeof(long double) == 16 && (nvp & 0xf))
+			vp = (long double *)((nvp + 15) & ~0xf);  // alignment requirement
 		else
 			vp = (long double *)nvp;
-		if (do_f || (vp+1) > (long double *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long double *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(true, false, "L", _M_flags), r);
@@ -3224,9 +3263,9 @@ struct TraceStreamer : std::ios
 		{
 			size_t f_l = 0;
 			msg_append(format(true, false, "L", _M_flags, &f_l), f_l);
-			argCount += (sizeof(long double)+sizeof(long)/2) / sizeof(long);
-			if (sizeof(long double)==16 && (nvp & 0xf))
-			    ++argCount; // speudo extra arg satisfies alignment requirement
+			argCount += (sizeof(long double) + sizeof(long) / 2) / sizeof(long);
+			if (sizeof(long double) == 16 && (nvp & 0xf))
+				++argCount;  // speudo extra arg satisfies alignment requirement
 			*vp++ = r;
 			param_va_ptr = vp;
 			T_STREAM_DBG << "streamer check 10a (const long double &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
@@ -3236,7 +3275,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const float &r)
 	{
 		double *vp = (double *)param_va_ptr;  // note: floats get pushed onto stack as double
-		if (do_f || (vp+1) > (double *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
@@ -3259,7 +3298,7 @@ struct TraceStreamer : std::ios
 		long *vp = (long *)param_va_ptr;  // note: bool is pushed as long
 		if (_M_flags & boolalpha)
 			msg_append(r ? "true" : "false", r ? 4 : 5);
-		else if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		else if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%d", r);
@@ -3291,7 +3330,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(const std::atomic<int> &r)
 	{
 		long *vp = (long *)param_va_ptr;  // note: int goes to long
-		if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r.load());
@@ -3312,7 +3351,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(std::atomic<unsigned long> const &r)
 	{
 		unsigned long *vp = (unsigned long *)param_va_ptr;
-		if (do_f || (vp+1) > (unsigned long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r.load());
@@ -3332,7 +3371,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(std::atomic<short int> const &r)
 	{
 		long *vp = (long *)param_va_ptr;  // note: shorts get pushed as long
-		if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r.load());
@@ -3358,7 +3397,7 @@ struct TraceStreamer : std::ios
 			bool rr = r.load();
 			msg_append(rr ? "true" : "false", rr ? 4 : 5);
 		}
-		else if (do_f || (vp+1) > (long *)&args[traceControl_p->num_params])
+		else if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%d", r.load());
@@ -3380,7 +3419,7 @@ struct TraceStreamer : std::ios
 	inline TraceStreamer &operator<<(std::unique_ptr<T> const &r)
 	{
 		trace_ptr_t *vp = (trace_ptr_t *)param_va_ptr;  // address is unsigned long
-		if (do_f || (vp+1) > (trace_ptr_t *)&args[traceControl_p->num_params])
+		if (do_f || (vp + 1) > (trace_ptr_t *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r.get()));
@@ -3455,7 +3494,7 @@ template<>
 inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
 {
 	trace_ptr_t *vp = (trace_ptr_t *)param_va_ptr;  // note: addresses are unsigned long
-	if (do_f || (vp+1) > (trace_ptr_t *)&args[traceControl_p->num_params])
+	if (do_f || (vp + 1) > (trace_ptr_t *)&args[traceControl_p->num_params])
 	{
 		size_t ss = sizeof(msg) - 1 - msg_sz;
 		int rr = snprintf(&msg[msg_sz], ss, "%p", r);

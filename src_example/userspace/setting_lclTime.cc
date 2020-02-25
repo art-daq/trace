@@ -29,7 +29,7 @@ int main( /*int argc, char *argv[]*/ )
 #  endif
 
 	// NOTE: you can only get the time for TRACEs _IFF_both_memory_and_slow_path_are_enabled. Can't get time from TLOG
-	TRACE( 1, "TRACE programEnd usecs=%ld - if zero, both mem/slow are not enabled", (programEnd=lclTime, lclTime.tv_sec) );
+	TRACE( 1, "TRACE programEnd secs=%ld - if zero, both mem/slow are not enabled", (programEnd=lclTime, lclTime.tv_sec) );
 
 	return (0);
 }   // main

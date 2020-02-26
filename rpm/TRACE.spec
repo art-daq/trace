@@ -25,11 +25,12 @@ Packager:	Fermilab Real-Time Software Infrastructure
 Source0:  %{kmod_name}.tar.bz2
 Source10: kmodtool-%{kmod_name}.sh
 
-# Determine the UPS Version from source if not specified
+# Determine the Version from source if not specified
 ### untar the source, ask and remove the untar'd copy
+### source should be in a format of [0-9].[0-9][0-9].[0-9][0-9] i.e. v3_15_03 or 3.15.03
 %if "x%{?trace_version}" == "x"
 %define trace_version %(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;\
-                        grep 'parent TRACE ' ups/product_deps 2>/dev/null | grep -v '\#' | awk '{print $3}'; rm -rf %{_builddir}/%{kmod_name}) 
+                        grep 'TRACE VERSION' CMakeLists.txt 2>/dev/null | egrep -o 'v*[0-9]([^0-9][0-9][0-9]*)*'; rm -rf %{_builddir}/%{kmod_name}) 
 %endif
 
 # Determine the svn revision from source if not specified

@@ -22,8 +22,8 @@
 #include <string>				// std::string
 
 #define TRACE_LOG_FUN_PROTO \
-  static void lntrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
-  static void lntrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
+  static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
+  static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
 #define TRACE_LOG_FUNCTION lntrace_user
 #include "TRACE/trace.h"		/* TRACE */
@@ -62,7 +62,7 @@
 __attribute__((no_sanitize("thread")))
 #  endif
 #endif
-static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__)), uint16_t lvl, const char* insert
+static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__)), uint8_t lvl, const char* insert
 	, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
@@ -158,7 +158,7 @@ static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__
 }
 
 SUPPRESS_NOT_USED_WARN
-static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
+static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -171,7 +171,7 @@ static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 #	pragma GCC diagnostic ignored "-Wvarargs"
 #endif
 SUPPRESS_NOT_USED_WARN
-static void lntrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
+static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);

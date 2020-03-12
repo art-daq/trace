@@ -3,23 +3,30 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 480 $$Date: 2016-01-12 01:44:19 -0600 (Tue, 12 Jan 2016) $";
+ rev="$Revision: 1264 $$Date: 2020-03-04 01:34:56 -0600 (Wed, 04 Mar 2020) $";
 
 
 
 1.  edit or patch init/Makfile  (see below)
-2.  copy or link include/trace.h into include/linux
-3a. copy or link src_modules/trace_.c into init/
-3b. sym link ../include/linux/trace.h init/trace.h to avoid
-    having to change trace_.c.  Note: putting trace.h into just include
-    messes with the kernels tracing.
+2a. mkdir include/TRACE
+2b. copy or link $TRACE_INC/TRACE/trace.h into include/TRACE
+    mkdir include/uapi/TRACE   # for headers_install into INSTALL_HDR_PATH
+    ln -s ../../TRACE/trace.h include/uapi/TRACE
+3.  copy or link src_modules/trace_.c into init/
 4.  edit or patch init/main.c (see below)
 5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
-5b. external modules can just include trace.h and insert TRACEs
+5b. external modules can just include TRACE/trace.h and insert TRACEs
     as opposed to using EXTRA_CFLAGS or CFLAGS_EXTRA, and KBUILD_EXTRA_SYMBOLS
 5c. build userspace programs with include path (-I):
-       lib/modules/`uname -r`/build/include/linux   (if installed)
-    or <path_to_source>/include/linux
+       lib/modules/`uname -r`/build/include/TRACE   (if installed)
+    or <path_to_source>/include/TRACE
+
+Note: trace_3_init calls trace_proc_add which needs to happen after
+      proc_root_init, as indicated in the patch below. If ones desires to add
+      TRACEs earlier in the boot process, trace_proc_add could be commented out
+      from the trace_3_init, declare and inserted into main.c:start_kernel.
+      trace_3_init (without trace_proc_add) can be inserted into main.c:start_kernel
+      as early as just after mem_encrypt_init().
 
 ==================================================
 
@@ -37,52 +44,65 @@ diff -u init/Makefile{.~1~,}
  else
 
 
-
 diff -u init/main.c{.~1~,}
---- main.c.~1~  2015-10-26 19:53:59.000000000 -0500
-+++ main.c      2016-01-12 01:41:39.467643463 -0600
-@@ -75,6 +75,7 @@
+--- init/main.c.~1~	2020-01-14 08:54:17.000000000 -0600
++++ init/main.c	2020-03-03 23:56:59.058307538 -0600
+@@ -80,6 +80,7 @@
  #include <linux/blkdev.h>
  #include <linux/elevator.h>
  #include <linux/sched_clock.h>
-+#include <linux/trace.h>  /* trace_3_init(), trace_sched_switch_hook_add */
++#include <TRACE/trace.h>
+ #include <linux/sched/task.h>
+ #include <linux/sched/task_stack.h>
  #include <linux/context_tracking.h>
- #include <linux/random.h>
- #include <linux/list.h>
-@@ -597,6 +598,9 @@
-        WARN(!irqs_disabled(), "Interrupts were enabled early\n");
-        early_boot_irqs_disabled = false;
-        local_irq_enable();
-+       printk("main.c:start_kernel: calling trace_3_init\n");
-+       trace_3_init();
-+       TRACE( 0, "main.c: trace initialize" );
+@@ -635,6 +636,8 @@
+ 	hrtimers_init();
+ 	softirq_init();
+ 	timekeeping_init();
++	trace_3_init(); // works after timekeeping_init
++	TRACE(3,"main.c:start_kernel - b4 time_init - after timekeeping_init - timeofday");
  
-        kmem_cache_init_late();
+ 	/*
+ 	 * For best initial stack canary entropy, prepare it after:
+@@ -652,6 +655,7 @@
+ 	time_init();
+ 	sched_clock_postinit();
+ 	printk_safe_init();
++	TRACE(2, "main.c:start_kernel trace initialize - TRACE'd lvl2 (printk)");
+ 	perf_event_init();
+ 	profile_init();
+ 	call_function_init();
+@@ -671,6 +675,8 @@
+ 		panic("Too many boot %s vars at `%s'", panic_later,
+ 		      panic_param);
  
-@@ -935,6 +939,7 @@
-        int ret;
++	TRACE(2,"main.c:start_kernel: trace_3_init called - TRACE lvl2 after console_init()"); /* after console_init() */
++
+ 	lockdep_info();
  
-        kernel_init_freeable();
-+       trace_sched_switch_hook_add();
-        /* need to finish all async __init code before freeing the memory */
-        async_synchronize_full();
-        free_initmem();
+ 	/*
+@@ -726,6 +732,8 @@
+ 	signals_init();
+ 	seq_file_init();
+ 	proc_root_init();
++	trace_3_proc_add(traceControl_p->memlen);
++	TRACE(2, "main.c:start_kernel after trace_3_proc_add");
+ 	nsfs_init();
+ 	cpuset_init();
+ 	cgroup_init();
+@@ -1067,6 +1075,8 @@
+ 	int ret;
+ 
+ 	kernel_init_freeable();
++	trace_3_sched_switch_hook_add();
++	TRACE(2,"main.c:kernel_init trace_3_sched_switch_hook_add'd");
+ 	/* need to finish all async __init code before freeing the memory */
+ 	async_synchronize_full();
+ 	ftrace_free_init_mem();
 
 
 
-# assuming you want to have trace.h installed into INSTALL_HDR_PATH/include/linux:
 
-diff -u include/uapi/linux/Kbuild{.~1~,}
---- include/uapi/linux/Kbuild.~1~       2015-10-26 19:53:59.000000000 -0500
-+++ include/uapi/linux/Kbuild   2015-10-30 11:01:10.494873620 -0500
-@@ -401,6 +401,7 @@
- header-y += tipc_netlink.h
- header-y += tipc.h
- header-y += toshiba.h
-+header-y += trace.h
- header-y += tty_flags.h
- header-y += tty.h
- header-y += types.h
 
 
 
@@ -95,7 +115,7 @@ diff -u net/socket.c{.~1~,}
  #ifndef __GENKSYMS__
  #include <net/busy_poll.h>
  #endif
-+#include <linux/trace.h>             /* TRACE */
++#include <TRACE/trace.h>             /* TRACE */
  
  #ifdef CONFIG_NET_RX_BUSY_POLL
  unsigned int sysctl_net_busy_read __read_mostly;

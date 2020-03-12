@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 1208 $$Date: 2019-10-02 15:07:23 -0500 (Wed, 02 Oct 2019) $";
+char const *rev="$Revision: 1265 $$Date: 2020-03-12 11:58:37 -0500 (Thu, 12 Mar 2020) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -20,14 +20,14 @@ char const *rev="$Revision: 1208 $$Date: 2019-10-02 15:07:23 -0500 (Wed, 02 Oct 
 
 #if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
 void my_log(uint16_t nargs, std::string  msg,...);
-void my_log2(timeval *, int, short unsigned int, const char *, const char *, int, short unsigned int nargs, const char * msg, ...)
+void my_log2(timeval *, int, unsigned char, const char *, const char *, int, short unsigned int nargs, const char * msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
 	my_log(nargs, msg, ap);
 	va_end(ap);
 }
-void my_log2(timeval *, int, short unsigned int, const char *, const char *, int, short unsigned int nargs, std::string msg, ...)
+void my_log2(timeval *, int, unsigned char, const char *, const char *, int, short unsigned int nargs, std::string msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);

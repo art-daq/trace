@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1187 $$Date: 2019-09-19 08:12:36 -0500 (Thu, 19 Sep 2019) $";
+    rev="$Revision: 1264 $$Date: 2020-03-04 01:34:56 -0600 (Wed, 04 Mar 2020) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -101,11 +101,11 @@ static int __init trace_allow_printk_setup(char *str)
 }
 __setup("trace_allow_printk=", trace_allow_printk_setup);
 static int __init trace_lvlS_setup(char *str)
-{	KSTRVAL( str, trace_lvlS, trace_lvlS, lu );
+{	KSTRVAL( str, trace_lvlS, trace_lvlS, llu );
 }
 __setup("trace_lvlS=", trace_lvlS_setup);
 static int __init trace_lvlM_setup(char *str)
-{	KSTRVAL( str, trace_lvlM, trace_lvlM, lu );
+{	KSTRVAL( str, trace_lvlM, trace_lvlM, llu );
 }
 __setup("trace_lvlM=", trace_lvlM_setup);
 
@@ -113,6 +113,7 @@ static int __init trace_print_setup(char *str)
 {	strncpy(trace_print,str,sizeof(trace_print));
 	trace_print[sizeof(trace_print)-1]='\0';
 	pr_info("setting trace_print to %s\n", trace_print);
+	return 1;
 }
 __setup("trace_print=", trace_print_setup);
 
@@ -157,9 +158,9 @@ static ssize_t trace_proc_control_read( struct file *fil, char __user *dst_p
 	if (*off >= cc) return 0;
 	cc  = snprintf( &(kernelBuffer[0]), siz,"trace_print=%s\n", trace_print );
 	if (*off >= cc) return 0;
-	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlS=0x%lx\n", trace_lvlS );
+	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlS=0x%llx\n", trace_lvlS );
 	if (*off >= cc) return 0;
-	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlM=0x%lx\n", trace_lvlM );
+	cc += snprintf( &(kernelBuffer[cc]),siz,"trace_lvlM=0x%llx\n", trace_lvlM );
 	if (*off >= cc) return 0;
 	if (copy_to_user( dst_p, &kernelBuffer[*off], cc-*off ) != 0)
 		return -1;
@@ -271,7 +272,8 @@ static struct file_operations trace_proc_buffer_file_ops = {
 
 static struct proc_dir_entry *trace_proc_root=NULL;
 
-static int  trace_proc_add( int len )
+//static
+int  trace_3_proc_add( int len )
 {
 
 # if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
@@ -303,10 +305,12 @@ static int  trace_proc_add( int len )
     child->proc_fops = &trace_proc_buffer_file_ops;
     child->size = len;
 # else
+    printk("trace_.c:trace_proc_add start\n");
     if (!proc_mkdir("trace", NULL))
     {   printk( "proc_trace_create: error creating proc_entry\n" );
         return (1);
     }
+    printk("trace_.c:trace_proc_add proc_mkdir(\"trace\", NULL)=OK\n");
 
     trace_proc_root = proc_create("trace/buffer",0666,NULL,&trace_proc_buffer_file_ops);
     if (trace_proc_root == NULL)
@@ -517,7 +521,7 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 #endif
 
 //static
-int  trace_sched_switch_hook_add( void )
+int  trace_3_sched_switch_hook_add( void )
 {
     int err=0;
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
@@ -552,7 +556,7 @@ int  trace_sched_switch_hook_add( void )
     printk("trace_sched_switch_hook_add: sys_exit returning %d (0=success)\n", err );
 # endif
     return (err);
-}   // trace_sched_switch_hook_add
+}   // trace_3_sched_switch_hook_add
 
 
 
@@ -583,30 +587,33 @@ trace_3_init(void)
 {
     int  ret=0;          /* SUCCESS */
 
+    //printk("trace_.c:trace_3_init b4 traceInit\n"); // ONLY DO THIS IF module or after console_init()
     if ((ret=traceInit(NULL,0)) != 0) return (ret);
+    //printk("trace_.c:trace_3_init after traceInit\n"); // ONLY DO THIS IF module or after console_init()
 
     traceTID = 0;
 
     traceControl_rwp->mode.bits.M = 1;
-    TRACE( 1, "kernel trace buffer initialized" );
+    TRACE( 64+3, "kernel trace buffer initialized - no slow path, no timeofday" ); /* NOTE: don't do slow path (printk) and don't get timeofday */
 
     /* 1) create the buffer
        2) create a way to access it (/proc)
        3) register some traces
        4) setup userspace interrupt (sw)
     */
-    if ((ret=trace_proc_add(traceControl_p->memlen))) goto undo1;
 # ifndef MODULE
-	return (ret);
+    return (ret);
 # else
-    if ((ret=trace_sched_switch_hook_add()))          goto undo2;
+    if ((ret=trace_3_proc_add(traceControl_p->memlen))) goto undo1;
+    if ((ret=trace_3_sched_switch_hook_add()))          goto undo2;
     return (ret);               /* success */
  undo2:
     trace_proc_remove();
-# endif
  undo1:
+    printk("trace_.c:trace_3_init ERROR before vfree(traceControl_p)\n"); // ONLY DO THIS (printk) IF module
     vfree( traceControl_p );
     return (ret);
+# endif
 }   // trace_3_init
 
 

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1239 $$Date: 2019-11-14 02:21:36 -0600 (Thu, 14 Nov 2019) $"
+#define TRACE_CNTL_REV "$Revision: 1264 $$Date: 2020-03-04 01:34:56 -0600 (Wed, 04 Mar 2020) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -731,7 +731,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	/* get the time format and the length of the format (using example time (now) */
 	if((tfmt=getenv("TRACE_TIME_FMT"))==NULL)
 		//tfmt=(char*)TRACE_DFLT_TIME_FMT;
-		tfmt=(char*)"%s%%06d"; // %s - The number of seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC).
+		tfmt=(char*)"%10s%%06d"; // %s - The number of seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC).
 	strftime(ttbuf,sizeof(ttbuf),tfmt,localtime(&tt));
 	tfmt_len=snprintf( tbuf,sizeof(tbuf),ttbuf, 0 );  /* possibly (probably) add usecs (i.e. FMT has %%06d) */
 

@@ -66,7 +66,7 @@
 
 
 SUPPRESS_NOT_USED_WARN
-static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
+static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
 	first. There are 2 main reasons that this is done:
@@ -114,7 +114,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -122,7 +122,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 	va_end(ap);
 }
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);

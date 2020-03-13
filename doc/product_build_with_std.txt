@@ -39,7 +39,8 @@ make
 setup gcc; qual=
 
 cd $tag
-make OUT=$PWD 32ON64=0 XTRA_CFLAGS=-std=c11 XTRA_CXXFLAGS=-std=c++11\
+make_xtra='-Wextra -Wconversion -pedantic'
+make OUT=$PWD 32ON64=0 XTRA_CFLAGS="-std=c11 $make_xtra" XTRA_CXXFLAGS="-std=c++11 $make_xtra"\
   src_utility src_example_user script modules 2>&1|tee make.out|egrep -iB4 -A1 'error|warn'
 : note: if OUT!=$PWD, use the "all" target which, additionally, includes the ups and script dirs
 # note: "make OUT=$PWD 32ON64=1 ..." will build both 64 and 32 bit versions on

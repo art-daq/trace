@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1208 $$Date: 2019-10-02 15:07:23 -0500 (Wed, 02 Oct 2019) $";
+ // rev="$Revision: 1268 $$Date: 2020-03-13 07:40:22 -0500 (Fri, 13 Mar 2020) $";
  */
  /**
   * \file tracemf.h
@@ -22,8 +22,8 @@
 #include <string>				// std::string
 
 #define TRACE_LOG_FUN_PROTO \
-  static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
-  static void mftrace_user(struct timeval *, int, uint16_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
+  static void mftrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
+  static void mftrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
 #define TRACE_LOG_FUNCTION mftrace_user
 #include "TRACE/trace.h"		/* TRACE */
@@ -69,7 +69,7 @@ static bool __mwe = mf::isWarningEnabled(), __mie = mf::isInfoEnabled(), __mde =
 __attribute__((no_sanitize("thread")))
 #  endif
 #endif
-static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* insert
+static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* insert
 	, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
@@ -151,7 +151,7 @@ static void vmftrace_user(struct timeval *, int TID, uint16_t lvl, const char* i
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -169,7 +169,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char*
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint16_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);

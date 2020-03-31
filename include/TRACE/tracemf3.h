@@ -52,7 +52,7 @@ Fri Apr 18 11:55:38 -0500 2014: %MSG
  */
 #undef TRACE
 # define TRACE( lvl, ... ) do                   \
-    {	TRACE_INIT_CHECK												\
+    {	if TRACE_INIT_CHECK												\
 	    {	struct timeval lclTime; lclTime.tv_sec = 0;					\
 			/* 1st "function" is memory */								\
 			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl))) \

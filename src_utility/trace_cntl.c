@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1264 $$Date: 2020-03-04 01:34:56 -0600 (Wed, 04 Mar 2020) $"
+#define TRACE_CNTL_REV "$Revision: 1278 $$Date: 2020-03-21 03:12:29 -0500 (Sat, 21 Mar 2020) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1073,7 +1073,7 @@ void traceInfo()
 	       , traceControl_p->memlen
 	       , (traceControl_p->memlen != (uint32_t)memlen)?"not for mmap":""
 	       , DFLT_SHOW
-	       , TRACE_PRINT
+	       , TRACE_PRINT__
 	       );
 }   /* traceInfo */
 

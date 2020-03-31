@@ -39,6 +39,7 @@ int
 //     , char	*argv[] )
 main()
 {
+	TLOG(TLVL_ERROR) << "hi" << example_sub_("zero",0);
 	TLOG(TLVL_ERROR) << "hi" << example_sub_("one",6) << example_sub_("two",3);
     example_sub_("main", 0);
     return (0);

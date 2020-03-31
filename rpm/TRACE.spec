@@ -35,9 +35,11 @@ Source10: kmodtool-%{kmod_name}.sh
 
 # Determine the svn revision from source if not specified
 ### untar the source, ask and remove the untar'd copy
+# If I need a revision w/o svn: find . -name \*.[chs]* -o -name \*ake\* -o -name \*.spec | egrep -v '/.svn|~' | xargs grep -o 'Revision: [0-9]*' | awk '{print$2}' | sort -n | tail -1
 %if "x%{?trace_revision}" == "x"
 %define trace_revision r%(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;\
-                           svn info 2>/dev/null |grep '^Revision: ' | awk '{print $2}'; rm -rf %{_builddir}/%{kmod_name}) 
+                          svn info 2>/dev/null |grep '^Revision: ' | awk '{print $2}';\
+                          rm -rf %{_builddir}/%{kmod_name}) 
 %endif
 
 # Determine if source repo is clean
@@ -82,7 +84,7 @@ of the same variant of the Linux kernel and not on any one specific build.
 ###########################################################
 %package -n %{kmod_name}-utils
 Summary: Utilities for %{kmod_name} kmod
-Requires: %{kmod_name}-kmod
+## Requires: %{kmod_name}-kmod  ## See "Requires: -utils" in kmodtools-TRACE.sh near line 155
 Requires: perl, bash
 
 %description -n %{kmod_name}-utils
@@ -93,6 +95,7 @@ Utilities for %{kmod_name} kmod
 %doc %{_mandir}/man1/*
 %doc %{_mandir}/man1p/*
 %doc %{_defaultdocdir}/%{kmod_name}-utils-%{version}/*
+%attr(0755,root,root) %{_bindir}/trace_addr2line
 %attr(0755,root,root) %{_bindir}/trace_cntl
 %attr(0755,root,root) %{_bindir}/trace_delta
 %attr(0755,root,root) %{_bindir}/bitN_to_mask

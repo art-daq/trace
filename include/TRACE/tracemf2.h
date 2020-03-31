@@ -23,7 +23,7 @@
 
 // "static int tid_" is thread safe in so far as multiple threads may init,
 // but will init with same value.
-#define TRACE_STREAMER(lvl, name, force_s) {   TRACE_INIT_CHECK						\
+#define TRACE_STREAMER(lvl, name, force_s) {   if TRACE_INIT_CHECK						\
 	{static TRACE_THREAD_LOCAL int tid_ =-1;if (tid_ == -1)tid_ = name2TID(std::string(name).c_str()); \
 	static TRACE_THREAD_LOCAL TraceStreamer s; s.init(tid_, lvl, force_s, __FILE__, __LINE__)
 
@@ -167,7 +167,7 @@ public:
 
 	inline TraceStreamer& init(int tid, int lvl, bool force_s,const char *file, int line)
 	{
-		TRACE_INIT_CHECK
+		if TRACE_INIT_CHECK
 		{
 			msg = "";
 		argCount = 0;

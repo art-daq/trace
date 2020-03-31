@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1272 $$Date: 2020-03-13 12:01:14 -0500 (Fri, 13 Mar 2020) $"
+#define TRACE_REV "$Revision: 1288 $$Date: 2020-03-31 10:42:30 -0500 (Tue, 31 Mar 2020) $"
 
 #ifndef __KERNEL__
 
@@ -167,7 +167,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	define TRACE_GETTIMEOFDAY(tvp) gettimeofday(tvp, NULL)
 #	define TRACE_PRN printf
 #	define TRACE_VPRN vprintf
-#	define TRACE_INIT_CHECK(nn) if ((traceTID != -1) || (traceInit(nn, 0) == 0)) /* See note by traceTID decl/def below */
+#	define TRACE_INIT_CHECK(nn) ((traceTID != -1) || (traceInit(nn, 0) == 0)) /* See note by traceTID decl/def below */
 
 #else /* __KERNEL__ */
 
@@ -195,7 +195,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	define TRACE_PRN printk
 #	define TRACE_VPRN vprintk
 /*static int trace_no_init_cnt=0;*/
-#	define TRACE_INIT_CHECK(nn) if ((traceTID != -1) || ((traceTID = name2TID(nn)) != -1))
+#	define TRACE_INIT_CHECK(nn) ((traceTID != -1) || ((traceTID = name2TID(nn)) != -1))
 #	ifndef MODULE
 int trace_3_init(void);
 int trace_3_proc_add(int);
@@ -253,8 +253,10 @@ static const char *TRACE_NAME = NULL;
 static const char *TRACE_NAME = TRACE_DFLT_NAME; /* kernel doesn't have env.var, so different init path*/
 #endif
 
-#if !defined(TRACE_PRINT)
-static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have separator */
+#if defined(TRACE_PRINT)						/* must be defined before static code is compiled; can be undef after. NOTE: not used in any macro(s) */
+static const char *TRACE_PRINT__ = TRACE_PRINT; /* Msg Limit Insert will have separator */
+#else											/* NOTE: kernel header kernel/trace/trace.h uses enum trace_type { ... TRACE_PRINT, ... } */
+static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have separator */
 #endif
 
 #ifndef TRACE_PRINT_FD          /* 2 (or 1) file descriptor(s) can be specified: */
@@ -276,6 +278,12 @@ static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have se
 
 #define LVLBITSMSK ((sizeof(uint64_t) * 8) - 1)
 #define TLVLMSK(xx) (1LL << ((xx)&LVLBITSMSK))
+
+#define TLVL_ERROR 0
+#define TLVL_WARNING 1
+#define TLVL_INFO 2
+#define TLVL_DEBUG 3
+#define TLVL_TRACE 4
 
 /* For C, these should go at the beginning of a block b/c they define new local variables */
 #if defined(TRACE_NO_LIMIT_SLOW) /* || defined(__KERNEL__) */
@@ -311,7 +319,7 @@ static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have se
 #define TRACE(lvl, ...)                                                                                                               \
 	do                                                                                                                                \
 	{                                                                                                                                 \
-		TRACE_INIT_CHECK(TRACE_NAME)                                                                                                  \
+		if TRACE_INIT_CHECK(TRACE_NAME)                                                                                                  \
 		{                                                                                                                             \
 			struct timeval lclTime;                                                                                                   \
 			uint8_t lvl_ = (uint8_t)(lvl);								\
@@ -334,7 +342,7 @@ static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have se
 #define TRACEN(nam, lvl, ...)                                                                                                     \
 	do                                                                                                                            \
 	{                                                                                                                             \
-		TRACE_INIT_CHECK(TRACE_NAME)                                                                                              \
+		if TRACE_INIT_CHECK(TRACE_NAME)                                                                                              \
 		{                                                                                                                         \
 			static TRACE_THREAD_LOCAL int tid_ = -1;                                                                              \
 			struct timeval lclTime;                                                                                               \
@@ -367,7 +375,7 @@ static const char *TRACE_PRINT = "%T %n %L %M"; /* Msg Limit Insert will have se
 #	define TRACEN_(nam, lvl, ...)                                                                                                                                              \
 		do                                                                                                                                                                      \
 		{                                                                                                                                                                       \
-			TRACE_INIT_CHECK(TRACE_NAME)                                                                                                                                        \
+			if TRACE_INIT_CHECK(TRACE_NAME)                                                                                                                                        \
 			{                                                                                                                                                                   \
 				static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                                        \
 				struct timeval lclTime;                                                                                                                                         \
@@ -899,12 +907,12 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char 
 			if (strlen(tracePrint_cntl) > 200)
 			{ /* cannot see how this could be OK/desirable */
 				fprintf(stderr, "Invalid TRACE_PRINT environment variable value.\n");
-				tracePrint_cntl = TRACE_PRINT; /* assume this (potentially user supplied) is more valid */
+				tracePrint_cntl = TRACE_PRINT__; /* assume this (potentially user supplied) is more valid */
 			}
 		}
 #endif
 		else
-			tracePrint_cntl = TRACE_PRINT;
+			tracePrint_cntl = TRACE_PRINT__;
 	}
 
 	obuf[0] = '\0';
@@ -1448,7 +1456,7 @@ static void trace(struct timeval *tvp, int trcId, uint8_t lvl, int32_t line, uin
 #	pragma GCC diagnostic pop
 #endif
 
-/* Search for name anf insert if not found and not full
+/* Search for name and insert if not found and not full
  */
 static int32_t name2TID(const char *nn)
 {
@@ -1701,13 +1709,13 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 	}
 	if (strcmp(cmd, "mapped") == 0)
 	{
-		TRACE_INIT_CHECK(_name){};
+		if TRACE_INIT_CHECK(_name){};
 		ret = (traceControl_p != &traceControl[0]); /* compatible with define TRACE_CNTL(...) (0) */
 		va_end(ap);
 		return (ret);
 	}
 #endif
-	TRACE_INIT_CHECK(_name){}; /* note: allows name2TID to be called in userspace */
+	if TRACE_INIT_CHECK(_name){}; /* note: allows name2TID to be called in userspace */
 
 	if (strcmp(cmd, "name") == 0) /* if TRACE_CNTL "name" and "file" are both used, "file" must be first (i.e. "name" first will _set_ file which won't be changed by "file") */
 	{                             /* THIS really only makes sense for non-thread local-name-for-module or for non-static implementation w/TLS for name-per-thread */
@@ -2565,53 +2573,25 @@ struct tstreamer_flags
 	tstreamer_flags()
 		: do_m(0), do_s(0), fmtnow(0) {}
 };
+typedef struct 
+{
+	int          tid;
+	limit_info_t info;
+} tinfo_t;
 
 #	if (__cplusplus >= 201103L)
+#		define TRACE_GET_STATIC() [&](){static TRACE_THREAD_LOCAL tinfo_t info={-1,{0,lsFREE,0}}; return &info; }()
+#	else
+#		define TRACE_GET_STATIC()     ({static TRACE_THREAD_LOCAL tinfo_t info={-1,{0,lsFREE,0}};        &info; })
+#	endif
 
-#		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)                                              \
-			[&](const char *nn, int lvl_, int s_enabled_, int s_frc_, tstreamer_flags *flgsp_, timeval *tvp_, char *ins_, size_t sz) {    \
-				TRACE_INIT_CHECK(TRACE_NAME)                                                                                              \
-				{                                                                                                                         \
-					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                              \
-					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                        \
-					flgsp_->do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                             \
-					flgsp_->do_s = (s_enabled_ && traceControl_rwp->mode.bits.S && (s_frc_ || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_)))); \
-					if (flgsp_->do_s)                                                                                                     \
-					{ /* try to avoid TLS lookup of _info - compiler probably does this anyway */                                         \
-						static TRACE_THREAD_LOCAL limit_info_t _info;                                                                     \
-						flgsp_->do_s = limit_do_print(tvp_, &_info, ins_, sz)!=0;                                                            \
-					}                                                                                                                     \
-					return (flgsp_->do_m || flgsp_->do_s) ? tid_ : -1;                                                                    \
-				}                                                                                                                         \
-				else return -1;                                                                                                           \
-			}(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)
-
-#	else /* (__cplusplus >= 201103L) */
-
-// Note: the s_enbld, s_frc and tvp args are used directly in the macro definition
-#		define TRACE_STATIC_TID_ENABLED(name, lvl, s_enbld, s_frc, flgsp, tvp, ins, ins_sz)                                                                                   \
-			({                                                                                                                                                                 \
-				const char *nn = name;                                                                                                                                         \
-				int lvl_ = lvl;                                                                                                                                                \
-				tstreamer_flags *flgsp_ = flgsp;                                                                                                                               \
-				char *ins_ = ins;                                                                                                                                              \
-				size_t sz = ins_sz;                                                                                                                                            \
-				int tid__;                                                                                                                                                     \
-				TRACE_INIT_CHECK(TRACE_NAME)                                                                                                                                   \
-				{                                                                                                                                                              \
-					static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                                   \
-					if (tid_ == -1) { tid_ = nn[0] ? name2TID(nn) : traceTID /*traceTID from TRACE_INIT_CHECK*/; }                                                             \
-					static TRACE_THREAD_LOCAL limit_info_t _info;                                                                                                              \
-					flgsp_->do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                                                                  \
-					flgsp_->do_s = (s_enbld && traceControl_rwp->mode.bits.S && (s_frc || (traceNamLvls_p[tid_].S & TLVLMSK(lvl_))) && limit_do_print(tvp, &_info, ins_, sz)); \
-					tid__ = (flgsp_->do_m || flgsp_->do_s) ? tid_ : -1;                                                                                                        \
-				}                                                                                                                                                              \
-				else tid__ = -1;                                                                                                                                               \
-				tid__;                                                                                                                                                         \
-			})
-
-#	endif /* else (__cplusplus >= 201103L) */
-
+static inline bool trace_do_streamer( struct timeval *tvp, int *tidp, uint8_t lvl, limit_info_t *lim_infop, char *ins, size_t sz, tstreamer_flags *flgs, int s_enabled, int force_s )
+{
+	flgs->do_m = (traceControl_rwp->mode.bits.M && (traceNamLvls_p[*tidp].M & TLVLMSK(lvl)));
+	flgs->do_s = (  (s_enabled && traceControl_rwp->mode.bits.S && (force_s || (traceNamLvls_p[*tidp].S & TLVLMSK(lvl))))
+	              &&limit_do_print(tvp, lim_infop, ins, sz));
+	return (flgs->do_m || flgs->do_s);
+}
 // Use C++ "for" statement to create single statement scope for key (static) variable that
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
 // arg1   - lvl;
@@ -2622,21 +2602,23 @@ struct tstreamer_flags
 #		define TRACE_USE_STATIC_STREAMER 1
 #	endif
 #	if TRACE_USE_STATIC_STREAMER == 1
-#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
-			for (struct _T_ {uint8_t lvl__; int tid; tstreamer_flags flgs; char ins[32]; struct timeval tv; void* stmr__; \
-			                     _T_(uint8_t llv):lvl__(llv),tid(-1), stmr__(&__streamer){tv.tv_sec=0;} \
-								 ~_T_(){if(stmr__ != (void*)&__streamer) delete (TraceStreamer*)stmr__;} } _tlog_((uint8_t)(lvl)); \
-				 (_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs), _tlog_.lvl__, s_enabled, force_s, \
-																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);\
-			     __streamer.str())														\
-			*((TraceStreamer*)(_tlog_.stmr__ = (void*)&((TraceStreamer*)_tlog_.stmr__)->init(_tlog_.tid, _tlog_.lvl__, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)))
+#		define TRACE_STREAMER(_lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
+	for (struct _T_ {unsigned once; uint8_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char ins[32]; struct timeval tv; void* stmr__; \
+	                     _T_(uint8_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info),stmr__(&__streamer){tv.tv_sec=0;} \
+						 ~_T_(){if(stmr__ != (void*)&__streamer) delete (TraceStreamer*)stmr__;} } _tlog_((uint8_t)(_lvl),TRACE_GET_STATIC()); \
+		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME)					\
+			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?name2TID(_tlog_.nn):traceTID))!=-1))) \
+			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s); \
+		 ((TraceStreamer*)_tlog_.stmr__)->str())						\
+		*((TraceStreamer*)(_tlog_.stmr__ = (void*)&((TraceStreamer*)_tlog_.stmr__)->init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)))
 #	else
-#		define TRACE_STREAMER(lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
-			for (struct _T_ {uint8_t lvl__; int tid; tstreamer_flags flgs; char ins[32]; struct timeval tv; \
-			                     _T_(uint8_t llv):lvl__(llv),tid(-1){tv.tv_sec=0;} } _tlog_((uint8_t)(lvl)); \
-				 (_tlog_.tid == -1) && ((_tlog_.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs), _tlog_.lvl__, s_enabled, force_s, \
-																			   &_tlog_.flgs, &_tlog_.tv, _tlog_.ins, sizeof(_tlog_.ins))) != -1);)                 \
-			TraceStreamer().init(_tlog_.tid, _tlog_.lvl__, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)
+#		define TRACE_STREAMER(_lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
+	for (struct _T_ {unsigned once; uint8_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char ins[32]; struct timeval tv; \
+	                     _T_(uint8_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info){tv.tv_sec=0;} } _tlog_((uint8_t)(_lvl),TRACE_GET_STATIC()); \
+		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME)					\
+			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?name2TID(_tlog_.nn):traceTID))!=-1))) \
+			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s);) \
+		TraceStreamer().init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)
 #	endif
 
 #	define TRACE_ENDL ""
@@ -2679,12 +2661,8 @@ static inline const char *t_arg_nmft(int fmtnow, int nm __attribute__((__unused_
 #	define tlog_LVL(a1, ...) a1
 #	define tlog_ARG2(a1, a2, ...) a2
 #	define tlog_ARG3(a1, a2, a3, ...) a3
-#	define TLVL_ERROR 0
-#	define TLVL_WARNING 1
-#	define TLVL_INFO 2
-#	define TLVL_DEBUG 3
-#	define TLVL_TRACE 4
-//                                 args are: lvl,         name, fmtnow, s_enabled, s_force,
+
+//                                 args are: lvl,        name, fmtnow,s_enabled,s_force,
 #	define TLOG_ERROR(name) TRACE_STREAMER(TLVL_ERROR, &(name)[0], 0, 1, 0)
 #	define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING, &(name)[0], 0, 1, 0)
 #	define TLOG_INFO(name) TRACE_STREAMER(TLVL_INFO, &(name)[0], 0, 1, 0)
@@ -2716,9 +2694,9 @@ namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 struct TraceStreamer : std::ios
 {
 	typedef unsigned long long arg;  // room for 64 bit args (i.e double on 32 or 64bit machines)
+	arg args[TRACE_STREAMER_ARGSMAX] __attribute__ ((aligned (16))); // needed for delayed long double formatting
 	char msg[TRACE_STREAMER_MSGMAX];
 	size_t msg_sz;
-	arg args[TRACE_STREAMER_ARGSMAX];
 	size_t argCount;
 	void *param_va_ptr;
 	int tid_;
@@ -2976,8 +2954,10 @@ public:
 		return *this;
 	}
 
+	// ------------------------------------------------------------------------
+
 	template<typename T>
-	inline TraceStreamer &operator<<(const T *const &r)
+	inline void delay_format(const T *const &r)
 	{
 		T **const vp = (T * *const) param_va_ptr;
 		if (do_f || (vp + 1) > (T * *const) & args[traceControl_p->num_params])
@@ -2985,7 +2965,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<const void *>(r));
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf T1 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 1T rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -2993,13 +2973,18 @@ public:
 			++argCount;
 			*vp = (T *const)r;
 			param_va_ptr = vp + 1;
-			T_STREAM_DBG << "streamer check T1 (const T*const &r) msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 1T (const T*const &r) msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	template<typename T>
+	inline TraceStreamer &operator<<(const T *const &r)
+	{
+		delay_format(r);
 		return *this;
 	}
 
 	template<typename T>
-	inline TraceStreamer &operator<<(T *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
+	inline void delay_format(T *const &r)
 	{
 		T **const vp = (T * *const) param_va_ptr;
 		if (do_f || (vp + 1) > (T * *const) & args[traceControl_p->num_params])
@@ -3007,7 +2992,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r));
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf T2 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 2T rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3015,56 +3000,19 @@ public:
 			++argCount;
 			*vp = (T *const)r;
 			param_va_ptr = vp + 1;
-			T_STREAM_DBG << "streamer check T2 (T *const &r) msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 2T (T *const &r) msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	template<typename T>
+	inline TraceStreamer &operator<<(T *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
+	{
+		delay_format(r);
 		return *this;
 	}
 
-	inline TraceStreamer &operator<<(const char &r)
+	inline void delay_format(const char &r)
 	{
 		long *vp = (long *)param_va_ptr;  // note: char gets pushed onto stack as sizeof(long)
-		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 1 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r;
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 1 (const char &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
-		return *this;
-	}
-	inline TraceStreamer &operator<<(const unsigned char &r)
-	{
-		unsigned long *vp = (unsigned long *)param_va_ptr;  // Note: char gets pushed as sizeof(long)
-		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 2 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r;
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 2 (const unsigned char &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
-		return *this;
-	}
-	inline TraceStreamer &operator<<(const int &r)
-	{
-		long *vp = (long *)param_va_ptr;  // int goes to long
 		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
@@ -3079,82 +3027,24 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 3 (const int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 3 (const char &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const char &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const short int &r)
+
+	inline void delay_format(const unsigned char &r)
 	{
-		long *vp = (long *)param_va_ptr;  // Note: shorts get pushed onto stack as sizeof(long)
-		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r);
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 4 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, false, "h", _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r;
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 4 (const short int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
-		return *this;
-	}
-	inline TraceStreamer &operator<<(const long int &r)
-	{
-		long int *vp = (long int *)param_va_ptr;
-		if (do_f || (vp + 1) > (long int *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "l", _M_flags), r);
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 5 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, false, "l", _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r;
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 5 (const long int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
-		return *this;
-	}
-	inline TraceStreamer &operator<<(const short unsigned int &r)
-	{
-		unsigned long *vp = (unsigned long *)param_va_ptr;  // NOTE: shorts get pushed onto stack as sizeof(long)
-		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "h", _M_flags), r);
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 6 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, true, "h", _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r;
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 6 (const short unsigned int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
-		return *this;
-	}
-	inline TraceStreamer &operator<<(const unsigned int &r)
-	{
-		unsigned long *vp = (unsigned long *)param_va_ptr;  // int goes to long
+		unsigned long *vp = (unsigned long *)param_va_ptr;  // Note: char gets pushed as sizeof(long)
 		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
 		{
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 7 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 4 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3163,11 +3053,146 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 7 (const unsigned int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 4 (const unsigned char &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const unsigned char &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const long unsigned int &r)
+
+	inline void delay_format(const int &r)
+	{
+		long *vp = (long *)param_va_ptr;  // int goes to long
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
+		{
+			size_t ss = sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
+			msg_sz += SNPRINTED(rr, ss);
+			T_STREAM_DBG << "streamer snprintf 5 rr=" << rr << " ss=" << ss << "\n";
+		}
+		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			size_t f_l = 0;
+			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 5 (const int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+		}
+	}
+	inline TraceStreamer &operator<<(const int &r)
+	{
+		delay_format(r);
+		return *this;
+	}
+
+	inline void delay_format(const short int &r)
+	{
+		long *vp = (long *)param_va_ptr;  // Note: shorts get pushed onto stack as sizeof(long)
+		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
+		{
+			size_t ss = sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r);
+			msg_sz += SNPRINTED(rr, ss);
+			T_STREAM_DBG << "streamer snprintf 6 rr=" << rr << " ss=" << ss << "\n";
+		}
+		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			size_t f_l = 0;
+			msg_append(format(false, false, "h", _M_flags, &f_l), f_l);
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 6 (const short int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+		}
+	}
+	inline TraceStreamer &operator<<(const short int &r)
+	{
+		delay_format(r);
+		return *this;
+	}
+
+	inline void delay_format(const long int &r)
+	{
+		long int *vp = (long int *)param_va_ptr;
+		if (do_f || (vp + 1) > (long int *)&args[traceControl_p->num_params])
+		{
+			size_t ss = sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "l", _M_flags), r);
+			msg_sz += SNPRINTED(rr, ss);
+			T_STREAM_DBG << "streamer snprintf 7 rr=" << rr << " ss=" << ss << "\n";
+		}
+		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			size_t f_l = 0;
+			msg_append(format(false, false, "l", _M_flags, &f_l), f_l);
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 7 (const long int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+		}
+	}
+	inline TraceStreamer &operator<<(const long int &r)
+	{
+		delay_format(r);
+		return *this;
+	}
+
+	inline void delay_format(const short unsigned int &r)
+	{
+		unsigned long *vp = (unsigned long *)param_va_ptr;  // NOTE: shorts get pushed onto stack as sizeof(long)
+		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
+		{
+			size_t ss = sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "h", _M_flags), r);
+			msg_sz += SNPRINTED(rr, ss);
+			T_STREAM_DBG << "streamer snprintf 8 rr=" << rr << " ss=" << ss << "\n";
+		}
+		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			size_t f_l = 0;
+			msg_append(format(false, true, "h", _M_flags, &f_l), f_l);
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 8 (const short unsigned int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+		}
+	}
+	inline TraceStreamer &operator<<(const short unsigned int &r)
+	{
+		delay_format(r);
+		return *this;
+	}
+
+	inline void delay_format(const unsigned int &r)
+	{
+		unsigned long *vp = (unsigned long *)param_va_ptr;  // int goes to long
+		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
+		{
+			size_t ss = sizeof(msg) - 1 - msg_sz;
+			int rr = snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
+			msg_sz += SNPRINTED(rr, ss);
+			T_STREAM_DBG << "streamer snprintf 9 rr=" << rr << " ss=" << ss << "\n";
+		}
+		else if (argCount < TRACE_STREAMER_ARGSMAX)
+		{
+			size_t f_l = 0;
+			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
+			++argCount;
+			*vp++ = r;
+			param_va_ptr = vp;
+			T_STREAM_DBG << "streamer check 9 (const unsigned int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+		}
+	}
+	inline TraceStreamer &operator<<(const unsigned int &r)
+	{
+		delay_format(r);
+		return *this;
+	}
+
+	inline void delay_format(const long unsigned int &r)
 	{
 		long unsigned int *vp = (long unsigned int *)param_va_ptr;
 		if (do_f || (vp + 1) > (long unsigned int *)&args[traceControl_p->num_params])
@@ -3175,7 +3200,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 8 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 10 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3184,11 +3209,16 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 8 (const long unsiged int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 10 (const long unsiged int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const long unsigned int &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const long long unsigned int &r)
+
+	inline void delay_format(const long long unsigned int &r)
 	{
 		long long unsigned int *vp = (long long unsigned int *)param_va_ptr;
 		if (do_f || (vp + 1) > (long long unsigned int *)&args[traceControl_p->num_params])
@@ -3196,7 +3226,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 9 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 11 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3205,11 +3235,16 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 9 (const long long unsiged int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 11 (const long long unsiged int &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const long long unsigned int &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const double &r)
+
+	inline void delay_format(const double &r)
 	{
 		unsigned long nvp = (unsigned long)param_va_ptr;
 		double *vp = (double *)nvp;
@@ -3218,7 +3253,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 10 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 12 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3227,11 +3262,16 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 10 (const double &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 12 (const double &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const double &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const long double &r)
+
+	inline void delay_format(const long double &r)
 	{
 		unsigned long nvp = (unsigned long)param_va_ptr;
 		long double *vp;
@@ -3244,7 +3284,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(true, false, "L", _M_flags), r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 10a rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 13 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3255,11 +3295,16 @@ public:
 				++argCount;  // speudo extra arg satisfies alignment requirement
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 10a (const long double &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 13 (const long double &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const long double &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const float &r)
+
+	inline void delay_format(const float &r)
 	{
 		double *vp = (double *)param_va_ptr;  // note: floats get pushed onto stack as double
 		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params])
@@ -3267,7 +3312,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 11 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 14 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3276,11 +3321,16 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 11 (const float &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 14 (const float &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const float &r)
+	{
+		delay_format(r);
 		return *this;
 	}
-	inline TraceStreamer &operator<<(const bool &r)
+
+	inline void delay_format(const bool &r)
 	{
 		long *vp = (long *)param_va_ptr;  // note: bool is pushed as long
 		if (_M_flags & boolalpha)
@@ -3290,7 +3340,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%d", r);
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 12 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 15 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3298,10 +3348,15 @@ public:
 			++argCount;
 			*vp++ = r;
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 12 (const bool &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
+			T_STREAM_DBG << "streamer check 15 (const bool &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
 		}
+	}
+	inline TraceStreamer &operator<<(const bool &r)
+	{
+		delay_format(r);
 		return *this;
 	}
+
 	inline TraceStreamer &operator<<(const std::string &r)
 	{
 		msg_append(r.c_str(), r.size());
@@ -3316,94 +3371,30 @@ public:
 #	if (__cplusplus >= 201103L)
 	inline TraceStreamer &operator<<(const std::atomic<int> &r)
 	{
-		long *vp = (long *)param_va_ptr;  // note: int goes to long
-		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r.load());
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 13 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r.load();
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 13 (const std::atomic<int> &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
+		delay_format(r.load());
 		return *this;
 	}
+
 	inline TraceStreamer &operator<<(std::atomic<unsigned long> const &r)
 	{
-		unsigned long *vp = (unsigned long *)param_va_ptr;
-		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r.load());
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 14 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			msg_append(format(false, true, "l", _M_flags));
-			++argCount;
-			*vp++ = r.load();
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 14 (std::atomic<unsigned long> const &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
+		delay_format(r.load());
 		return *this;
 	}
+
 	inline TraceStreamer &operator<<(std::atomic<short int> const &r)
 	{
-		long *vp = (long *)param_va_ptr;  // note: shorts get pushed as long
-		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r.load());
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 15 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			size_t f_l = 0;
-			msg_append(format(false, false, "h", _M_flags, &f_l), f_l);
-			++argCount;
-			*vp++ = r.load();
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 15 (std::atomic<short int> const &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
+		delay_format(r.load());
 		return *this;
 	}
+
 	inline TraceStreamer &operator<<(std::atomic<bool> const &r)
 	{
-		long *vp = (long *)param_va_ptr;  // note: bool goes to long
-		if (_M_flags & boolalpha)
-		{
-			bool rr = r.load();
-			msg_append(rr ? "true" : "false", rr ? 4 : 5);
-		}
-		else if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params])
-		{
-			size_t ss = sizeof(msg) - 1 - msg_sz;
-			int rr = snprintf(&msg[msg_sz], ss, "%d", r.load());
-			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 16 rr=" << rr << " ss=" << ss << "\n";
-		}
-		else if (argCount < TRACE_STREAMER_ARGSMAX)
-		{
-			msg_append("%d", 2);
-			++argCount;
-			*vp++ = r.load();
-			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 16 (std::atomic<bool> const &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";
-		}
+		delay_format(r.load());
 		return *this;
 	}
 
 	template<typename T>
-	inline TraceStreamer &operator<<(std::unique_ptr<T> const &r)
+	inline void delay_format(std::unique_ptr<T> const &r)
 	{
 		trace_ptr_t *vp = (trace_ptr_t *)param_va_ptr;  // address is unsigned long
 		if (do_f || (vp + 1) > (trace_ptr_t *)&args[traceControl_p->num_params])
@@ -3411,7 +3402,7 @@ public:
 			size_t ss = sizeof(msg) - 1 - msg_sz;
 			int rr = snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r.get()));
 			msg_sz += SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 17 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer snprintf 20 rr=" << rr << " ss=" << ss << "\n";
 		}
 		else if (argCount < TRACE_STREAMER_ARGSMAX)
 		{
@@ -3419,12 +3410,17 @@ public:
 			++argCount;
 			*vp++ = (trace_ptr_t)(void *)(r.get());
 			param_va_ptr = vp;
-			T_STREAM_DBG << "streamer check 17 (std::unique_ptr<T> const &r) " << r.get()
+			T_STREAM_DBG << "streamer check 20 (std::unique_ptr<T> const &r) " << r.get()
 						 << " sizeof(r.get())=" << sizeof(r.get())
 						 << " (unsigned long)r.get()=0x" << std::hex << (trace_ptr_t)(void *)(r.get())
 						 << " sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t)
 						 << " msg_sz=" << std::dec << msg_sz << "\n";  // ALERT: without ".get()" - error: no match for 'operator<<' (operand types are 'std::basic_ostream<char>' and 'const std::unique_ptr<std::__cxx11::basic_string<char> >')
 		}
+	}
+	template<typename T>
+	inline TraceStreamer &operator<<(std::unique_ptr<T> const &r)
+	{
+		delay_format(r);
 		return *this;
 	}
 #	endif /* (__cplusplus >= 201103L) */
@@ -3478,7 +3474,7 @@ public:
 };  // struct Streamer
 
 template<>
-inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
+inline void TraceStreamer::delay_format(void *const &r)
 {
 	trace_ptr_t *vp = (trace_ptr_t *)param_va_ptr;  // note: addresses are unsigned long
 	if (do_f || (vp + 1) > (trace_ptr_t *)&args[traceControl_p->num_params])
@@ -3486,7 +3482,7 @@ inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++..
 		size_t ss = sizeof(msg) - 1 - msg_sz;
 		int rr = snprintf(&msg[msg_sz], ss, "%p", r);
 		msg_sz += SNPRINTED(rr, ss);
-		T_STREAM_DBG << "streamer snprintf 18 rr=" << rr << " ss=" << ss << "\n";
+		T_STREAM_DBG << "streamer snprintf 21 rr=" << rr << " ss=" << ss << "\n";
 	}
 	else if (argCount < TRACE_STREAMER_ARGSMAX)
 	{
@@ -3494,8 +3490,13 @@ inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++..
 		++argCount;
 		*vp++ = (trace_ptr_t)r;
 		param_va_ptr = vp;
-		T_STREAM_DBG << "streamer check 18 (void *const &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";  // ALERT: without ".get()" - error: no match for 'operator<<' (operand types are 'std::basic_ostream<char>' and 'const std::unique_ptr<std::__cxx11::basic_string<char> >')
+		T_STREAM_DBG << "streamer check 21 (void *const &r) " << r << " msg_sz=" << std::dec << msg_sz << "\n";  // ALERT: without ".get()" - error: no match for 'operator<<' (operand types are 'std::basic_ostream<char>' and 'const std::unique_ptr<std::__cxx11::basic_string<char> >')
 	}
+}
+template<>
+inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++...to pass pointer by reference, have to have the const AFTER the type
+{
+	delay_format(r);
 	return *this;
 }
 

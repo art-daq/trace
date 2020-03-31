@@ -35,18 +35,20 @@ main(/*  int	argc
 {
 
 	// The following is just shoved in here as a place to help develop the TRACE_STREAMER macro
-#define lvl        2
+#define _lvl       2
 #define nam_or_fmt 0
 #define fmt_or_nam ""
 #define s_enabled  1
 #define force_s    0
-static TRACE_THREAD_LOCAL TraceStreamer steamer;
- for (struct _T_ {uint8_t lvl__; int tid; tstreamer_flags flgs; char ins[32]; struct timeval tv;
-	 _T_(uint8_t llv):lvl__(llv),tid(-1){tv.tv_sec=0;}} _xx((uint8_t)(lvl));
-		 (_xx.tid == -1) && ((_xx.tid = TRACE_STATIC_TID_ENABLED(t_arg_nmft(nam_or_fmt, fmt_or_nam, &_xx.flgs), _xx.lvl__, s_enabled, force_s,
-		                                                         &_xx.flgs, &_xx.tv, _xx.ins, sizeof(_xx.ins))) != -1);
+	static TRACE_THREAD_LOCAL TraceStreamer steamer;
+	for (struct _T_ {unsigned once; uint8_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char ins[32]; struct timeval tv; void* stmr__;
+		_T_(uint8_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info),stmr__(&__streamer){tv.tv_sec=0;}
+		~_T_(){if(stmr__ != (void*)&__streamer) delete (TraceStreamer*)stmr__;} } _tlog_((uint8_t)(_lvl),TRACE_GET_STATIC());
+		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME)
+			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?name2TID(_tlog_.nn):traceTID))!=-1)))
+			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s);
 		 steamer.str())
-		steamer.init(_xx.tid, _xx.lvl__, _xx.flgs, __FILE__, __LINE__, &_xx.tv, _xx.ins, &TRACE_LOG_FUNCTION) << "hello";
+		steamer.init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION) << "hello";
 
 
 	int lvlx=0x107;  // testing conversion between int and uint8_t

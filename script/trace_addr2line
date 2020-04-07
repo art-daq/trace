@@ -1,0 +1,70 @@
+#!/bin/sh
+ # This file (trace_addr2line) was created by Ron Rechenmacher <ron@fnal.gov> on
+ # Mar 28, 2020. "TERMS AND CONDITIONS" governing this file are in the README
+ # or COPYING file. If you do not have such a file, one can be obtained by
+ # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+ # $RCSfile: trace_addr2line,v $
+ # rev="$Revision: 1.4 $$Date: 2020/03/30 17:37:01 $";
+
+def_filter='lambda\()'
+opt_filter=$def_filter
+USAGE="\
+usage: `basename $0` [-f<filter_ere>] <debug_executable>
+options:
+-f<filter_ere>     extended regular pattern used to filter functions. default: $opt_filter
+"
+# Process script arguments and options
+op1chr='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set -- "-$rest" "$@"'
+op1arg='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set -- "$rest"  "$@"'
+reqarg="$op1arg;"'test -z "${1+1}" && { echo opt -$op requires arg.; eval "echo \"$USAGE\""; exit; }'
+args= do_help= opt_v=0
+while [ -n "${1-}" ];do
+    if expr "x${1-}" : 'x-' >/dev/null;then
+        op=`expr "x$1" : 'x-\(.*\)'`; shift   # done with $1
+        leq=`expr "x$op" : 'x-[^=]*\(=\)'` lev=`expr "x$op" : 'x-[^=]*=\(.*\)'`
+        test -n "$leq"&&eval "set -- \"\$lev\" \"\$@\""&&op=`expr "x$op" : 'x\([^=]*\)'`
+        case "$op" in
+        \?*|h*)     eval $op1chr; do_help=1;;
+        v*)         eval $op1chr; opt_v=`expr $opt_v + 1`;;
+        x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
+        f*)         eval $reqarg; opt_filter=$1;      shift;;
+        *)          echo unknown option -$op$leq$lev; do_help=1;; # see dash_opts5.sh for mix {,un}known
+        esac
+    else # allow mix of opts and arg (i.e. opts after args)
+        aa=`echo "$1" | sed -e "s/'/'\"'\"'/g"` args="$args '$aa'"; shift
+    fi
+done
+eval "set -- $args \"\$@\""; unset args aa
+test $# -ne 1 && { echo "Wrong number of arguments. \$#=$#"; do_help=1; }
+test -n "${do_help-}" && { eval "echo \"$USAGE\"";test $opt_v -ge 1 && echo "$VUSAGE"; exit; }
+set -u
+
+EXECUTABLE="$1"
+
+if test ! -f "$EXECUTABLE";then
+    echo "Error: executable $EXECUTABLE does not exist."
+    exit 1
+fi
+
+addr2line_opts=-C
+
+while IFS= read -r line;do
+    cyg_profile=`echo "$line" | sed -n '/cyg_profile dbg/{s/.*cyg_profile dbg . //;p}'`
+    if [ -n "$cyg_profile" ];then
+        pre=`echo "$line" | sed 's/cyg_profile dbg \([.0-9]* \)[ex] .*/cyg_profile dbg \1/'`
+        read LINETYPE FADDR CADDR <<EOF
+$cyg_profile
+EOF
+        FNAME="$(addr2line $addr2line_opts -f -e ${EXECUTABLE} ${FADDR}|head -1)"
+        test -n "$opt_filter" && { echo "$FNAME" | grep -Eq "$opt_filter" && continue; }
+        if test "${LINETYPE}" = "e";then
+	    CNAME="$(addr2line $addr2line_opts -f -e ${EXECUTABLE} ${CADDR}|head -1)"
+	    CLINE="$(addr2line $addr2line_opts -s -e ${EXECUTABLE} ${CADDR})"
+	    echo "${pre}Enter ${FNAME} called from ${CNAME} (${CLINE})"
+        elif test "${LINETYPE}" = "x";then
+	    echo "${pre}Exit  ${FNAME}"
+        fi
+    else
+        echo "$line"
+    fi
+done

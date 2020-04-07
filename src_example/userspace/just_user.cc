@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev="$Revision: 1265 $$Date: 2020-03-12 11:58:37 -0500 (Thu, 12 Mar 2020) $";
+char const *rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
 
 
 #include <stdarg.h>		/* va_list */
@@ -20,14 +20,14 @@ char const *rev="$Revision: 1265 $$Date: 2020-03-12 11:58:37 -0500 (Thu, 12 Mar 
 
 #if 1   /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
 void my_log(uint16_t nargs, std::string  msg,...);
-void my_log2(timeval *, int, unsigned char, const char *, const char *, int, short unsigned int nargs, const char * msg, ...)
+void my_log2(timeval *, int, unsigned char, const char *, const char *, int, const char *, short unsigned int nargs, const char * msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
 	my_log(nargs, msg, ap);
 	va_end(ap);
 }
-void my_log2(timeval *, int, unsigned char, const char *, const char *, int, short unsigned int nargs, std::string msg, ...)
+void my_log2(timeval *, int, unsigned char, const char *, const char *, int, const char *, short unsigned int nargs, std::string msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -75,8 +75,8 @@ static void parse_args_( int argc, char	*argv[] )
 		switch (opt) {
 		case '?': case 'h': printf(USAGE);if(opt_v)printf(VUSAGE);exit(0);break;
 		case 'V': printf("%s\n",rev);       exit(0);                     break;
-		case 'v': if(optarg)opt_v=strtoul(optarg,0,0); else ++opt_v;    break; // optional is for when coming from long option
-		case 'l': opt_loops=strtoul(optarg,NULL,0);                     break;
+		case 'v': if(optarg)opt_v=(int)strtoul(optarg,0,0); else ++opt_v;    break; // optional is for when coming from long option
+		case 'l': opt_loops=(int)strtoul(optarg,NULL,0);                     break;
 		case 't': opt_test=optarg;                                      break;
 		default:
 			printf( "?? getopt returned character code 0%o ??\n", opt );

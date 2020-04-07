@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1274 $$Date: 2020-03-16 21:18:26 -0500 (Mon, 16 Mar 2020) $";
+ # rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
 
 # TOP LEVEL Makefile
 
@@ -52,6 +52,7 @@ clean:
 	rm -f src_example/userspace/*.d src_module/{.*.cmd,*.symvers,*.ko,*.mod.c,*.order}
 	rm -fr Linux64bit+* module big_ex.d src_module/.tmp_versions
 	rm -f make.out
+	rm -f rpm/TRACE.tar.bz2
 
 rpm_source:
 	@unclean=`svn status | wc -l`; 
@@ -81,7 +82,7 @@ src_module: OUT_check
 #    1) userspace - src can remain
 #    2) module (which needs src copied)
 src_example_user: OUT_check
-	${FLAVOR_SUBDIR};\
+	@${FLAVOR_SUBDIR};\
 	test -n "${TRACE_FQ_DIR}"\
 	 && out="${TRACE_FQ_DIR}"\
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}";\
@@ -109,7 +110,7 @@ src_example_module: OUT_check
 	$(MAKE) -e -C "${OUT}/$$modsubdir" TRACE_INC=$$PWD/include
 
 src_utility: OUT_check
-	${FLAVOR_SUBDIR};\
+	@${FLAVOR_SUBDIR};\
 	test -n "${TRACE_FQ_DIR}"\
 	 && out="${TRACE_FQ_DIR}/bin/"\
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin/";\
@@ -122,7 +123,7 @@ src_utility: OUT_check
 	fi
 
 script: OUT_check
-	${FLAVOR_SUBDIR};\
+	@${FLAVOR_SUBDIR};\
 	test -n "${TRACE_FQ_DIR}"\
 	 && out="${TRACE_FQ_DIR}/bin/"\
 	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/bin/";\

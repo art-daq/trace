@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1278 $$Date: 2020-03-21 03:12:29 -0500 (Sat, 21 Mar 2020) $"
+#define TRACE_CNTL_REV "$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -81,7 +81,7 @@ tests:  (use %s show after test)\n\
  TRACE <lvl> <fmt> [ulong]...   (just ulong args are supported)\n\
 "
 #define DFLT_TEST_COMPARE_ITERS 1000000
-#define minw(a,b) (b<a?a:b)     /* min width -- really max of the 2 numbers - argh */
+#define minw(a,b) ((b)<(a)?a:b)     /* min width -- really max of the 2 numbers - argh */
 
 #ifdef __linux__
 //# define DFLT_SHOW         "HxNTPiCnLR"
@@ -95,7 +95,7 @@ static int trace_thread_option=0;
 
 typedef struct {
 	unsigned tidx;
-	int      loops;
+	unsigned loops;
 	unsigned dly_ms;
 	unsigned burst;
 } args_t;
@@ -106,8 +106,8 @@ void* thread_func(void *arg)
 	unsigned tidx  =argsp->tidx;
 	unsigned dly_ms=argsp->dly_ms;
 	unsigned burst =argsp->burst;
-	int      loops =argsp->loops;
-	int      lp;
+	unsigned loops =argsp->loops;
+	unsigned lp;
 	char tmp[PATH_MAX];
 	pid_t tid=trace_gettid();
 
@@ -145,7 +145,7 @@ void* thread_func(void *arg)
 uint64_t get_us_timeofday()
 {	struct timeval tv;
 	gettimeofday( &tv, NULL );
-	return (uint64_t)tv.tv_sec*1000000+tv.tv_usec;
+	return (uint64_t)(tv.tv_sec*1000000+tv.tv_usec);
 }
 
 //                  32bit      64bit
@@ -185,8 +185,8 @@ size_t get_arg_sizes(  char            *ofmt
                      , unsigned         nargs )
 {	char    *in;
 	char    *percent_sav;
-	int	     numArgs=0;
-	int	     maxArgs=(nargs<traceControl_p->num_params?nargs:traceControl_p->num_params);
+	unsigned numArgs=0;
+	unsigned maxArgs=(nargs<traceControl_p->num_params?nargs:traceControl_p->num_params);
 	int	     modifier=0;
 	int	     filter_newline=opts&filter_newline_;
 	size_t   slen=0;
@@ -223,10 +223,10 @@ size_t get_arg_sizes(  char            *ofmt
 		case 'd': case 'i': case 'o': case 'u': case 'x': case 'X': case 'c':
 			switch (modifier)
 			{
-			case -2: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4; break; /* char */
-			case -1: sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* short */
-			case 0:	 sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4;break;/* int */
-			case 1:	 sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=param_bytes;/* long */
+			case -2: sizes_out[numArgs].push=(unsigned short)param_bytes;sizes_out[numArgs].size=4; break; /* char */
+			case -1: sizes_out[numArgs].push=(unsigned short)param_bytes;sizes_out[numArgs].size=4;break;/* short */
+			case 0:	 sizes_out[numArgs].push=(unsigned short)param_bytes;sizes_out[numArgs].size=4;break;/* int */
+			case 1:	 sizes_out[numArgs].push=(unsigned short)param_bytes;sizes_out[numArgs].size=(unsigned short)param_bytes;/* long */
 				if ((param_bytes==8)&&(sizeof(long)==4)) ofmt[slen++] = 'l';
 				break;
 			case 2:	 sizes_out[numArgs].push=8;          sizes_out[numArgs].size=8;break;/* long long */
@@ -263,7 +263,7 @@ size_t get_arg_sizes(  char            *ofmt
 			if (*in=='s')
 				while (strchr("-.0123456789",ofmt[slen-1]))
 					--slen;
-			sizes_out[numArgs].push=param_bytes; sizes_out[numArgs].size=param_bytes;
+			sizes_out[numArgs].push=(unsigned short)param_bytes; sizes_out[numArgs].size=(unsigned short)param_bytes;
 			if ((param_bytes==8)&&(sizeof(long)==4)) { // traced on 64, showing on 32
 				strcpy(&ofmt[slen-1],"0x%llx"); // overwrite the original '%'
 				slen+=5;
@@ -276,7 +276,7 @@ size_t get_arg_sizes(  char            *ofmt
 			continue;
 			break;
 		case '*':   /* special -- "arg" in an arg */
-			sizes_out[numArgs].push=param_bytes;sizes_out[numArgs].size=4/*int*/;
+			sizes_out[numArgs].push=(unsigned short)param_bytes;sizes_out[numArgs].size=4/*int*/;
 			sizes_out[numArgs].positive = 1;
 			if (++numArgs == maxArgs) { ofmt[slen++] = *in++; break; }
 			ofmt[slen++] = *in++;
@@ -331,7 +331,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 	uint64_t              * params_p;
 	size_t                  slen;
 	time_t                  seconds;
-	unsigned                useconds;
+	int                     useconds;
 	void                  * param_va_ptr;
 	uint8_t               * ent_param_ptr;
 	uint8_t               * lcl_param_ptr;
@@ -367,7 +367,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 		if        (	 ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
 		           ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
 		{	seconds	 = myEnt_p->time.tv_sec;
-			useconds = myEnt_p->time.tv_usec;
+			useconds = (int)myEnt_p->time.tv_usec;
 			param_va_ptr = (void*)params_p;
 		}
 		else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
@@ -375,7 +375,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			void *xx = &(myEnt_p->time);
 			unsigned *ptr=(unsigned*)xx;
 			seconds	 = *ptr++;
-			useconds = *ptr;
+			useconds = (int)*ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
 			for (uu=0; uu<myEnt_p->nargs && params_sizes[uu].push!=0; ++uu)
@@ -413,7 +413,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			void *xx=&myEnt_p->time;
 			long long *ptr=(long long*)xx;
 			seconds	 = (unsigned)*ptr++;
-			useconds = (unsigned)*ptr;
+			useconds = (int)*ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
 			for (uu=0; uu<myEnt_p->nargs && params_sizes[uu].push!=0; ++uu)
@@ -501,7 +501,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 						  case '4':div=100;break;
 						  case '5':div=10;break;
 						  }
-						  useconds = (unsigned)((double)useconds/div+0.5); // div, round and cast back to unsigned
+						  useconds = (int)((double)useconds/div+0.5); // div, round and cast back to unsigned
 					  }
 					  printf(tbuf, useconds); } break;
 			case 't': printf("%10u", (unsigned)myEnt_p->tsc); break;
@@ -544,7 +544,8 @@ typedef struct trace_ptrs {
 	struct traceNamLvls_s  *namlvls_p;
 	struct traceEntryHdr_s *entries_p;
 	uint32_t                rdIdx;
-	int32_t                 max;
+	uint32_t                max;
+	struct timeval          ref_tv;
 } trace_ptrs_t;
 
 void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file )
@@ -652,7 +653,7 @@ int tvcmp( struct timeval *t1, struct timeval *t2)
 void traceShow( const char *ospec, int count, int slotStart, int show_opts, int argc, char *argv[] )
 {
 	uint32_t rdIdx;
-	int32_t max;
+	uint32_t max;
 	unsigned printed=0;
 	int      ii;
 	int	   	 bufSlot_width;
@@ -674,7 +675,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	int                     memlen_out_unused __attribute__((__unused__));
 	trace_ptrs_t		  * t_ptrs, * trace_ptrs_list_start, *t_ptrs_use;
 	struct timeval        * tv_p_use;
-	int                     name_width=0;
+	uint32_t                name_width=0;
 	unsigned                longest_lvlstr=0;
 	uint32_t                num_entries_total;
 	uint32_t                siz_msg_largest;
@@ -698,8 +699,8 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*1);
 		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile );
 	} else {
-		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*argc);
-		memset( trace_ptrs_list_start, 0, sizeof(trace_ptrs_t)*argc );
+		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*(unsigned)argc);
+		memset( trace_ptrs_list_start, 0, sizeof(trace_ptrs_t)*(unsigned)argc );
 		trace_ptrs_list_start[0].prev = NULL;
 		for (ii=0; ii<argc; ++ii) {
 			if (access(argv[ii],R_OK) != 0) {
@@ -738,13 +739,13 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	if (strflg(ospec,'L')) { /* level number 0-63 is 2 digits, 'L' is level string -- need to find longest str */
 		unsigned ll;
 		for (ii=0; ii<64; ++ii)
-			if (_lvlstr[ii]!=NULL && (ll=strlen(_lvlstr[ii]))>longest_lvlstr)
+			if (_lvlstr[ii]!=NULL && (ll=(unsigned)strlen(_lvlstr[ii]))>longest_lvlstr)
 				longest_lvlstr = ll;
 	}
 
 	if (strflg(ospec,'n') || strflg(ospec,'e'))
 		for (name_width=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
-			if (name_width < (int)t_ptrs->rw_p->longest_name)
+			if (name_width < t_ptrs->rw_p->longest_name)
 				name_width = t_ptrs->rw_p->longest_name;
 	for (num_entries_total=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
 		num_entries_total += t_ptrs->ro_p->num_entries;
@@ -768,25 +769,29 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	if (slotStart >= 0) // only applicable with one file
 	{	slotStart++; /* startSlot index needs to be turned into a "count" */
 		if ((unsigned)slotStart > num_entries_total)
-		{	slotStart = num_entries_total;
+		{	slotStart = (int)num_entries_total;
 			printf("specified slotStart index too large, adjusting to %d\n",slotStart );
 		}
-		trace_ptrs_list_start->rdIdx = slotStart; // in "startSlot mode" rdIdx is not realative to wrIdxCnt
+		trace_ptrs_list_start->rdIdx = (uint32_t)slotStart; // in "startSlot mode" rdIdx is not realative to wrIdxCnt
+		trace_ptrs_list_start->ref_tv.tv_sec = 0;
 	}
 	else
 	{	/* here, rdIdx starts as a count (see max = rdIdx below), but it is
 		   used as an index after first being decremented (assuming reverse
 		   printing) */
-		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next)
+		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next) {
 			t_ptrs->rdIdx = TRACE_ATOMIC_LOAD(&t_ptrs->rw_p->wrIdxCnt); // % t_ptrs->ro_p->num_entries;
+			t_ptrs->ref_tv.tv_sec = 0;
+		}
 	}
 
 	if ((count>=0) && (slotStart>=0)) {   // only applicable with one file (the slotStart>=0 part)
 		t_ptrs=trace_ptrs_list_start;
 		if ((unsigned)count > num_entries_total) {
-			count = max = t_ptrs->max = t_ptrs->ro_p->num_entries;
+			max = t_ptrs->max = t_ptrs->ro_p->num_entries;
+			count = (int)max;
 		} else {
-			max = t_ptrs->max = count;
+			max = t_ptrs->max = (uint32_t)count;
 		}
 	} else {
 		for (max=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next)
@@ -798,12 +803,13 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				max += t_ptrs->max = t_ptrs->rdIdx;
 	}
 
-	if ((count>=0) && (slotStart<0) && (count<max))
+	if ((count>=0) && (slotStart<0) && (count<(int)max))
 		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next)
-			t_ptrs->max=count;
+			t_ptrs->max=(uint32_t)count;
 	if (opts&forward_) {
 		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
-			t_ptrs->rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&t_ptrs->rw_p->wrIdxCnt), -t_ptrs->max );
+			int32_t add = -(int32_t)t_ptrs->max;
+			t_ptrs->rdIdx = IDXCNT_ADD( TRACE_ATOMIC_LOAD(&t_ptrs->rw_p->wrIdxCnt), add );
 			/* subtract 1 b/c during loop (below) rdIdx is incremented first */
 			t_ptrs->rdIdx = IDXCNT_ADD( t_ptrs->rdIdx, -1 );
 		}
@@ -814,8 +820,8 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	//printf("for_rev=%d slotStart=%d count=%d max=%d siz_msg_largest=%u num_params_largest=%u files_to_show=%d\n"
 	//       ,for_rev,slotStart,count,max,siz_msg_largest,num_params_largest, files_to_show);
 
-	N_width = minw(3,countDigits(max-1));
-	bufSlot_width= minw( 3, countDigits(num_entries_total-1) );
+	N_width = minw(3,countDigits((int32_t)max-1));
+	bufSlot_width= minw( 3, countDigits((int32_t)num_entries_total-1) );
 
 	myEnt_p       = (struct traceEntryHdr_s *)malloc( siz_entry_largest );
 	local_msg     =	                   (char*)malloc( siz_msg_largest * 3 );/* in case an %ld needs change to %lld */
@@ -948,6 +954,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			} else if ((lines=rdIdx_has_lines(t_ptrs->rw_p->wrIdxCnt,t_ptrs->rdIdx,for_rev))) {
 				if (lines > traceControl_p->num_entries) {  // reset detect
 					t_ptrs->rdIdx = 0;
+					t_ptrs->ref_tv.tv_sec=0;
 					goto reset_check;
 				}
 				trace_ptrs_restore( t_ptrs ); // for idxCnt2entPtr to get time
@@ -961,6 +968,16 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 					if (tvcmp(tv_p_use,&idxCnt2entPtr(t_ptrs->rdIdx)->time) == for_rev) {
 						t_ptrs_use=t_ptrs;
 						tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+					}
+				}
+			} else if (forward_continuous) { /* and lines==0 (obviously) */
+				/* special check where, e.g.: treset; tcntl test */
+				if (t_ptrs->ref_tv.tv_sec) {
+					uint32_t prvIdx=IDXCNT_ADD(t_ptrs->rdIdx, -1);
+					if (tvcmp(&t_ptrs->ref_tv,&idxCnt2entPtr(prvIdx)->time)) {
+						t_ptrs->rdIdx = 0;
+						t_ptrs->ref_tv.tv_sec=0;
+						goto reset_check;
 					}
 				}
 			} else if (!forward_continuous)  // not strictly needed, but a little efficiency gain
@@ -980,9 +997,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 		printEnt(  ospec, opts, myEnt_p
 		         , local_msg, local_params, params_sizes
-		         , bufSlot_width, N_width, name_width, printed, t_ptrs_use->rdIdx
+		         , bufSlot_width, N_width, (int)name_width, printed, t_ptrs_use->rdIdx
 		         , tfmt, tfmt_len, longest_lvlstr );
 		++printed;
+		t_ptrs_use->ref_tv = myEnt_p->time;
 		t_ptrs_use->rdIdx = IDXCNT_ADD( t_ptrs_use->rdIdx, for_rev );
 	}
 }	/*traceShow*/
@@ -996,7 +1014,7 @@ void traceInfo()
 	char           outstr[200];
 	struct tm      *tmp;
 	time_t         tt=(time_t)traceControl_p->create_tv_sec;
-	int            memlen=traceMemLen( cntlPagesSiz()
+	int            memlen=(int)traceMemLen( cntlPagesSiz()
 	                                  ,traceControl_p->num_namLvlTblEnts
 	                                  ,traceControl_p->siz_msg
 	                                  ,traceControl_p->num_params
@@ -1108,18 +1126,18 @@ extern  int        optind;         /* for getopt */
 		case 'N': opt_name=optarg;                           break;
 		case 'n': setenv("TRACE_NAME",optarg,1);             break;/*note: TRACE_CNTL "file" or "name" doesn't allow setting the other (order becomes dependent)*/
 		case 'f': setenv("TRACE_FILE",optarg,1);             break;
-		case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
+		case 'x': trace_thread_option=(int)strtoul(optarg,NULL,0);break;
 		case 'H': do_heading=0;                              break;
 		case 'q': show_opts|=quiet_;                         break;
 		case 'V': printf( "%s\n",TRACE_CNTL_REV ); exit(0);  break;
 		case 'L': setlocale(LC_NUMERIC,optarg);              break;
         case 'F': show_opts|=forward_;                       break;
-		case 'l': opt_loops=strtoul(optarg,NULL,0);          break;
-		case 'd': opt_dly_ms=strtoul(optarg,NULL,0);         break;
-		case 'b': opt_burst=strtoul(optarg,NULL,0);          break;
+		case 'l': opt_loops=(int)strtoul(optarg,NULL,0);     break;
+		case 'd': opt_dly_ms=(unsigned)strtoul(optarg,NULL,0);break;
+		case 'b': opt_burst=(unsigned)strtoul(optarg,NULL,0);break;
 		case 'a': opt_all=1;                                 break;
-		case 'c': opt_count=strtoul(optarg,NULL,0);          break;
-		case 's': opt_start=strtoul(optarg,NULL,0);          break;
+		case 'c': opt_count=(int)strtoul(optarg,NULL,0);     break;
+		case 's': opt_start=(int)strtoul(optarg,NULL,0);     break;
 		}
 	}
 	if (argc - optind < 1) {
@@ -1187,7 +1205,7 @@ extern  int        optind;         /* for getopt */
 			   , (void*)&((struct traceEntryHdr_s*)0)->tsc
 			   );
 
-		for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=2.5*ii;
+		for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=(float)(2.5*ii);
 
 		/* NOTE: using setenv method works in threading env where as additional
 		   threads initializing via TRACE will disable/undo the levels
@@ -1218,7 +1236,7 @@ extern  int        optind;         /* for getopt */
 		printf("myIdx=0x%08x\n", myIdx );
 
 		xx=5;
-		myIdx = traceControl_p->largest_multiple - (3*xx);
+		myIdx = traceControl_p->largest_multiple - (uint32_t)(3*xx);
 		printf("myIdx=0x%08x\n", myIdx );
 		for (ii=0; ii<6; ++ii)
 		{	desired = IDXCNT_ADD(myIdx,xx);
@@ -1320,7 +1338,7 @@ extern  int        optind;         /* for getopt */
 #	   define END_FMT  "%10llu us (%5.3f us/TRACE)\n",delta,(double)delta/loops
 #      define CONTINUE fprintf(stderr,"Continuing with S lvl enabled (stdout redirected to /dev/null).\n");TRACE_CNTL("lvlsetS",4LL);continue
 		for (jj=0; jj<4; ++jj) {
-			if (argc - optind == 1) compares=strtoul(argv[optind],NULL,0);
+			if (argc - optind == 1) compares=(unsigned)strtoul(argv[optind],NULL,0);
 			switch (jj) {
 			case 0: TRACE_CNTL("lvlsetM",4LL); TRACE_CNTL("lvlclrS",4LL);
 				fprintf(stderr,"First testing with S lvl disabled (mem only). loops=%u\n", loops ); break;
@@ -1403,7 +1421,7 @@ extern  int        optind;         /* for getopt */
 			opt_burst=1;
 		}
 		if ((argc-optind)==1)
-		{	num_threads=strtoul(argv[optind],NULL,0);
+		{	num_threads=(unsigned)strtoul(argv[optind],NULL,0);
 			if (num_threads > 4095) num_threads=4095;
 		}
 		threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
@@ -1413,14 +1431,14 @@ extern  int        optind;         /* for getopt */
 		      , main_tid, loops, num_threads, opt_dly_ms, (void*)traceControl_p );
 		for (ii=0; ii<num_threads; ii++) {
 			argsp[ii].tidx   = ii+1;
-			argsp[ii].loops  = loops;
+			argsp[ii].loops  = (unsigned)loops;
 			argsp[ii].dly_ms = opt_dly_ms;
 			argsp[ii].burst  = opt_burst;
 			pthread_create(&(threads[ii]),NULL,thread_func,(void*)&argsp[ii] );
 		}
 
 		args0.tidx   = 0;
-		args0.loops  = loops;
+		args0.loops  = (unsigned)loops;
 		args0.dly_ms = opt_dly_ms;
 		args0.burst  = opt_burst;
 		thread_func( &args0 );
@@ -1469,7 +1487,7 @@ extern  int        optind;         /* for getopt */
 		traceInit(NULL,0);
 		longest_name = traceControl_rwp->longest_name;
 		/*printf("longest_name=%d\n",longest_name);*/
-		namLvlTblEnts_digits=countDigits(traceControl_p->num_namLvlTblEnts-1);
+		namLvlTblEnts_digits=countDigits((int)traceControl_p->num_namLvlTblEnts-1);
 		if (do_heading) {
 			printf( "mode:%*s%*s            M=%d                S=%d\n"
 			       , minw(3,namLvlTblEnts_digits), ""
@@ -1641,17 +1659,17 @@ extern  int        optind;         /* for getopt */
 	else if (strncmp(cmd,"sleep",4) == 0) { /* this allows time to look at /proc/fd/ and /proc/maps */
 		TRACE( 1, "starting sleep" );
 		if ((argc-optind) == 1)
-			sleep( strtoul(argv[optind],NULL,0) );
+			sleep( (unsigned)strtoul(argv[optind],NULL,0) );
 		else sleep( 10 );
 		TRACE( 1, "done sleeping" );
 	}
 	/* now deal with traceCntl commands using TRACE_CNTL */
 	else if (strncmp(cmd,"mode",4) == 0) { /* mode is special -- may _return_ old mode */
 		if ((argc-optind) == 0) {
-			ret=TRACE_CNTL( cmd );
+			ret=(int)TRACE_CNTL( cmd );
 			printf( "%d\n",ret ); /* print the old mode */
 		}
-		else ret=TRACE_CNTL( cmd, strtoul(argv[optind],NULL,0) );
+		else ret=(int)TRACE_CNTL( cmd, strtoul(argv[optind],NULL,0) );
 		if (ret == -1) ret=1; else ret=0;
 	} else if (  (strncmp(cmd,"lvlmsk",6)==0)
 	           ||(strncmp(cmd,"lvlset",6)==0)
@@ -1662,7 +1680,8 @@ extern  int        optind;         /* for getopt */
 		   trace_cntl mode -n<name>
 		   TRACE_NAME=<name> trace_cntl lvlsetM <msk>
            others? */
-		int sts=0, slen=strlen(&cmd[6]);
+		size_t  slen=strlen(&cmd[6]);
+		long long msk=0;
 		if (opt_name) {
 			char cmdn[8];
 			if (slen>1 || (slen==1&&!strpbrk(&cmd[6],"MST"))) {
@@ -1671,10 +1690,10 @@ extern  int        optind;         /* for getopt */
 			strncpy(cmdn,cmd,6);
 			cmdn[6]='n';strcpy(&cmdn[7],&cmd[6]); /* insert the 'n' */
 			switch (argc - optind) {
-			case 0: sts=TRACE_CNTL( cmdn, opt_name );
-				printf("mask=0x%x\n",sts);
+			case 0: msk=TRACE_CNTL( cmdn, opt_name );
+				printf("mask=0x%llx\n",msk);
 				break;
-			case 1: sts=TRACE_CNTL( cmdn, opt_name, strtoull(argv[optind],NULL,0) );
+			case 1: msk=TRACE_CNTL( cmdn, opt_name, strtoull(argv[optind],NULL,0) );
 				/*printf("previous mask=0x%x\n",sts);*/
 				break;
 			case 3: TRACE_CNTL( cmdn, opt_name, strtoull(argv[optind],NULL,0)
@@ -1690,10 +1709,10 @@ extern  int        optind;         /* for getopt */
 				printf("invalid command: %s\n", cmd );printf( USAGE );
 			}
 			switch (argc - optind) {
-			case 0: sts=TRACE_CNTL( cmd );
-				printf("mask=0x%x\n",sts);
+			case 0: msk=TRACE_CNTL( cmd );
+				printf("mask=0x%llx\n",msk);
 				break;
-			case 1: sts=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
+			case 1: msk=TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0) );
 				break;
 			case 3: TRACE_CNTL( cmd, strtoull(argv[optind],NULL,0)
 			                   , strtoull(argv[optind+1],NULL,0)
@@ -1705,7 +1724,7 @@ extern  int        optind;         /* for getopt */
 		}
 	}
 	else { /* all other traceCntl commands */
-		int sts=0;
+		long long sts=0;
 		/*printf("argc - optind = %d\n", argc - optind );*/
 		switch (argc - optind) {
 		case 0: sts=TRACE_CNTL( cmd ); break;
@@ -1720,7 +1739,7 @@ extern  int        optind;         /* for getopt */
 			printf("invalid command: %s\n", cmd );
 			printf( USAGE );
 			ret=1;
-		} else if (sts==0)
+		} else if (sts==0)    /* WHY?? */
 			ret=1;
 		else
 			ret=0;

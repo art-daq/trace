@@ -22,8 +22,8 @@ int main( /*int argc, char *argv[]*/ )
 
 	/* print the internal namLvlTbl */
 	for (uu=0; uu<traceControl_p->num_namLvlTblEnts; ++uu)
-		if (strnlen(traceNamLvls_p[uu].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
-			longest_name = strnlen(traceNamLvls_p[uu].name,sizeof(traceNamLvls_p[0].name));
+		if ((unsigned)strnlen(traceNamLvls_p[uu].name,sizeof(traceNamLvls_p[0].name)) > longest_name)
+			longest_name = (unsigned)strnlen(traceNamLvls_p[uu].name,sizeof(traceNamLvls_p[0].name));
 	for (uu=0; uu<traceControl_p->num_namLvlTblEnts; ++uu)
 		if (traceNamLvls_p[uu].name[0] != '\0')
 			printf("%4u %*.*s 0x%016llx 0x%016llx 0x%016llx\n"

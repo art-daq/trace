@@ -22,8 +22,8 @@
 #include <string>				// std::string
 
 #define TRACE_LOG_FUN_PROTO \
-  static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
-  static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
+  static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, const char*, uint16_t nargs, const char *msg, ...); \
+  static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, const char*, uint16_t nargs, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
 #define TRACE_LOG_FUNCTION lntrace_user
 #include "TRACE/trace.h"		/* TRACE */
@@ -63,7 +63,7 @@ __attribute__((no_sanitize("thread")))
 #  endif
 #endif
 static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__)), uint8_t lvl, const char* insert
-	, const char* file, int line, uint16_t nargs, const char *msg, va_list ap)
+                          , const char* file, int line, const char *function __attribute__((__unused__)), uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
 	   first. There are 2 main reasons that this is done:
@@ -76,7 +76,7 @@ static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__
 	size_t printed = 0;
 	char *cp;
 	struct tm tm_s;
-	int quiet_warn = 0;
+	ssize_t quiet_warn = 0;
 	if (traceTimeFmt == NULL)
 	{
 		/* no matter who writes, it should basically be the same thing */
@@ -158,11 +158,11 @@ static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__
 }
 
 SUPPRESS_NOT_USED_WARN
-static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
+static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, const char* function, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	vlntrace_user(tvp, TID, lvl, insert, file, line, nargs, msg, ap);
+	vlntrace_user(tvp, TID, lvl, insert, file, line, function, nargs, msg, ap);
 	va_end(ap);
 }
 
@@ -171,11 +171,11 @@ static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* 
 #	pragma GCC diagnostic ignored "-Wvarargs"
 #endif
 SUPPRESS_NOT_USED_WARN
-static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
+static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, const char* function, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	vlntrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
+	vlntrace_user(tvp, TID, lvl, insert, file, line, function, nargs, &msg[0], ap);
 	va_end(ap);
 }   /* trace */
 #if ( __GNUC__ >= 6 ) || ( __cplusplus >= 201103L )

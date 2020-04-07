@@ -23,9 +23,9 @@ char *create_ascii_msg( char *buf, size_t bufsiz )
 	// so now bufsiz must be greater than 0 (it's unsigned and can't be negative
 	for (ii=0; ii<(bufsiz-1); ++ii) {
 		if ((ii+1)%10 == 0)
-			buf[ii] = '0' + ONES((ii+1)/10);
+			buf[ii] = (char)('0' + ONES((ii+1)/10));
 		else
-			buf[ii] = '0' + ONES((ii+1));
+			buf[ii] = (char)('0' + ONES((ii+1)));
 	}
 	buf[ii]='\0';
 	return (buf);
@@ -50,7 +50,7 @@ int main( /*int argc, char *argv[]*/ )
 
 	tracePrint_cntl="";  // just message should be printed
 	msgmax=0x1800;
-	TRACE( 2, "changed tracePrint_cntl to \"\" which gets change to \"%m\" in vtrace_user");
+	TRACE( 2, "changed tracePrint_cntl to \"\" which gets changed to \"%%m\" in vtrace_user");
 	for (xx=3; xx<14; ++xx) {   // 3 would be sizeof("%m") OR strlen("%m")+1
 		msgmax=xx+22;
 		TRACE(2,"***>>>---> xx=%u <---<<<***",xx);

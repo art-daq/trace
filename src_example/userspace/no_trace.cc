@@ -29,7 +29,7 @@
 # define TRACE_MSG_MAX   0x200
 # define TARG1(a1, ...) a1
 # define TLOG(...) \
-	for(struct _S_{int once; int sts; std::string ss; std::ostringstream oss; _S_():once(0){}} _xx; \
+	for(struct _S_{int once; ssize_t sts; std::string ss; std::ostringstream oss; _S_():once(0){}} _xx; \
 		TARG1(__VA_ARGS__,need_at_least_one)<=TRACE_DEBUG_LVL && _xx.once==0; \
 		_xx.once=1,														\
 			_xx.ss=_xx.oss.str(),										\
@@ -38,10 +38,11 @@
 		_xx.oss
 # define TRACE(lvl,...) do if(lvl<=TRACE_DEBUG_LVL){ /*wrap in do...while(0) for certain 'if' syntax */ \
 							char obuf[TRACE_MSG_MAX]; \
-							int sts __attribute__((__unused__)),nn=snprintf(obuf,sizeof(obuf),__VA_ARGS__);	\
+							ssize_t sts __attribute__((__unused__)); \
+							int nn=snprintf(obuf,sizeof(obuf),__VA_ARGS__);	\
 							if(nn>=(int)sizeof(obuf)){/*truncated(but still terminated)*/ \
 								obuf[sizeof(obuf)-2]='\n';				\
-								nn=sizeof(obuf)-1;						\
+								nn=(int)sizeof(obuf)-1;					\
 							} else if(nn>0 && obuf[nn-1]!='\n' && nn==(sizeof(obuf)-1)) \
 								obuf[nn-1]='\n';						\
 							else if(nn>0 && obuf[nn-1]!='\n')					\
@@ -63,7 +64,7 @@
 int main( int argc, char *argv[] )
 {
 
-	for (struct _S_ {int once; int sts; std::string ss; std::ostringstream oss; _S_():once(0){}} _xx;
+	for (struct _S_ {int once; ssize_t sts; std::string ss; std::ostringstream oss; _S_():once(0){}} _xx;
 		 2<=2 && _xx.once==0;
 		 _xx.once=1,
 			 _xx.ss=_xx.oss.str(),
@@ -73,10 +74,11 @@ int main( int argc, char *argv[] )
 
 	if(2<=2){
 		char obuf[20];
-		int sts __attribute__((__unused__)),nn=snprintf(obuf,sizeof(obuf),"hello argc=%d",argc);
+		ssize_t sts __attribute__((__unused__));
+		int nn=snprintf(obuf,sizeof(obuf),"hello argc=%d",argc);
 		if(nn>=(int)sizeof(obuf)){/*truncated(but still terminated)*/
 			obuf[sizeof(obuf)-2]='\n';
-			nn=sizeof(obuf)-1;
+			nn=(int)sizeof(obuf)-1;
 		} else if(obuf[nn-1]!='\n' && nn==(sizeof(obuf)-1))
 			obuf[nn-1]='\n';
 		else if(obuf[nn-1]!='\n')

@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_sub3.cc,v $
- // rev="$Revision: 1168 $$Date: 2019-08-28 10:45:46 -0500 (Wed, 28 Aug 2019) $";
+ // rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
 
 #include "TRACE/trace.h"
 #include <libgen.h>				// basename
@@ -12,7 +12,7 @@
 void example_sub4( void );
 
 void example_sub3( void )
-{   int mode=TRACE_CNTL("mode");
+{   int mode=(int)TRACE_CNTL("mode");
 	TRACE( 2, "hello from example_sub3 mode=%d before calling sub4",mode );
     example_sub4();
     TLOG(2,TRACE_NAME) << "hello from example_sub3 after  calling sub4";

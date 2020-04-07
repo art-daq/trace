@@ -84,7 +84,7 @@ of the same variant of the Linux kernel and not on any one specific build.
 ###########################################################
 %package -n %{kmod_name}-utils
 Summary: Utilities for %{kmod_name} kmod
-## Requires: %{kmod_name}-kmod  ## See "Requires: -utils" in kmodtools-TRACE.sh near line 155
+## Requires: {kmod_name}-kmod  ## See "Requires: ${kmod_name}-utils" in kmodtools-TRACE.sh near line 155
 Requires: perl, bash
 
 %description -n %{kmod_name}-utils
@@ -154,6 +154,7 @@ done
 # Install utils
 %{__install} -d %{buildroot}%{_bindir}
 %{__install} %(echo build/Linux*/bin/trace_cntl) %{buildroot}%{_bindir}/trace_cntl
+%{__install} script/trace_addr2line %{buildroot}%{_bindir}/trace_addr2line
 %{__install} script/trace_delta %{buildroot}%{_bindir}/trace_delta
 %{__install} script/bitN_to_mask %{buildroot}%{_bindir}/bitN_to_mask
 %{__install} script/trace_envvars %{buildroot}%{_bindir}/trace_envvars

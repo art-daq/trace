@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
+ // rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
 
 #include <pthread.h>		/* pthread_self */
 #include <sys/time.h>		/* gettimeofday */
@@ -69,7 +69,7 @@ extern  int           optind;         /* for getopt */
         case '?': case 'h': printf(USAGE);exit(0);           break;
 	case 'n': setenv("TRACE_NAME",optarg,1);             break;
 	case 'f': setenv("TRACE_FILE",optarg,1);             break;
-	case 'x': trace_thread_option=strtoul(optarg,NULL,0);break;
+		case 'x': trace_thread_option=(int)strtoul(optarg,NULL,0);break;
         }
     }
 
@@ -78,7 +78,7 @@ extern  int           optind;         /* for getopt */
 	printf("loops set to %lu\n", loops );
     }
     if ((argc-optind)==2)
-    {   num_threads=strtoul(argv[2],NULL,0);
+    {   num_threads=(unsigned)strtoul(argv[2],NULL,0);
 	printf("num_threads set to %u\n", num_threads );
     }
     threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));

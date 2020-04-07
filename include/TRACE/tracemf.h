@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1268 $$Date: 2020-03-13 07:40:22 -0500 (Fri, 13 Mar 2020) $";
+ // rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
  */
  /**
   * \file tracemf.h
@@ -22,8 +22,8 @@
 #include <string>				// std::string
 
 #define TRACE_LOG_FUN_PROTO \
-  static void mftrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const char *msg, ...); \
-  static void mftrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, uint16_t nargs, const std::string& msg, ...)
+  static void mftrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, const char*, uint16_t nargs, const char *msg, ...); \
+  static void mftrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, const char*, uint16_t nargs, const std::string& msg, ...)
 #undef TRACE_LOG_FUNCTION
 #define TRACE_LOG_FUNCTION mftrace_user
 #include "TRACE/trace.h"		/* TRACE */
@@ -151,7 +151,7 @@ static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* in
 }
 
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const char *msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, const char* function, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -161,7 +161,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* 
 	}
 	else
 	{
-		vtrace_user(tvp, TID, lvl, insert, file, line, nargs, msg, ap); // vtrace_user does not use file, line
+		vtrace_user(tvp, TID, lvl, insert, file, line, function, nargs, msg, ap); // vtrace_user does not use file, line
 	}
 	va_end(ap);
 }
@@ -169,7 +169,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvarargs"
 SUPPRESS_NOT_USED_WARN
-static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, uint16_t nargs, const std::string& msg, ...)
+static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* insert, const char* file, int line, const char* function, uint16_t nargs, const std::string& msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
@@ -179,7 +179,7 @@ static void mftrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char* 
 	}
 	else
 	{
-		vtrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap); // vtrace_user does not use file, line
+		vtrace_user(tvp, TID, lvl, insert, file, line, function, nargs, &msg[0], ap); // vtrace_user does not use file, line
 	}
 	va_end(ap);
 }   /* trace */

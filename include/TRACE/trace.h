@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1288 $$Date: 2020-03-31 10:42:30 -0500 (Tue, 31 Mar 2020) $"
+#define TRACE_REV "$Revision: 1295 $$Date: 2020-04-03 01:18:01 -0500 (Fri, 03 Apr 2020) $"
 
 #ifndef __KERNEL__
 
@@ -277,7 +277,7 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 #endif
 
 #define LVLBITSMSK ((sizeof(uint64_t) * 8) - 1)
-#define TLVLMSK(xx) (1LL << ((xx)&LVLBITSMSK))
+#define TLVLMSK(xx) (1ULL << ((xx)&LVLBITSMSK))
 
 #define TLVL_ERROR 0
 #define TLVL_WARNING 1
@@ -333,7 +333,7 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 			{                                                                                                                         \
 				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                             \
 				{                                                                                                                     \
-					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
 				}                                                                                                                     \
 			}                                                                                                                         \
 		}                                                                                                                             \
@@ -348,7 +348,7 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 			struct timeval lclTime;                                                                                               \
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			TSBUFDECL;                                                                                                            \
-			if (tid_ == -1) tid_ = name2TID(&(nam)[0]);                                                                           \
+			if (tid_ == -1) tid_ = (int)name2TID(&(nam)[0]);			\
 			lclTime.tv_sec = 0;                                                                                                   \
 			if (traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)))                                        \
 			{                                                                                                                     \
@@ -358,7 +358,7 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 			{                                                                                                                     \
 				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                         \
 				{                                                                                                                 \
-					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
 				}                                                                                                                 \
 			}                                                                                                                     \
 		}                                                                                                                         \
@@ -393,7 +393,7 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 					{                                                                                                                                                           \
 						TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                                                               \
 						{                                                                                                                                                       \
-							TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
+							TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
 						}                                                                                                                                                       \
 					}                                                                                                                                                           \
 				}                                                                                                                                                               \
@@ -653,14 +653,14 @@ static int trace_buffer_numa_node = -1;         /* module_param */
 
 #endif /*  __KERNEL__             TRACE_IMPL  */
 
-static long traceCntl(const char *_name, int nargs, const char *cmd, ...);
-static int32_t name2TID(const char *nn);
+static int64_t traceCntl(const char *_name, int nargs, const char *cmd, ...);
+static uint32_t name2TID(const char *nn);
 #define cntlPagesSiz() ((uint32_t)sizeof(struct traceControl_s))
-#define namtblSiz(ents) (((uint32_t)sizeof(struct traceNamLvls_s) * (ents) + TRACE_CACHELINE - 1) & ~(TRACE_CACHELINE - 1))
-#define entSiz(siz_msg, num_params) (uint32_t)(sizeof(struct traceEntryHdr_s) + sizeof(uint64_t) * (num_params) /* NOTE: extra size for i686 (32bit processors) */ \
-											   + (siz_msg))
+#define namtblSiz(ents) (((uint32_t)sizeof(struct traceNamLvls_s) * (ents) + (unsigned)(TRACE_CACHELINE - 1)) & ~((unsigned)(TRACE_CACHELINE - 1)))
+#define entSiz(siz_msg, num_params) (uint32_t)(sizeof(struct traceEntryHdr_s) + sizeof(uint64_t) * (unsigned)(num_params) /* NOTE: extra size for i686 (32bit processors) */ \
+											   + (unsigned)(siz_msg))
 #define traceMemLen(siz_cntl_pages, num_namLvlTblEnts, siz_msg, num_params, num_entries) \
-	(((siz_cntl_pages) + namtblSiz(num_namLvlTblEnts) + entSiz(siz_msg, num_params) * (num_entries) + TRACE_PAGESIZE - 1) & ~(TRACE_PAGESIZE - 1))
+	(((siz_cntl_pages) + namtblSiz(num_namLvlTblEnts) + entSiz(siz_msg, num_params) * (num_entries) + (unsigned)(TRACE_PAGESIZE - 1)) & ~((unsigned)(TRACE_PAGESIZE - 1)))
 
 /* The "largest_multiple" method (using (ulong)-1) allows "easy" "add 1"
    I must do the substract (ie. add negative) by hand.
@@ -673,10 +673,10 @@ static int32_t name2TID(const char *nn);
 #if 1
 #	define IDXCNT_ADD(idxCnt, add)                                                                               \
 		(((add) < 0)                                                                                              \
-			 ? (((uint32_t) - (add) > (idxCnt))                                                                   \
-					? (traceControl_p->largest_multiple - (-(add) - (idxCnt))) % traceControl_p->largest_multiple \
-					: ((idxCnt) - (-(add))) % traceControl_p->largest_multiple)                                   \
-			 : ((idxCnt) + (add)) % traceControl_p->largest_multiple)
+		           ? (((uint32_t) - (add) > (idxCnt))					\
+				      ? (traceControl_p->largest_multiple - ((uint32_t)-(add) - (idxCnt))) % traceControl_p->largest_multiple \
+				      : ((idxCnt) - ((uint32_t)-(add))) % traceControl_p->largest_multiple)	\
+		           : ((idxCnt) + (uint32_t)(add)) % traceControl_p->largest_multiple)
 #else
 static uint32_t IDXCNT_ADD(uint32_t idxCnt, int32_t add)
 {
@@ -696,7 +696,7 @@ static uint32_t IDXCNT_ADD(uint32_t idxCnt, int32_t add)
 		 ? (cur) - (prv)       \
 		 : (cur) - (prv)-traceControl_p->largest_zero_offset)
 
-typedef void (*trace_log_function_type)(struct timeval *, int, uint8_t, const char *, const char *, int, uint16_t, const char *, ...);
+typedef void (*trace_log_function_type)(struct timeval *, int, uint8_t, const char *, const char *, int, const char *, uint16_t, const char *, ...);
 #ifndef TRACE_LOG_FUNCTION
 #	define TRACE_LOG_FUNCTION trace_user
 #elif defined(TRACE_LOG_FUN_PROTO)
@@ -778,7 +778,7 @@ static inline int limit_do_print(struct timeval *tvp, limit_info_t *info, char *
 	{
 		TRACE_GETTIMEOFDAY(tvp);
 	}
-	tnow_ms = tvp->tv_sec * 1000 + tvp->tv_usec / 1000;
+	tnow_ms = (uint64_t)(tvp->tv_sec * 1000 + tvp->tv_usec / 1000);
 	/* could lock  trace_lock( &(info->lock) );*/
 	delta_ms = tnow_ms - info->span_start_ms;
 	if (info->state == lsFREE)
@@ -866,7 +866,7 @@ static const char *trace_path_components(const char *in_cp, int n_components)
 static const char _lvlstr[64][32] = {TRACE_4_LVLSTRS, TRACE_60_LVLSTRS};
 
 SUPPRESS_NOT_USED_WARN
-static void vtrace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *insert, const char *file, int line, uint16_t nargs, const char *msg, va_list ap)
+static void vtrace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *insert, const char *file, int line, const char *function, uint16_t nargs, const char *msg, va_list ap)
 {
 	/* I format output in a local output buffer (with specific/limited size)
 	   first. There are 2 main reasons that this is done:
@@ -985,6 +985,9 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char 
 				snprintf(tbuf, sizeof(tbuf), "%s:%d", traceNamLvls_p[TrcId].name, line);
 				retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%*s", traceControl_rwp->longest_name + 1 + TRACE_LINENUM_WIDTH, tbuf); /* +1 for ':' */
 				break;
+			case 'F': /* function */
+				retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", function);
+				break;
 			case 'f': /* filename */
 				retval = snprintf(&(obuf[printed]), PRINTSIZE(printed), "%s", TRACE_ADJUST_FILE(file));
 				break;
@@ -1087,7 +1090,7 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char 
 							div = 10;
 							break;
 					}
-					useconds = (unsigned)((double)useconds / div + 0.5);  // div, round and cast back to unsigned
+					useconds = (int)((double)useconds / div + 0.5);  /* div, round and cast back to int -- FIXME: theoretically possible to have negative useconds */
 				}
 #	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
 #		pragma GCC diagnostic push
@@ -1167,11 +1170,11 @@ static void vtrace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char 
 	/*TRACE_PRN("sizeof(obuf)=%zu retval=%d msg_printed=%d printed=%zd\n",sizeof(obuf), retval, msg_printed, printed);*/
 } /* vtrace_user */
 SUPPRESS_NOT_USED_WARN
-static void trace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *insert, const char *file, int line, uint16_t nargs, const char *msg, ...)
+static void trace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *insert, const char *file, int line, const char *function, uint16_t nargs, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	vtrace_user(tvp, TrcId, lvl, insert, file, line, nargs, msg, ap);
+	vtrace_user(tvp, TrcId, lvl, insert, file, line, function, nargs, msg, ap);
 	va_end(ap);
 } /* trace_user - const char* */
 #ifdef __cplusplus
@@ -1180,11 +1183,11 @@ static void trace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *
 #		pragma GCC diagnostic ignored "-Wvarargs"
 #	endif
 SUPPRESS_NOT_USED_WARN
-static void trace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *insert, const char *file, int line, uint16_t nargs, const std::string &msg, ...)
+static void trace_user(struct timeval *tvp, int TrcId, uint8_t lvl, const char *insert, const char *file, int line, const char *function, uint16_t nargs, const std::string &msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	vtrace_user(tvp, TrcId, lvl, insert, file, line, nargs, msg.c_str(), ap);
+	vtrace_user(tvp, TrcId, lvl, insert, file, line, function, nargs, msg.c_str(), ap);
 	va_end(ap);
 } /* trace_user - std::string& */
 #	if (__cplusplus >= 201103L)
@@ -1373,7 +1376,7 @@ tod: 132348  133161
 	myEnt_p->tid = traceTid;
 #endif
 	myEnt_p->cpu = trace_getcpu(); /* for userspace, this costs alot :(*/
-	myEnt_p->linenum = line;
+	myEnt_p->linenum = (uint32_t)line;
 	myEnt_p->TrcId = trcId;
 	myEnt_p->lvl = lvl;
 	myEnt_p->nargs = nargs;
@@ -1457,8 +1460,9 @@ static void trace(struct timeval *tvp, int trcId, uint8_t lvl, int32_t line, uin
 #endif
 
 /* Search for name and insert if not found and not full
+   Returns value between 0 and traceControl_p->num_namLvlTblEnts - 1, inclusive
  */
-static int32_t name2TID(const char *nn)
+static uint32_t name2TID(const char *nn)
 {
 	uint32_t ii, len;
 	const char *name = (nn && nn[0]) ? nn : traceName;
@@ -1555,7 +1559,7 @@ static void trace_namLvlSet(void)
 		       || ((sts = sscanf(cp, "%" MM_STR(TRACE_DFLT_NAM_CHR_MAX) "s %llx", name, &S)) && sts == 2))                         //NOLINT
 			// The last case is for when TRACE will remain "inactive" (not tracing to mem and not using lvls from trace file) -- just concerned about slow path
 		{
-			int tid = name2TID(name);
+			uint32_t tid = name2TID(name);
 			/*fprintf(stderr,"name=%s tid=%d\n",name,tid );*/
 			traceNamLvls_p[tid].S = S;
 			if (sts > 2) // note: if sts==2, M will be set to S as previous sscanf will have set M; this check filters this effect out.
@@ -1667,7 +1671,7 @@ for cc in file namlvl mapped name mode lvl trig reset limit_ms; do
   find . -name \*.[ch] -o -name \*.cc | xargs grep -n "TRACE_CNTL( *\"$cc"
 done
  */
-static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
+static int64_t traceCntl(const char *_name, int nargs, const char *cmd, ...)
 {
 	long ret = 0;
 	va_list ap;
@@ -1722,7 +1726,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		char *tnam;               /* this can still be overridden by env.var. IF traceInit(TRACE_NAME,0) is called; suggest testing w. TRACE_ARGSMAX=10*/
 		tnam = va_arg(ap, char *);
 		traceName = tnam ? tnam : TRACE_DFLT_NAME; /* doing it this way allows this to be called by kernel module */
-		traceTID = name2TID(traceName);
+		traceTID = (int)name2TID(traceName);
 	}
 	else if (strncmp(cmd, "mode", 4) == 0)
 	{ /* this returns the (prv/cur) mode requested */
@@ -1815,7 +1819,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		switch (cmd[7])
 		{
 			case 'M':
-				ret = traceNamLvls_p[ii].M;
+				ret = (long)traceNamLvls_p[ii].M; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
 				for (; ii < ee; ++ii)
 				{
 					if (traceNamLvls_p[ii].name[0] && TMATCHCMP(name_spec, traceNamLvls_p[ii].name))
@@ -1825,7 +1829,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 				}
 				break;
 			case 'S':
-				ret = traceNamLvls_p[ii].S;
+				ret = (long)traceNamLvls_p[ii].S; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
 				for (; ii < ee; ++ii)
 				{
 					if (traceNamLvls_p[ii].name[0] && TMATCHCMP(name_spec, traceNamLvls_p[ii].name))
@@ -1835,7 +1839,7 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 				}
 				break;
 			case 'T':
-				ret = traceNamLvls_p[ii].T;
+				ret = (long)traceNamLvls_p[ii].T; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
 				for (; ii < ee; ++ii)
 				{
 					if (traceNamLvls_p[ii].name[0] && TMATCHCMP(name_spec, traceNamLvls_p[ii].name))
@@ -1868,7 +1872,8 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 	else if ((strncmp(cmd, "lvlmsk", 6) == 0) || (strncmp(cmd, "lvlset", 6) == 0) || (strncmp(cmd, "lvlclr", 6) == 0))
 	{ /* TAKES 1 or 3 args: lvlX or lvlM,lvlS,lvlT */
 		uint64_t lvl, lvlm, lvls, lvlt;
-		unsigned ee, doNew = 1, op;
+		unsigned ee, doNew = 1;
+		int      op;
 		if (strncmp(&cmd[3], "msk", 3) == 0)
 		{
 			op = 0;
@@ -1894,18 +1899,18 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 		}
 		else
 		{
-			ii = traceTID;
-			ee = traceTID + 1;
+			ii = (unsigned)traceTID;
+			ee = (unsigned)traceTID + 1;
 			switch (cmd[6])
 			{
 				case 'M':
-					ret = traceNamLvls_p[ii].M;
+					ret = (long)traceNamLvls_p[ii].M; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
 					break;
 				case 'S':
-					ret = traceNamLvls_p[ii].S;
+					ret = (long)traceNamLvls_p[ii].S; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
 					break;
 				case 'T':
-					ret = traceNamLvls_p[ii].T;
+					ret = (long)traceNamLvls_p[ii].T; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
 					break;
 			}
 		}
@@ -1998,7 +2003,8 @@ static long traceCntl(const char *_name, int nargs, const char *cmd, ...)
 	}
 	else if (strcmp(cmd, "reset") == 0)
 	{
-		traceControl_rwp->full = traceControl_rwp->trigIdxCnt = traceControl_rwp->trigActivePost = 0;
+		traceControl_rwp->trigIdxCnt = traceControl_rwp->trigActivePost = 0;
+		traceControl_rwp->full = 0;
 		TRACE_ATOMIC_STORE(&traceControl_rwp->wrIdxCnt, (uint32_t)0);
 		traceControl_rwp->triggered = 0;
 	}
@@ -2064,13 +2070,14 @@ static void trace_created_init(struct traceControl_s *t_p, struct traceControl_r
 	t_p->largest_multiple = (uint32_t)-1 - ((uint32_t)-1 % numents);
 	t_p->largest_zero_offset = ((uint32_t)-1 % numents) + 1; /* used in DELTA. largest_multiple+largest_zero_offset=0 (w/ rollover) */
 	t_p->num_namLvlTblEnts = namtblents;
-	t_p->memlen = memlen;
+	t_p->memlen = (uint32_t)memlen;
 
 	TRACE_ATOMIC_STORE(&t_rwp->namelock, (uint32_t)0);
 
 	/*TRACE_CNTL( "reset" );  Can't call traceCntl during Init b/c it does an INIT_CHECK and will call Init */
 	TRACE_ATOMIC_STORE(&t_rwp->wrIdxCnt, (uint32_t)0);
-	t_rwp->full = t_rwp->trigIdxCnt = t_rwp->trigActivePost = t_rwp->triggered = 0;
+	t_rwp->trigIdxCnt = t_rwp->trigActivePost = 0;
+	t_rwp->full = t_rwp->triggered = 0;
 	t_rwp->limit_span_on_ms = t_rwp->limit_span_off_ms = t_rwp->limit_cnt_limit = 0;
 
 	t_rwp->mode.mode = 0;
@@ -2280,7 +2287,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 			}
 		}
 		/*sleep(1);*/
-		*memlen = controlFirstPage_p->memlen;
+		*memlen = (int)controlFirstPage_p->memlen;
 	}
 
 	/* ??? OLD:I MUST allocate/grab a contiguous vm address space! [in testing threads (where address space
@@ -2288,7 +2295,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 	   these two calls]
 	   ???
 	   NEW: mmap from rw portion on */
-	rw_rwp = (struct traceControl_rw *)mmap(NULL, (*memlen) - TRACE_PAGESIZE, prot_flags, MAP_SHARED, fd, TRACE_PAGESIZE);
+	rw_rwp = (struct traceControl_rw *)mmap(NULL, (size_t)((*memlen) - TRACE_PAGESIZE), prot_flags, MAP_SHARED, fd, TRACE_PAGESIZE);
 	if (rw_rwp == (void *)-1)
 	{
 		perror("Error:mmap(NULL,(*memlen)-TRACE_PAGESIZE,PROT_READ[|PROT_WRITE],MAP_SHARED,fd,TRACE_PAGESIZE)");
@@ -2306,7 +2313,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 		if (controlFirstPage_p == (struct traceControl_s *)-1)
 		{
 			perror("mmap(NULL,sizeof(struct traceControl_s),PROT_READ,MAP_SHARED,fd,0) error");
-			munmap(rw_rwp, (*memlen) - TRACE_PAGESIZE);
+			munmap(rw_rwp, (size_t)((*memlen) - TRACE_PAGESIZE));
 			close(fd);
 			*tC_p = &(traceControl[0]);
 			*tC_rwp = &(traceControl[0].rw);
@@ -2321,7 +2328,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 		{
 			perror("Error:mmap(NULL,TRACE_PAGESIZE,PROT_READ," MM_STR(MM_FLAGS) ",fd,0)");
 			printf("(*memlen)=%d errno=%d\n", (*memlen), errno);
-			munmap(rw_rwp, (*memlen) - TRACE_PAGESIZE);
+			munmap(rw_rwp, (size_t)((*memlen) - TRACE_PAGESIZE));
 			close(fd);
 			*tC_p = &(traceControl[0]);
 			*tC_rwp = &(traceControl[0].rw);
@@ -2422,7 +2429,7 @@ static int traceInit(const char *_name, int allow_ro)
 			{
 				namtblents_ = 2; /* If it has been specified in the env. it should be at least 2 */
 			}
-			memlen = traceMemLen(cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_);
+			memlen = (int)traceMemLen(cntlPagesSiz(), namtblents_, msgmax_, argsmax_, numents_);
 			if ((traceControl_p_static != NULL) && (strcmp(traceFile_static, _file) == 0))
 			{
 				traceControl_p = traceControl_p_static;
@@ -2463,7 +2470,7 @@ static int traceInit(const char *_name, int allow_ro)
 		}
 	}
 
-	traceTID = name2TID(_name);
+	traceTID = (int)name2TID(_name);
 	/* Now that the critical variables
 	   (traceControl_p, traceNamLvls_p, traceEntries_p) and even traceTID are
 	   set, it's OK to indicate that the initialization is complete */
@@ -2606,19 +2613,20 @@ static inline bool trace_do_streamer( struct timeval *tvp, int *tidp, uint8_t lv
 	for (struct _T_ {unsigned once; uint8_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char ins[32]; struct timeval tv; void* stmr__; \
 	                     _T_(uint8_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info),stmr__(&__streamer){tv.tv_sec=0;} \
 						 ~_T_(){if(stmr__ != (void*)&__streamer) delete (TraceStreamer*)stmr__;} } _tlog_((uint8_t)(_lvl),TRACE_GET_STATIC()); \
-		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME)					\
+		 _tlog_.once && TRACE_INIT_CHECK(TRACE_NAME)					\
 			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?name2TID(_tlog_.nn):traceTID))!=-1))) \
 			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s); \
-		 ((TraceStreamer*)_tlog_.stmr__)->str())						\
-		*((TraceStreamer*)(_tlog_.stmr__ = (void*)&((TraceStreamer*)_tlog_.stmr__)->init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)))
+		 --_tlog_.once,((TraceStreamer*)_tlog_.stmr__)->str())			\
+		*((TraceStreamer*)(_tlog_.stmr__=(void*)&((TraceStreamer*)_tlog_.stmr__)->init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__,__LINE__,__PRETTY_FUNCTION__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)))
 #	else
 #		define TRACE_STREAMER(_lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                    \
 	for (struct _T_ {unsigned once; uint8_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char ins[32]; struct timeval tv; \
 	                     _T_(uint8_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info){tv.tv_sec=0;} } _tlog_((uint8_t)(_lvl),TRACE_GET_STATIC()); \
-		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME)					\
+		 _tlog_.once && TRACE_INIT_CHECK(TRACE_NAME)					\
 			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?name2TID(_tlog_.nn):traceTID))!=-1))) \
-			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s);) \
-		TraceStreamer().init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)
+			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s); \
+	     --_tlog_.once)																\
+		TraceStreamer().init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__,__LINE__,__PRETTY_FUNCTION__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION)
 #	endif
 
 #	define TRACE_ENDL ""
@@ -2709,6 +2717,7 @@ struct TraceStreamer : std::ios
 	const char *ins_;
 	const char *file_;
 	int line_;
+	const char *function_;
 	trace_log_function_type user_fun_ptr_;
 #	if TRACE_USE_STATIC_STREAMER == 1
 	bool inUse_;
@@ -2730,7 +2739,7 @@ public:
 	}
 
 	// use this method to return a reference (to the temporary, in its intended use)
-	inline TraceStreamer &init(int tid, uint8_t lvl, tstreamer_flags flgs, const char *file, int line,
+	inline TraceStreamer &init(int tid, uint8_t lvl, tstreamer_flags flgs, const char *file, int line, const char *function,
 	                           timeval *tvp, const char *ins, trace_log_function_type user_fun_ptr)
 	{
 #   if TRACE_USE_STATIC_STREAMER == 1
@@ -2750,6 +2759,7 @@ public:
 			ins_ = ins;
 			file_ = file;
 			line_ = line;
+			function_ = function;
 			lclTime_p = tvp;
 			user_fun_ptr_ = user_fun_ptr;
 #	if TRACE_USE_STATIC_STREAMER == 1
@@ -2761,7 +2771,7 @@ public:
 		}
 		else
 		{
-			return (new TraceStreamer())->init(tid, lvl, flgs, file, line, tvp, ins, user_fun_ptr);
+			return (new TraceStreamer())->init(tid, lvl, flgs, file, line, function, tvp, ins, user_fun_ptr);
 		}
 #   endif
 	}
@@ -2785,7 +2795,7 @@ public:
 		if (do_f)
 		{
 			if (do_m) trace(lclTime_p, tid_, lvl_, line_, 0 TRACE_XTRA_PASSED, (const char *)msg);
-			if (do_s) { (*user_fun_ptr_)(lclTime_p, tid_, lvl_, ins_, file_, line_, 0, msg); } /* can be null */
+			if (do_s) { (*user_fun_ptr_)(lclTime_p, tid_, lvl_, ins_, file_, line_, function_, 0, msg); } /* can be null */
 		}
 		else
 		{
@@ -2800,7 +2810,7 @@ public:
 #	endif
 			if (do_s)
 			{
-				(*user_fun_ptr_)(lclTime_p, tid_, lvl_, ins_, file_, line_, (uint8_t)argCount, msg, TRACE_STREAMER_EXPAND(args));
+				(*user_fun_ptr_)(lclTime_p, tid_, lvl_, ins_, file_, line_, function_, (uint8_t)argCount, msg, TRACE_STREAMER_EXPAND(args));
 			} /* can be null */
 		}
 #	if (defined(__cplusplus) && (__cplusplus >= 201103L))

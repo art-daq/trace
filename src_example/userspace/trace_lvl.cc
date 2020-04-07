@@ -48,7 +48,7 @@ main(/*  int	argc
 			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?name2TID(_tlog_.nn):traceTID))!=-1)))
 			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s);
 		 steamer.str())
-		steamer.init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION) << "hello";
+		steamer.init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, __FUNCTION__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION) << "hello";
 
 
 	int lvlx=0x107;  // testing conversion between int and uint8_t

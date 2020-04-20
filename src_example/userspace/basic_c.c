@@ -3,7 +3,7 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1.26 $$Date: 2015/08/02 00:03:01 $";
+	rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
 	*/
 
 /*#define _GNU_SOURCE*/ /* Defined by compiler flags now to kill the sched_getcpu error once and for all */

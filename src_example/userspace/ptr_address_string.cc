@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1.30 $$Date: 2016/03/01 14:27:27 $";
+ // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
 #if 0
 rm -f /tmp/trace_buffer_`whoami`
 

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
+ # rev="$Revision: 1303 $$Date: 2020-04-13 01:17:19 -0500 (Mon, 13 Apr 2020) $";
 
 # TOP LEVEL Makefile
 
@@ -55,10 +55,10 @@ clean:
 	rm -f rpm/TRACE.tar.bz2
 
 rpm_source:
-	@unclean=`svn status | wc -l`; 
 	@rm -f rpm/TRACE.tar.bz2
+	@test -d .svn && echo "Warning: .svn dir present. Make sure files are checked in."
 	@tar cf - --exclude=TRACE.tar.bz2 --exclude=.vs --exclude=*.json --exclude=.gdb_history --exclude=*~ \
-	* .svn | bzip2 > rpm/TRACE.tar.bz2
+	* | bzip2 > rpm/TRACE.tar.bz2
 srpm: rpm_source
 	@unset TRACE_FQ_DIR;\
 	rpmbuild -bs --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec

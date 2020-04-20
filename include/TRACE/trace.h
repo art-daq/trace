@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1295 $$Date: 2020-04-03 01:18:01 -0500 (Fri, 03 Apr 2020) $"
+#define TRACE_REV "$Revision: 1306 $$Date: 2020-04-19 08:41:02 -0500 (Sun, 19 Apr 2020) $"
 
 #ifndef __KERNEL__
 
@@ -366,6 +366,56 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 
 #if defined(__cplusplus)
 
+#	if defined(TRACE_STD_STRING_FORMAT)
+
+// NOTE: No delayed formatting - except for 6 (or 7): time, lvl, pid, tid, cpu, line (and tsc).
+// IIF I can figure out a _ss = fmt::vformat( msg, ap ), then I can create a static void trace_do_fmt( x,y,z, __VA_ARGS__ )
+#		define TRACEF(lvl, ...)													\
+	do                                                                                                                                \
+	{                                                                                                                                 \
+		if TRACE_INIT_CHECK(TRACE_NAME)                                                                                                  \
+		{                                                                                                                             \
+			static TRACE_THREAD_LOCAL limit_info_t _info = {/*TRACE_ATOMIC_INIT,*/ 0, lsFREE, 0}; \
+			struct timeval lclTime;                                                                                                   \
+			uint8_t lvl_ = (uint8_t)(lvl);								\
+			char _ins[32];                                                                         \
+			std::string _ss; \
+			lclTime.tv_sec = 0;                                                                                                       \
+			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[traceTID].M & TLVLMSK(lvl_)); \
+			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[traceTID].S & TLVLMSK(lvl_)) && limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
+			if (do_m || do_s) {											\
+				_ss = TRACE_STD_STRING_FORMAT( __VA_ARGS__ );						\
+				if (do_m) trace(&lclTime, traceTID, lvl_, __LINE__, 0 TRACE_XTRA_PASSED, _ss.c_str()); \
+				if (do_s) TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _ins, __FILE__, __LINE__, __func__, 0, _ss.c_str() ); \
+			}														\
+		}                                                                                                                             \
+	} while (0)
+
+#		define TRACEFN(nam, lvl, ...)                                                                                                     \
+	do                                                                                                                            \
+	{                                                                                                                             \
+		if TRACE_INIT_CHECK(TRACE_NAME)                                                                                              \
+		{                                                                                                                         \
+			static TRACE_THREAD_LOCAL int tid_ = -1;                                                                              \
+			static TRACE_THREAD_LOCAL limit_info_t _info = {/*TRACE_ATOMIC_INIT,*/ 0, lsFREE, 0}; \
+			struct timeval lclTime;                                                                                               \
+			uint8_t lvl_ = (uint8_t)(lvl);								\
+			char _ins[32];                                                                         \
+			std::string _ss; \
+			lclTime.tv_sec = 0;                                                                                                   \
+			if (tid_ == -1) tid_ = (int)name2TID(&(nam)[0]);			\
+			bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_)); \
+			bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl_)) && limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
+			if (do_m || do_s) {											\
+				_ss = TRACE_STD_STRING_FORMAT( __VA_ARGS__ );						\
+				if (do_m) trace(&lclTime, tid_, lvl_, __LINE__, 0 TRACE_XTRA_PASSED, _ss.c_str()); \
+				if (do_s) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _ins, __FILE__, __LINE__, __func__, 0, _ss.c_str() ); \
+			}														\
+		}                                                                                                                             \
+	} while (0)
+
+#	endif /* TRACE_STD_STRING_FORMAT */
+
 /* Note: This supports using a mix of stream syntax and format args, i.e: "string is " << some_str << " and float is %f", some_float
    Note also how the macro evaluates the first part (the "FMT") only once
    no matter which destination ("M" and/or "S") is active.
@@ -378,24 +428,20 @@ static const char *TRACE_PRINT__ = "%T %n %L %M"; /* Msg Limit Insert will have 
 			if TRACE_INIT_CHECK(TRACE_NAME)                                                                                                                                        \
 			{                                                                                                                                                                   \
 				static TRACE_THREAD_LOCAL int tid_ = -1;                                                                                                                        \
+				static TRACE_THREAD_LOCAL limit_info_t _info = {/*TRACE_ATOMIC_INIT,*/ 0, lsFREE, 0}; \
 				struct timeval lclTime;                                                                                                                                         \
 				uint8_t lvl_ = (uint8_t)(lvl);							\
+				char _ins[32];											\
 				if (tid_ == -1) tid_ = name2TID(&(nam)[0]);                                                                                                                     \
 				lclTime.tv_sec = 0;                                                                                                                                             \
 				bool do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl_));                                                                          \
-				bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl_));                                                                          \
+				bool do_s = traceControl_rwp->mode.bits.S && (traceNamLvls_p[tid_].S & TLVLMSK(lvl_)) && limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
 				if (do_s || do_m)                                                                                                                                               \
 				{                                                                                                                                                               \
 					std::ostringstream ostr__; /*instance creation is heavy weight*/                                                                                            \
 					ostr__ << TRACE_ARGS_FMT(__VA_ARGS__, xx);                                                                                                                  \
 					if (do_m) trace(&lclTime, tid_, lvl_, __LINE__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__));                     \
-					if (do_s)                                                                                                                                                   \
-					{                                                                                                                                                           \
-						TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime)                                                                                                               \
-						{                                                                                                                                                       \
-							TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
-						}                                                                                                                                                       \
-					}                                                                                                                                                           \
+					if (do_s) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _ins, __FILE__, __LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
 				}                                                                                                                                                               \
 			}                                                                                                                                                                   \
 		} while (0)

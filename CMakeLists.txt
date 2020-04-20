@@ -4,6 +4,8 @@
 #  cd .../path/to/build/directory
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
+#
+# $Revision: 1303 $$Date: 2020-04-13 01:17:19 -0500 (Mon, 13 Apr 2020) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 

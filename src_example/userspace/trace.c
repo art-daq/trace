@@ -3,9 +3,11 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: trace.c,v $
-	rev="$Revision: 1.3 $$Date: 2020/03/30 17:38:21 $";
+	rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
 
-gcc -c trace.c
+   gcc -c trace.c
+OR
+   gcc -fPIC -c trace.c
 
 Use with trace-addr2line.
 Example (with simple exe program "one_string_on_function_call.cc"):

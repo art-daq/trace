@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: TLOG_manipulators.cc,v $
- // rev="$Revision: 1.1 $$Date: 2019/07/18 15:28:45 $";
+ // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
 /*
 rm -fr Linux*; \
 make OUT=$PWD\

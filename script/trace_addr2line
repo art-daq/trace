@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_addr2line,v $
- # rev="$Revision: 1.4 $$Date: 2020/03/30 17:37:01 $";
+ # rev="$Revision: 1.7 $$Date: 2020/04/13 03:22:09 $";
 
 def_filter='lambda\()'
 opt_filter=$def_filter
@@ -49,13 +49,15 @@ fi
 addr2line_opts=-C
 
 while IFS= read -r line;do
-    cyg_profile=`echo "$line" | sed -n '/cyg_profile dbg/{s/.*cyg_profile dbg . //;p}'`
+    cyg_profile=`echo "$line" | sed -n '/cyg_profile[^ ]* dbg/{s/.*cyg_profile[^ ]* dbg . //;p}'` # cyg_profile may or may not have :ln_num
     if [ -n "$cyg_profile" ];then
-        pre=`echo "$line" | sed 's/cyg_profile dbg \([.0-9]* \)[ex] .*/cyg_profile dbg \1/'`
+        pre=`echo "$line" | sed 's/cyg_profile\([^ ]*\) dbg \([.0-9]* \)[ex] .*/cyg_profile\1 dbg \2/'`
         read LINETYPE FADDR CADDR <<EOF
 $cyg_profile
 EOF
         FNAME="$(addr2line $addr2line_opts -f -e ${EXECUTABLE} ${FADDR}|head -1)"
+        #test "$FNAME" = "??" && FNAME="$(addr2line $addr2line_opts -j .text -f -e ${EXECUTABLE} ${FADDR}|head -1)"
+        #test "$FNAME" = "??" && FNAME="addr:$FADDR"
         test -n "$opt_filter" && { echo "$FNAME" | grep -Eq "$opt_filter" && continue; }
         if test "${LINETYPE}" = "e";then
 	    CNAME="$(addr2line $addr2line_opts -f -e ${EXECUTABLE} ${CADDR}|head -1)"

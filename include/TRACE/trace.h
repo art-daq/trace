@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1414 $$Date: 2020-10-19 16:01:31 -0500 (Mon, 19 Oct 2020) $"
+#define TRACE_REV "$Revision: 1416 $$Date: 2020-10-19 18:50:29 -0500 (Mon, 19 Oct 2020) $"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,7 +15,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1414 $_$Date: 2020-10-19 16:01:31 -0500 (Mon, 19 Oct 2020) $
+#define TRACE_REVx $_$Revision: 1416 $_$Date: 2020-10-19 18:50:29 -0500 (Mon, 19 Oct 2020) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -967,6 +967,11 @@ static const char *trace_name(const char *TNAME, const char *file, char *buf, si
 					buf[oo++]= *name;
 					name+= 2;
 				} else if (*(name + 1) == 'f') {
+#	if __GNUC__ >= 8
+#		pragma GCC diagnostic push
+					// With -O3, I get warnings. I do not get warning if -O2 or -O0
+#		pragma GCC diagnostic ignored "-Wstringop-truncation"
+#	endif
 					strncpy(&buf[oo], file, buflen - oo - 1);
 					oo+= TRACE_MIN(buflen - oo - 1, strlen(file));
 					name+= 2;
@@ -979,11 +984,6 @@ static const char *trace_name(const char *TNAME, const char *file, char *buf, si
 					} else
 						ll= strlen(file);
 					min = TRACE_MIN(buflen - oo - 1, ll);
-#	if __GNUC__ >= 8
-#		pragma GCC diagnostic push
-					// With -O3, I get warnings. I do not get warning if -O2 or -O0
-#		pragma GCC diagnostic ignored "-Wstringop-truncation"
-#	endif
 					strncpy(&buf[oo], file, min);
 					oo+= min;//TRACE_MIN(buflen - oo - 1, ll);
 					name+= 3;
@@ -998,14 +998,14 @@ static const char *trace_name(const char *TNAME, const char *file, char *buf, si
 						ll= strlen(ff);
 					min = TRACE_MIN(buflen - oo - 1, ll);
 					strncpy(&buf[oo], ff, min);
-#	if __GNUC__ >= 10
-#		pragma GCC diagnostic pop
-#	endif
 					oo+= min;//TRACE_MIN(buflen - oo - 1, ll);
 					name+= 4;
 				} else if (*(name + 1) >= '0' && *(name + 1) <= '9' && *(name + 2) == 'f') {
 					const char *ff= trace_path_components(file, *(name + 1) - '0');
 					strncpy(&buf[oo], ff, buflen - oo - 1);
+#	if __GNUC__ >= 8
+#		pragma GCC diagnostic pop
+#	endif
 					oo+= TRACE_MIN(buflen - oo - 1, strlen(ff));
 					name+= 3;
 /*#	define TRACE_DO__PROGNAME*/

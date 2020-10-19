@@ -3,9 +3,19 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+ // rev="$Revision: 1398 $$Date: 2020-10-01 22:44:25 -0500 (Thu, 01 Oct 2020) $";
 
-// demonstrate the 21 delayable types plus 1 custome delayable 
+// demonstrate the 21 delayable types plus 1 custome delayable
+/*
+# simple:
+TRACE_LVLS=-1 TLOG_types
+
+# fast/mem:
+export TRACE_FILE=/tmp/trace_buffer_${USER}_types;\
+rm -f $TRACE_FILE;\
+TLOG_types;\
+tshow|tdelta -ct 1 -d 1
+*/
 #include "TRACE/trace.h"		// TLOG
 
 struct myObj {
@@ -30,7 +40,15 @@ struct myObj2 {
 		return os;
 	}
 	operator std::string() {
+#		if defined(__cplusplus) && (__cplusplus >= 201103L)
 		return std::string("X: ")+std::to_string(x)+ " Y: "+std::to_string(y);
+#		else
+		char buf[20];
+		sprintf(buf,"%d", x);
+		std::string xstr(buf);
+		sprintf(buf,"%d", y);
+		return std::string("X: ") + xstr + " Y: "+std::string(buf);
+#		endif
 	}
 };
 
@@ -57,9 +75,9 @@ int main()
 	std::atomic<unsigned long> xx17(17);TLOG(TLVL_DEBUG) << "17 std::atomic<unsigned long> const &r " << xx17;
 	std::atomic<short int> xx18(18);    TLOG(TLVL_DEBUG) << "18 std::atomic<short int> const &r " << xx18;
 	std::atomic<bool> xx19(true);       TLOG(TLVL_DEBUG) << "19 std::atomic<bool> const &r " << xx19;
-#   endif
 	std::unique_ptr<std::string> xx20(new std::string("hi"));
 	                                    TLOG(TLVL_DEBUG) << "20 std::unique_ptr<T> const &r " << xx20;
+#   endif
 	void *xx21=(void*)0xffff1234;       TLOG(TLVL_DEBUG) << "21 void *const  &r " << xx21;
 
 	myObj xx22={1,2};                   TLOG(TLVL_DEBUG) << "22 myObj " << xx22;

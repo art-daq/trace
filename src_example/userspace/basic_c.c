@@ -3,9 +3,13 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+	rev="$Revision: 1398 $$Date: 2020-10-01 22:44:25 -0500 (Thu, 01 Oct 2020) $";
 	*/
-
+/*
+    # Just:
+    basic_c
+    basic_c | grep 'before OK' && basic_c | grep 'after OK' && echo ALL OK || echo 'all NOT OK!!!!!'
+ */
 /*#define _GNU_SOURCE*/ /* Defined by compiler flags now to kill the sched_getcpu error once and for all */
 #include <stdio.h>		/* printf */
 struct basic_c_s

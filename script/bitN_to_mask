@@ -4,7 +4,20 @@
 # or COPYING file. If you do not have such a file, one can be obtained by
 # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 # $RCSfile: bitN_to_mask,v $
-# rev="$Revision: 788 $$Date: 2018-01-14 14:01:50 -0600 (Sun, 14 Jan 2018) $";
+# rev="$Revision: 1348 $$Date: 2020-08-23 15:55:43 -0500 (Sun, 23 Aug 2020) $";
+
+# debug with, e.g.: sh -x bitN_to_mask jones,d04-d04+9
+#        test with: TLVL_JONES=3 bitN_to_mask jones,d04-d04+9,jack
+
+USAGE="\
+   usage: `basename $0` <levels_expr>
+examples: `basename $0` 0-63
+          `basename $0` debug+1-debug+8, debug+12-debug+13
+"
+
+# NOTE: these should match values in trace.h
+#dflt_lvlstrs=err,wrn,nfo,dbg,d04
+dflt_lvlstrs=fatal,alert,crit,error,warn,notice,info,log,debug,dbg01
 
 bitN_to_mask()
 {
@@ -13,15 +26,50 @@ bitN_to_mask()
     while [ -n "${1+x}" ];do
         op=$1;shift
         case "$op" in
-        -f*) eval $op1arg; opts="${opts:+$opts }-f$1"; shift;;
-        -n*) eval $op1arg; opts="${opts:+$opts }-n$1"; shift;;
-        -N*) eval $op1arg; opts="${opts:+$opts }-N$1"; shift;;
+        -f*) eval $op1arg; opts="${opts:+$opts }-f$1"; shift;; # pass -f (TRACE_FILE) option 
+        -n*) eval $op1arg; opts="${opts:+$opts }-n$1"; shift;; # pass -n (TRACE_NAME) option
+        -N*) eval $op1arg; opts="${opts:+$opts }-N$1"; shift;; # pass -N (wildcard name) option
         *)  xx=`echo "$op" | sed -e "s/'/'\"'\"'/g"`; args="${args-} '$xx'";;
         esac
     done
     eval set -- ${args-} \"\$@\"; unset op args xx
 
     spec=$*
+
+    # NOTE: these should match values in trace.h
+    test -z "$TLVL_FATAL"   && export TLVL_FATAL=0
+    test -z "$TLVL_ERROR"   && export TLVL_ERROR=3
+    test -z "$TLVL_WARNING" && export TLVL_WARNING=4
+    test -z "$TLVL_INFO"    && export TLVL_INFO=6
+    test -z "$TLVL_LOG"     && export TLVL_LOG=7
+    test -z "$TLVL_DEBUG"   && export TLVL_DEBUG=8
+    test -z "$TLVL_TRACE"   && export TLVL_TRACE=9
+
+    # any TLVL_blah=N will allow "blah" to be used in bitN_to_mask expression
+    for ev in `env | grep -o '^TLVL_[^=]*'`;do  # big expe
+        tkn=`expr $ev : 'TLVL_\(.*\)' | tr [A-Z] [a-z]`    # get lower case "fatal","error","warning",etc
+        eval "evv=\$$ev"
+        test -n "$evv" && sedcmd="${sedcmd+$sedcmd; }s/$tkn/$evv/gi" # use the "i" flag for case insensitive
+    done
+
+    # See also TRACE_LVLSTRS processing in trace.h
+    test -n "$TRACE_LVLSTRS" && lvlstrs=$TRACE_LVLSTRS || lvlstrs=$dflt_lvlstrs
+    dIdx=0
+    for lvlidx in `seq 0 63`;do
+        field=`expr $lvlidx + 1`
+        lstr=`echo $lvlstrs | cut -d, -f$field` 
+        if [ -n "$lstr" ];then
+            dIdx=`expr "$lstr" : 'd\([0-9]*\)'`
+        else
+            dIdx=`expr $dIdx + 1`
+            lstr=`printf "d%02u" $dIdx`
+        fi
+        sedcmd="$sedcmd; s/$lstr/$lvlidx/gi" # use the "i" flag for case insensitive
+        #echo lvlidx=$lvlidx dIdx=$dIdx lstr=$lstr spec=$spec
+    done
+
+    spec=`echo $spec | sed "$sedcmd"`
+
     prev=
     while [ "x$spec" != "x$prev" ];do
         prev=$spec
@@ -30,9 +78,12 @@ bitN_to_mask()
     spec=`echo $spec | sed 's/ //g'`  # git rid of spaces (ie. "4- 7" -> "4-7"
     rr=
     for xx in `echo $spec | sed 's/,/ /g'`;do
-        start=`expr "$xx" : '\([^-]*\)'`
-        end=`expr "$xx" : '[^-]*-\(.*\)'`; test -z "$end" && end=$start
+        star=`expr "$xx" : '\([^-]*\)'`
+        start=`perl -e "print $star"`    # evaluate potential '+'
+        test -z "$start" && { echo Warning: unknown level: $star >&2; continue; }
+        end=`expr "$xx" : '[^-]*-\(.*\)'`; test -z "$end" && end=$start || end=`perl -e "print $end"`    # evaluate potential '+'
         test $start -le $end && inc=1 || inc=-1
+        #echo start=$start inc=$inc end=$end
         for ii in `seq $start $inc $end`; do rr="${rr:+$rr }$ii"; done
     done
     test -n "$opts" && printf -- "$opts "

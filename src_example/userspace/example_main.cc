@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: example_main.cc,v $
- // rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
+ // rev="$Revision: 1385 $$Date: 2020-09-25 13:58:09 -0500 (Fri, 25 Sep 2020) $";
 
 #include <pthread.h>		/* pthread_self */
 #include <sys/time.h>		/* gettimeofday */
@@ -42,10 +42,10 @@ void* thread_func(void *arg)
 
     gettimeofday( &mark, NULL );
     while(loops-- > 0)
-    {   TRACE( 0, "loops=%ld", loops );
+    {   TRACE( TLVL_INFO, "loops=%ld", loops );
 	example_sub1();
     }
-    TRACE( 1, "mark: %ld%06ld", mark.tv_sec, (long)mark.tv_usec );
+    TRACE( TLVL_LOG, "mark: %ld%06ld", mark.tv_sec, (long)mark.tv_usec );
 
     pthread_exit(NULL);
 }
@@ -82,7 +82,7 @@ extern  int           optind;         /* for getopt */
 	printf("num_threads set to %u\n", num_threads );
     }
     threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
-    TRACE( 0, "example_main calling example" );
+    TRACE( TLVL_INFO, "example_main calling example" );
     for (ii=0; ii<num_threads; ii++)
     {
 	if (loops == num_threads)
@@ -94,7 +94,7 @@ extern  int           optind;         /* for getopt */
     {   pthread_join(threads[ii], NULL);
     }
 
-    TRACE( 0, "back to example_main" );
+    TRACE( TLVL_INFO, "back to example_main" );
     free( threads );
     return (0);
 }   // main

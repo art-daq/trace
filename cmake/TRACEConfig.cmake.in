@@ -1,22 +1,53 @@
-@PACKAGE_INIT@
 
-#include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
-# Create imported target TRACE::TRACE
-#add_library(TRACE::TRACE INTERFACE IMPORTED)
+####### Expanded from @PACKAGE_INIT@ by configure_package_config_file() #######
+####### Any changes to this file will be overwritten by the next CMake run ####
+####### The input file was TRACEConfig.cmake.in                            ########
 
-# Compute the installation prefix relative to this file.
-get_filename_component(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)
-#get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
-#get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
-#get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)
-if(_IMPORT_PREFIX STREQUAL "/")
-  set(_IMPORT_PREFIX "")
+get_filename_component(PACKAGE_PREFIX_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../" ABSOLUTE)
+
+macro(set_and_check _var _file)
+  set(${_var} "${_file}")
+  if(NOT EXISTS "${_file}")
+    message(FATAL_ERROR "File or directory ${_file} referenced by variable ${_var} does not exist !")
+  endif()
+endmacro()
+
+macro(check_required_components _NAME)
+  foreach(comp ${${_NAME}_FIND_COMPONENTS})
+    if(NOT ${_NAME}_${comp}_FOUND)
+      if(${_NAME}_FIND_REQUIRED_${comp})
+        set(${_NAME}_FOUND FALSE)
+      endif()
+    endif()
+  endforeach()
+endmacro()
+
+####################################################################################
+
+if (EXISTS "${PACKAGE_PREFIX_DIR}/include")
+  set(TRACE_inc_dir "${PACKAGE_PREFIX_DIR}/include")
+endif()
+if (EXISTS "${PACKAGE_PREFIX_DIR}/sl7.x86_64/lib")
+  set(TRACE_lib_dir "${PACKAGE_PREFIX_DIR}/sl7.x86_64/lib")
+endif()
+if (EXISTS "${PACKAGE_PREFIX_DIR}/sl7.x86_64/bin")
+  set(TRACE_bin_dir "${PACKAGE_PREFIX_DIR}/sl7.x86_64/bin")
+endif()
+if (EXISTS "${PACKAGE_PREFIX_DIR}/Modules")
+  set(TRACE_modules_dir "${PACKAGE_PREFIX_DIR}/Modules")
+endif()
+if (EXISTS "${PACKAGE_PREFIX_DIR}/test")
+  set(TRACE_test_dir "${PACKAGE_PREFIX_DIR}/test")
 endif()
 
-#set_target_properties(TRACE PROPERTIES
-#  INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/include"
-#)
-include_directories("${_IMPORT_PREFIX}/include")
+if (IS_DIRECTORY "${TRACE_modules_dir}")
+  list(APPEND CMAKE_MODULE_PATH "${TRACE_modules_dir}")
+endif()
 
+if (IS_DIRECTORY "${TRACE_inc_dir}")
+  include_directories(${TRACE_inc_dir})
+endif()
 
-check_required_components("@PROJECT_NAME@")
+## find_library directives
+
+check_required_components(TRACE)

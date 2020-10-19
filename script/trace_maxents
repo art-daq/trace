@@ -8,8 +8,10 @@
 
 
 USAGE="\
-   usage: `basename $0`
+   usage: `basename $0` [-a<args>] [-m<msgmax>] [-n<namtblents>] [-v]
 examples: `basename $0` -a10
+          rm -f /tmp/trace_buffer_\$USER; eval \`trace_maxents\` tinfo
+Attempt to determine the maximum possible entries when creating a trace_buffer file.
 "
 VUSAGE=""
 
@@ -51,7 +53,7 @@ test -n "$opt_names"  && export TRACE_NAMTBLENTS=$opt_names
 test -n "$opt_args"   && export TRACE_ARGSMAX=$opt_args
 test -n "$opt_msgmax" && export TRACE_MSGMAX=$opt_msgmax
 
-export TRACE_FILE=/tmp/xxx
+export TRACE_FILE=`mktemp`
 rm -f $TRACE_FILE
 
 export TRACE_NUMENTS
@@ -64,7 +66,7 @@ while true;do
     #echo trying $try_ents
     if TRACE_NUMENTS=$try_ents trace_cntl mapped 2>/dev/null;then
 	entry_size=`trace_cntl info | awk '/entry_size/{print$3}'`
-        test $opt_v -ge 1 && printf '%7d good - entry_size=%d\n' $try_ents $entry_size
+        test $opt_v -ge 1 && printf '%7d good - entry_size=%d\n' $try_ents $entry_size >&2
 	if [ -n "$prv_bad" ];then
             # good with higher prv_bad
 	    prv_good=$try_ents try_ents=`expr \( $try_ents + $prv_bad \) / 2`
@@ -87,4 +89,6 @@ while true;do
     #sleep .5
 done
 rm -f $TRACE_FILE
-echo "try: TRACE_NUMENTS=$try_ents${opt_args:+ TRACE_ARGSMAX=$opt_args}${opt_msgmax:+ TRACE_MSGMAX=$opt_msgmax} # entry_size=$entry_size"
+echo "TRACE_NUMENTS=$try_ents${opt_args:+ TRACE_ARGSMAX=$opt_args}\
+${opt_msgmax:+ TRACE_MSGMAX=$opt_msgmax}"
+test $opt_v -ge 1 && echo entry_size=$entry_size >&2

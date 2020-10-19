@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+ // rev="$Revision: 1370 $$Date: 2020-09-19 15:20:46 -0500 (Sat, 19 Sep 2020) $";
 
 // A module that just has a single TRACE
 // Simple to compile and look at assemble
@@ -12,5 +12,5 @@
 
 void example_sub_( void )
 {
-    TRACE( 0, "hello from example_sub_" ); // module with single simply TRACE
+    TRACE( TLVL_INFO, "hello from example_sub_" ); // module with single simple TRACE
 }

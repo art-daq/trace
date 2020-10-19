@@ -3,16 +3,24 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+	rev="$Revision: 1398 $$Date: 2020-10-01 22:44:25 -0500 (Thu, 01 Oct 2020) $";
 	*/
 /*
- compile:
-   cd src_example/userspace
+ This is a test program. It checks that the trace Process ID and Thread ID
+ saved in the memory buffer are correct. This is done by tracing the PID
+ and TID as parameters in the trace message and then checking to make sure
+ they match the tid and pid printed in the trace show output.
+# compile (if not already done):
+   cd src_example/userspace # or appropriate
+   # you may need to set TRACE_{INC,BIN} 
    gcc -g -Wall -I$TRACE_INC -std=c11 -o $TRACE_BIN/pid_test pid_test.c -lpthread 2>&1 | head -22
+# run:
    treset;strace -f -e getpid,gettid pid_test
+# check:
    tshow | awk '/mypid/{tpid=$3;mypid=gensub(".*mypid: ([0-9]*).*","\\1",1);
  if(tpid!=mypid){print"No good at ",$1;nogood=1;exit}}
 END{if(!nogood)print"ALL OK"}'
+
 */
 #define USAGE "\
   usage: %s [options]\n\

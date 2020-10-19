@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1264 $$Date: 2020-03-04 01:34:56 -0600 (Wed, 04 Mar 2020) $";
+    rev="$Revision: 1365 $$Date: 2020-09-16 00:00:31 -0500 (Wed, 16 Sep 2020) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -32,16 +32,6 @@
 #else
 # define REGISTER_NULL_ARG
 #endif
-
-EXPORT_SYMBOL_GPL( traceControl_p );
-EXPORT_SYMBOL_GPL( traceControl_rwp );
-EXPORT_SYMBOL_GPL( traceEntries_p );
-EXPORT_SYMBOL_GPL( traceNamLvls_p );
-EXPORT_SYMBOL_GPL( trace_allow_printk );
-EXPORT_SYMBOL_GPL( tracePrint_cntl );
-EXPORT_SYMBOL_GPL( trace_print );
-EXPORT_SYMBOL_GPL( trace_lvlS );
-EXPORT_SYMBOL_GPL( trace_lvlM );
 
 #ifdef MODULE
 // ls /sys/module/TRACE/parameters
@@ -244,6 +234,12 @@ static ssize_t trace_proc_buffer_read( struct file *fil, char __user *dst_p
 }
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0)
+static struct proc_ops        trace_proc_buffer_file_ops = {
+	.proc_read=trace_proc_buffer_read,	/* read         */
+	.proc_mmap=trace_proc_buffer_mmap,   /* mmap         */
+};
+#else
 static struct file_operations trace_proc_buffer_file_ops = {
     .owner=   THIS_MODULE,
     .llseek=  NULL,           		/* lseek        */
@@ -268,6 +264,7 @@ static struct file_operations trace_proc_buffer_file_ops = {
                            	/* revalidate   */
                            	/* lock         */
 };
+#endif
 
 
 static struct proc_dir_entry *trace_proc_root=NULL;
@@ -344,7 +341,7 @@ static void trace_proc_remove( void )
 // =========================================================================
 
 /* based on code in kernel/trace/trace_sched_switch.c */
-static void my_trace_sched_switch_hook(
+static void _sched_switch_hook(
 # if   LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
 									   void *ignore, bool preempt
 # elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
@@ -355,12 +352,12 @@ static void my_trace_sched_switch_hook(
 				       , struct task_struct *prev
 				       , struct task_struct *next )
 {
-	TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
+	TRACE( 31, "cpu=%d prev=%d next=%d", raw_smp_processor_id(), prev->pid, next->pid );
 	//TRACE( 31, "schedule: cpu=%d prev=%d next=%d", raw_smp_processor_id(), task_pid_nr(prev), task_pid_nr(next) );
 	//TRACE( 31, "schedule: cpu=%d prev=%p next=%p", raw_smp_processor_id(), prev, next );
-}   // my_trace_sched_switch_hook
+}   // _sched_switch_hook
 
-static void my_trace_hirq_enter(
+static void _hirq_enter(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 				void *new,
 # endif
@@ -369,12 +366,12 @@ static void my_trace_hirq_enter(
 {
         // comment out since I don't use action ptr. unsigned long flags;
         //local_irq_save(flags);
-	TRACE( 29, "hirqenter: cpu=%d irq=%d"
+	TRACE( 29, "cpu=%d irq=%d"
 	      , raw_smp_processor_id(), irq );
         //local_irq_restore(flags);
 }   // my_trace_irq_enter
 
-static void my_trace_hirq_exit(
+static void _hirq_exit(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 			       void *new,
 # endif
@@ -383,13 +380,13 @@ static void my_trace_hirq_exit(
 {
 	// comment out since I don't use action ptr. unsigned long flags;
 	//local_irq_save(flags);
-	TRACE( 30, "hirqexit: cpu=%d irq=%d ret=%d"
+	TRACE( 30, "cpu=%d irq=%d ret=%d"
 	      , raw_smp_processor_id(), irq, ret );
         //local_irq_restore(flags);
 }   // my_trace_irq_exit
 
 struct softirq_action { void (*action)(struct softirq_action *); };
-static void my_trace_sirq_enter(
+static void _sirq_enter(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 				void *new,
 				unsigned int vec_nr )
@@ -399,10 +396,10 @@ static void my_trace_sirq_enter(
 				struct softirq_action *y )
 {	unsigned int vec_nr = x - y;
 # endif
-	TRACE( 27,"sirqenter: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
-}   // my_trace_sirq_enter
+	TRACE( 27,"cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
+}   // _sirq_enter
 
-static void my_trace_sirq_exit(
+static void _sirq_exit(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 			       void *new,
 				unsigned int vec_nr )
@@ -412,11 +409,11 @@ static void my_trace_sirq_exit(
 			       struct softirq_action *y )
 {	unsigned int vec_nr = x - y;
 # endif
-	TRACE( 28,"sirqexit: cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
-}   // my_trace_sirq_exit
+	TRACE( 28,"cpu=%d vec_nr=%u",raw_smp_processor_id(),vec_nr );
+}   // _sirq_exit
 
 // Ref. kernel/trace/trace_syscalls.c:void ftrace_syscall_enter(void *ignore, struct pt_regs *regs, long id)
-static void my_trace_sys_enter(
+static void _sys_enter(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 			       void *ignore,
 # endif
@@ -429,13 +426,13 @@ static void my_trace_sys_enter(
                 return;
 
 	if (syscall_nr == id)
-	    TRACE( 25, "sysenter: cpu=%d syscall=%ld", raw_smp_processor_id(), id );
+	    TRACE( 25, "cpu=%d syscall=%ld", raw_smp_processor_id(), id );
 	else
-	    TRACE( 25, "sysenter: cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
+	    TRACE( 25, "cpu=%d syscall=%d id=%ld", raw_smp_processor_id(), syscall_nr, id );
 
-}   // my_trace_sys_enter
+}   // _sys_enter
 
-static void my_trace_sys_exit(
+static void _sys_exit(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 			       void *ignore,
 # endif
@@ -450,14 +447,14 @@ static void my_trace_sys_exit(
 
 	syscall_ret=syscall_get_return_value(current, regs);
 	if (syscall_ret == ret)
-	    TRACE( 26, "sys_exit: cpu=%d syscall=%d ret=0x%lx (%ld)"
+	    TRACE( 26, "cpu=%d syscall=%d ret=0x%lx (%ld)"
 		  , raw_smp_processor_id(), syscall_nr, ret, ret );
 	else
-	    TRACE( 26, "sys_exit: cpu=%d syscall=%d ret=0x%lx (%ld), 0x%lx (%ld)"
+	    TRACE( 26, "cpu=%d syscall=%d ret=0x%lx (%ld), 0x%lx (%ld)"
 		  , raw_smp_processor_id(), syscall_nr
 		  , syscall_ret, syscall_ret, ret, ret );
 
-}   // my_trace_sys_exit
+}   // _sys_exit
 
 
 // ---------------------------------------------------------------------------
@@ -467,23 +464,23 @@ static void regfunc(struct tracepoint *tp, void *priv)
         int *ret = priv;
 	*ret=0;
 	if      (strcmp(tp->name,"sched_switch") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_sched_switch_hook, NULL );
+	    *ret = tracepoint_probe_register( tp, _sched_switch_hook, NULL );
 		printk("TRACE tracepoint_probe_register sched_switch returned %d\n", *ret );
 	}
 	else if (strcmp(tp->name,"irq_handler_entry") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_hirq_enter, NULL );
+	    *ret = tracepoint_probe_register( tp, _hirq_enter, NULL );
 		printk("TRACE tracepoint_probe_register irq_handler_entry returned %d\n", *ret );
 	}
 	else if (strcmp(tp->name,"irq_handler_exit") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_hirq_exit, NULL );
+	    *ret = tracepoint_probe_register( tp, _hirq_exit, NULL );
 		printk("TRACE tracepoint_probe_register irq_handler_exit returned %d\n", *ret );
 	}
 	else if (strcmp(tp->name,"softirq_entry") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_sirq_enter, NULL );
+	    *ret = tracepoint_probe_register( tp, _sirq_enter, NULL );
 		printk("TRACE tracepoint_probe_register softirq_entry returned %d\n", *ret );
 	}
 	else if (strcmp(tp->name,"softirq_exit") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_sirq_exit, NULL );
+	    *ret = tracepoint_probe_register( tp, _sirq_exit, NULL );
 		printk("TRACE tracepoint_probe_register softirq_exit returned %d\n", *ret );
 	}
     /* for some reason, registering these early in boot (at the end of
@@ -491,11 +488,11 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	   (doesn't do any syscall tracing even when apparently enabled).
 	   Solution - call later - at the beginning of init/main.c:kernel_init */
 	else if (strcmp(tp->name,"sys_enter") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_sys_enter, NULL );
+	    *ret = tracepoint_probe_register( tp, _sys_enter, NULL );
 		printk("TRACE tracepoint_probe_register sys_enter returned %d\n", *ret );
 	}
 	else if (strcmp(tp->name,"sys_exit") == 0) {
-	    *ret = tracepoint_probe_register( tp, my_trace_sys_exit, NULL );
+	    *ret = tracepoint_probe_register( tp, _sys_exit, NULL );
 		printk("TRACE tracepoint_probe_register sys_exit returned %d\n", *ret );
 	}
 }
@@ -503,19 +500,19 @@ static void regfunc(struct tracepoint *tp, void *priv)
 static void unregfunc(struct tracepoint *tp, void *ignore)
 {
 	if      (strcmp(tp->name,"sched_switch") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_sched_switch_hook, NULL );
+	    tracepoint_probe_unregister( tp, _sched_switch_hook, NULL );
 	else if (strcmp(tp->name,"irq_handler_entry") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_hirq_enter, NULL );
+	    tracepoint_probe_unregister( tp, _hirq_enter, NULL );
 	else if (strcmp(tp->name,"irq_handler_exit") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_hirq_exit, NULL );
+	    tracepoint_probe_unregister( tp, _hirq_exit, NULL );
 	else if (strcmp(tp->name,"softirq_entry") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_sirq_enter, NULL );
+	    tracepoint_probe_unregister( tp, _sirq_enter, NULL );
 	else if (strcmp(tp->name,"softirq_exit") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_sirq_exit, NULL );
+	    tracepoint_probe_unregister( tp, _sirq_exit, NULL );
 	else if (strcmp(tp->name,"sys_enter") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_sys_enter, NULL );
+	    tracepoint_probe_unregister( tp, _sys_enter, NULL );
 	else if (strcmp(tp->name,"sys_exit") == 0)
-	    tracepoint_probe_unregister( tp, my_trace_sys_exit, NULL );
+	    tracepoint_probe_unregister( tp, _sys_exit, NULL );
 }
 # endif
 #endif
@@ -527,32 +524,32 @@ int  trace_3_sched_switch_hook_add( void )
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
 	for_each_kernel_tracepoint(regfunc, &err);
 # else
-    err = register_trace_sched_switch( my_trace_sched_switch_hook 
+    err = register_trace_sched_switch( _sched_switch_hook 
                                       REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sched returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_irq_handler_entry( my_trace_hirq_enter REGISTER_NULL_ARG );
+    err = register_trace_irq_handler_entry( _hirq_enter REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: hirq_entry returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_irq_handler_exit( my_trace_hirq_exit REGISTER_NULL_ARG );
+    err = register_trace_irq_handler_exit( _hirq_exit REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: hirq_exit returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_softirq_entry( my_trace_sirq_enter REGISTER_NULL_ARG );
+    err = register_trace_softirq_entry( _sirq_enter REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sirq_entry returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_softirq_exit( my_trace_sirq_exit REGISTER_NULL_ARG );
+    err = register_trace_softirq_exit( _sirq_exit REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sirq_exit returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
+    err = register_trace_sys_enter( _sys_enter REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sys_enter returning %d (0=success)\n", err );
     if (err) return (err);
 
-    err = register_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
+    err = register_trace_sys_exit( _sys_exit REGISTER_NULL_ARG );
     printk("trace_sched_switch_hook_add: sys_exit returning %d (0=success)\n", err );
 # endif
     return (err);
@@ -567,14 +564,13 @@ static void trace_sched_switch_hook_remove( void )
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
 	for_each_kernel_tracepoint(unregfunc, NULL);
 # else
-    unregister_trace_sys_exit( my_trace_sys_exit REGISTER_NULL_ARG );
-    unregister_trace_sys_enter( my_trace_sys_enter REGISTER_NULL_ARG );
-    unregister_trace_softirq_exit( my_trace_sirq_exit REGISTER_NULL_ARG );
-    unregister_trace_softirq_entry( my_trace_sirq_enter REGISTER_NULL_ARG );
-    unregister_trace_irq_handler_exit( my_trace_hirq_exit REGISTER_NULL_ARG );
-    unregister_trace_irq_handler_entry( my_trace_hirq_enter REGISTER_NULL_ARG );
-    unregister_trace_sched_switch( my_trace_sched_switch_hook
-				   REGISTER_NULL_ARG );
+    unregister_trace_sys_exit( _sys_exit REGISTER_NULL_ARG );
+    unregister_trace_sys_enter( _sys_enter REGISTER_NULL_ARG );
+    unregister_trace_softirq_exit( _sirq_exit REGISTER_NULL_ARG );
+    unregister_trace_softirq_entry( _sirq_enter REGISTER_NULL_ARG );
+    unregister_trace_irq_handler_exit( _hirq_exit REGISTER_NULL_ARG );
+    unregister_trace_irq_handler_entry( _hirq_enter REGISTER_NULL_ARG );
+    unregister_trace_sched_switch( _sched_switch_hook REGISTER_NULL_ARG );
 # endif
 }   // trace_sched_switch_hook_remove
 
@@ -586,15 +582,17 @@ int
 trace_3_init(void)
 {
     int  ret=0;          /* SUCCESS */
+	struct { char tn[TRACE_TN_BUFSZ];	} _trc_;
 
     //printk("trace_.c:trace_3_init b4 traceInit\n"); // ONLY DO THIS IF module or after console_init()
-    if ((ret=traceInit(NULL,0)) != 0) return (ret);
+    if ((ret=traceInit(trace_name(NULL,__FILE__,_trc_.tn,sizeof(_trc_.tn)),0)) != 0) return (ret);
     //printk("trace_.c:trace_3_init after traceInit\n"); // ONLY DO THIS IF module or after console_init()
 
-    traceTID = 0;
+    //traceTID = 0;
 
     traceControl_rwp->mode.bits.M = 1;
-    TRACE( 64+3, "kernel trace buffer initialized - no slow path, no timeofday" ); /* NOTE: don't do slow path (printk) and don't get timeofday */
+    TRACE( 64+TLVL_INFO, "kernel trace buffer initialized - no slow path, no timeofday, mode.words.cntl=%u",
+	      traceControl_rwp->mode.words.cntl); /* NOTE: don't do slow path (printk) and don't get timeofday (64+) */
 
     /* 1) create the buffer
        2) create a way to access it (/proc)

@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just.cc,v $
-// rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+// rev="$Revision: 1385 $$Date: 2020-09-25 13:58:09 -0500 (Fri, 25 Sep 2020) $";
 */
 /*
 /home/ron/work/tracePrj/trace
@@ -28,19 +28,16 @@ ron@mu2edaq01 :^) just_recursive
 
 std::string example_sub_(const char *msg, int lvl) {
     if (lvl--)
-		TLOG(TLVL_ERROR) << "Completing greeting" << example_sub_("from sub", lvl) << " lvl=" << lvl << " " << msg;
+		TLOG(TLVL_INFO) << "Completing greeting" << example_sub_("from sub", lvl) << " lvl=" << lvl << " " << msg;
 	else
-		TLOG(TLVL_ERROR) << "Completing greeting " << msg;
+		TLOG(TLVL_INFO) << "Completing greeting " << msg;
 	return " there";
 }
 
-int
-//main(  int	argc
-//     , char	*argv[] )
-main()
+int main(/*int	argc, char	*argv[]*/)
 {
-	TLOG(TLVL_ERROR) << "hi" << example_sub_("zero",0);
-	TLOG(TLVL_ERROR) << "hi" << example_sub_("one",6) << example_sub_("two",3);
+	TLOG(TLVL_INFO) << "hi" << example_sub_("zero",0);
+	TLOG(TLVL_INFO) << "hi" << example_sub_("one",6) << example_sub_("two",3);
     example_sub_("main", 0);
     return (0);
 }   /* main */

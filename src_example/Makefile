@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 416 $$Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $";
+ # rev="$Revision: 1380 $$Date: 2020-09-23 19:56:26 -0500 (Wed, 23 Sep 2020) $";
 
 
 SUBDIRS=module userspace
@@ -17,7 +17,7 @@ all: $(SUBDIRS)
 $(SUBDIRS):
 	echo 'OUT=${OUT}'
 	$(MAKE) -C $@ EXTRA_CFLAGS=-I${TRACE_INC} \
-	CFLAGS="-g -Wall -I${TRACE_INC}" CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}" \
+	CPPFLAGS="-I${TRACE_INC} ${CPPFLAGS}" \
 	${EXTRA_SYMBOLS}
 
 clean: $(SUBDIRS)

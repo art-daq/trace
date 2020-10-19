@@ -23,7 +23,7 @@
 
 // "static int tid_" is thread safe in so far as multiple threads may init,
 // but will init with same value.
-#define TRACE_STREAMER(lvl, name, force_s) {   if TRACE_INIT_CHECK						\
+#define TRACE_STREAMER(lvl, name, force_s) {   if TRACE_INIT_CHECK(TRACE_NAME)	\
 	{static TRACE_THREAD_LOCAL int tid_ =-1;if (tid_ == -1)tid_ = name2TID(std::string(name).c_str()); \
 	static TRACE_THREAD_LOCAL TraceStreamer s; s.init(tid_, lvl, force_s, __FILE__, __LINE__)
 
@@ -102,7 +102,7 @@ static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* in
 	}
 
 	char namebuf[TRACE_DFLT_NAM_CHR_MAX+1];
-	strcpy( namebuf, traceNamLvls_p[TID].name ); // could just give traceNamLvls_p[TID].name to Log*
+	strcpy( namebuf, TRACE_TID2NAME(TID) ); // could just give TRACE_TID2NAME(TID) to Log*
 	switch (lvl)
 	{
 	case TLVL_ERROR:  ::mf::LogError(namebuf) << obuf; break;
@@ -175,8 +175,8 @@ public:
 		lvl_ = lvl;
 		file_ = file;
         line_ = line;
-		do_m = traceControl_rwp->mode.bits.M && (traceNamLvls_p[tid_].M & TLVLMSK(lvl));
-		do_s = traceControl_rwp->mode.bits.S && ((force_s) || (traceNamLvls_p[tid_].S & TLVLMSK(lvl)));
+		do_m = traceControl_rwp->mode.bits.M && (idx2namLvlsPtr(tid_)->M & TLVLMSK(lvl));
+		do_s = traceControl_rwp->mode.bits.S && ((force_s) || (idx2namLvlsPtr(tid_)->S & TLVLMSK(lvl)));
 		enabled = do_s || do_m;
 		}
 		return *this;

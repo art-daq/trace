@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1309 $$Date: 2020-04-20 04:53:08 -0500 (Mon, 20 Apr 2020) $";
+ # rev="$Revision: 1359 $$Date: 2020-09-14 09:40:27 -0500 (Mon, 14 Sep 2020) $";
 
 # TOP LEVEL Makefile
 
@@ -44,7 +44,6 @@ default: src_utility src_example_user script ups
 
 .PHONY: src_utility src_module src_example_user src_example_module script ups module default
 
-modules: src_module src_example_module
 all: default modules
 	@echo Done with $@
 
@@ -60,23 +59,35 @@ rpm_source:
 	@tar cf - --exclude=TRACE.tar.bz2 --exclude=.vs --exclude=*.json --exclude=.gdb_history --exclude=*~ \
 	* | bzip2 > rpm/TRACE.tar.bz2
 srpm: rpm_source
-	@unset TRACE_FQ_DIR;\
+	@: TRACE_FQ_DIR is cleared in spec file;\
 	rpmbuild -bs --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
-	@: rm -f rpm/TRACE.tar.bz2
+	@rm -f rpm/TRACE.tar.bz2
 rpm: rpm_source
-	@unset TRACE_FQ_DIR;\
+	@: TRACE_FQ_DIR is cleared in spec file;\
 	rpmbuild -bb --quiet --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
 	@rm -f rpm/TRACE.tar.bz2
 
-src_example_module: src_module      # the example module depends on symbols from the TRACE module
+modules: src_module src_example_module
 
 src_module: OUT_check
 	test -n "${KDIR}"\
 	  && subdir=module/`cat ${KDIR}/include/config/kernel.release`\
 	  || subdir=module/`uname -r`;\
 	test -d "${OUT}/$$subdir" || mkdir -p "${OUT}/$$subdir";\
-	cp -ar $@/*.[ch] $@/[MK]* "${OUT}/$$subdir/.";\
-	$(MAKE) -e -C "${OUT}/$$subdir";
+	cp -a $@/*.[ch] $@/[MK]* "${OUT}/$$subdir/.";\
+	$(MAKE) -C "${OUT}/$$subdir" TRACE_INC=$${TRACE_INC-$$PWD/include};
+
+src_example_module: OUT_check src_module # the example module depends on symbols from the TRACE module
+	test -n "${KDIR}"\
+	  && modsubdir=module/`cat ${KDIR}/include/config/kernel.release`\
+	  || modsubdir=module/`uname -r`;\
+	cp -a src_example/module*/*.c "${OUT}/$$modsubdir/.";\
+	for mod in `grep -ho ^.*_mod-y src_example/module*/Kbuild | sed 's/-y//'`;do \
+	  grep $${mod}ule.o "${OUT}/$$modsubdir/Kbuild" || \
+	  sed -i -e '/TRACE.o/s/$$/ '$$mod'.o/;$$a\
+	'$$mod'-y := '$$mod'ule.o' "${OUT}/$$modsubdir/Kbuild";\
+	done;\
+	$(MAKE) -C "${OUT}/$$modsubdir" TRACE_INC=$${TRACE_INC-$$PWD/include}
 
 # have to do this in two parts:
 #    1) userspace - src can remain
@@ -97,18 +108,6 @@ src_example_user: OUT_check
 	    exit $$sts;\
 	fi
 
-src_example_module: OUT_check
-	test -n "${KDIR}"\
-	  && modsubdir=module/`cat ${KDIR}/include/config/kernel.release`\
-	  || modsubdir=module/`uname -r`;\
-	cp -a src_example/module*/*.c "${OUT}/$$modsubdir/.";\
-	for mod in `grep -ho ^.*_mod-y src_example/module*/Kbuild | sed 's/-y//'`;do \
-	  grep $${mod}ule.o "${OUT}/$$modsubdir/Kbuild" || \
-	  sed -i -e '/TRACE.o/s/$$/ '$$mod'.o/;$$a\
-	'$$mod'-y := '$$mod'ule.o' "${OUT}/$$modsubdir/Kbuild";\
-	done;\
-	$(MAKE) -e -C "${OUT}/$$modsubdir" TRACE_INC=$$PWD/include
-
 src_utility: OUT_check
 	@${FLAVOR_SUBDIR};\
 	test -n "${TRACE_FQ_DIR}"\
@@ -121,6 +120,26 @@ src_utility: OUT_check
 	    test -d "$$out" || mkdir -p "$$out";\
 	    $(MAKE) -C $@ OUT="$$out" LDFLAGS="-m32 -lpthread" CPPFLAGS="-m32 -I${TRACE_INC} ${CPPFLAGS}";\
 	fi
+
+cmake: OUT_check
+	@${FLAVOR_SUBDIR};\
+	test -n "${TRACE_FQ_DIR}"\
+	 && out="${TRACE_FQ_DIR}/lib/TRACE/cmake/"\
+	 || out="${OUT}/$$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1}/lib/TRACE/cmake";\
+	test -d "$$out" || mkdir -p "$$out";\
+	sed -e '/^[^#]/{s|@PACKAGE_INIT@|get_filename_component(PACKAGE_PREFIX_DIR "$${CMAKE_CURRENT_LIST_DIR}/../../../" ABSOLUTE)\
+	macro(check_required_components _NAME)\
+	  foreach(comp $${$${_NAME}_FIND_COMPONENTS})\
+	    if(NOT $${_NAME}_$${comp}_FOUND)\
+	      if($${_NAME}_FIND_REQUIRED_$${comp})\
+	        set($${_NAME}_FOUND FALSE)\
+	      endif()\
+	    endif()\
+	  endforeach()\
+	endmacro()\
+	|;s/@PROJECT_NAME@/TRACE/;}' cmake/TRACEConfig.cmake.in >"$$out/TRACEConfig.cmake";\
+	_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION *//;s/)//;p}' CMakeLists.txt`;\
+	sed -e "s/@PACKAGE_VERSION@/$$_ver/" cmake/TRACEConfigVersion.cmake.in >"$$out/TRACEConfigVersion.cmake"
 
 script: OUT_check
 	@${FLAVOR_SUBDIR};\

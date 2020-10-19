@@ -4,51 +4,59 @@ Language:        Cpp
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
+#AlignConsecutiveBitFields: true
 AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: true
 AlignEscapedNewlines: Left
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: true
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Always    # was true (in pre-version-10 of clang-format) DOESN'T SEEM TO APPLY TO MACROS :(
+AllowShortCaseLabelsOnASingleLine: true  # false
+#AllowShortEnumsOnASingleLine: true  # needs version 12
 AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: Always  # was true (in older version of clang-format
 AllowShortLoopsOnASingleLine: true
-AlwaysBreakAfterDefinitionReturnType: None
+# deprecated AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakBeforeMultilineStrings: false   # true
 AlwaysBreakTemplateDeclarations: true
 BinPackArguments: true
 BinPackParameters: true
-BraceWrapping:   
+# BitFieldColonSpacing: None     BitFieldColonSpacing needs version 12
+BreakBeforeBraces: WebKit  #  Attach   # Custom    # Linux # Custom          # Linux   Custom means use BraceWrapping (next)
+BraceWrapping:
+  AfterCaseLabel:  false
   AfterClass:      true
-  AfterControlStatement: true
-  AfterEnum:       true
+  AfterControlStatement: Never # false # the linux kernel has false; clang default seems to be true
+  AfterEnum:       false       # was true
   AfterFunction:   true
   AfterNamespace:  false
   AfterObjCDeclaration: false
   AfterStruct:     true
   AfterUnion:      true
+  AfterExternBlock: false
   BeforeCatch:     true
-  BeforeElse:      true
+  BeforeElse:      false       # was true
+  #  BeforeWhile:     false   needs version 12
   IndentBraces:    false
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: true
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Custom
+#BreakBeforeBraces: WebKit
 BreakBeforeInheritanceComma: false
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeColon
 BreakAfterJavaFieldAnnotations: false
-BreakStringLiterals: true
+BreakStringLiterals: true # false # true  - no change
 ColumnLimit:     0
 CommentPragmas:  '^\\.+'
-CompactNamespaces: false
+CompactNamespaces: true # false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
-ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4      # probably should be 8
+ContinuationIndentWidth: 4                # probably should be 8
 Cpp11BracedListStyle: true
 DerivePointerAlignment: true
 DisableFormat:   false
@@ -66,9 +74,9 @@ IncludeCategories:
   - Regex:           '.*'
     Priority:        3
 IncludeIsMainRegex: '([-_](test|unittest))?$'
-IndentCaseLabels: true
+IndentCaseLabels: false      # was true
 IndentPPDirectives: AfterHash
-IndentWidth:     4
+IndentWidth:     4                  # UseTab??? (below)
 IndentWrappedFunctionNames: false
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
@@ -87,23 +95,27 @@ PenaltyBreakFirstLessLess: 120
 PenaltyBreakString: 1000
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
-PointerAlignment: Left
-ReflowComments:  true
+PointerAlignment: Right   #  Left  Right b/c * does go with variable
+ReflowComments:  false      # true   false because comments can be manually aligned
 SortIncludes:    false
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: false
-SpaceBeforeAssignmentOperators: true
+SpaceBeforeAssignmentOperators: false    # true
 SpaceBeforeParens: ControlStatements
+SpaceBeforeSquareBrackets: false    # new circa version 10
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 2
 SpacesInAngles:  false
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard:        Auto
 TabWidth:        4
-UseTab:          ForContinuationAndIndentation
+UseTab:          ForContinuationAndIndentation # AlignWithSpaces (circa Version 12) # ForIndentation # AlignWithSpaces  # was ForContinuationAndIndentation
+# WhitespaceSensitiveMacros: [ 'TRACE_ATOMIC_INIT', 'TRACE_VA_LIST_INIT' ] # circa version 12
 ...
 

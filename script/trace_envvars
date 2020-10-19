@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: trace_envvars.sh,v $
- # rev='$Revision: 1282 $$Date: 2020-03-29 14:44:01 -0500 (Sun, 29 Mar 2020) $'
+ # rev='$Revision: 1370 $$Date: 2020-09-19 15:20:46 -0500 (Sat, 19 Sep 2020) $'
 
 USAGE="\
  usage: `basename $0` [[path/]file]   # default file is trace_cntl
@@ -25,9 +25,9 @@ test -f /bin/egrep && EGREP=/bin/egrep || EGREP=/usr/bin/egrep
 
 tenv()  # $1=file
 {   tcntlexe=$1
-    envvars=`strings -a $tcntlexe | sed -n -e '/^TRACE_/p' | grep -v __ | sort -u` # variables with __ are really private/special
+    envvars=`strings -a $tcntlexe | sed -n -e '/^TRACE_/p' | egrep -v '__|TRACE_(LVL_ENUM|IDXCNT)' | sort -u` # variables with __ are really private/special
     # according to trace.h, the following "activate" TRACE
-    list='NAMTBLENTS NUMENTS ARGSMAX MSGMAX NAME FILE LVLM'
+    list='NAMTBLENTS NAMEMAX NUMENTS ARGSMAX MSGMAX NAME FILE LVLM'
     ere=`echo $list | sed 's/ /|/g'`
     envvars=`echo "$envvars" | $EGREP -v "^TRACE_($ere)"`
     for ee in $list;do

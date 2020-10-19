@@ -3,7 +3,7 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 1264 $$Date: 2020-03-04 01:34:56 -0600 (Wed, 04 Mar 2020) $";
+ rev="$Revision: 1365 $$Date: 2020-09-16 00:00:31 -0500 (Wed, 16 Sep 2020) $";
 
 
 
@@ -44,10 +44,11 @@ diff -u init/Makefile{.~1~,}
  else
 
 
+
 diff -u init/main.c{.~1~,}
---- init/main.c.~1~	2020-01-14 08:54:17.000000000 -0600
-+++ init/main.c	2020-03-03 23:56:59.058307538 -0600
-@@ -80,6 +80,7 @@
+--- init/main.c.~1~	2020-06-01 14:12:31.000000000 -0500
++++ init/main.c	2020-07-14 18:35:25.222980542 -0500
+@@ -81,6 +81,7 @@
  #include <linux/blkdev.h>
  #include <linux/elevator.h>
  #include <linux/sched_clock.h>
@@ -55,51 +56,42 @@ diff -u init/main.c{.~1~,}
  #include <linux/sched/task.h>
  #include <linux/sched/task_stack.h>
  #include <linux/context_tracking.h>
-@@ -635,6 +636,8 @@
+@@ -636,6 +637,8 @@
  	hrtimers_init();
  	softirq_init();
  	timekeeping_init();
 +	trace_3_init(); // works after timekeeping_init
-+	TRACE(3,"main.c:start_kernel - b4 time_init - after timekeeping_init - timeofday");
++	TRACE(TLVL_INFO,"after timekeeping_init, trace_3_init - b4 time_init - timeofday");
  
  	/*
  	 * For best initial stack canary entropy, prepare it after:
-@@ -652,6 +655,7 @@
- 	time_init();
- 	sched_clock_postinit();
- 	printk_safe_init();
-+	TRACE(2, "main.c:start_kernel trace initialize - TRACE'd lvl2 (printk)");
- 	perf_event_init();
- 	profile_init();
- 	call_function_init();
-@@ -671,6 +675,8 @@
+@@ -672,6 +675,8 @@
  		panic("Too many boot %s vars at `%s'", panic_later,
  		      panic_param);
  
-+	TRACE(2,"main.c:start_kernel: trace_3_init called - TRACE lvl2 after console_init()"); /* after console_init() */
++	TRACE(TLVL_INFO,"TRACE lvl2 after console_init()"); /* after console_init() */
 +
- 	lockdep_info();
+ 	lockdep_init();
  
  	/*
-@@ -726,6 +732,8 @@
+@@ -727,6 +732,8 @@
  	signals_init();
  	seq_file_init();
  	proc_root_init();
 +	trace_3_proc_add(traceControl_p->memlen);
-+	TRACE(2, "main.c:start_kernel after trace_3_proc_add");
++	TRACE(TLVL_INFO, "after trace_3_proc_add");
  	nsfs_init();
  	cpuset_init();
  	cgroup_init();
-@@ -1067,6 +1075,8 @@
+@@ -1068,6 +1075,8 @@
  	int ret;
  
  	kernel_init_freeable();
 +	trace_3_sched_switch_hook_add();
-+	TRACE(2,"main.c:kernel_init trace_3_sched_switch_hook_add'd");
++	TRACE(TLVL_INFO,"trace_3_sched_switch_hook_add'd");
  	/* need to finish all async __init code before freeing the memory */
  	async_synchronize_full();
  	ftrace_free_init_mem();
-
 
 
 
@@ -123,7 +115,7 @@ diff -u net/socket.c{.~1~,}
         size_t size = 0;
         int i;
  
-+       TRACE( 20, "net/socket.c:do_sock_write" );
++       TRACE( 20, "nr_segs=%d", nr_segs );
         for (i = 0; i < nr_segs; i++)
                 size += iov[i].iov_len;
  

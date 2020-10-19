@@ -31,20 +31,23 @@
 
 
 // SLow FoRCe
-#define SL_FRC(lvl) ((lvl<=2)||((lvl==3)&&DEBUG_FORCED))
+#define SL_FRC(lvl) ((lvl<TLVL_DEBUG)||((lvl==TLVL_DEBUG)&&DEBUG_FORCED))
+
+#undef tlog_LVL
+#define tlog_LVL(a1, ...) a1
 
 #undef  TLOG_ERROR           // TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)
-#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR, &(name)[0], 0, 1, 1 )
+#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR,  &(name)[0], 0, 1, 1 )
 #undef  TLOG_WARNING
-#define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING, &(name)[0], 0, 1, 1 )
+#define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING,&(name)[0], 0, 1, 1 )
 #undef  TLOG_INFO
-#define TLOG_INFO(name)    TRACE_STREAMER( TLVL_INFO,    &(name)[0], 0, 1, 1)
+#define TLOG_INFO(name)    TRACE_STREAMER( TLVL_INFO,   &(name)[0], 0, 1, 1)
 #undef  TLOG_DEBUG
-#define TLOG_DEBUG(name)   TRACE_STREAMER( TLVL_DEBUG,   &(name)[0], 0, 1, DEBUG_FORCED)
+#define TLOG_DEBUG(name)   TRACE_STREAMER( TLVL_DEBUG,  &(name)[0], 0, 1, DEBUG_FORCED)
 #undef  TLOG_TRACE
-#define TLOG_TRACE(name)   TRACE_STREAMER( TLVL_TRACE,   &(name)[0], 0, 1, 0)
+#define TLOG_TRACE(name)   TRACE_STREAMER( TLVL_TRACE,  &(name)[0], 0, 1, 0)
 #undef  TLOG_DBG
-#define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one),  tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
+#define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
 															, 1, SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 #undef  TLOG_ARB
@@ -109,7 +112,7 @@ static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__
        (strstr(&file[0], "/srcs/") ? strstr(&file[0], "/srcs/") + 6 : file)
 
 	printed += snprintf(&(obuf[printed]), sizeof(obuf) - printed, &(" %s %s:%d %s")[printed == 0 ? 1 : 0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
-	                    , _lvlstr[lvl & LVLBITSMSK] ? _lvlstr[lvl & LVLBITSMSK] : ""
+	                    , trace_lvlstrs[0][lvl & TLVLBITSMSK]
 	                    , __SHORTFILE__, line
 	                    , insert);
 
@@ -135,19 +138,19 @@ static void vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__
 									/*printf("added \\n printed=%d\n",printed);*/
 		}
 		/*else printf("already there printed=%d\n",printed);*/
-		quiet_warn += write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, printed);
+		quiet_warn += write(tracePrintFd[lvl & TLVLBITSMSK], obuf, printed);
 	}
 	else
 	{
 		/* obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n */
 		if (obuf[sizeof(obuf) - 2] == '\n')
 		{
-			quiet_warn += write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, sizeof(obuf) - 1);
+			quiet_warn += write(tracePrintFd[lvl & TLVLBITSMSK], obuf, sizeof(obuf) - 1);
 		}
 		else
 		{
 			obuf[sizeof(obuf) - 1] = '\n';
-			quiet_warn += write(lvl?tracePrintFd[0]:tracePrintFd[1], obuf, sizeof(obuf));
+			quiet_warn += write(tracePrintFd[lvl & TLVLBITSMSK], obuf, sizeof(obuf));
 			/*printf("changed \\0 to \\n printed=%d\n",);*/
 		}
 	}

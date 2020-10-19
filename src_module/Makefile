@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 702 $$Date: 2017-11-17 00:05:11 -0600 (Fri, 17 Nov 2017) $";
+ # rev="$Revision: 1354 $$Date: 2020-09-03 10:31:45 -0500 (Thu, 03 Sep 2020) $";
 
 #
 # src_module/Makefile   -- NOTE: top level make file calls this make file
@@ -27,8 +27,8 @@ CC=/usr/bin/gcc
 #           make trace_proc.o
 #           make TRACE.ko
 # Ref. Documentation/kbuild/modules.txt
-%.o %.lst %.ko:
-	$(MAKE) -C $(KDIR) M=$$PWD CC=${CC} $@
+#%.o %.lst %.ko:
+#	$(MAKE) -C $(KDIR) M=$$PWD CC=${CC} $@
 
 all default:
 	$(MAKE) -C $(KDIR) M=$$PWD CC=${CC} EXTRA_CFLAGS=${EXTRA_CFLAGS}

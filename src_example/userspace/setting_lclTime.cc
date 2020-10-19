@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+ // rev="$Revision: 1327 $$Date: 2020-06-12 02:25:01 -0500 (Fri, 12 Jun 2020) $";
 
 // When this program is executed, both "traces" (TRACE and TLOG) with display the same time.
 // and ltrace shows gettimeofday is called just once.
@@ -21,11 +21,11 @@ int main( /*int argc, char *argv[]*/ )
 	TRACE( 1, "TRACE programStart usecs=%ld", (lclTime=programStart, lclTime.tv_usec) );
 
 #  if 1
-	// need extra shenanigans (tvp) to avoid: warning: operation on '_tlog_.main(int, char**)::_T_::tv' may be undefined [-Wsequence-point]
+	// need extra shenanigans (tvp) to avoid: warning: operation on '_trc_.main(int, char**)::_T_::tv' may be undefined [-Wsequence-point]
 	struct timeval *tvp;
-	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp=&_tlog_.tv)=programStart, programStart.tv_usec);
+	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp=&_trc_.tv)=programStart, programStart.tv_usec);
 #  else
-	TLOG(1) << "TLOG  programStart usecs=" << (_tlog_.tv=programStart, programStart.tv_usec);
+	TLOG(1) << "TLOG  programStart usecs=" << (_trc_.tv=programStart, programStart.tv_usec);
 #  endif
 
 	// NOTE: you can only get the time for TRACEs _IFF_both_memory_and_slow_path_are_enabled. Can't get time from TLOG

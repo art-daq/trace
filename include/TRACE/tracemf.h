@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1294 $$Date: 2020-04-03 00:01:01 -0500 (Fri, 03 Apr 2020) $";
+ // rev="$Revision: 1389 $$Date: 2020-09-26 11:22:40 -0500 (Sat, 26 Sep 2020) $";
  */
  /**
   * \file tracemf.h
@@ -32,8 +32,12 @@
 #define MFBOOL_INFO __mie
 #define MFBOOL_DEBUG __mde
 
-#define SEV_EN(lvl) ((lvl==0)||((lvl==1)&&MFBOOL_WARNING)||((lvl==2)&&MFBOOL_INFO)||((lvl>=3)&&MFBOOL_DEBUG))
-#define SL_FRC(lvl) ((lvl<=2)||((lvl==3)&&DEBUG_FORCED))
+#define SEV_EN(lvl) (  ((lvl<TLVL_WARNING)||lvl==TLVL_NOTICE)			\
+					 ||((lvl==TLVL_WARNING)&&MFBOOL_WARNING)			\
+					 ||((lvl==TLVL_INFO)&&MFBOOL_INFO)					\
+					 ||((lvl>=TLVL_DEBUG)&&MFBOOL_DEBUG))
+// SLow FoRCe
+#define SL_FRC(lvl) ((lvl<TLVL_DEBUG)||((lvl==TLVL_DEBUG)&&DEBUG_FORCED))
 
 #undef  TLOG_ERROR           // TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)
 #define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR, &(name)[0], 0, 1, 1 )
@@ -48,15 +52,15 @@
 #undef  TLOG_DBG
 #define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one),  tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-															,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 #undef  TLOG_ARB
 #define TLOG_ARB(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  , tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-															, SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+										  , SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 #undef  TLOG
 #define TLOG(...)          TRACE_STREAMER( tlog_LVL( __VA_ARGS__,need_at_least_one),tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
 										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-															,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
+										  ,SEV_EN(tlog_LVL(__VA_ARGS__,need_at_least_one)), SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 
 #include "messagefacility/MessageLogger/MessageLogger.h"	// LOG_DEBUG
 #include "cetlib_except/exception.h" // cet::exception
@@ -89,16 +93,16 @@ static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* in
 		// assume insert is smaller than obuf
 		if (printed) {
 			retval = snprintf(obuf,sizeof(obuf),"%s ",insert );
-			printed = SNPRINTED(retval,sizeof(obuf));
+			printed = TRACE_SNPRINTED(retval,sizeof(obuf));
 		}
 		if (nargs) {
 			retval = vsnprintf(&(obuf[printed]), sizeof(obuf) - printed, msg, ap); // man page say obuf will always be terminated
-			printed += SNPRINTED(retval,sizeof(obuf)-printed);
+			printed += TRACE_SNPRINTED(retval,sizeof(obuf)-printed);
 		} else {
 			/* don't do any parsing for format specifiers in the msg -- tshow will
 			   also know to do this on the memory side of things */
 			retval = snprintf( &(obuf[printed]), sizeof(obuf)-printed, "%s", msg );
-			printed += SNPRINTED(retval,sizeof(obuf)-printed);
+			printed += TRACE_SNPRINTED(retval,sizeof(obuf)-printed);
 		}
 		if (obuf[printed-1] == '\n')
 			obuf[printed-1] = '\0';  // DONE w/ printed (don't need to decrement
@@ -106,16 +110,13 @@ static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* in
 	} else {
 		if (msg[strlen(msg)-1] == '\n') { // need to copy to remove the trailing nl
 			retval = snprintf( obuf, sizeof(obuf), "%s", msg );
-			printed = SNPRINTED(retval,sizeof(obuf));
+			printed = TRACE_SNPRINTED(retval,sizeof(obuf));
 			if (obuf[printed-1] == '\n')
 				obuf[printed-1] = '\0';  // DONE w/ printed (don't need to decrement
 			outp = obuf;
 		} else
 			outp = msg;
 	}
-
-	char namebuf[TRACE_DFLT_NAM_CHR_MAX + 1];
-	strcpy(namebuf, traceNamLvls_p[TID].name); // could just give traceNamLvls_p[TID].name to Log*
 
 // Define MESSAGEFACILITY_HEX_VERSION in top-level CMakeLists.txt (see artdaq's CMakeLists.txt!)
 #ifdef MESSAGEFACILITY_HEX_VERSION
@@ -135,17 +136,17 @@ static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* in
 	switch (lvl)
 	{
 #  ifdef TRACEMF_USE_VERBATIM
-	case TLVL_ERROR:   ::mf::LogProblem(namebuf, file, line) << outp; break;
-	case TLVL_WARNING: ::mf::LogPrint(namebuf, file, line) << outp; break;
-	case TLVL_INFO:    ::mf::LogVerbatim{ namebuf, file, line } << outp; break;
-	case TLVL_DEBUG:   ::mf::LogTrace{ namebuf, file, line } << outp; break;
-	default:           ::mf::LogTrace{ namebuf, file, line } << std::to_string(lvl) << ": " << outp; break;
+	case TLVL_ERROR:   ::mf::LogProblem(TRACE_TID2NAME(TID), file, line) << outp; break;
+	case TLVL_WARNING: ::mf::LogPrint(TRACE_TID2NAME(TID), file, line) << outp; break;
+	case TLVL_INFO:    ::mf::LogVerbatim{ TRACE_TID2NAME(TID), file, line } << outp; break;
+	case TLVL_DEBUG:   ::mf::LogTrace{ TRACE_TID2NAME(TID), file, line } << outp; break;
+	default:           ::mf::LogTrace{ TRACE_TID2NAME(TID), file, line } << std::to_string(lvl) << ": " << outp; break;
 #  else
-	case TLVL_ERROR:   ::mf::LogError(namebuf, file, line) << outp; break;
-	case TLVL_WARNING: ::mf::LogWarning(namebuf, file, line) << outp; break;
-	case TLVL_INFO:    ::mf::LogInfo{ namebuf, file, line } << outp; break;
-	case TLVL_DEBUG:   ::mf::LogDebug{ namebuf, file, line } << outp; break;
-	default:           ::mf::LogDebug{ namebuf, file, line } << std::to_string(lvl) << ": " << outp; break;
+	case TLVL_ERROR:   ::mf::LogError(TRACE_TID2NAME(TID), file, line) << outp; break;
+	case TLVL_WARNING: ::mf::LogWarning(TRACE_TID2NAME(TID), file, line) << outp; break;
+	case TLVL_INFO:    ::mf::LogInfo{ TRACE_TID2NAME(TID), file, line } << outp; break;
+	case TLVL_DEBUG:   ::mf::LogDebug{ TRACE_TID2NAME(TID), file, line } << outp; break;
+	default:           ::mf::LogDebug{ TRACE_TID2NAME(TID), file, line } << std::to_string(lvl) << ": " << outp; break;
 #  endif
 	}
 }
@@ -194,5 +195,5 @@ inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)
 	return x;
 }
 
-#endif
+#endif /* __cplusplus */
 #endif /* TRACEMF_H */

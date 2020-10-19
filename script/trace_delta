@@ -4,33 +4,38 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1236 $';
-#   $Date: 2019-11-01 14:15:03 -0500 (Fri, 01 Nov 2019) $
+$version = '$Revision: 1399 $';
+#   $Date: 2020-10-12 10:35:35 -0500 (Mon, 12 Oct 2020) $
 
 use Time::Local; # timelocal()
+#use File::Basename;
+
+%month_a=(Jan=>0,Feb=>1,Mar=>2,Apr=>3,May=>4, Jun=>5,
+          Jul=>6,Aug=>7,Sep=>8,Oct=>9,Nov=>10,Dec=>11);
 
 $USAGE = "\
 $version
-usage: $0 [options] [files]...
+
+usage: ".(split /\//,$0)[-1]." [options] [files]...
 
 options:
--cpu  <col_spec>     column for cpu field.
--c    <cols_spec>    columns to include in output
--d    <cols_spec>    columns for non cpu specific delta
--dc   <cols_spec>    columns for cpu specific delta
--dw   <width>        delta column width
--pre  <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
--post <re>           post processing filter (of output lines)
--b                   output delta before associated column
--stats               min, max, ave stats on delta (except cpu deltas)
--i                   invert (use this is deltas are always negative)
--r                   change \"timeStamp\" column to \"relative\" (currently
-                     effects all -d columns)
--ct   <col_spec>     make time more readable (convert time) IFF time is usecs from epoch
--syscall <file>      attempt read <file> (i.e /usr/include/asm/unistd.h or
-                     unistd_64.h) to convert system call numbers in string
-                     \"syscall=\\d+\" to names
--show_sub            development/debug option
+ -cpu  <col_spec>     column for cpu field.
+ -c    <cols_spec>    columns to include in output
+ -d    <cols_spec>    columns for non cpu specific delta
+ -dc   <cols_spec>    columns for cpu specific delta
+ -dw   <width>        delta column width
+ -pre  <re>           allow processing if true i.e: '/(begin|end)/ && !/916951/'
+ -post <re>           post processing filter (of output lines)
+ -b                   output delta before associated column
+ -stats               min, max, ave stats on delta (except cpu deltas)
+ -i                   invert (use this is deltas are always negative)
+ -r                   change \"timeStamp\" column to \"relative\" (currently
+                      effects all -d columns)
+ -ct   <col_spec>     make time more readable (convert time) IFF time is usecs from epoch
+ -syscall <file>      attempt read <file> (i.e /usr/include/asm/unistd.h or
+                      unistd_64.h) to convert system call numbers in string
+                      \"syscall=\\d+\" to names
+ -show_sub            development/debug option
 
 cols_spec examples:  (Note: cols are zero indexed)
    CPU,message
@@ -54,7 +59,8 @@ $TRACE_DFLT_TIME_FMT = "%m-%d %H:%M:%S.%%06d";
        ,'stats,0','i,0','r,0','show_sub,0','"syscall",1','xxx,0');  # syscall needs to be quoted as it is a function
 while ($ARGV[0] =~ /^-/)
 {   $_ = shift;
-    if (/^-[h?]/) { die "$USAGE\n"; }
+    if (/^-[h?]/ || /^--help/) { die "$USAGE\n"; }
+    elsif (/^--version/) { die "tdelta $version\n"; }
     $found = 0;
     foreach $optset (@opts)
     {   eval "\@opt = ($optset)";
@@ -223,41 +229,49 @@ sub get_delta_data
     {   $ret = $delta_d;
 	#print STDERR "get_delta_data start - return input: $ret\n";
     }
-    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}$/o)
+    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])([.,]\d+){0,1}$/o)
     {   # convert to float seconds  e.g. 2019-12-23 13:22:57.123456
-        $year=$1; $month=$2; $date=$3; $hour=$4; $minute=$5; $seconds=$6;
+        $year=$1; $month=$2-1; $date=$3; $hour=$4; $minute=$5; $seconds=$6;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "get_delta_data1 time_then = $time_then\n";
+	#print STDERR "get_delta_data1 time_then = $time_then month=$month (0-11)\n";
 	$ret = $time_then . $7;
     }
-    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}$/o)
-    {   # convert to float seconds  e.g. 12-23 13:22:57.123456
-        $year=1970; $month=$1; $date=$2; $hour=$3; $minute=$4; $seconds=$5;  # year doesn't matter to get delta
+    elsif ($delta_d =~ /^\s*([0-9]+).([A-Za-z]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])([.,]\d+){0,1}$/o)
+    {   # convert to float seconds  e.g. 2019-Sep-23 13:22:57.123456
+        $year=$1; $month=$month_a{$2}; $date=$3; $hour=$4; $minute=$5; $seconds=$6;
+	#print STDERR "get_delta_data2 2=$2 date=$date month=$month (0-11)\n";
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "get_delta_data2 time_then = $time_then\n";
+	#print STDERR "get_delta_data2 time_then = $time_then month=$month (0-11)\n";
+	$ret = $time_then . $7;
+    }
+    elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])([.,]\d+){0,1}$/o)
+    {   # convert to float seconds  e.g. 12-23 13:22:57.123456
+        $year=1970; $month=$1-1; $date=$2; $hour=$3; $minute=$4; $seconds=$5;  # year doesn't matter to get delta
+        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	#print STDERR "get_delta_data3 time_then = $time_then month=$month (0-11)\n";
 	$ret = $time_then . $6;
     }
-    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}$/o)   # string that ends with .123456
+    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])([.,]\d+){0,1}$/o)   # string that ends with .123456
     {   # convert to float seconds  e.g. 13:22:57.123456
-        $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
-        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
-	#print STDERR "get_delta_data3 time_then = $time_then\n";
-	$ret = $time_then . $4;
-    }
-    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])(\.\d+){0,1}/o)  # handles a "." and other stuff at end of string
-    {   # convert to: float or int seconds e.g. 13:22:57xyz or 13:22:57.123.xyz
         $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
         $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
 	#print STDERR "get_delta_data4 time_then = $time_then\n";
 	$ret = $time_then . $4;
     }
+    elsif ($delta_d =~ /^\s*([0-9]+):([0-9]+):([0-9][0-9])([.,]\d+){0,1}/o)  # handles a "." and other stuff at end of string
+    {   # convert to: float or int seconds e.g. 13:22:57xyz or 13:22:57.123.xyz
+        $year=1970; $month=0; $date=1; $hour=$1; $minute=$2; $seconds=$3;
+        $time_then = timelocal(($seconds,$minute,$hour,$date,$month,$year,0,0,0));
+	#print STDERR "get_delta_data5 time_then = $time_then\n";
+	$ret = $time_then . $4;
+    }
     elsif ($delta_d =~ /^\s*([\d.]+)/o)
     {   $ret = $1;         # e.g. 1234blah or 1234.56blah
-	#print STDERR "get_delta_data penultimate - return numbers: $ret\n";
+	#print STDERR "get_delta_data6 - return numbers: $ret\n";
     }
     else
     {   $ret = $delta_d;   # e.g. blah
-	#print STDERR "get_delta_data last - return input: $ret\n";
+	#print STDERR "get_delta_data7 - return input: $ret\n";
     }
     #print STDERR "ret=$ret\n";
     return $ret;

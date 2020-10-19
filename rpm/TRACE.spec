@@ -38,7 +38,7 @@ Source10: kmodtool-%{kmod_name}.sh
 # If I need a revision w/o svn: find . -name \*.[chs]* -o -name \*ake\* -o -name \*.spec | egrep -v '/.svn|~' | xargs grep -o 'Revision: [0-9]*' | awk '{print$2}' | sort -n | tail -1
 %if "x%{?trace_revision}" == "x"
 %define trace_revision r%(mkdir -p %{_builddir}/%{kmod_name}; cd  %{_builddir}/%{kmod_name} ; tar xf %{SOURCE0} ;\
-                          find . -name '*.[chs]*' -o -name '*ake*' -o -name '*.spec' | egrep -v '/.svn|~' | xargs grep -o 'Revision: [0-9]*' | awk '{print$2}' | sort -n | tail -1;\
+                          find . -type f -a '(' -name '*.[chs]*' -o -name '*ake*' -o -name '*.spec' ')' | egrep -v '/.svn|~' | xargs grep -o 'Revision: [0-9]*' | awk '{print$2}' | sort -n | tail -1;\
                           rm -rf %{_builddir}/%{kmod_name}) 
 %endif
 
@@ -92,6 +92,7 @@ Utilities for %{kmod_name} kmod
 %attr(0755,root,root) %{_bindir}/trace_delta
 %attr(0755,root,root) %{_bindir}/bitN_to_mask
 %attr(0755,root,root) %{_bindir}/trace_envvars
+%attr(0755,root,root) %{_bindir}/trace_maxents
 %{_sysconfdir}/profile.d/trace.sh
 %{_includedir}/TRACE/*
 
@@ -109,7 +110,8 @@ echo "override %{kmod_name} * weak-updates/%{kmod_name}" > build/kmod-%{kmod_nam
 %{__mkdir_p} build
 # Build all (TRACE packages its own implementation of module-build)
 #  when the distro has gcc 4.9+, (and std is less than c11) then add XTRA_CFLAGS=-std=c11
-%{__make} OUT=${PWD}/build XTRA_CFLAGS=-D_GNU_SOURCE XTRA_CXXFLAGS=-std=c++11 all KDIR=%{_usrsrc}/kernels/%{kversion}
+# Make sure the TRACE_FQ_DIR env var is not set as it can override OUT
+TRACE_FQ_DIR= %{__make} OUT=${PWD}/build XTRA_CFLAGS=-D_GNU_SOURCE XTRA_CXXFLAGS=-std=c++11 all KDIR=%{_usrsrc}/kernels/%{kversion}
 
 ###########################################################
 %install
@@ -150,6 +152,7 @@ done
 %{__install} script/trace_delta %{buildroot}%{_bindir}/trace_delta
 %{__install} script/bitN_to_mask %{buildroot}%{_bindir}/bitN_to_mask
 %{__install} script/trace_envvars %{buildroot}%{_bindir}/trace_envvars
+%{__install} script/trace_maxents %{buildroot}%{_bindir}/trace_maxents
 
 # Install manpages
 %{__install} -d %{buildroot}%{_mandir}/man1

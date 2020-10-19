@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1247 $$Date: 2020-02-06 11:41:23 -0600 (Thu, 06 Feb 2020) $'
+ # rev='$Revision: 1395 $$Date: 2020-09-29 09:58:06 -0500 (Tue, 29 Sep 2020) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -18,6 +18,7 @@ def_threads=`expr $(nproc) \* 91 / 100`   #
 def_loops=50
 def_process_forks=0
 def_stack=0x4000
+def_min_delta=-100
 USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
@@ -450,11 +451,12 @@ test -n "${check_numents-}" \
  || check_numents=`expr \( \( $opt_depth - 1 \) \* $opt_tlogs_per + 35 \) \* $opt_threads \* $opt_loops`
 
 if [ "${do_mapcheck-0}" -gt 0 ];then
-    export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS
+    export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS TRACE_PRINT
+    TRACE_PRINT='%T %*n %*L %M'  # the old default (w/o __func__)
     TRACE_ARGSMAX=4
     TRACE_MSGMAX=64
     TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
-    TRACE_NAMTBLENTS=`expr $opt_threads + 3 + $opt_depth / 10`   # extras: jones, TRACE, _TRACE_ "sub10s"
+    TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
     vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS" 
     test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset || { rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
     file_entries=`trace_cntl info | awk '/num_entries/{print$3;}'`
@@ -499,12 +501,15 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
             uniq_pids=`   TRACE_SHOW='%x%P %n' trace_cntl show | grep -v KERNEL | awk '{print$1;}' | sort -nu | wc -l`
             sub10_trc_id_=`trace_cntl tids | awk '/ sub10 /{print$1;}'`
             last_thr_idx=`expr $opt_threads - 1`
-            _TRACE_=`TRACE_SHOW=%n trace_cntl show | grep "_TRACE_"`
+            _TRACE_=`TRACE_SHOW=%n trace_cntl show | grep "_TRACE_"` # should be none (i.e. namtbl should not be full)
             vprintf 1 'Calculating delta_min...\n'
             show_count=`trace_cntl info | awk '/num_entries/{print$3;}'`
             test $show_count -gt 500000 && show_count=500000
             start_idx=`expr $show_count - 1` # smaller buffers will wrap -- smallish number of unused entries have 0 timestamp which tdelta ignores
             delta_min=`TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx | trace_delta -stats | awk '/^  *min /{print$2;}'`
+            if [ $delta_min -lt $def_min_delta -a $opt_v -ge 1 ];then
+                TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx | trace_delta | grep -C5 " $delta_min "
+            fi
             vprintf 1 'done calculating\n'
         else
             echo "TRACE_FILE not found - FAIL will result"
@@ -519,7 +524,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) || fail="$fail uniq_addrs"
         test "$sub10_trc_id" -eq $sub10_trc_id_                            || fail="$fail sub10_trc_id"
         test -z "$_TRACE_"                                                 || fail="$fail _TRACE_tid"
-        test $delta_min -gt -100                                           || fail="$fail delta_min=$delta_min"
+        test $delta_min -ge $def_min_delta                                 || fail="$fail delta_min=$delta_min"
         if [ "$uname" = Linux ];then
             # additional checks
             test $num_maps -eq $uniq2                                      || fail="$fail num_maps($num_maps!=$uniq2)"

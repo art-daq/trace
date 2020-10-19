@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1084 $
-#  $Date: 2019-03-04 09:12:13 -0600 (Mon, 04 Mar 2019) $
+#  $Revision: 1380 $
+#  $Date: 2020-09-23 19:56:26 -0500 (Wed, 23 Sep 2020) $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -30,8 +30,9 @@
 #endif
 CC       = gcc
 CXX      = g++   # a variable named "C++" is not compatible with bourne shell
-CFLAGS   = -g -Wall -DDO_THREADS -O2 $(XTRA_CFLAGS)
-CXXFLAGS = -g -Wall -DDO_THREADS -O2 $(XTRA_CXXFLAGS)
+OPT=2            # override this on the make command line. Cannot use "O" as kernel make (module) uses O for output dir
+CFLAGS   = -g -Wall -DDO_THREADS -O$(OPT) $(XTRA_CFLAGS)
+CXXFLAGS = -g -Wall -DDO_THREADS -O$(OPT) $(XTRA_CXXFLAGS)
 CPPFLAGS = -I../include
 LDFLAGS  = -lpthread  # -g not needed
 

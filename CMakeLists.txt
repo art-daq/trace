@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1380 $$Date: 2020-09-23 19:56:26 -0500 (Wed, 23 Sep 2020) $
+# $Revision: 1408 $$Date: 2020-10-19 10:42:05 -0500 (Mon, 19 Oct 2020) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -18,8 +18,8 @@ endif()
 project(TRACE VERSION 3.16.00)
 # cetbuildtools contains our cmake modules
 
-#find_package(cetmodules 1.02.02 REQUIRED)
-find_package(cetmodules 1.02.02 QUIET)
+find_package(cetmodules 1.04.00 REQUIRED)
+#find_package(cetmodules 1.04.00 QUIET)
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmouldes.")
   include(CetCMakeEnv)
@@ -139,17 +139,24 @@ if (${cetmodules_FOUND})
     "Built TRACE utilities using ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}\n")
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
     DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
-endif (${cetmodules_FOUND})
+else  (${cetmodules_FOUND})
 
-
-#---------------------------------------------------------------------------------------------
-
-# locations are provided by GNUInstallDirs
-install(TARGETS ${PROJECT_NAME}
+  # locations are provided by GNUInstallDirs
+  install(TARGETS ${PROJECT_NAME}
         EXPORT ${PROJECT_NAME}_Targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  install(EXPORT ${PROJECT_NAME}_Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+endif (${cetmodules_FOUND})
+
+
+#---------------------------------------------------------------------------------------------
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file("${PROJECT_NAME}ConfigVersion.cmake"
@@ -161,11 +168,6 @@ configure_package_config_file(
   "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
   INSTALL_DESTINATION
   ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
-
-install(EXPORT ${PROJECT_NAME}_Targets
-        FILE ${PROJECT_NAME}Targets.cmake
-        NAMESPACE ${PROJECT_NAME}::
-        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 
 install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
               "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"

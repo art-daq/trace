@@ -7,15 +7,15 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1411 $$Date: 2020-10-19 12:35:04 -0500 (Mon, 19 Oct 2020) $"
+#define TRACE_REV "$Revision: 1414 $$Date: 2020-10-19 16:01:31 -0500 (Mon, 19 Oct 2020) $"
 
-#ifdef __CLANG__
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1411 $_$Date: 2020-10-19 12:35:04 -0500 (Mon, 19 Oct 2020) $
+#define TRACE_REVx $_$Revision: 1414 $_$Date: 2020-10-19 16:01:31 -0500 (Mon, 19 Oct 2020) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -28,7 +28,7 @@
 //#warning "put whatever here"
 #endif
 
-#ifdef __CLANG__
+#ifdef __clang__
 #pragma clang diagnostic pop
 #endif
 

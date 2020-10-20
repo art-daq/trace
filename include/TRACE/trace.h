@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1416 $$Date: 2020-10-19 18:50:29 -0500 (Mon, 19 Oct 2020) $"
+#define TRACE_REV "$Revision: 1418 $$Date: 2020-10-20 17:53:46 -0500 (Tue, 20 Oct 2020) $"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,7 +15,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1416 $_$Date: 2020-10-19 18:50:29 -0500 (Mon, 19 Oct 2020) $
+#define TRACE_REVx $_$Revision: 1418 $_$Date: 2020-10-20 17:53:46 -0500 (Tue, 20 Oct 2020) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1947,7 +1947,7 @@ static uint32_t trace_name2TID(const char *nn)
 	   searching when either the string or an empty string is found.
 	   If the string is found, return. If an empty is found, go on
 	   to insert. */
-	if (strcmp(nn, "_TRACE_") == 0)
+	if (strcmp(nn, "_TRACE_") == 0) /* if hashing, "_TRACE_" is special, so need to check */
 		return (traceControl_p->num_namLvlTblEnts - 1);
 	ii= start= /*0;*/ trace_name_hash(name) % traceControl_p->num_namLvlTblEnts;
 	do {
@@ -2993,8 +2993,7 @@ static void traceInitNames(struct traceControl_s *tC_p, struct traceControl_rw *
 	unsigned ii;
 	int32_t TrcId;
 	for (ii= 0; ii < tC_p->num_namLvlTblEnts; ++ii) {
-		TRACE_TID2NAME((int32_t)ii)
-		[0]= '\0';
+		TRACE_TID2NAME((int32_t)ii)[0]= '\0';
 		traceLvls_p[ii].M= TRACE_DFLT_LVLM; /* As Name/TIDs can't go away, these are */
 		traceLvls_p[ii].S= TRACE_DFLT_LVLS; /* then defaults except for trace_lvlS/trace_lvlM */
 		traceLvls_p[ii].T= 0;               /* in trace_name2TID. */
@@ -3002,7 +3001,7 @@ static void traceInitNames(struct traceControl_s *tC_p, struct traceControl_rw *
 	// if hashing the name, special considerations need to me made -- see trace_name2TID(nn)
 	//strcpy(TRACE_TID2NAME((int32_t)tC_p->num_namLvlTblEnts - 2), "TRACE");    //NOLINT
 	TrcId= (int32_t)tC_p->num_namLvlTblEnts - 1;
-	strcpy(TRACE_TID2NAME(TrcId), "_TRACE_");  //NOLINT
+	strcpy(TRACE_TID2NAME(TrcId), "_TRACE_");  //NOLINT - do first, before any hashing
 	tC_rwp->longest_name= 7;
 #	ifdef __KERNEL__
 	TrcId= (int32_t)trace_name2TID("KERNEL");
@@ -3012,6 +3011,7 @@ static void traceInitNames(struct traceControl_s *tC_p, struct traceControl_rw *
 	if (trace_lvlM)
 		traceLvls_p[TrcId].M= trace_lvlM;
 #	endif
+	trace_name2TID("TRACE");	/* make sure TRACE is in the table as some apps may expect this */
 } /* traceInitNames */
 
 #endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */

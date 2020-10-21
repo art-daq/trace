@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1418 $$Date: 2020-10-20 17:53:46 -0500 (Tue, 20 Oct 2020) $"
+#define TRACE_REV "$Revision: 1422 $$Date: 2020-10-21 09:51:26 -0500 (Wed, 21 Oct 2020) $"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,7 +15,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1418 $_$Date: 2020-10-20 17:53:46 -0500 (Tue, 20 Oct 2020) $
+#define TRACE_REVx $_$Revision: 1422 $_$Date: 2020-10-21 09:51:26 -0500 (Wed, 21 Oct 2020) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2675,6 +2675,9 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 			*tC_rwp= &(traceControl[0].rw);
 			return (0);
 		}
+		/* In this "created" case, tC_rwp will point to traceControl_rwp which needs to be set 
+		   for trace_created_init to call traceInitNames which calls trace_name2TID */
+		*tC_rwp= rw_rwp; /* as per above comment, we have to assume we will succeed with the remap */
 		trace_created_init(controlFirstPage_p, rw_rwp, msgmax, argsmax, numents, namtblents, namemax, *memlen, 1);
 		/* Now make first page RO */
 		munmap(controlFirstPage_p, TRACE_PAGESIZE);

@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1389 $$Date: 2020-09-26 11:22:40 -0500 (Sat, 26 Sep 2020) $";
+ // rev="$Revision: 1425 $$Date: 2020-10-21 18:34:09 -0500 (Wed, 21 Oct 2020) $";
  */
  /**
   * \file tracemf.h
@@ -32,12 +32,12 @@
 #define MFBOOL_INFO __mie
 #define MFBOOL_DEBUG __mde
 
-#define SEV_EN(lvl) (  ((lvl<TLVL_WARNING)||lvl==TLVL_NOTICE)			\
-					 ||((lvl==TLVL_WARNING)&&MFBOOL_WARNING)			\
-					 ||((lvl==TLVL_INFO)&&MFBOOL_INFO)					\
-					 ||((lvl>=TLVL_DEBUG)&&MFBOOL_DEBUG))
+#define SEV_EN(lvl) (  ((lvl<static_cast<int>(TLVL_WARNING))||lvl==static_cast<int>(TLVL_NOTICE)) \
+					 ||((lvl==static_cast<int>(TLVL_WARNING))&&MFBOOL_WARNING) \
+					 ||((lvl==static_cast<int>(TLVL_INFO))&&MFBOOL_INFO) \
+					    ||((lvl>=static_cast<int>(TLVL_DEBUG))&&MFBOOL_DEBUG))
 // SLow FoRCe
-#define SL_FRC(lvl) ((lvl<TLVL_DEBUG)||((lvl==TLVL_DEBUG)&&DEBUG_FORCED))
+#define SL_FRC(lvl) ((lvl<static_cast<int>(TLVL_DEBUG))||((lvl==static_cast<int>(TLVL_DEBUG))&&DEBUG_FORCED))
 
 #undef  TLOG_ERROR           // TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)
 #define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR, &(name)[0], 0, 1, 1 )

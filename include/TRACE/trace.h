@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1422 $$Date: 2020-10-21 09:51:26 -0500 (Wed, 21 Oct 2020) $"
+#define TRACE_REV "$Revision: 1429 $$Date: 2020-10-21 19:18:58 -0500 (Wed, 21 Oct 2020) $"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,7 +15,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1422 $_$Date: 2020-10-21 09:51:26 -0500 (Wed, 21 Oct 2020) $
+#define TRACE_REVx $_$Revision: 1429 $_$Date: 2020-10-21 19:18:58 -0500 (Wed, 21 Oct 2020) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -941,12 +941,12 @@ static const char *trace_path_components(const char *in_cp, int n_additional_com
     If a pattern besides the 2 indicated occurs, it will be transferred to the output.
  */
 SUPPRESS_NOT_USED_WARN
-static const char *trace_name(const char *TNAME, const char *file, char *buf, size_t buflen)
+static const char *trace_name(const char *_tname_, const char *file, char *buf, size_t buflen)
 {
 	const char *ret;
 
-	if ((TNAME) && (*TNAME))
-		ret= TNAME; /* we should be able to do better than "" */
+	if ((_tname_) && (*_tname_))
+		ret= _tname_; /* we should be able to do better than "" */
 	else {
 		size_t oo= 0;
 		const char *name;

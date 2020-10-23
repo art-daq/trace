@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1403 $$Date: 2020-10-16 11:18:41 -0500 (Fri, 16 Oct 2020) $"
+#define TRACE_CNTL_REV "$Revision: 1432 $$Date: 2020-10-23 12:46:38 -0500 (Fri, 23 Oct 2020) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -617,8 +617,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				break;
 			case 'N': printf("%*u", N_width, printed ); break;
 			case 'n': printf("%*.*s",name_width,name_width,TRACE_TID2NAME(myEnt_p->TrcId));break;
-			case 'O': printf(trace_lvlcolors[(myEnt_p->lvl)&TLVLBITSMSK][0]); break;
-			case 'o': printf(trace_lvlcolors[(myEnt_p->lvl)&TLVLBITSMSK][1]); break;
+			case 'O': printf("%s",trace_lvlcolors[(myEnt_p->lvl)&TLVLBITSMSK][0]); break;
+			case 'o': printf("%s",trace_lvlcolors[(myEnt_p->lvl)&TLVLBITSMSK][1]); break;
 			case 'P': printf("%*d", TRACE_TID_WIDTH, myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 or 458752 (on mu2edaq13) */
 			case 'R':
 				if (myEnt_p->get_idxCnt_retries) printf( "%u", myEnt_p->get_idxCnt_retries );

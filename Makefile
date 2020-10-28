@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1359 $$Date: 2020-09-14 09:40:27 -0500 (Mon, 14 Sep 2020) $";
+ # rev="$Revision: 1436 $$Date: 2020-10-25 01:41:06 -0500 (Sun, 25 Oct 2020) $";
 
 # TOP LEVEL Makefile
 
@@ -48,8 +48,9 @@ all: default modules
 	@echo Done with $@
 
 clean:
+	@${FLAVOR_SUBDIR};\
+	set -x; rm -fr $$os$$mach$$b64+$$os_rev1$${libc1:+-$$libc1} module/`uname -r` big_ex.d src_module/.tmp_versions
 	rm -f src_example/userspace/*.d src_module/{.*.cmd,*.symvers,*.ko,*.mod.c,*.order}
-	rm -fr Linux64bit+* module big_ex.d src_module/.tmp_versions
 	rm -f make.out
 	rm -f rpm/TRACE.tar.bz2
 

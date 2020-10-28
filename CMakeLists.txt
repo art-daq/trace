@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1408 $$Date: 2020-10-19 10:42:05 -0500 (Mon, 19 Oct 2020) $
+# $Revision: 1438 $$Date: 2020-10-28 09:49:17 -0500 (Wed, 28 Oct 2020) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -15,7 +15,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
   unset(CMAKE_CXX_COMPILER)
 endif()
 
-project(TRACE VERSION 3.16.00)
+project(TRACE VERSION 3.16.01)
 # cetbuildtools contains our cmake modules
 
 find_package(cetmodules 1.04.00 REQUIRED)

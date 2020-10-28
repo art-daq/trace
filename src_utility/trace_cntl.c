@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1432 $$Date: 2020-10-23 12:46:38 -0500 (Fri, 23 Oct 2020) $"
+#define TRACE_CNTL_REV "$Revision: 1437 $$Date: 2020-10-27 00:58:17 -0500 (Tue, 27 Oct 2020) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -784,15 +784,19 @@ int tvcmp( struct timeval *t1, struct timeval *t2)
 		return (1);
 } /* tvcmp */
 
-/* count==-1, slotStart==-1  ==> DEFAULT - reverse print from wrIdx to zero (if not
+/*
+   ospec is TRACE_SHOW or DFLT_SHOW
+   count==-1, slotStart==-1  ==> DEFAULT - reverse print from wrIdx to zero (if not
                                  full) or for num_entrie
-   count>=0,  slotStart==-1  ==> reverse print "count" entries (incuding 0, which
+   count>=0,  slotStart==-1  ==> reverse print "count" entries (including 0, which
                                  doesn't seem to useful
    count>=0,  slotStart>=0   ==> reverse print count entries starting at "slot" idx
                                  "slotStart"  I.e. if 8 traces have occurred, these 2
                                  are equivalent:
                                  traceShow( ospec, -1, -1, 0 ) and
                                  traceShow( ospec,  8,  7, 0 )
+   show_opts = 0[|quiet_][|forward_]
+   arg, argv -- list of files to show
  */
 void traceShow( const char *ospec, int count, int slotStart, int show_opts, int argc, char *argv[] )
 {
@@ -1293,13 +1297,13 @@ void traceInfo()
 	       "limit_span_off_ms = %llu\n"
 	       "traceLevel        = 0x%0*llx 0x%0*llx 0x%0*llx\n"
 	       "num_entries       = %u\n"
-	       "max_msg_sz        = %u  includes system enforced terminator\n"
+	       "max_msg_sz        = %u         includes system enforced terminator\n"
 	       "max_params        = %u\n"
 	       "entry_size        = %u\n"
 	       "namLvlTbl_ents    = %u\n"
-	       "namLvlTbl_name_sz = %u         not including null terminator\n"
+	       "namLvlTbl_name_sz = %u          not including null terminator\n"
 	       "longest_name      = %u\n"
-	       "wrIdxCnt offset   = %p\n"
+	       "wrIdxCnt offset   = %p     traceControl_rw start\n"
 	       "lvls offset       = 0x%lx\n"
 	       "nams offset       = 0x%lx\n"
 	       "buffer_offset     = 0x%lx\n"
@@ -1367,7 +1371,7 @@ extern  int        optind;         /* for getopt */
 	unsigned    opt_dly_ms=0;
 	unsigned    opt_burst=1;
 	int         opt_all=0;
-	int         opt_count=-1, opt_start=-1;
+	int         opt_count=-2, opt_start=-1; // -2 to indicate "not specified" (less likely to be specfied than -1)
 	const char *opt_Name=NULL;	/* -N<wild> */
 	uint64_t t0_us=0;
 	uint32_t tdelta_us;
@@ -1763,7 +1767,9 @@ extern  int        optind;         /* for getopt */
 	{
 		const char *ospec=getenv("TRACE_SHOW");
 		if (!ospec) ospec=DFLT_SHOW;
-		if ((do_heading==0) && (strncmp("%H",ospec,2)==0)) ospec+=2;
+		if ((do_heading==0) && (strncmp("%H",ospec,2)==0)) ospec+=2; /* skip "%H" */
+		if (show_opts&forward_ && opt_count==-2)
+			opt_count=10;		/* like head and tail default */
 		traceShow(ospec,opt_count,opt_start,show_opts, argc-optind, &argv[optind]);
 	}
 	else if (strncmp(cmd,"info",4) == 0)

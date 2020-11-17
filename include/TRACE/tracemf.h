@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1425 $$Date: 2020-10-21 18:34:09 -0500 (Wed, 21 Oct 2020) $";
+ // rev="$Revision: 1440 $$Date: 2020-10-30 01:15:37 -0500 (Fri, 30 Oct 2020) $";
  */
  /**
   * \file tracemf.h
@@ -136,6 +136,7 @@ static void vmftrace_user(struct timeval *, int TID, uint8_t lvl, const char* in
 	switch (lvl)
 	{
 #  ifdef TRACEMF_USE_VERBATIM
+		// NOTE: need this "Verbatim" set of methods to get full filename
 	case TLVL_ERROR:   ::mf::LogProblem(TRACE_TID2NAME(TID), file, line) << outp; break;
 	case TLVL_WARNING: ::mf::LogPrint(TRACE_TID2NAME(TID), file, line) << outp; break;
 	case TLVL_INFO:    ::mf::LogVerbatim{ TRACE_TID2NAME(TID), file, line } << outp; break;

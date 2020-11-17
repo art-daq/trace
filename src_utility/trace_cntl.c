@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1437 $$Date: 2020-10-27 00:58:17 -0500 (Tue, 27 Oct 2020) $"
+#define TRACE_CNTL_REV "$Revision: 1445 $$Date: 2020-11-17 11:56:18 -0600 (Tue, 17 Nov 2020) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -35,6 +35,14 @@ done
 #include "TRACE/trace.h"
 //#define TRACE_NAME basename(__FILE__)  // don't define TRACE_NAME, so ton* (w/o -n or -N) works on default TRACE_NAME "TRACE"
 
+struct {
+	const char* subcmd;
+	const char* cmdhlp;
+} subcmdhlp[] = {
+	{"show","[opts] [file]...   # Note: -s option invalid with multiple files"},
+	{"lvl{msk,set,clr}<M|S|T>[g|G] <lvlmsk>","M=memory, S=slow/console, T=trig; G=only active (not empth), g=all (current and futur)"},
+	{"lvl{msk,set,clr}[g|G] <mskM> <mskS> <mskT>","provide all 3 masks; G=only active (not empth), g=all (current and futur)"},
+};
 #define USAGE "\
 %s [opts] <cmd> [command opt/args]\n\
 commands:\n\
@@ -1183,7 +1191,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 	printed=0;
 	while (1) {
-		uint32_t lines;
+		uint32_t lines=0;
 		/* loop trhough the files looking for
 		   a) ones that have something to print and
 		   b) the one that is earliest or latest depending on for_rev
@@ -1200,8 +1208,11 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				// "startSlot mode"
 				t_ptrs_use=t_ptrs;
 			} else if ((lines=rdIdx_has_lines(t_ptrs->rw_p->wrIdxCnt,t_ptrs->rdIdx,for_rev))) {
-				if (lines > traceControl_p->num_entries) {  // reset detect
-					t_ptrs->rdIdx = 0;
+				if (forward_continuous && lines > traceControl_p->num_entries) {  // reset detect
+					if (t_ptrs->rw_p->wrIdxCnt == 0 && t_ptrs->rw_p->full == 0)
+						t_ptrs->rdIdx = 0;
+					else
+						t_ptrs->rdIdx = TRACE_IDXCNT_ADD(t_ptrs->rw_p->wrIdxCnt, -(int)traceControl_p->num_entries);
 					t_ptrs->ref_tv.tv_sec=0;
 					goto reset_check;
 				}
@@ -1231,7 +1242,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			} else if (!forward_continuous)  // not strictly needed, but a little efficiency gain
 				trace_ptrs_discard( t_ptrs, &trace_ptrs_list_start );
 		}
-		if (t_ptrs_use == NULL && !forward_continuous) {
+		if (!forward_continuous && (t_ptrs_use == NULL || lines > traceControl_p->num_entries)) {
 			break;
 		} else if (t_ptrs_use==NULL && forward_continuous) {
 			usleep( 100000 );
@@ -1819,8 +1830,9 @@ extern  int        optind;         /* for getopt */
 	} else if (strcmp(cmd,"lvlstrs") == 0) {
 		TRACE_CNTL("init");		/* for potential TRACE_LVLSTRS */
 		for (ii=0; ii<64; ++ii) {
+			printf("%2d ", ii);
 			for (int aa=0; aa<trace_lvlstrs_aliases; ++aa)
-				printf("%*s ",trace_lvlwidth, trace_lvlstrs[aa][ii]);
+				printf("%*s ", trace_lvlwidth, trace_lvlstrs[aa][ii]);
 			printf("\n");
 		}
 	} else if (strncmp(cmd,"TRACE",5) == 0) {

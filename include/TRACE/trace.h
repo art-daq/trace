@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1429 $$Date: 2020-10-21 19:18:58 -0500 (Wed, 21 Oct 2020) $"
+#define TRACE_REV "$Revision: 1443 $$Date: 2020-11-09 13:39:57 -0600 (Mon, 09 Nov 2020) $"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,7 +15,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1429 $_$Date: 2020-10-21 19:18:58 -0500 (Wed, 21 Oct 2020) $
+#define TRACE_REVx $_$Revision: 1443 $_$Date: 2020-11-09 13:39:57 -0600 (Mon, 09 Nov 2020) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2025,17 +2025,23 @@ static void trace_namLvlSet(void)
 	   the potential of effecting another process's TRACE-ing. */
 	if ((cp= getenv("TRACE_NAMLVLSET"))) {
 		int ign; /* will ignore trace id (index) if present */
-		char name[PATH_MAX];
+		char name[PATH_MAX], line[PATH_MAX];
+		const char *cpnl;
+		size_t len;
 		unsigned long long M, S, T= 0;
 		/* NOTE: Currently, (it could change; see trace_name2TID)
 		   TRACE_NAME's can contain ',' (i.e "THIS,THAT" is a valid),
 		   but since it's unusual, after checking for " " separated,
 		   I'll  check for "," separated (because it seems reasonable) */
-		while (((sts= sscanf(cp, "%d %s %llx %llx %llx", &ign, name, &M, &S, &T)) && sts >= 4)  //NOLINT
-			   || ((sts= sscanf(cp, "%s %llx %llx %llx", name, &M, &S, &T)) && sts >= 3)        //NOLINT
-			   || ((sts= sscanf(cp, "%[^,],%llx,%llx,%llx", name, &M, &S, &T)) && sts >= 3)        //NOLINT
-			   || ((sts= sscanf(cp, "%s %llx", name, &S)) && sts == 2)                          //NOLINT
-			   || ((sts= sscanf(cp, "%s[^,],%llx", name, &S)) && sts == 2))                         //NOLINT
+		if ((cpnl=strchr(cp,'\n'))) len=(size_t)(cpnl-cp);
+		else                        len=strlen(cp);
+	    len=TRACE_MIN(sizeof(line)-1,len); /* need room, possibly, for terminator */
+		strncpy(line,cp,len); line[len]='\0';
+		while (((sts= sscanf(line, "%d %s %llx %llx %llx", &ign, name, &M, &S, &T)) && sts >= 4)  //NOLINT
+			   || ((sts= sscanf(line, "%s %llx %llx %llx", name, &M, &S, &T)) && sts >= 3)        //NOLINT
+			   || ((sts= sscanf(line, "%[^,],%llx,%llx,%llx", name, &M, &S, &T)) && sts >= 3)        //NOLINT
+			   || ((sts= sscanf(line, "%s %llx", name, &S)) && sts == 2)                          //NOLINT
+			   || ((sts= sscanf(line, "%s[^,],%llx", name, &S)) && sts == 2))                         //NOLINT
 																								// The last case is for when TRACE will remain "inactive" (not tracing to mem and not using lvls from trace file) -- just concerned about slow path
 		{
 			int32_t tid= (int32_t)trace_name2TID(name);
@@ -2046,14 +2052,16 @@ static void trace_namLvlSet(void)
 				traceLvls_p[tid].M= M;
 				traceLvls_p[tid].T= T;
 			}
-			cp= strchr(cp, '\n');
-			if (cp == NULL) {
+			if (cpnl == NULL)
 				break;
-			}
-			++cp;
+			cp = cpnl+1;
+			if ((cpnl=strchr(cp,'\n'))) len=(size_t)(cpnl-cp);
+			else                        len=strlen(cp);
+			len=TRACE_MIN(sizeof(line)-1,len); /* need room, possibly, for terminator */
+			strncpy(line,cp,len); line[len]='\0';
 			T= 0;
 		}
-		if (cp != NULL && *cp != '\0') {
+		if (cpnl != NULL && *cpnl != '\0') {
 			fprintf(stderr, "Warning: TRACE_NAMLVLSET in env., but processing did not complete\n");
 		}
 	}

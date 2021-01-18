@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1372 $$Date: 2020-09-19 21:20:04 -0500 (Sat, 19 Sep 2020) $";
+ // rev="$Revision: 1459 $$Date: 2021-01-02 09:23:56 -0600 (Sat, 02 Jan 2021) $";
 
 
 // test TRACE(lvl++,...) and TLOG( 
@@ -11,6 +11,7 @@
 // g++ -Wall -g -o trace_lvl{,.cc} -I$TRACE_INC && ./trace_lvl
 
 #include <stdio.h>		// printf
+#define TRACE_USE_STATIC_STREAMER 1 // the use of TraceStreamer in the file assumes this and precludes non-static
 #include "TRACE/trace.h"
 
 void sub1(int lvl)
@@ -35,18 +36,14 @@ main(/*  int	argc
 {
 
 	// The following is just shoved in here as a place to help develop the TRACE_STREAMER macro
-#define _lvl       2
+#define _lvl       TLVL_INFO
 #define nam_or_fmt 0
 #define fmt_or_nam ""
-#define s_enabled  1
-#define force_s    0
 	static TRACE_THREAD_LOCAL TraceStreamer steamer;
-	for (struct _T_ {unsigned once; uint8_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char ins[32]; struct timeval tv; void* stmr__;
-		_T_(uint8_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info),stmr__(&__tstreamer){tv.tv_sec=0;}
-		~_T_(){if(stmr__ != (void*)&__tstreamer) delete (TraceStreamer*)stmr__;} } _tlog_((uint8_t)(_lvl),TRACE_GET_STATIC());
+	for (TSTREAMER_T_ _tlog_((tlvle_t)(_lvl), TRACE_GET_STATIC());
 		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME)
-			 && (_tlog_.nn=t_arg_nmft(nam_or_fmt, fmt_or_nam, &_tlog_.flgs),((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?trace_name2TID(_tlog_.nn):traceTID))!=-1)))
-			 && trace_do_streamer(&_tlog_.tv,_tlog_.tidp,_tlog_.lvl,_tlog_.lim_infop,_tlog_.ins,sizeof(_tlog_.ins),&_tlog_.flgs,s_enabled,force_s);
+			 && (_tlog_.TLOG2(nam_or_fmt,fmt_or_nam), ((*_tlog_.tidp != -1) || ((*_tlog_.tidp=(_tlog_.nn[0]?trace_name2TID(_tlog_.nn):traceTID))!=-1)))
+			 && trace_do_streamer(&_tlog_);
 		 steamer.str())
 		steamer.init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, __FUNCTION__, &_tlog_.tv, _tlog_.ins, &TRACE_LOG_FUNCTION) << "hello";
 

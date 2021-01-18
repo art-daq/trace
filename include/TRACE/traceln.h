@@ -24,40 +24,8 @@
 #define TRACE_LOG_FUN_PROTO \
   static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, const char*, uint16_t nargs, const char *msg, ...); \
   static void lntrace_user(struct timeval *, int, uint8_t, const char*, const char*, int, const char*, uint16_t nargs, const std::string& msg, ...)
-#undef TRACE_LOG_FUNCTION
 #define TRACE_LOG_FUNCTION lntrace_user
 #include "TRACE/trace.h"		/* TRACE */
-
-
-
-// SLow FoRCe
-#define SL_FRC(lvl) ((lvl<TLVL_DEBUG)||((lvl==TLVL_DEBUG)&&DEBUG_FORCED))
-
-#undef tlog_LVL
-#define tlog_LVL(a1, ...) a1
-
-#undef  TLOG_ERROR           // TRACE_STREAMER(lvl, nam_or_fmt,fmt_or_nam,s_enabled,force_s)
-#define TLOG_ERROR(name)   TRACE_STREAMER( TLVL_ERROR,  &(name)[0], 0, 1, 1 )
-#undef  TLOG_WARNING
-#define TLOG_WARNING(name) TRACE_STREAMER( TLVL_WARNING,&(name)[0], 0, 1, 1 )
-#undef  TLOG_INFO
-#define TLOG_INFO(name)    TRACE_STREAMER( TLVL_INFO,   &(name)[0], 0, 1, 1)
-#undef  TLOG_DEBUG
-#define TLOG_DEBUG(name)   TRACE_STREAMER( TLVL_DEBUG,  &(name)[0], 0, 1, DEBUG_FORCED)
-#undef  TLOG_TRACE
-#define TLOG_TRACE(name)   TRACE_STREAMER( TLVL_TRACE,  &(name)[0], 0, 1, 0)
-#undef  TLOG_DBG
-#define TLOG_DBG(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
-										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-															, 1, SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
-#undef  TLOG_ARB
-#define TLOG_ARB(...)      TRACE_STREAMER( tlog_LVL(__VA_ARGS__,need_at_least_one), tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
-										  , tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-															, 1, SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
-#undef  TLOG
-#define TLOG(...)          TRACE_STREAMER( tlog_LVL( __VA_ARGS__,need_at_least_one),tlog_ARG2(__VA_ARGS__,0,need_at_least_one) \
-										  ,tlog_ARG3(__VA_ARGS__,0,"",need_at_least_one) \
-															, 1, SL_FRC(tlog_LVL( __VA_ARGS__,need_at_least_one)) )
 
 
 #if defined(__has_feature)

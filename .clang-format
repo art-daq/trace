@@ -51,7 +51,7 @@ BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeColon
 BreakAfterJavaFieldAnnotations: false
 BreakStringLiterals: true # false # true  - no change
-ColumnLimit:     0
+ColumnLimit:     132
 CommentPragmas:  '^\\.+'
 CompactNamespaces: true # false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true

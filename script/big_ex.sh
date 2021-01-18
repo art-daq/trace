@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1395 $$Date: 2020-09-29 09:58:06 -0500 (Tue, 29 Sep 2020) $'
+ # rev='$Revision: 1464 $$Date: 2021-01-05 14:38:26 -0600 (Tue, 05 Jan 2021) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -12,8 +12,10 @@ do_define=1
 do_declare=1
 do_mapcheck=2
 do_shared=1
+do_trace_active=1
 #check_opts='-l5000 -t7 -x3'
 opt_tlogs_per=150   # default for subs besides last
+opt_name=jones
 def_threads=`expr $(nproc) \* 91 / 100`   # 
 def_loops=50
 def_process_forks=0
@@ -51,12 +53,13 @@ Files in the dir will be overwritten (unless... see --rerun below).
 -t<threads>      default $def_threads
 -l<loops>        default $def_loops
 -p<forks>        default $def_process_forks
---tlogs-per=[num] 
+--tlogs-per=[num] default $opt_tlogs_per
 --check-opts=<opts> default=\"-t$def_threads -l$def_loops\"  See below. Note: thread and loops options added
 --check-numents=<ents>  default=calculated: ( depth * tlogs_per + 2 ) * threads * loops
 --stack=[num]    stack used in all but last subroutine - default $def_stack
 -O<x>            compile optimization level. default: no -O
 --rerun          Only recompile main program (don't remake and compile all other files)
+--inactive       no memory/fast path, just stdout/slow
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>
@@ -69,6 +72,7 @@ NOTE: the program can display the number of trace_buffer mappings which
 can get very large when a large combination of TRACE_STATIC modules and
 threads are used.
 "
+VUSAGE=''
 set +u # avoid issues with $@ and bash 4.3.27 on SunOS
 op1chr='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set -- "-$rest" "$@"'
 op1arg='rest=`expr "$op" : "[^-]\(.*\)"`; test -n "$rest" && set --  "$rest" "$@"'
@@ -105,6 +109,7 @@ while [ -n "${1-}" ];do
         -mapcheck)  test -n "$leq"&&do_mapcheck=$1&&shift||do_mapcheck=1;;
         -check-numents)eval $reqarg; check_numents=$1;                 shift;;
         -extra-ents)eval $reqarg; opt_extra_ents=$1;                   shift;;
+        -inactive)  do_trace_active=;;
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -128,8 +133,8 @@ test -z "${opt_threads-}" && opt_threads=$def_threads
 test -z "${opt_loops-}"   && opt_loops=$def_loops
 test -z "${opt_forks-}"   && opt_forks=$def_process_forks
 test -z "${check_opts-}" \
- && check_opts="-t$opt_threads -l$opt_loops -p$opt_forks" \
- || check_opts="-t$opt_threads -l$opt_loops -p$opt_forks $check_opts"
+ && check_opts="-l$opt_loops -t$opt_threads -p$opt_forks" \
+ || check_opts="-l$opt_loops -t$opt_threads -p$opt_forks $check_opts"
 
 vprintf() { num=$1; shift; test $opt_v -ge $num && printf "`date`: ""$@"; }
 
@@ -149,6 +154,18 @@ test -z "${TRACE_FILE-}" && TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
 
 # - - - - - - - - - - - Make all the sub modules (except for the last 1) - - -
 
+# trace versions less than v3_13_12 need to have
+#      ln -s . $TRACE_INC/TRACE
+#      ln -s trace_delta.pl $TRACE_BIN/trace_delta
+# manually added.
+trace_revnum=`awk '/Revision:/{print$4;exit}' $TRACE_INC/TRACE/trace.h`
+if   [ $trace_revnum -le  719 ];then
+    opt_def_trace_revnum="-DTRACE_REVNUM=$trace_revnum -DTLOG(lvl)=TLOG_ARB(lvl,\"somename\")"
+elif [ $trace_revnum -le 1429 ];then
+    opt_def_trace_revnum="-DTRACE_REVNUM=$trace_revnum"
+else
+    opt_def_trace_revnum=
+fi
 struct_args='struct args { pid_t tid; unsigned loop; int xtra_options; useconds_t dly_us; int thread_idx; unsigned char *tosp; }'
 
 echo opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=$check_opts
@@ -183,14 +200,22 @@ void sub$nn( struct args *aa )
     unsigned char tos;
     TLOG(2) << "sub$nn tid="<<aa->tid<<" loop="<<aa->loop
             << " calling sub$next tC_p="<<(void*)traceControl_p<<" "
-            <<traceInitLck_hung_max<<"=tIL_hung_max";
+            <<traceInitLck_hung_max<<"=tIL_hung_max"
+#   if TRACE_REVNUM <= 762
+    << TLOG_ENDL
+#   endif
+    ;
     $POTENTIAL_DELAY
 EOF
     set +x
     xx=$opt_tlogs_per
     while xx=`expr $xx - 1`;do
         cat >>sub$nn.cc <<EOF
-    TLOG(2) << "sub$nn additional $xx";
+    TLOG(2) << "sub$nn additional $xx"
+#   if TRACE_REVNUM <= 762
+    << TLOG_ENDL
+#   endif
+    ;
 EOF
     done
     cat >>sub$nn.cc <<EOF
@@ -229,7 +254,11 @@ $struct_args;
 void* simple_thread_func(void *arg)
 {
     struct args aa=*(struct args *)arg;
-    TLOG(2) << "hello from simple_thread idx " << aa.thread_idx << " tC_p="<<(void*)traceControl_p;
+    TLOG(2) << "hello from simple_thread idx " << aa.thread_idx << " tC_p="<<(void*)traceControl_p
+#   if TRACE_REVNUM <= 762
+    << TLOG_ENDL
+#   endif
+    ;
     pthread_exit(NULL);
 }
 
@@ -302,7 +331,11 @@ void* thread_func(void *arg)
     struct args aa=*args_p;  // per thread copy -  initialize from main
     if (aa.tid != 1) aa.tid=ex_gettid();
     aa.tosp=&tos;
+#   if TRACE_REVNUM <= 762
+    TLOG(2)                                        << "hello from thread idx " << aa.thread_idx <<" "<<3.14 << TLOG_ENDL;
+#   else
     TLOG(2,"thread"+std::to_string(aa.thread_idx)) << "hello from thread idx " << aa.thread_idx <<" "<<3.14;
+#   endif
     for (unsigned ii=0; ii<loops; ++ii) {
         TRACE( 2, "tf tid=%d loop=%u calling sub1 tC_p=%p %u=tIL_hung_max",aa.tid,ii,traceControl_p,traceInitLck_hung_max);
         aa.loop=ii;
@@ -373,7 +406,11 @@ extern  char        * optarg;        // for getopt
         args_p[ii].tid = 1;
         thread_func( (void*)&args_p[ii] );
     }
-    TLOG(1) << "Main - all 0x" << std::hex << num_threads << " threads created";
+    TLOG(1) << "Main - all 0x" << std::hex << num_threads << " threads created"
+#   if TRACE_REVNUM <= 762
+    << TLOG_ENDL
+#   endif
+    ;
 
     for (ii=0; ii<num_processes; ii++) {
         if((pids[ii]=fork()) == 0) {
@@ -429,7 +466,7 @@ for ss in sub*.cc; do
    ofile=`basename $ss .cc`
    test -n "${do_shared-}" && out_opts="-fPIC -shared -o $ofile.so" || out_opts="-c -o $ofile.o"
    test -n "$do_once" && set -x
-   g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include $out_opts $ss &
+   g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum $out_opts $ss &
    test -n "$do_once" && { set +x; do_once=; }
    expr $nn % $opt_j >/dev/null || wait
    nn=`expr $nn + 1`
@@ -442,8 +479,8 @@ fi # -z "${opt_rerun-}"
 vprintf 0 'Compile main\n'
 test $opt_v -gt 0 && set -x
 test -n "${do_shared-}" \
- && { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}; } \
- || { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_DIR/include -o big_ex_main big_ex_main.cc *.o  -lpthread; sts=$?; }
+ && { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}; } \
+ || { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum -o big_ex_main big_ex_main.cc *.o  -lpthread; sts=$?; }
 test $opt_v -gt 0 && set +x
 test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED; exit 1; }
 
@@ -451,16 +488,22 @@ test -n "${check_numents-}" \
  || check_numents=`expr \( \( $opt_depth - 1 \) \* $opt_tlogs_per + 35 \) \* $opt_threads \* $opt_loops`
 
 if [ "${do_mapcheck-0}" -gt 0 ];then
-    export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS TRACE_PRINT
+    export TRACE_PRINT
     TRACE_PRINT='%T %*n %*L %M'  # the old default (w/o __func__)
-    TRACE_ARGSMAX=4
-    TRACE_MSGMAX=64
-    TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
-    TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
-    vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS" 
-    test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset || { rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
-    file_entries=`trace_cntl info | awk '/num_entries/{print$3;}'`
-    test $file_entries -lt $TRACE_NUMENTS && { echo "file_entries=$file_entries -lt calculated_entries=$TRACE_NUMENTS"; exit; }
+    if [ -z "$do_trace_active" ];then
+        unset TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS TRACE_NAMEMAX TRACE_NAME TRACE_FILE TRACE_LVLM
+        opt_name=
+    else
+        export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS
+        TRACE_ARGSMAX=4
+        TRACE_MSGMAX=64
+        TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
+        TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
+        vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS"
+        test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset || { rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
+        file_entries=`trace_cntl info | awk '/num_entries/{print$3;}'`
+        test $file_entries -lt $TRACE_NUMENTS && { echo "file_entries=$file_entries -lt calculated_entries=$TRACE_NUMENTS"; exit; }
+    fi
     echo check_opts=$check_opts
     uname=`uname`
     expect_static=`expr \( $opt_depth + 1 \) \* 2`
@@ -470,9 +513,9 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         vprintf 0 "Testing... $do_mapcheck\n"
 
         test -f big_ex_main.out && mv -f big_ex_main.out big_ex_main.out~
-        vprintf 1 "executing: ./big_ex_main -njones -x1 $check_opts >big_ex_main.out 2>&1\n"
+        vprintf 1 "executing: ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts >big_ex_main.out 2>&1\n"
         trace_cntl reset; trace_cntl mode 3
-        time ./big_ex_main -njones -x1 $check_opts >big_ex_main.out 2>&1
+        time ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts >big_ex_main.out 2>&1
         sts=$?; trace_cntl mode 0
         test $sts -ne 0 && { echo ./big_ex_main FAILED - exit status: $sts; exit 1; }
 
@@ -488,7 +531,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
 Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLARE=%d ?tids=%d)\n\
 " $num_maps $loops $parallel_threads $expect_static $expect_declare $check_tids
 
-        if [ -f $TRACE_FILE ];then
+        if [ -n "$do_trace_active" -a -f "${TRACE_FILE-}" ];then
             trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
             uniq_addrs=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
             vprintf 1 'Calculating sub10_trc_ids...\n'
@@ -506,11 +549,29 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
             show_count=`trace_cntl info | awk '/num_entries/{print$3;}'`
             test $show_count -gt 500000 && show_count=500000
             start_idx=`expr $show_count - 1` # smaller buffers will wrap -- smallish number of unused entries have 0 timestamp which tdelta ignores
-            delta_min=`TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx | trace_delta -stats | awk '/^  *min /{print$2;}'`
+            if [ $trace_revnum -ge 1146 ];then # v3_14_02 (1129) or below does not have -c<cnt> and -s<start>; v3_15_00 (1146) does.
+                delta_min=`TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx|trace_delta -stats|awk '/^  *min /{print$2;}'`
+            else
+                #vprintf 1 "start_idx=$start_idx show_count=$show_count\n"
+                delta_min=`TRACE_SHOW=%T trace_cntl show | head -$show_count | trace_delta -d 0 -stats|awk '/^  *min /{print$2;}'`
+            fi
             if [ $delta_min -lt $def_min_delta -a $opt_v -ge 1 ];then
                 TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx | trace_delta | grep -C5 " $delta_min "
             fi
             vprintf 1 'done calculating\n'
+        elif [ -z "$do_trace_active" ];then
+            echo "stdout (big_ex_main.out) analysis only"
+            expect_declare=0
+            uniq_addrs=`expr $expect_declare / 2`   # the right answer
+            sub10_trc_id_=0                         # the right answer
+            sub10_trc_id=$sub10_trc_id_             # the right answer
+            sub10_trc_ids=1                         # the right answer
+            uniq_thr_ids=1                          # the right answer
+            uniq_pids=0                             # the right answer
+            vprintf 1 'Calculating delta_min...\n'
+            d_min=`grep '[0-9][0-9]-[0-9]' big_ex_main.out | trace_delta -d 1 -i -stats | awk '/^  *min /{print$2;}'`
+            delta_min=`perl -e "print $d_min * 1000000"`
+            _TRACE_=`grep _TRACE_ big_ex_main.out`
         else
             echo "TRACE_FILE not found - FAIL will result"
             uniq_addrs=0 sub10_trc_ids=0 sub10_trc_id=-1 sub10_trc_id_=-2 uniq_thr_ids=0 uniq_pids=0
@@ -535,5 +596,5 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         test "$do_mapcheck" -le 1 && break
         do_mapcheck=`expr $do_mapcheck - 1`
     done
-    ls -l $TRACE_FILE big_ex_main.out*
+    ls -l ${TRACE_FILE-} big_ex_main.out*
 fi

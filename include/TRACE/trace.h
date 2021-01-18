@@ -7,7 +7,15 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1443 $$Date: 2020-11-09 13:39:57 -0600 (Mon, 09 Nov 2020) $"
+#define TRACE_REV "$Revision: 1462 $$Date: 2021-01-05 01:00:34 -0600 (Tue, 05 Jan 2021) $"
+
+
+
+
+
+
+
+/*##############  the detail below  #######################*/
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -15,7 +23,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1443 $_$Date: 2020-11-09 13:39:57 -0600 (Mon, 09 Nov 2020) $
+#define TRACE_REVx $_$Revision: 1462 $_$Date: 2021-01-05 01:00:34 -0600 (Tue, 05 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -262,33 +270,34 @@ typedef struct timeval trace_tv_t;
 
 /* Maximum UDP Datagram Data Length */
 #ifndef TRACE_STREAMER_MSGMAX            /* allow test program to try different values */
-#	define TRACE_STREAMER_MSGMAX 0x2000 /* 0x3400 seems to work for artdaq, but 0x3800 does not. 65507 is way too much for when TraceStreamer is static thread_local */
+#	define TRACE_STREAMER_MSGMAX 0x2000 /* 0x3400 seems to work for artdaq, 0x3800 does not. */
+	                                     /* 65507 is way too much for when TraceStreamer is static thread_local */
 #endif
 #ifndef TRACE_USER_MSGMAX            /* allow test program to try different values */
-#	define TRACE_USER_MSGMAX 0x1800 /* Note: currently user msg part will be 10's of bytes less than this depending upon TRACE_PRINT format */
+#	define TRACE_USER_MSGMAX 0x1800
 #endif
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ  192
 #define TRACE_DFLT_MAX_PARAMS  10
-#define TRACE_DFLT_NAMTBL_ENTS 1022 /* this is for creating new trace_buffer file --         \
-									   it currently matches the "trace DISABLED" number that \
-									   fits into traceControl[1] (see below) */
-#define TRACE_DFLT_NAM_CHR_MAX 39   /* Really The hardcoded max name len.                                      \
-									   Name buffers should be +1 (for null terminator) - 40 was the value with \
-									   8K pages which gave 127 NAMTBL_ENTS with "trace DISBALED".              \
-									   Search for trace_created_init(...) call in "DISABLE" case.              \
-									   Names can have this many characters (and always be null terminated -    \
-									   so names can be printed from nam tbl) */
-#define TRACE_TN_BUFSZ         128  /* hardcoded size of buffer used for creating "trace name."
-									   I've arbitrarily imposed that this should/must be a multiple of 8.
-									   If 2048 is used (uber ridiculous number as I think 128 is ridiculous),
-									   a module build warning occurs:
-									   warning: the frame size of 2080 bytes is larger than 2048 bytes [-Wframe-larger-than=]
-									 */
+#define TRACE_DFLT_NAMTBL_ENTS 1022 /* this is for creating new trace_buffer file -- it currently matches the */
+                                    /* "trace DISABLED" number that fits into traceControl[1] (see below) */
+#define TRACE_DFLT_NAM_CHR_MAX 39   /* Really the hardcoded max name len. Name buffers should be +1 (for null */
+                                    /* terminator) - 40 was the value with 8K pages which gave 127 NAMTBL_ENTS */
+	/* with "trace DISBALED". Search for trace_created_init(...) call in "DISABLE" case. */
+	/* Names can have this many characters (and always be null terminated - so names can be printed from nam tbl) */
+
+#define TRACE_TN_BUFSZ         128  /* hardcoded size of buffer used for creating "trace name." I've arbitrarily */
+	                                /* imposed that this should/must be a multiple of 8. If 2048 is used (uber */
+	/* ridiculous number as I think 128 is ridiculous), a module build warning occurs: */
+	/*                     warning: the frame size of 2080 bytes is larger than 2048 bytes [-Wframe-larger-than=] */
+
 #define TRACE_DFLT_NUM_ENTRIES 500000
 #define TRACE_DFLT_TIME_FMT    "%m-%d %H:%M:%S.%%06d" /* match default in trace_delta.pl */
-#define TRACE_DFLT_NAME        "%-0f"
-#define TRACE_DFLT_LVLS        ((1ULL << (TLVL_DEBUG + 0)) - 1) /* non-debug for slow path -- NOT ERS COMPAT (ERS has DEBUG_0 enabled by default, but I think "debug is debug") */
+#ifndef TRACE_DFLT_NAME
+#	define TRACE_DFLT_NAME        "%-0f"
+#endif
+#define TRACE_DFLT_LVLS        ((1ULL << (TLVL_DEBUG + 0)) - 1) /* non-debug for slow path -- NOT ERS COMPAT (ERS has */
+	                                                     /* DEBUG_0 enabled by default, but I think "debug is debug") */
 #define TRACE_DFLT_LVLM        ((1ULL << (TLVL_DEBUG + 1)) - 1) /* first lvl of debug and below on for fast/mem path */
 
 #if !defined(TRACE_NAME)
@@ -296,9 +305,9 @@ static const char *TRACE_NAME= NULL; /* basically a flag which will indicate whe
 #endif
 
 #if !defined(__KERNEL__) || (defined(__KERNEL__) && defined(TRACE_IMPL))  // if userspace OR kernel init environment (i.e. not sub module)
-#	if defined(TRACE_PRINT)                                              /* must be defined before static code is compiled; can be undef after. NOTE: not used in any macro(s) */
-static const char *TRACE_PRINT__= TRACE_PRINT;                            /* Msg Limit Insert will have separator */
-#	else                                                                 /* NOTE: kernel header kernel/trace/trace.h uses enum trace_type { ... TRACE_PRINT, ... } */
+#	if defined(TRACE_PRINT) // must be defined before static code is compiled; can be undef after. NOTE: not used in any macro(s)
+static const char *TRACE_PRINT__= TRACE_PRINT; /* Msg Limit Insert will have separator */
+#	else                                       /* NOTE: kernel header kernel/trace/trace.h uses enum trace_type { ... TRACE_PRINT, ... } */
 static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will have separator */
 #	endif
 #endif
@@ -587,11 +596,13 @@ union trace_mode_u {
 typedef char trace_vers_t[sizeof(int64_t) * 16];
 
 struct traceControl_rw {
-	TRACE_ATOMIC_T wrIdxCnt;                                                                             /* 32 bits */
-	uint32_t cacheline1[TRACE_CACHELINE / sizeof(int32_t) - (sizeof(TRACE_ATOMIC_T) / sizeof(int32_t))]; /* the goal is to have wrIdxCnt in it's own cache line */
+	/* the goal is to have wrIdxCnt in it's own cache line */
+	TRACE_ATOMIC_T wrIdxCnt; /* 32 bits */
+	uint32_t cacheline1[TRACE_CACHELINE / sizeof(int32_t) - (sizeof(TRACE_ATOMIC_T) / sizeof(int32_t))];
 
-	TRACE_ATOMIC_T namelock;                                                                             /* 32 bits */
-	uint32_t cacheline2[TRACE_CACHELINE / sizeof(int32_t) - (sizeof(TRACE_ATOMIC_T) / sizeof(int32_t))]; /* the goal is to have wrIdxCnt in it's own cache line */
+	/* the goal is to have namelock in it's own cache line */
+	TRACE_ATOMIC_T namelock; /* 32 bits */
+	uint32_t cacheline2[TRACE_CACHELINE / sizeof(int32_t) - (sizeof(TRACE_ATOMIC_T) / sizeof(int32_t))];
 
 	union trace_mode_u mode;
 	uint32_t reserved0;  /* use to be trigOffMode */
@@ -603,7 +614,8 @@ struct traceControl_rw {
 	uint32_t limit_span_off_ms;
 	uint32_t limit_cnt_limit;
 	uint32_t longest_name;                                 /* helps with trace_user if printing names */
-	uint32_t xtra[TRACE_CACHELINE / sizeof(int32_t) - 10]; /* force some sort of alignment -- taking into account the 6 fields (above) since the last cache line alignment */
+	uint32_t xtra[TRACE_CACHELINE / sizeof(int32_t) - 10]; /* force some sort of alignment -- taking into account - */
+	/* - the 6 fields (above) since the last cache line alignment */
 };
 struct traceControl_s {
 	trace_vers_t version_string;
@@ -619,20 +631,21 @@ struct traceControl_s {
 	uint32_t create_tv_sec;                                                                                /* 10 */
 	uint32_t largest_zero_offset;                                                                          /* 11 */
 	uint32_t nam_arr_sz;                                                                                   /* 12 */
-	uint32_t page_align[TRACE_PAGESIZE / sizeof(int32_t) - (12 + sizeof(trace_vers_t) / sizeof(int32_t))]; /* allow mmap 1st page(s) (stuff above) readonly */
+	uint32_t page_align[TRACE_PAGESIZE / sizeof(int32_t) - (12 + sizeof(trace_vers_t) / sizeof(int32_t))];
+	               /* allow mmap 1st page(s) (stuff above) readonly */
 
 	/* "page" break */
 	struct traceControl_rw rw;
 };
-/*                                      bytes  TRACE_SHOW cntl char */
-struct traceEntryHdr_s /*-----   -------        */
+/* clang-format off *//*          bytes  TRACE_SHOW cntl char */
+struct traceEntryHdr_s          /*-----   -------        */
 {
-	trace_tv_t time;    /* 16        T */
+	trace_tv_t time;            /* 16        T */
 	TRACE_ENT_TV_FILLER /* because timeval is larger on x86_64 (16 bytes compared to 8 for i686) */
 
-		uint64_t tsc; /*  8        t */
-	pid_t pid;        /*  4        P system info */
-	pid_t tid;        /*  4        i system info - "thread id" */
+	uint64_t tsc;               /*  8        t */
+	pid_t pid;                  /*  4        P system info */
+	pid_t tid;                  /*  4        i system info - "thread id" */
 
 	int32_t cpu;                /*  4  %3u   C -- kernel sched switch will indicate this info? */
 	uint32_t linenum;           /*  4  %5u   u */
@@ -641,10 +654,11 @@ struct traceEntryHdr_s /*-----   -------        */
 	uint8_t nargs;              /*  1  %4u   # */
 	uint8_t lvl;                /*  1  %2d   L or l */
 	uint8_t param_bytes;        /*  1  %1u   B */
-								/*char msg[0];                             See "msg_p = (char *)(myEnt_p + 1)" below. Note: warning: ISO C++ forbids zero-size array */
+	/*char msg[0];                             See "msg_p = (char *)(myEnt_p + 1)" below. Note: warning: ISO C++ forbids zero-size array */
 };                              /* ---       M -- NO, ALWAY PRINTED LAST! formated Message */
 /* msg buf,then params buf               48   adding uint32_t line;char file[60] (another cache line) doesn't seem worth it */
 /* see TRACE_entSiz(siz_msg,num_params) and idxCnt2entPtr(idxCnt) */ /* other - N  index */
+/* clang-format on */
 
 struct traceLvls_s {			/* formerly traceNamLvls_s */
 	uint64_t M;
@@ -678,10 +692,10 @@ struct trace_vtrace_cntl_s {
 enum tlvle_t { TRACE_LVL_ENUM_0_9,
 			   TRACE_LVL_ENUM_10_63 };
 
-#ifndef TRACE_8_PRINT_FD /* all must be given (for macro; env var (TRACE_5_PRINT_FD) is different) */
+#ifndef TRACE_8_PRINT_FD /* all must be given (for macro; env var (TRACE_PRINT_FD) is different) */
 #	define TRACE_8_PRINT_FD 1, 1, 1, 1, 1, 1, 1, 1
 #endif
-#ifndef TRACE_56_PRINT_FD /* all must be given (for macro; env var (TRACE_5_PRINT_FD) is different) */
+#ifndef TRACE_56_PRINT_FD /* all must be given (for macro; env var (TRACE_PRINT_FD) is different) */
 #	define TRACE_56_PRINT_FD 1, 1, 1, 1, 1, 1, 1, 1,                         \
 							  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
 							  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
@@ -1669,7 +1683,7 @@ static void vtrace(trace_tv_t *tvp, int trcId, uint8_t lvl, int32_t line, const 
 	char *out;
 #ifndef __KERNEL__
 	TRACE_CHK_PID;
-	/*printf("overflow_arg_area=%p\n",ap->overflow_arg_area); NOTE: THIS MUST INDICATE 16 byte alignment in order of long double to work */
+	/*printf("overflow_arg_area=%p\n",ap->overflow_arg_area); NOTE: THIS MUST INDICATE 16 byte alignment in order for long double to work */
 #endif
 	/* I learned ... ---v---v---v---v---v---v---v---v---v---v---
 	   I originally thought I would get this entry idx/slot first (because
@@ -3076,94 +3090,61 @@ typedef struct
 #		define TRACE_GET_STATIC() ({static TRACE_THREAD_LOCAL tinfo_t info={-1,{0,lsFREE,0}};        &info; })
 #	endif
 
-static inline bool trace_do_streamer(trace_tv_t *tvp, int *tidp, uint8_t lvl, limit_info_t *lim_infop, char *ins, size_t sz, tstreamer_flags *flgs, int s_enabled, int force_s)
-{
-	flgs->do_m= ((traceLvls_p[*tidp].M & TLVLMSK(lvl)) && traceControl_rwp->mode.bits.M);
-	flgs->do_s= (((traceLvls_p[*tidp].S & TLVLMSK(lvl)) || force_s) && (traceControl_rwp->mode.bits.S && s_enabled) && trace_limit_do_print(tvp, lim_infop, ins, sz));
-	return (flgs->do_m || flgs->do_s);
-}
-
 // Use C++ "for" statement to create single statement scope for key (static) variable that
 // are initialized and then, if enabled, passed to the Streamer class temporary instances.
 // arg1   - lvl;
-// arg2,3 - nam_or_fmt = name or fmtnow (note: fmtnow can be used to force formatting env if Memory only);
-// arg4   - s_enabled = is_slowpath_enabled (b/c one version of message facility had a global "is_enabled");
-// arg5   - force_s = force_slow - override tlvlmskS&lvl==0
+// arg2   - the TSTREAMER_T_ method used to set the "lvl,nam,fmt" or "name,fmt" members/flag
+//          note: fmtnow can be used to force formatting env if Memory only;
+// arg3   - s_enabled = is_slowpath_enabled (b/c one version of message facility had a global "is_enabled");
+// arg4   - force_s = force_slow - override tlvlmskS&lvl==0
 // NOTE: I use the gnu extension __PRETTY_FUNCTION__ as opposed to __func__ b/c in C++ a method/function can have different arguments
 #	ifndef TRACE_USE_STATIC_STREAMER
 #		define TRACE_USE_STATIC_STREAMER 1
 #	endif
+#   define _PRAGMA(xx) /*_Pragma(xx)*/
 #	if TRACE_USE_STATIC_STREAMER == 1
-#		define TRACE_STREAMER(_lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                                                                                                                                                                                                                                                                         \
-			for (                                                                                                                                                                                                                                                                                                                                                                                                        \
-				struct _T_ {unsigned once; tlvle_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char tn[TRACE_TN_BUFSZ]; char ins[32]; trace_tv_t tv; void* stmr__; \
-	                 _T_(tlvle_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info),stmr__(&__tstreamer){tv.tv_sec=0;} \
-					 ~_T_(){if(stmr__ != (void*)&__tstreamer) delete (TraceStreamer*)stmr__;} } _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                                                                                                                                                                                                                                                                                                                               \
-				TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) && (_trc_.nn= t_arg_nmft(nam_or_fmt, fmt_or_nam, &_trc_.flgs), ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? trace_name2TID(_trc_.nn) : traceTID)) != -1))) && trace_do_streamer(&_trc_.tv, _trc_.tidp, _trc_.lvl, _trc_.lim_infop, _trc_.ins, sizeof(_trc_.ins), &_trc_.flgs, s_enabled, force_s) && _trc_.once; \
-				--_trc_.once, ((TraceStreamer *)_trc_.stmr__)->str())                                                                                                                                                                                                                                                                                                                                                    \
-			*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)))
+#		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
+			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
+				_trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+				&& (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? (int)trace_name2TID(_trc_.nn) : traceTID)) != -1))) \
+					 && trace_do_streamer(&_trc_); \
+				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
+				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
+					*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)))
 #	else
-#		define TRACE_STREAMER(_lvl, nam_or_fmt, fmt_or_nam, s_enabled, force_s)                                                                                                                                                                                                                                                                                                                                          \
-			for (struct _T_ {unsigned once; tlvle_t lvl; int *tidp; limit_info_t *lim_infop; tstreamer_flags flgs; const char *nn; char tn[512]; char ins[32]; trace_tv_t tv; \
-	                     _T_(tlvle_t llv,tinfo_t *infop):once(1),lvl(llv),tidp(&infop->tid),lim_infop(&infop->info){tv.tv_sec=0;} } _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                                                                                                                                                                                                                                                                                                                               \
-				 TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) && (_trc_.nn= t_arg_nmft(nam_or_fmt, fmt_or_nam, &_trc_.flgs), ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? trace_name2TID(_trc_.nn) : traceTID)) != -1))) && trace_do_streamer(&_trc_.tv, _trc_.tidp, _trc_.lvl, _trc_.lim_infop, _trc_.ins, sizeof(_trc_.ins), &_trc_.flgs, s_enabled, force_s) && _trc_.once; \
-				 --_trc_.once)                                                                                                                                                                                                                                                                                                                                                                                            \
+#		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
+	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
+				 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+				 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? (int)trace_name2TID(_trc_.nn) : traceTID)) != -1))) \
+					 && trace_do_streamer(&_trc_, s_enabled); \
+				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
+				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
 			TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
 #	endif
 
 #	define TRACE_ENDL ""
 #	define TLOG_ENDL  TRACE_ENDL
 
-// This will help devleper who use too many TLOG_INFO/TLOG_DEBUG
-// to use more TLOG{,_TRACE,_DBG,_ARB} (use more levels)
+// This will help devleper who use too many TLOG_INFO/TLOG_DEBUG to use more
+// TLOG{,_TRACE,_DBG,_ARB} (use more levels). DEBUG_FORCED is also used in tracemf.h
 #	ifdef __OPTIMIZE__
 #		define DEBUG_FORCED 0
 #	else
 #		define DEBUG_FORCED 1
 #	endif
 
-static inline const char *t_arg_nmft(const char *nm, int fmtnow, tstreamer_flags *fmtret)
-{
-	fmtret->fmtnow= (fmtnow == 0) ? 0 : ((fmtnow > 0) ? 1 : -1);
-	return nm;
-}
-static inline const char *t_arg_nmft(const std::string &nm, int fmtnow, tstreamer_flags *fmtret)
-{
-	fmtret->fmtnow= (fmtnow == 0) ? 0 : ((fmtnow > 0) ? 1 : -1);
-	return nm.c_str();
-}
-static inline const char *t_arg_nmft(int fmtnow, const char *nm, tstreamer_flags *fmtret)
-{
-	fmtret->fmtnow= (fmtnow == 0) ? 0 : ((fmtnow > 0) ? 1 : -1);
-	return nm ? nm : "";
-}  // could be addr 0 (null)
-static inline const char *t_arg_nmft(int fmtnow, const std::string &nm, tstreamer_flags *fmtret)
-{
-	fmtret->fmtnow= (fmtnow == 0) ? 0 : ((fmtnow > 0) ? 1 : -1);
-	return nm.c_str();
-}
-static inline const char *t_arg_nmft(int fmtnow, int nm __attribute__((__unused__)), tstreamer_flags *fmtret)
-{
-	fmtret->fmtnow= (fmtnow == 0) ? 0 : ((fmtnow > 0) ? 1 : -1);
-	return "";
-}
+/* clang-format off */ //         args are: lvl,  lvl/name/fmtnow_method,    s_force
+#	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
+#	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
+#	define TLOG_INFO(...)    TRACE_STREAMER(TLVL_INFO,   TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_INFO))
+#	define TLOG_TRACE(...)   TRACE_STREAMER(TLVL_TRACE,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_TRACE))
 
-#	define tlog_LVL(a1, ...)          a1
-#	define tlog_ARG2(a1, a2, ...)     a2
-#	define tlog_ARG3(a1, a2, a3, ...) a3
-// SLow FoRCe
-#	ifndef TSTREAMER_SL_FRC
-#		define TSTREAMER_SL_FRC(lvl)  0
-#	endif
-
-//                                 args are: lvl,        name, fmtnow,s_enabled,s_force,
-#	define TLOG_ERROR(name)   TRACE_STREAMER(TLVL_ERROR,  &(name)[0], 0, 1, TSTREAMER_SL_FRC(TLVL_ERROR))
-#	define TLOG_WARNING(name) TRACE_STREAMER(TLVL_WARNING,&(name)[0], 0, 1, TSTREAMER_SL_FRC(TLVL_WARNING))
-#	define TLOG_INFO(name)    TRACE_STREAMER(TLVL_INFO,   &(name)[0], 0, 1, TSTREAMER_SL_FRC(TLVL_INFO))
-#	define TLOG_DEBUG(name)   TRACE_STREAMER(TLVL_DEBUG,  &(name)[0], 0, 1, TSTREAMER_SL_FRC(TLVL_DEBUG))
-#	define TLOG_TRACE(name)   TRACE_STREAMER(TLVL_TRACE,  &(name)[0], 0, 1, TSTREAMER_SL_FRC(TLVL_TRACE))
-
-// NOTE: the TLOG*(lvl,...) macros are moved to the end so they can be put after a pragma GCC system_header directive
+#	define TLOG_DEBUG(...)   TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+// NOTE: the TLOG*(lvl,...) macros are (WERE?) moved to the end so they can be put after a pragma GCC system_header directive
+/* clang-format on */
 
 #	define TRACE_STREAMER_ARGSMAX      35
 #	define TRACE_STREAMER_TEMPLATE     1
@@ -3172,8 +3153,7 @@ static inline const char *t_arg_nmft(int fmtnow, int nm __attribute__((__unused_
 #	ifdef TRACE_STREAMER_DEBUG
 #		define T_STREAM_DBG std::cout
 #	else
-#		define T_STREAM_DBG \
-			if (0) std::cout
+#		define T_STREAM_DBG if (0) std::cout
 #	endif
 
 //typedef unsigned long long trace_ptr_t;
@@ -3215,6 +3195,7 @@ public:
 
 	inline ~TraceStreamer()
 	{
+		T_STREAM_DBG << "TraceStreamer DESTRUCTOR\n";
 #	if TRACE_USE_STATIC_STREAMER != 1
 		str();
 #	endif
@@ -3253,7 +3234,7 @@ public:
 			return (new TraceStreamer())->init(tid, lvl, flgs, file, line, function, tvp, ins, user_fun_ptr);
 		}
 #	endif
-	}
+	} // init
 
 #	ifdef __clang__
 #		define _M_flags flags()
@@ -3384,7 +3365,8 @@ public:
 		T_STREAM_DBG << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
 		return *this;
 	}
-#	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4)
+#	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4) \
+	|| (__clang_major__ >= 10)
 	inline TraceStreamer &operator<<(std::_Setprecision r)
 	{
 		precision(r._M_n);
@@ -3477,12 +3459,14 @@ public:
 		long *vp= (long *)param_va_ptr;  // note: char gets pushed onto stack as sizeof(long)
 		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
-			msg_sz+= TRACE_SNPRINTED(rr, ss);
+			int rr=0;
+			if (r != '\0') {							 // BEST TO JUST SKIP IF NULL
+				rr= snprintf(&msg[msg_sz], ss, "%c", r); // print "null" if null???
+				msg_sz+= TRACE_SNPRINTED(rr, ss);
+			}
 			T_STREAM_DBG << "streamer snprintf 3 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
-			size_t f_l= 0;
-			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
+			msg_append("%c", 2);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -3490,8 +3474,9 @@ public:
 		}
 	}
 	inline TraceStreamer &operator<<(const char &r)
-	{
-		delay_format(r);
+	{	// std::iostream just outputs the character
+		if (r != '\0') msg_append(&r,1);
+		else           delay_format(r);
 		return *this;
 	}
 
@@ -3500,12 +3485,14 @@ public:
 		unsigned long *vp= (unsigned long *)param_va_ptr;  // Note: char gets pushed as sizeof(long)
 		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
-			msg_sz+= TRACE_SNPRINTED(rr, ss);
+			int rr;
+			if (r != '\0') {							  // BEST TO JUST SKIP IF NULL
+				rr = snprintf(&msg[msg_sz], ss, "%c", r); // print "null" if null???
+				msg_sz+= TRACE_SNPRINTED(rr, ss);
+			}
 			T_STREAM_DBG << "streamer snprintf 4 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
-			size_t f_l= 0;
-			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
+			msg_append("%c", 2);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -3513,8 +3500,9 @@ public:
 		}
 	}
 	inline TraceStreamer &operator<<(const unsigned char &r)
-	{
-		delay_format(r);
+	{	// std::iostream just outputs the character
+		if (r != '\0') msg_append((const char*)&r,1);
+		else           delay_format(r);
 		return *this;
 	}
 
@@ -3731,7 +3719,7 @@ public:
 		unsigned long nvp= (unsigned long)param_va_ptr;
 		long double *vp;
 		if (sizeof(long double) == 16 && (nvp & 0xf))
-			vp= (long double *)((nvp + 15) & ~0xf);  // alignment requirement
+			vp= (long double *)((nvp + 15) & ~(unsigned long)0xf);  // alignment requirement
 		else
 			vp= (long double *)nvp;
 		if (do_f || (vp + 1) > (long double *)&args[traceControl_p->num_params]) {
@@ -3942,7 +3930,105 @@ inline TraceStreamer &TraceStreamer::operator<<(void *const &r)  // Tricky C++..
 #	if TRACE_USE_STATIC_STREAMER == 1
 static TRACE_THREAD_LOCAL TraceStreamer __tstreamer;
 #	endif
+
+
+struct TSTREAMER_T_ {
+	unsigned once;
+	tlvle_t lvl;
+	int* tidp;			 // initialized to address of tid in static tinfo_t
+	limit_info_t* lim_infop;  // initialized to address of info in static tinfo_t
+	tstreamer_flags flgs;
+	const char* nn;           // the name passed in the TLOG*(...) arg list
+	char tn[TRACE_TN_BUFSZ];  // for converting the __FILE__ to a trace name - just used in TRACE_INIT_CHECK(trace_name(...)) call.
+	char ins[32];
+	trace_tv_t tv;
+	void* stmr__;
+	inline TSTREAMER_T_(tlvle_t llv, tinfo_t* infop)
+		: once(1), lvl(llv), tidp(&infop->tid), lim_infop(&infop->info)
+#	if TRACE_USE_STATIC_STREAMER == 1
+		, stmr__(&__tstreamer)
+#	endif
+	{
+		tv.tv_sec= 0;
+	}
+	inline ~TSTREAMER_T_() // implementation below (or not)
+	{
+#	if TRACE_USE_STATIC_STREAMER == 1
+		if (stmr__ != (void*)&__tstreamer) delete (TraceStreamer*)stmr__;
+#	endif
+	}
+
+	// FOR TLOG(...)
+	inline void TLOG3(int _lvl= TLVL_LOG, int fmt= 0, const char* nam= "")
+	{
+		//if (_lvl < 0) _lvl= 0;
+		lvl= (tlvle_t)_lvl;
+		if (fmt == 0) flgs.fmtnow= 0;
+		else if (fmt > 0)
+			flgs.fmtnow= 1;
+		else
+			flgs.fmtnow= -1;
+		nn= nam;
+	}
+	inline void TLOG3(int _lvl, int fmt, const std::string& nam) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, const char* nam, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, const std::string& nam, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const char* nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const std::string& nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
+
+	// FOR TLOG_DEBUG(...)
+	inline void TLOG_DEBUG3(int _lvl= 0, int fmt= 0, const char* nam= "")
+	{
+		if (_lvl < 0) _lvl= 0;
+		else if (_lvl > (63 - TLVL_DEBUG))
+			_lvl= (63 - TLVL_DEBUG);
+		lvl= (tlvle_t)(TLVL_DEBUG + _lvl);
+
+		if (fmt == 0) flgs.fmtnow= 0;
+		else if (fmt > 0)
+			flgs.fmtnow= 1;
+		else
+			flgs.fmtnow= -1;
+		nn= nam;
+	}
+	inline void TLOG_DEBUG3(int _lvl, int fmt, const std::string& nam) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, const char* nam, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, const std::string& nam, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const char* nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const std::string& nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+
+	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and possibly TLOG when only TLVL_LOG
+	inline void TLOG2(int fmt= 0, const char* nam= "")
+	{
+		if (fmt == 0) flgs.fmtnow= 0;
+		else if (fmt > 0)
+			flgs.fmtnow= 1;
+		else
+			flgs.fmtnow= -1;
+		nn= nam;
+	}
+	inline void TLOG2(int fmt, const std::string& nam) { TLOG2(fmt, &nam[0]); }
+	inline void TLOG2(const char* nam, int fmt= 0) { TLOG2(fmt, &nam[0]); }
+	inline void TLOG2(const std::string& nam, int fmt= 0) { TLOG2(fmt, &nam[0]); }
+};
+
 }  // unnamed namespace
+
+// SLow FoRCe
+#	ifndef TSTREAMER_SL_FRC
+#		define TSTREAMER_SL_FRC(lvl)     0
+#	endif
+
+static inline bool trace_do_streamer(TSTREAMER_T_ *ts_p)
+{
+	ts_p->flgs.do_m=     (traceLvls_p[*ts_p->tidp].M & TLVLMSK(ts_p->lvl)) && traceControl_rwp->mode.bits.M;
+	ts_p->flgs.do_s= ( (((traceLvls_p[*ts_p->tidp].S & TLVLMSK(ts_p->lvl)) && traceControl_rwp->mode.bits.S) || TSTREAMER_SL_FRC(ts_p->lvl))
+	                  && trace_limit_do_print(&ts_p->tv, ts_p->lim_infop, ts_p->ins, sizeof(ts_p->ins)) );
+	return (ts_p->flgs.do_m || ts_p->flgs.do_s);
+}
+
+//inline TSTREAMER_T_::TSTREAMER_T_(tlvle_t llv, tinfo_t* infop)
+//inline TSTREAMER_T_::~TSTREAMER_T_()
 
 //  The following use gnu extension of "##" connecting "," with empty __VA_ARGS__
 //  which eats "," when __VA_ARGS__ is empty.
@@ -3953,9 +4039,6 @@ static TRACE_THREAD_LOCAL TraceStreamer __tstreamer;
 #	if (__cplusplus < 201709L)
 #		pragma GCC system_header
 #	endif
-#	define TLOG_DBG(lvl, ...) TRACE_STREAMER(lvl, tlog_ARG2(not_used, ##__VA_ARGS__, 0, need_at_least_one), tlog_ARG3(not_used, ##__VA_ARGS__, 0, "", need_at_least_one), 1, TSTREAMER_SL_FRC(lvl))
-#	define TLOG_ARB(lvl, ...) TRACE_STREAMER(lvl, tlog_ARG2(not_used, ##__VA_ARGS__, 0, need_at_least_one), tlog_ARG3(not_used, ##__VA_ARGS__, 0, "", need_at_least_one), 1, TSTREAMER_SL_FRC(lvl))
-#	define TLOG(lvl, ...)     TRACE_STREAMER(lvl, tlog_ARG2(not_used, ##__VA_ARGS__, 0, need_at_least_one), tlog_ARG3(not_used, ##__VA_ARGS__, 0, "", need_at_least_one), 1, TSTREAMER_SL_FRC(lvl))
 
 #endif /* __cplusplus */
 

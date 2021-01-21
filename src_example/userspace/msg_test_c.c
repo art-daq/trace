@@ -3,7 +3,7 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1435 $$Date: 2020-10-23 14:05:01 -0500 (Fri, 23 Oct 2020) $";
+	rev="$Revision: 1469 $$Date: 2021-01-19 16:44:19 -0600 (Tue, 19 Jan 2021) $";
 	*/
 /*
     This tests the maximum slow path message buffer. It uses the veriable
@@ -54,6 +54,8 @@ char *create_ascii_msg( char *buf, size_t bufsiz )
 	return (buf);
 }
 
+#pragma GCC diagnostic ignored "-Wformat-security"
+
 int main( int argc, char *argv[] )
 {
 	unsigned ii, xx;
@@ -84,7 +86,6 @@ extern int getopt(int, char * const [], const char *);
 	printf("w/ %7s=tracePrint_cntl and obuf[%d]: ",tracePrint_cntl,msgmax); fflush(stdout);
 	if (args == 1) {
 		for (int ii=0; ii<opt_loops; ++ii) {
-#			pragma GCC diagnostic ignored "-Wformat-security"
 			TRACE(TLVL_INFO, argv[optind]);
 			if (opt_sleep && ii<opt_loops)
 				sleep(opt_sleep);

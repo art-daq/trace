@@ -19,6 +19,7 @@ if ("cxx_lambdas" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
   cet_make_exec(trace_lvl SOURCE trace_lvl.cc)
   cet_make_exec(tlog-compare SOURCE tlog-compare.cc)
   #cet_make_exec(setting_lclTime SOURCE setting_lclTime.cc) # this one is problematic for some compilers
+  cet_make_exec(TLOG SOURCE TLOG.cc)
 else()
   message(WARNING "C++ userspace examples not built due to lack of compiler support for CXX lambdas.")
 endif()

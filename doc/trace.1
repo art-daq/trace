@@ -1,7 +1,6 @@
 .\" Manpage for trace. 
-
-.\"Check rpm.8.gz for good examples!! Delete this line when finished editing this man page.
-
+.\" Check rpm.8.gz for good examples!! zless /usr/share/man/man8/rpm.8.gz 
+.\" 
 .\" Contact ron@fnal.gov for more information
 .TH TRACE 1 "July 2018" "1.0" "User Commands"
 .SH NAME
@@ -43,8 +42,52 @@ Print trace environment with
 to display current environmental settings. To enable memory TRACEing, one of the first 7 env. vars in the "tenv env list" (see below/next) has to be set, either in the environment or by the program. The first four of these variables effect fundamental parameters of the memory buffer, but only if they cause the creation of the buffer (as opposed to the use of a previously created buffer). An exception to this is the special case of 
 .BR TRACE_MSGMAX=0 
 which causes the default value (128) to be used if creating the memory buffer.
+
 .PP
-Executing 
+
+\" .TL
+\" Two boxes, two ways
+
+\" .LP
+\" ASCII drawing
+
+\" .DS C
+\" .ft CW
+\"  +-------------------------+             +-----------------+
+\"  |                         |             |                 |
+\"  |      Hello              |             |                 |
+\"  |                         +-------------+                 |
+\"  |                         |             |                 |
+\"  +-------------------------+             +-----------------+
+\" .ft
+\" .DE
+
+\" .LP
+\" Pic drawing
+
+\" .PS
+\" box width 2 "\f(CWHello\fP"
+\" line 1.5
+\" box width 1.5
+\" .PE
+
+\" .sp
+\" .if n \{\
+\" .RS 4
+\" .\}
+\" .nf
+\"           A\-\-\-B\-\-\-C topic
+\"          /         \e
+\"     D---E---F---G---H master
+\" .fi
+\" .if n \{\
+\" .RE
+\" .\}
+
+
+\" .PP
+\" Executing 
+
 .BR "tinfo"
 in this environment will create the memory buffer file if doesn't exists, then display the info about the file.
 .PP

@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1442 $$Date: 2020-11-09 13:33:01 -0600 (Mon, 09 Nov 2020) $";
+ # rev="$Revision: 1469 $$Date: 2021-01-19 16:44:19 -0600 (Tue, 19 Jan 2021) $";
 
 # TOP LEVEL Makefile
 
@@ -153,16 +153,18 @@ script: OUT_check
 	test -d "$$out" || mkdir -p "$$out";\
 	$(MAKE) -C $@ OUT="$$out"
 
-ups: OUT_check
-	test -d "${OUT}/$@" || mkdir "${OUT}/$@"
+${OUT}/ups/TRACE.table: ${CURDIR}/ups/TRACE.table.in
+	test -d "${OUT}/ups" || mkdir "${OUT}/ups"
 	@${FLAVOR_SUBDIR};\
 	ups_prod_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION */v/;s/)//;s/\./_/g;p}' CMakeLists.txt`;\
 	sed -e "s/@UPS_PRODUCT_NAME@/TRACE/;\
 	s/@UPS_PROUDCT_VERSION@/$$ups_prod_ver/;\
 	s/@UPS_QUALIFIER_STRING@//;\
 	s|@CMAKE_INSTALL_DOCDIR@|doc|;\
-	s/@UPS_PRODUCT_FQ@/\`ups flavor -4\`/" $@/TRACE.table.in >"${OUT}/$@/TRACE.table"
+	s/@UPS_PRODUCT_FQ@/\`ups flavor -4\`/" $< >"$@"
 
+ups: OUT_check ${OUT}/ups/TRACE.table
+	@echo done with ups
 
 help:
 	@$(HELP)

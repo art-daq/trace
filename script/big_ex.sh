@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1464 $$Date: 2021-01-05 14:38:26 -0600 (Tue, 05 Jan 2021) $'
+ # rev='$Revision: 1471 $$Date: 2021-01-19 23:48:57 -0600 (Tue, 19 Jan 2021) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -18,7 +18,7 @@ opt_tlogs_per=150   # default for subs besides last
 opt_name=jones
 def_threads=`expr $(nproc) \* 91 / 100`   # 
 def_loops=50
-def_process_forks=0
+def_process_forks=1
 def_stack=0x4000
 def_min_delta=-100
 USAGE="\
@@ -334,7 +334,7 @@ void* thread_func(void *arg)
 #   if TRACE_REVNUM <= 762
     TLOG(2)                                        << "hello from thread idx " << aa.thread_idx <<" "<<3.14 << TLOG_ENDL;
 #   else
-    TLOG(2,"thread"+std::to_string(aa.thread_idx)) << "hello from thread idx " << aa.thread_idx <<" "<<3.14;
+    TLOG(2,"thread"+std::to_string((long long)(aa.thread_idx))) << "hello from thread idx " << aa.thread_idx <<" "<<3.14;
 #   endif
     for (unsigned ii=0; ii<loops; ++ii) {
         TRACE( 2, "tf tid=%d loop=%u calling sub1 tC_p=%p %u=tIL_hung_max",aa.tid,ii,traceControl_p,traceInitLck_hung_max);
@@ -425,6 +425,7 @@ extern  char        * optarg;        // for getopt
     }
     for (ii=0; ii<num_processes; ii++) {
         int wstatus;
+        printf("waiting for pid=%d\n",pids[ii]);
         if(waitpid(pids[ii],&wstatus,0)==-1){perror("waitpid");exit(EXIT_FAILURE);}
     }
 
@@ -485,7 +486,7 @@ test $opt_v -gt 0 && set +x
 test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED; exit 1; }
 
 test -n "${check_numents-}" \
- || check_numents=`expr \( \( $opt_depth - 1 \) \* $opt_tlogs_per + 35 \) \* $opt_threads \* $opt_loops`
+ || check_numents=`expr \( \( $opt_depth - 1 \) \* $opt_tlogs_per + 35 \) \* \( $opt_threads + $opt_forks \) \* $opt_loops`
 
 if [ "${do_mapcheck-0}" -gt 0 ];then
     export TRACE_PRINT
@@ -523,7 +524,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         loops=`cat big_ex_main.out | sed -n -e '/before create/{s/.*loops= *//;s/ .*//;p;}'`
         num_maps=`cat big_ex_main.out | sed -n -e '/after join (#2) = /{s/.*= *//;p;}'`
         xtra_threads=`cat big_ex_main.out | sed -n -e '/xtra_threads/{s/.*xtra_threads= *//;s/ .*//;p;}'`
-        test $xtra_threads -eq 0 && check_tids=`expr 1 + $parallel_threads + $opt_threads \* $opt_loops` || check_tids=
+        test $xtra_threads -eq 0 && check_tids=`expr 1 + $parallel_threads + \( $opt_threads + $opt_forks \) \* $opt_loops` || check_tids=
         # Note; the OS can randomly recycle tids, so if the program is creating/joining threads,
         # the number of uniq tids that the program will experience is unknown.
 
@@ -546,7 +547,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
             last_thr_idx=`expr $opt_threads - 1`
             _TRACE_=`TRACE_SHOW=%n trace_cntl show | grep "_TRACE_"` # should be none (i.e. namtbl should not be full)
             vprintf 1 'Calculating delta_min...\n'
-            show_count=`trace_cntl info | awk '/num_entries/{print$3;}'`
+            show_count=`trace_cntl info | awk '/entries used:/{print$6;}'`
             test $show_count -gt 500000 && show_count=500000
             start_idx=`expr $show_count - 1` # smaller buffers will wrap -- smallish number of unused entries have 0 timestamp which tdelta ignores
             if [ $trace_revnum -ge 1146 ];then # v3_14_02 (1129) or below does not have -c<cnt> and -s<start>; v3_15_00 (1146) does.
@@ -589,7 +590,8 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         if [ "$uname" = Linux ];then
             # additional checks
             test $num_maps -eq $uniq2                                      || fail="$fail num_maps($num_maps!=$uniq2)"
-            test \( $uniq_thr_ids -eq 1 -o -z "$check_tids" -o $uniq_thr_ids -eq "${check_tids:-0}" \) || fail="$fail uniq_thr_ids($uniq_thr_ids!=${check_tids:-0})"
+            test \( $uniq_thr_ids -eq 1 -o -z "$check_tids" -o $uniq_thr_ids -eq "${check_tids:-0}" \) \
+                || fail="$fail uniq_thr_ids($uniq_thr_ids!=${check_tids:-0})"
         fi
         test -n "$fail" && { echo FAIL - $fail ; exit 1; } || echo "  SUCCESS"
         #trace_cntl tids

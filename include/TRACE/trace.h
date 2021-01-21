@@ -7,15 +7,120 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1462 $$Date: 2021-01-05 01:00:34 -0600 (Tue, 05 Jan 2021) $"
+#define TRACE_REV "$Revision: 1474 $$Date: 2021-01-20 12:43:37 -0600 (Wed, 20 Jan 2021) $"
+
+// The C++ streamer style macros...............................................
+/*
+      TLOG() << "hello";
+      TLOG(TLVL_INFO) << "hello";
+	  TLOG("name",lvl) << "a param is: " << std::hex << param;
+ */
+
+#ifdef __cplusplus
+
+/* clang-format off */
+//  This group takes 0, 1 or 2 optional args: Name, and/or FormatControl
+//  Name is a const char* or std::string&
+//  FormatControl is an int:  0 - format if slow enabled
+//                           >0 - streamer format even if just fast/mem
+//                           <0 - sprintf format
+#	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
+#	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
+#	define TLOG_INFO(...)    TRACE_STREAMER(TLVL_INFO,   TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_INFO))
+#	define TLOG_TRACE(...)   TRACE_STREAMER(TLVL_TRACE,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_TRACE))
+
+//  This group takes 0, 1, 2, or 3 optional args: Level, and/or Name, and/or FormatControl
+//  Name and FormatControl are same as above.
+//  Level - an int or TLVL_* enum -- 0 to 55 for TLOG_DEBUG/TLOG_DBG
+//                                   0 to 63 for TLOG/TLOG_ARB
+//  TLOG_DEBUG and TLOG_DBG are duplicates as are TLOG and TLOG_ARB
+#	define TLOG_DEBUG(...)   TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+
+#endif
+
+// The C/C++ printf style macros...............................................
+/*
+   TRACE(TLVL_DEBUG, "this is an int: %d or 0x%08x", intvar, intvar );
+   TRACEN("example",TLVL_DEBUG, "this is an int: %d or 0x%08x", intvar, intvar );
+ */
+
+#define TRACE(lvl, ...)                                                                                                               \
+	do {																\
+		struct { char tn[TRACE_TN_BUFSZ]; } _trc_;						\
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+			trace_tv_t lclTime;                                                                                                   \
+			uint8_t lvl_ = (uint8_t)(lvl);								\
+			TRACE_SBUFDECL;                                                                                                                \
+			lclTime.tv_sec = 0;                                                                                                       \
+			if (traceControl_rwp->mode.bits.M && (traceLvls_p[traceTID].M & TLVLMSK(lvl_))) {  \
+				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
+				trace(&lclTime, traceTID, lvl_, __LINE__, __func__/*NULL*/, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
+			}                                                                                                                         \
+			if (traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_))) {  \
+				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
+					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+				}                                                                                                                     \
+			}                                                                                                                         \
+		}                                                                                                                             \
+	} while (0)
+
+#define TRACEN(nam, lvl, ...)											\
+	do {																\
+		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+			static TRACE_THREAD_LOCAL int tid_ = -1;				\
+			trace_tv_t lclTime;											\
+			uint8_t lvl_ = (uint8_t)(lvl);								\
+			TRACE_SBUFDECL;													\
+			if (tid_ == -1) tid_ = (int)trace_name2TID(&(nam)[0]);			\
+			lclTime.tv_sec = 0;											\
+			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) { \
+				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
+				trace(&lclTime, tid_, lvl_, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__);	\
+			}                                                                                                                     \
+			if (traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_))) { \
+				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
+					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+				}                                                                                                                 \
+			}                                                                                                                     \
+		}                                                                                                                         \
+	} while (0)
+
+
+#ifndef TRACE_LVL_ENUM_0_9
+/* Note: these should match values in the bitN_to_mask script */
+#	define TRACE_LVL_ENUM_0_9 TLVL_FATAL= 0, TLVL_EMERG= TLVL_FATAL, TLVL_ALERT, TLVL_CRIT, TLVL_ERROR, TLVL_WARNING, \
+		TLVL_WARN= TLVL_WARNING, TLVL_NOTICE, TLVL_INFO, TLVL_LOG, TLVL_DEBUG, TLVL_DBG= TLVL_DEBUG, TLVL_DEBUG_1, TLVL_TRACE= TLVL_DEBUG_1
+#endif
+#ifndef TRACE_LVL_ENUM_10_63
+/* Use to fill out the enum to the proper range (0-63) so C++ -Wconversion will warn when out-of-range */
+/* At some point, these my used to produce a string which is parsed to automatically become the LVLSTRS (below) */
+/* There currently is a desire to have short enums (e.g. TLVL_D03), but TLVL_DBG+3 may do for the time being */
+#	define TRACE_LVL_ENUM_10_63 TLVL_DEBUG_2, TLVL_DEBUG_3, TLVL_DEBUG_4, TLVL_DEBUG_5, TLVL_DEBUG_6, TLVL_DEBUG_7,	\
+		TLVL_DEBUG_8, TLVL_DEBUG_9, TLVL_DEBUG_10, TLVL_DEBUG_11, TLVL_1DEBUG_2, TLVL_DEBUG_13, TLVL_DEBUG_14, TLVL_DEBUG_15, \
+		TLVL_DEBUG_16, TLVL_DEBUG_17, TLVL_DEBUG_18, TLVL_DEBUG_19, TLVL_DEBUG_20, TLVL_DEBUG_21, TLVL_DEBUG_22, TLVL_DEBUG_23, \
+		TLVL_DEBUG_24, TLVL_DEBUG_25, TLVL_DEBUG_26, TLVL_DEBUG_27, TLVL_DEBUG_28, TLVL_DEBUG_29, TLVL_DEBUG_30, TLVL_DEBUG_31, \
+		TLVL_DEBUG_32, TLVL_DEBUG_33, TLVL_DEBUG_34, TLVL_DEBUG_35, TLVL_DEBUG_36, TLVL_DEBUG_37, TLVL_DEBUG_38, TLVL_DEBUG_39, \
+		TLVL_DEBUG_40, TLVL_DEBUG_41, TLVL_DEBUG_42, TLVL_DEBUG_43, TLVL_DEBUG_44, TLVL_DEBUG_45, TLVL_DEBUG_46, TLVL_DEBUG_47, \
+		TLVL_DEBUG_48, TLVL_DEBUG_49, TLVL_DEBUG_50, TLVL_DEBUG_51, TLVL_DEBUG_52, TLVL_DEBUG_53, TLVL_DEBUG_54, TLVL_DEBUG_55
+#endif
+enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
+
+/* clang-format on */
+
+// A Control macro.............................................................
+/*
+   TRACE_CNTL("modeM",0); // "freeze"
+ */
+// See traceCntl below for list of command strings and arguments.
+#define TRACE_CNTL(...)           traceCntl(TRACE_NAME,__FILE__,TRACE_NARGS(__VA_ARGS__),__VA_ARGS__) /* Note: cannot be used when TRACE_NAME is macro which has _trc_.tn unless compatible structure is introduced in the surrounding code. */
 
 
 
-
-
-
-
-/*##############  the detail below  #######################*/
+//###########################  the detail below  ##############################
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -23,7 +128,7 @@
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1462 $_$Date: 2021-01-05 01:00:34 -0600 (Tue, 05 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1474 $_$Date: 2021-01-20 12:43:37 -0600 (Wed, 20 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -192,6 +297,7 @@ static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 #	endif        /* userspace arch */
 
 #	define TRACE_GETTIMEOFDAY(tvp) gettimeofday(tvp, NULL)
+/* Note: anonymous variadic macros were introduced in C99/C++11 (maybe C++0x) */
 #	define TRACE_STRTOL(...)       strtol(__VA_ARGS__)
 #	define TRACE_PRN(...)          printf(__VA_ARGS__)
 #	define TRACE_VPRN(...)         vprintf(__VA_ARGS__)
@@ -357,54 +463,11 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #	define TSPRINTF(...)   (tsbuf__[0] ? &(tsbuf__[0]) : (snprintf(&(tsbuf__[0]), TRACE_SBUFSIZ__, __VA_ARGS__), &(tsbuf__[0])))
 #endif
 
-/* Note: anonymous variadic macros were introduced in C99/C++11 (maybe C++0x) */
-// clang-format off
-
-#define TRACE(lvl, ...)                                                                                                               \
-	do {																\
-		struct { char tn[TRACE_TN_BUFSZ]; } _trc_;						\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
-			trace_tv_t lclTime;                                                                                                   \
-			uint8_t lvl_ = (uint8_t)(lvl);								\
-			TRACE_SBUFDECL;                                                                                                                \
-			lclTime.tv_sec = 0;                                                                                                       \
-			if (traceControl_rwp->mode.bits.M && (traceLvls_p[traceTID].M & TLVLMSK(lvl_))) {  \
-				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
-				trace(&lclTime, traceTID, lvl_, __LINE__, __func__/*NULL*/, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
-			}                                                                                                                         \
-			if (traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_))) {  \
-				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
-					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
-				}                                                                                                                     \
-			}                                                                                                                         \
-		}                                                                                                                             \
-	} while (0)
-/* static int tid_ could be TRACE_THREAD_LOCAL */
-#define TRACEN(nam, lvl, ...)                                                                                                     \
-	do {																\
-		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) {  \
-			static TRACE_THREAD_LOCAL int tid_ = -1;                                                                              \
-			trace_tv_t lclTime;                                                                                               \
-			uint8_t lvl_ = (uint8_t)(lvl);								\
-			TRACE_SBUFDECL;													\
-			if (tid_ == -1) tid_ = (int)trace_name2TID(&(nam)[0]);			\
-			lclTime.tv_sec = 0;                                                                                                   \
-			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) { \
-				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
-				trace(&lclTime, tid_, lvl_, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__);	\
-			}                                                                                                                     \
-			if (traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_))) { \
-				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
-					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
-				}                                                                                                                 \
-			}                                                                                                                     \
-		}                                                                                                                         \
-	} while (0)
 
 #if defined(__cplusplus)
 
 // NOTE: I use the gnu extension __PRETTY_FUNCTION__ as opposed to __func__ b/c in C++ a method/function can have different arguments
+// clang-format off
 
 #	if defined(TRACE_STD_STRING_FORMAT)
 
@@ -489,7 +552,6 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #define TRACE_NARGS(...)          TRACE_NARGS_HELP1(__VA_ARGS__,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0) /* 0 here but not below */
 #define TRACE_NARGS_HELP1(...)    TRACE_NARGS_HELP2(__VA_ARGS__,unused) /* "unused" to avoid warning "requires at least one argument for the "..." in a variadic macro" */
 #define TRACE_NARGS_HELP2(fmt,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,n,...) n
-#define TRACE_CNTL(...)           traceCntl(TRACE_NAME,__FILE__,TRACE_NARGS(__VA_ARGS__),__VA_ARGS__) /* Note: cannot be used when TRACE_NAME is macro which has _trc_.tn unless compatible structure is introduced in the surrounding code. */
 #define TRACE_ARGS_1ST(first,...) first
 // clang-format on
 /* TRACE_ARGS_ARGS(...) ignores the 1st arg (the "format" arg) and returns the remaining "args", if any.
@@ -672,26 +734,6 @@ struct trace_vtrace_cntl_s {
 	char sep[16];              /* arbitrary limit on separator characters */
 };
 
-#ifndef TRACE_LVL_ENUM_0_9
-/* Note: these should match values in the bitN_to_mask script */
-#	define TRACE_LVL_ENUM_0_9 TLVL_FATAL= 0, TLVL_EMERG= TLVL_FATAL, TLVL_ALERT, TLVL_CRIT, TLVL_ERROR, TLVL_WARNING, \
-							   TLVL_WARN= TLVL_WARNING, TLVL_NOTICE, TLVL_INFO, TLVL_LOG, TLVL_DEBUG, TLVL_DBG= TLVL_DEBUG, TLVL_DEBUG_1, TLVL_TRACE= TLVL_DEBUG_1
-#endif
-#ifndef TRACE_LVL_ENUM_10_63
-/* Use to fill out the enum to the proper range (0-63) so C++ -Wconversion will warn when out-of-range */
-/* At some point, these my used to produce a string which is parsed to automatically become the LVLSTRS (below) */
-/* There currently is a desire to have short enums (e.g. TLVL_D03), but TLVL_DBG+3 may do for the time being */
-#	define TRACE_LVL_ENUM_10_63 TLVL_DEBUG_2, TLVL_DEBUG_3, TLVL_DEBUG_4, TLVL_DEBUG_5, TLVL_DEBUG_6, TLVL_DEBUG_7,	\
-								 TLVL_DEBUG_8, TLVL_DEBUG_9, TLVL_DEBUG_10, TLVL_DEBUG_11, TLVL_1DEBUG_2, TLVL_DEBUG_13, TLVL_DEBUG_14, TLVL_DEBUG_15,   \
-								 TLVL_DEBUG_16, TLVL_DEBUG_17, TLVL_DEBUG_18, TLVL_DEBUG_19, TLVL_DEBUG_20, TLVL_DEBUG_21, TLVL_DEBUG_22, TLVL_DEBUG_23, \
-								 TLVL_DEBUG_24, TLVL_DEBUG_25, TLVL_DEBUG_26, TLVL_DEBUG_27, TLVL_DEBUG_28, TLVL_DEBUG_29, TLVL_DEBUG_30, TLVL_DEBUG_31, \
-								 TLVL_DEBUG_32, TLVL_DEBUG_33, TLVL_DEBUG_34, TLVL_DEBUG_35, TLVL_DEBUG_36, TLVL_DEBUG_37, TLVL_DEBUG_38, TLVL_DEBUG_39, \
-								 TLVL_DEBUG_40, TLVL_DEBUG_41, TLVL_DEBUG_42, TLVL_DEBUG_43, TLVL_DEBUG_44, TLVL_DEBUG_45, TLVL_DEBUG_46, TLVL_DEBUG_47, \
-								 TLVL_DEBUG_48, TLVL_DEBUG_49, TLVL_DEBUG_50, TLVL_DEBUG_51, TLVL_DEBUG_52, TLVL_DEBUG_53, TLVL_DEBUG_54, TLVL_DEBUG_55
-#endif
-enum tlvle_t { TRACE_LVL_ENUM_0_9,
-			   TRACE_LVL_ENUM_10_63 };
-
 #ifndef TRACE_8_PRINT_FD /* all must be given (for macro; env var (TRACE_PRINT_FD) is different) */
 #	define TRACE_8_PRINT_FD 1, 1, 1, 1, 1, 1, 1, 1
 #endif
@@ -782,6 +824,7 @@ TRACE_DECL(TRACE_THREAD_LOCAL const char *, traceName, , = "TRACE");            
 TRACE_DECL(TRACE_THREAD_LOCALX const char *, traceFile, , = "/tmp/trace_buffer_%u"); /*a local/efficient FS device is best; operation when path is on NFS device has not been studied*/
 TRACE_DECL(TRACE_THREAD_LOCAL pid_t, traceTid, , = 0);                               /* thread id */
 TRACE_DECL(pid_t, tracePid, , = 0);
+TRACE_DECL(int, trace_no_pid_check, , = 0);
 #	define TRACE_PRINT_FD_INIT TRACE_8_PRINT_FD, TRACE_56_PRINT_FD
 TRACE_DECL(int, tracePrintFd, [64], = {TRACE_PRINT_FD_INIT});
 TRACE_DECL(TRACE_ATOMIC_T, traceInitLck, , = TRACE_ATOMIC_INIT);
@@ -1633,7 +1676,6 @@ static void trace_user(trace_tv_t *tvp, int TrcId, uint8_t lvl, const char *inse
 /* if undefined __GLIBC_PREREQ is used in a #if (i.e. previous line), some preprocessor will give:
     error: missing binary operator before token "("
  */
-#	if __GLIBC_PREREQ(2, 27)
 #		ifdef __cplusplus
 extern "C" int __register_atfork(void (*)(void), void (*)(void), void (*)(void));
 #		else
@@ -1662,6 +1704,7 @@ static void trace_pid_atfork(void)
 #			pragma GCC diagnostic pop
 #		endif
 }
+#	if __GLIBC_PREREQ(2, 27)
 #		undef TRACE_REGISTER_ATFORK
 #		define TRACE_REGISTER_ATFORK __register_atfork(NULL, NULL, trace_pid_atfork)
 #		undef TRACE_CHK_PID
@@ -1682,7 +1725,11 @@ static void vtrace(trace_tv_t *tvp, int trcId, uint8_t lvl, int32_t line, const 
 	size_t sz, len;
 	char *out;
 #ifndef __KERNEL__
-	TRACE_CHK_PID;
+	//TRACE_CHK_PID;
+	if (!trace_no_pid_check){     // starting at glibc 2.27, I do not have to check b/c atfork
+		pid_t chkpid;
+		if (tracePid != (chkpid= getpid())) { tracePid= traceTid= chkpid; }
+	}
 	/*printf("overflow_arg_area=%p\n",ap->overflow_arg_area); NOTE: THIS MUST INDICATE 16 byte alignment in order for long double to work */
 #endif
 	/* I learned ... ---v---v---v---v---v---v---v---v---v---v---
@@ -2134,24 +2181,24 @@ and to avoid compiling in a (default) name into (hard-coding) the function in
 this header file, _name is passed. _name will then take on the value used when
 compiling calling of traceCntl via the TRACE_CNTL macro.
 
-cmd		   		arg	      	  	  notes         returns
-------          ---------		-----------    ---------
-file			char*				1               0
-namlvlset		optional char*		1               0
-mapped			n/a                               bool
-init            n/a                                 0
-name			char*				1               0
-mode			UL					1               old mode (uint16_t)
-lvlmskn[MST]	ULL					2               -1(error), 0 (success)
-lvlsetn[MST]	ULL					2               -1(error), 0 (success)
-lvlclrn[MST]	ULL					2               -1(error), 0 (success)
-lvlmsk[MST][gG]	ULL					2               0
-lvlset[MST][gG]	ULL					2               0
-lvlclr[MST][gG]	ULL					2               0
-trig			UL [ULL]			1,2             0
-reset			n/a                                 0
-limit_ms		UL UL [UL]			1               limit_cnt_limit (uint32_t)
-                                                   -1
+cmd		   		 arg	      	  notes        returns
+------           ---------		----------    ---------
+file			 char*				1             0
+namlvlset		 optional char*		1             0
+mapped			 n/a                             bool
+init             n/a                              0
+name			 char*				1             0
+mode[ MS]		 UL					1            old mode (uint16_t)
+lvlmskn[ MST]	 ULL				2            -1(error), 0 (success)
+lvlsetn[ MST]	 ULL				2            -1(error), 0 (success)
+lvlclrn[ MST]	 ULL				2            -1(error), 0 (success)
+lvlmsk[ MST][gG] ULL				2             0
+lvlset[ MST][gG] ULL				2             0
+lvlclr[ MST][gG] ULL				2             0
+trig			 UL [ULL]			1,2           0
+reset			 n/a                              0
+limit_ms		 UL UL [UL]			1            limit_cnt_limit (uint32_t)
+<unknown>                                        -1
 
 Note 1: 4 bytes on 32, 8 bytes on 64
 Note 2: 8 bytes (LL or ULL) on both 32 and 64 bit machines
@@ -2757,8 +2804,23 @@ static int traceInit(const char *_name, int allow_ro)
 	printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", traceControl_p, traceControl_p_static, _name, traceTid, traceTID);
 #		endif
 	if (traceControl_p == NULL) {
+#		if 1
+		char buf[64], *minor;
+		extern size_t confstr(int,char*,size_t);
+		size_t sz=confstr(_CS_GNU_LIBC_VERSION,buf,sizeof(buf)-1);
+		if (sz > 6 && sz<=(sizeof(buf)-1) && (minor=strchr(buf,'.'))){
+			// have string like "glibc 2.31"
+			int32_t trace_libc_version = (atoi(&buf[6])<<16) + atoi(minor+1);
+			//printf("trace_libc_version=0x%x\n",trace_libc_version);
+			if (trace_libc_version >= ((2<<16) + 27)){     // starting at glibc 2.27
+				trace_no_pid_check=1;
+				__register_atfork(NULL, NULL, trace_pid_atfork);
+			}
+		}
+#		else
 		/* This stuff should happen once (per TRACE_DEFINE compilation module) */
 		TRACE_REGISTER_ATFORK;
+#		endif
 		traceControl_p_was_NULL= 1;
 
 		/* test for activation. (See below for _name override/default) */
@@ -3095,14 +3157,14 @@ typedef struct
 // arg1   - lvl;
 // arg2   - the TSTREAMER_T_ method used to set the "lvl,nam,fmt" or "name,fmt" members/flag
 //          note: fmtnow can be used to force formatting env if Memory only;
-// arg3   - s_enabled = is_slowpath_enabled (b/c one version of message facility had a global "is_enabled");
-// arg4   - force_s = force_slow - override tlvlmskS&lvl==0
+// arg3   - force_s = force_slow - override tlvlmskS&lvl==0
 // NOTE: I use the gnu extension __PRETTY_FUNCTION__ as opposed to __func__ b/c in C++ a method/function can have different arguments
 #	ifndef TRACE_USE_STATIC_STREAMER
 #		define TRACE_USE_STATIC_STREAMER 1
 #	endif
 #   define _PRAGMA(xx) /*_Pragma(xx)*/
 #	if TRACE_USE_STATIC_STREAMER == 1
+//                   args are: lvl, lvl/name/fmtnow_method, s_force
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
 			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
 				_trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) \
@@ -3116,7 +3178,7 @@ typedef struct
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
 				 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) \
 				 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? (int)trace_name2TID(_trc_.nn) : traceTID)) != -1))) \
-					 && trace_do_streamer(&_trc_, s_enabled); \
+					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
 			TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
@@ -3133,18 +3195,6 @@ typedef struct
 #		define DEBUG_FORCED 1
 #	endif
 
-/* clang-format off */ //         args are: lvl,  lvl/name/fmtnow_method,    s_force
-#	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
-#	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
-#	define TLOG_INFO(...)    TRACE_STREAMER(TLVL_INFO,   TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_INFO))
-#	define TLOG_TRACE(...)   TRACE_STREAMER(TLVL_TRACE,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_TRACE))
-
-#	define TLOG_DEBUG(...)   TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
-#	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
-#	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
-#	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
-// NOTE: the TLOG*(lvl,...) macros are (WERE?) moved to the end so they can be put after a pragma GCC system_header directive
-/* clang-format on */
 
 #	define TRACE_STREAMER_ARGSMAX      35
 #	define TRACE_STREAMER_TEMPLATE     1

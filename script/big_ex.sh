@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1471 $$Date: 2021-01-19 23:48:57 -0600 (Tue, 19 Jan 2021) $'
+ # rev='$Revision: 1477 $$Date: 2021-01-20 22:49:11 -0600 (Wed, 20 Jan 2021) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -524,7 +524,16 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         loops=`cat big_ex_main.out | sed -n -e '/before create/{s/.*loops= *//;s/ .*//;p;}'`
         num_maps=`cat big_ex_main.out | sed -n -e '/after join (#2) = /{s/.*= *//;p;}'`
         xtra_threads=`cat big_ex_main.out | sed -n -e '/xtra_threads/{s/.*xtra_threads= *//;s/ .*//;p;}'`
-        test $xtra_threads -eq 0 && check_tids=`expr 1 + $parallel_threads + \( $opt_threads + $opt_forks \) \* $opt_loops` || check_tids=
+        if [ $xtra_threads -eq 0 ];then
+            # b/c the last sub creates a thread...
+            # and it is called during each loop...
+            case $opt_threads in
+                1) check_tids=`expr     \(     1        + $opt_forks \) \* \( $opt_loops + 1 \)`;;
+                *) check_tids=`expr 1 + \( $opt_threads + $opt_forks \) \* \( $opt_loops + 1 \)`;;
+            esac
+        else
+            check_tids=
+        fi
         # Note; the OS can randomly recycle tids, so if the program is creating/joining threads,
         # the number of uniq tids that the program will experience is unknown.
 

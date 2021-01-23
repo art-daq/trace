@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1474 $$Date: 2021-01-20 12:43:37 -0600 (Wed, 20 Jan 2021) $"
+#define TRACE_REV "$Revision: 1480 $$Date: 2021-01-21 21:52:51 -0600 (Thu, 21 Jan 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1474 $_$Date: 2021-01-20 12:43:37 -0600 (Wed, 20 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1480 $_$Date: 2021-01-21 21:52:51 -0600 (Thu, 21 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2804,7 +2804,7 @@ static int traceInit(const char *_name, int allow_ro)
 	printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", traceControl_p, traceControl_p_static, _name, traceTid, traceTID);
 #		endif
 	if (traceControl_p == NULL) {
-#		if 1
+#		if defined(__GLIBC_PREREQ)   // use this to indicate if we are in a GNU env
 		char buf[64], *minor;
 		extern size_t confstr(int,char*,size_t);
 		size_t sz=confstr(_CS_GNU_LIBC_VERSION,buf,sizeof(buf)-1);
@@ -3416,7 +3416,7 @@ public:
 		return *this;
 	}
 #	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4) \
-	|| (__clang_major__ >= 10)
+	|| (__clang_major__ >= 10 && __clang_major__ <= 11)
 	inline TraceStreamer &operator<<(std::_Setprecision r)
 	{
 		precision(r._M_n);

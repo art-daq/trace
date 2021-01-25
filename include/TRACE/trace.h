@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1480 $$Date: 2021-01-21 21:52:51 -0600 (Thu, 21 Jan 2021) $"
+#define TRACE_REV "$Revision: 1483 $$Date: 2021-01-25 12:35:36 -0600 (Mon, 25 Jan 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1480 $_$Date: 2021-01-21 21:52:51 -0600 (Thu, 21 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1483 $_$Date: 2021-01-25 12:35:36 -0600 (Mon, 25 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1676,6 +1676,7 @@ static void trace_user(trace_tv_t *tvp, int TrcId, uint8_t lvl, const char *inse
 /* if undefined __GLIBC_PREREQ is used in a #if (i.e. previous line), some preprocessor will give:
     error: missing binary operator before token "("
  */
+extern size_t confstr(int,char*,size_t);
 #		ifdef __cplusplus
 extern "C" int __register_atfork(void (*)(void), void (*)(void), void (*)(void));
 #		else
@@ -2806,7 +2807,6 @@ static int traceInit(const char *_name, int allow_ro)
 	if (traceControl_p == NULL) {
 #		if defined(__GLIBC_PREREQ)   // use this to indicate if we are in a GNU env
 		char buf[64], *minor;
-		extern size_t confstr(int,char*,size_t);
 		size_t sz=confstr(_CS_GNU_LIBC_VERSION,buf,sizeof(buf)-1);
 		if (sz > 6 && sz<=(sizeof(buf)-1) && (minor=strchr(buf,'.'))){
 			// have string like "glibc 2.31"

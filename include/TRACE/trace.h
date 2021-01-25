@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1483 $$Date: 2021-01-25 12:35:36 -0600 (Mon, 25 Jan 2021) $"
+#define TRACE_REV "$Revision: 1486 $$Date: 2021-01-25 14:17:57 -0600 (Mon, 25 Jan 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1483 $_$Date: 2021-01-25 12:35:36 -0600 (Mon, 25 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1486 $_$Date: 2021-01-25 14:17:57 -0600 (Mon, 25 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1676,11 +1676,17 @@ static void trace_user(trace_tv_t *tvp, int TrcId, uint8_t lvl, const char *inse
 /* if undefined __GLIBC_PREREQ is used in a #if (i.e. previous line), some preprocessor will give:
     error: missing binary operator before token "("
  */
-extern size_t confstr(int,char*,size_t);
 #		ifdef __cplusplus
 extern "C" int __register_atfork(void (*)(void), void (*)(void), void (*)(void));
+#			ifdef __THROW
+# 				define ___THROW __THROW
+#			else
+#				define ___THROW
+#			endif
+extern size_t confstr(int,char*,size_t) ___THROW;
 #		else
 extern int __register_atfork(void (*)(void), void (*)(void), void (*)(void));
+extern size_t confstr(int,char*,size_t);
 #		endif
 static void trace_pid_atfork(void)
 {

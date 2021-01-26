@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1486 $$Date: 2021-01-25 14:17:57 -0600 (Mon, 25 Jan 2021) $"
+#define TRACE_REV "$Revision: 1489 $$Date: 2021-01-25 22:51:31 -0600 (Mon, 25 Jan 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1486 $_$Date: 2021-01-25 14:17:57 -0600 (Mon, 25 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1489 $_$Date: 2021-01-25 22:51:31 -0600 (Mon, 25 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -4020,10 +4020,7 @@ struct TSTREAMER_T_ {
 		//if (_lvl < 0) _lvl= 0;
 		lvl= (tlvle_t)_lvl;
 		if (fmt == 0) flgs.fmtnow= 0;
-		else if (fmt > 0)
-			flgs.fmtnow= 1;
-		else
-			flgs.fmtnow= -1;
+		else          flgs.fmtnow= 1;
 		nn= nam;
 	}
 	inline void TLOG3(int _lvl, int fmt, const std::string& nam) { TLOG3(_lvl, fmt, &nam[0]); }
@@ -4041,10 +4038,7 @@ struct TSTREAMER_T_ {
 		lvl= (tlvle_t)(TLVL_DEBUG + _lvl);
 
 		if (fmt == 0) flgs.fmtnow= 0;
-		else if (fmt > 0)
-			flgs.fmtnow= 1;
-		else
-			flgs.fmtnow= -1;
+		else          flgs.fmtnow= 1;
 		nn= nam;
 	}
 	inline void TLOG_DEBUG3(int _lvl, int fmt, const std::string& nam) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
@@ -4057,10 +4051,7 @@ struct TSTREAMER_T_ {
 	inline void TLOG2(int fmt= 0, const char* nam= "")
 	{
 		if (fmt == 0) flgs.fmtnow= 0;
-		else if (fmt > 0)
-			flgs.fmtnow= 1;
-		else
-			flgs.fmtnow= -1;
+		else          flgs.fmtnow= 1;
 		nn= nam;
 	}
 	inline void TLOG2(int fmt, const std::string& nam) { TLOG2(fmt, &nam[0]); }

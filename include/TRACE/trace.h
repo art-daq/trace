@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1489 $$Date: 2021-01-25 22:51:31 -0600 (Mon, 25 Jan 2021) $"
+#define TRACE_REV "$Revision: 1494 $$Date: 2021-01-29 18:19:22 -0600 (Fri, 29 Jan 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1489 $_$Date: 2021-01-25 22:51:31 -0600 (Mon, 25 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1494 $_$Date: 2021-01-29 18:19:22 -0600 (Fri, 29 Jan 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -3943,6 +3943,12 @@ public:
 		return *this;
 	}
 
+	inline TraceStreamer &operator<<(const tlvle_t& r)
+	{
+		delay_format(r);
+		return *this;
+	}
+
 #	if TRACE_STREAMER_TEMPLATE
 	// This is heavy weight (instantiation of stringstream); hopefully will not be done too often or not at all
 	template<typename T>
@@ -4015,37 +4021,57 @@ struct TSTREAMER_T_ {
 	}
 
 	// FOR TLOG(...)
-	inline void TLOG3(int _lvl= TLVL_LOG, int fmt= 0, const char* nam= "")
+	inline void TLOG3(int _lvl= TLVL_LOG, bool fmt= false, const char* nam= "")
 	{
 		//if (_lvl < 0) _lvl= 0;
 		lvl= (tlvle_t)_lvl;
-		if (fmt == 0) flgs.fmtnow= 0;
-		else          flgs.fmtnow= 1;
+		if (!fmt) flgs.fmtnow= 0;
+		else      flgs.fmtnow= 1;
 		nn= nam;
 	}
-	inline void TLOG3(int _lvl, int fmt, const std::string& nam) { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(int _lvl, const char* nam, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(int _lvl, const std::string& nam, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const char* nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const std::string& nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, bool fmt,           const std::string& nam)           { TLOG3(_lvl, fmt,       &nam[0]); }
+	inline void TLOG3(int _lvl, int  fmt,           const char*        nam="")        { TLOG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG3(bool fmt, int _lvl=TLVL_LOG,  const char*        nam="")        { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, const char*        nam,           bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, const std::string& nam,           bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, const char*        nam,           int  fmt)           { TLOG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, const std::string& nam,           int  fmt)           { TLOG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG3(bool fmt, const char*        nam,           int _lvl=TLVL_LOG)  { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(bool fmt, const std::string& nam,           int _lvl=TLVL_LOG)  { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const char*        nam, int _lvl= TLVL_LOG, bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const std::string& nam, int _lvl= TLVL_LOG, bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const char*        nam, bool fmt,           int _lvl= TLVL_LOG) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const std::string& nam, bool fmt,           int _lvl= TLVL_LOG) { TLOG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG3(const char*        nam, int _lvl,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG3(const std::string& nam, int _lvl,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); }
 
 	// FOR TLOG_DEBUG(...)
-	inline void TLOG_DEBUG3(int _lvl= 0, int fmt= 0, const char* nam= "")
+	inline void TLOG_DEBUG3(int _lvl= 0, bool fmt= false, const char* nam= "")
 	{
 		if (_lvl < 0) _lvl= 0;
 		else if (_lvl > (63 - TLVL_DEBUG))
 			_lvl= (63 - TLVL_DEBUG);
 		lvl= (tlvle_t)(TLVL_DEBUG + _lvl);
 
-		if (fmt == 0) flgs.fmtnow= 0;
-		else          flgs.fmtnow= 1;
+		if (!fmt) flgs.fmtnow= 0;
+		else      flgs.fmtnow= 1;
 		nn= nam;
 	}
-	inline void TLOG_DEBUG3(int _lvl, int fmt, const std::string& nam) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG_DEBUG3(int _lvl, const char* nam, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG_DEBUG3(int _lvl, const std::string& nam, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG_DEBUG3(const char* nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG_DEBUG3(const std::string& nam, int _lvl= TLVL_LOG, int fmt= 0) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, bool fmt,           const std::string& nam)       { TLOG_DEBUG3(_lvl, fmt,       &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, int  fmt,           const char*        nam="")    { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(bool fmt, int _lvl=0,         const char*        nam="")    { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, const char*        nam,           bool fmt=false) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, const std::string& nam,           bool fmt=false) { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, const char*        nam,           int  fmt)       { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(int _lvl, const std::string& nam,           int  fmt)       { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(bool fmt, const char*        nam,           int _lvl=0)     { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(bool fmt, const std::string& nam,           int _lvl=0)     { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const char*        nam, int _lvl= 0, bool fmt=false)        { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const std::string& nam, int _lvl= 0, bool fmt=false)        { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const char*        nam, bool fmt,           int _lvl= 0)    { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const std::string& nam, bool fmt,           int _lvl= 0)    { TLOG_DEBUG3(_lvl, fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const char*        nam, int _lvl,           int fmt)        { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG_DEBUG3(const std::string& nam, int _lvl,           int fmt)        { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
 
 	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and possibly TLOG when only TLVL_LOG
 	inline void TLOG2(int fmt= 0, const char* nam= "")

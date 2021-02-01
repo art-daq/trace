@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1494 $$Date: 2021-01-29 18:19:22 -0600 (Fri, 29 Jan 2021) $"
+#define TRACE_REV "$Revision: 1498 $$Date: 2021-02-01 00:34:05 -0600 (Mon, 01 Feb 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1494 $_$Date: 2021-01-29 18:19:22 -0600 (Fri, 29 Jan 2021) $
+#define TRACE_REVx $_$Revision: 1498 $_$Date: 2021-02-01 00:34:05 -0600 (Mon, 01 Feb 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2987,7 +2987,7 @@ static int traceInit(const char *_name, int allow_ro)
 				traceControl_p_static= traceControl_p;
 			}
 		}
-	}
+	} // (traceControl_p == NULL) -- once per process
 
 	if (_name == NULL) {
 		if (!((_name= getenv("TRACE_NAME")) && (*_name != '\0'))) {
@@ -3016,30 +3016,32 @@ static int traceInit(const char *_name, int allow_ro)
 #		endif
 	trace_unlock(&traceInitLck);
 
-	if ((cp= getenv("TRACE_LVLS")) && (*cp)) /* TRACE_TLVLM above as it "activates" */
-	{
-		char *endptr;
-		trace_lvlS= strtoull(cp, &endptr, 0); /* set for future new traceTIDs (from this process) regardless of cmd line tonSg or toffSg - if non-zero! */
-		if (endptr != cp && *endptr == ',') {
-			trace_lvl_off= strtoull(endptr + 1, NULL, 0);
-			TRACE_CNTL("lvlclrSg", trace_lvl_off);
-			TRACE_CNTL("lvlsetSg", trace_lvlS);
-		} else
-			TRACE_CNTL("lvlmskSg", trace_lvlS);
-	}
-	if (trace_lvlM) /* env "activate" is above */
-	{               /* all current and future (until cmdline tonMg/toffMg) (and new from this process regardless of cmd line tonSg or toffSg) */
-		if (*lvlM_endptr == ',') {
-			trace_lvl_off= strtoull(lvlM_endptr + 1, NULL, 0);
-			TRACE_CNTL("lvlclrMg", trace_lvl_off);
-			TRACE_CNTL("lvlsetMg", trace_lvlM);
-		} else
-			TRACE_CNTL("lvlmskMg", trace_lvlM);
-	}
 	if (traceControl_p_was_NULL)
+	{	/* This stuff gets done once per process */
+		if ((cp= getenv("TRACE_LVLS")) && (*cp)) /* TRACE_TLVLM above as it "activates" */
+		{                                        /* Note "g" in lvl*Mg -- TRACE_NAME not needed */
+			char *endptr;
+			trace_lvlS= strtoull(cp, &endptr, 0); /* set for future new traceTIDs (from this process) regardless of cmd line tonSg or toffSg - if non-zero! */
+			if (endptr != cp && *endptr == ',') {
+				trace_lvl_off= strtoull(endptr + 1, NULL, 0);
+				TRACE_CNTL("lvlclrSg", trace_lvl_off);
+				TRACE_CNTL("lvlsetSg", trace_lvlS);
+			} else
+				TRACE_CNTL("lvlmskSg", trace_lvlS);
+		}
+		if (trace_lvlM) /* env "activate" is above -- Note "g" in lvl*Mg -- TRACE_NAME not needed */
+		{               /* all current and future (until cmdline tonMg/toffMg) (and new from this process regardless of cmd line tonSg or toffSg) */
+			if (*lvlM_endptr == ',') { /* NOTE: lvlM_endptr is only set (above) when traceControl_p_was_NULL */
+				trace_lvl_off= strtoull(lvlM_endptr + 1, NULL, 0);
+				TRACE_CNTL("lvlclrMg", trace_lvl_off);
+				TRACE_CNTL("lvlsetMg", trace_lvlM);
+			} else
+				TRACE_CNTL("lvlmskMg", trace_lvlM);
+		}
 		trace_namLvlSet(); /* more env vars checked - I want this to be done once,
 							  but after TRACE_LVLS and/or TRACE_LVLM processing.
 						      This is b/c this processing can be more specific than */
+	}
 
 #	else /* ifndef __KERNEL__ */
 

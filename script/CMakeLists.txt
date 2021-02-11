@@ -22,5 +22,6 @@ if (${cetmodules_FOUND})
 
   endif()
 else (${cetmodules_FOUND})
-  install(PROGRAMS "bitN_to_mask" DESTINATION bin)
+  install(PROGRAMS bitN_to_mask trace_envvars trace_delta DESTINATION bin)
+  install(PROGRAMS trace_functions.sh DESTINATION etc/profile.d)
 endif (${cetmodules_FOUND})

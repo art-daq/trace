@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1475 $$Date: 2021-01-20 12:44:44 -0600 (Wed, 20 Jan 2021) $
+# $Revision: 1501 $$Date: 2021-02-10 22:51:05 -0600 (Wed, 10 Feb 2021) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -18,8 +18,8 @@ endif()
 project(TRACE VERSION 3.17.01)
 # cetbuildtools contains our cmake modules
 
-find_package(cetmodules 1.04.00 REQUIRED)
-#find_package(cetmodules 1.04.00 QUIET)
+#find_package(cetmodules 1.04.00 REQUIRED)
+find_package(cetmodules 1.04.00 QUIET)
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmouldes.")
   include(CetCMakeEnv)
@@ -113,12 +113,12 @@ if (${cetmodules_FOUND})
   add_subdirectory(src_example)
   FILE(COPY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
   INSTALL(DIRECTORY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
-
-  # Kernel Module
-  add_subdirectory(src_module)
-  FILE(COPY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
-  INSTALL(DIRECTORY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
 endif (${cetmodules_FOUND})
+
+# Kernel Module
+add_subdirectory(src_module)
+FILE(COPY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
 
 # The include directory (aka the core of TRACE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1498 $$Date: 2021-02-01 00:34:05 -0600 (Mon, 01 Feb 2021) $"
+#define TRACE_REV "$Revision: 1500 $$Date: 2021-02-04 17:27:52 -0600 (Thu, 04 Feb 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1498 $_$Date: 2021-02-01 00:34:05 -0600 (Mon, 01 Feb 2021) $
+#define TRACE_REVx $_$Revision: 1500 $_$Date: 2021-02-04 17:27:52 -0600 (Thu, 04 Feb 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2893,7 +2893,7 @@ static int traceInit(const char *_name, int allow_ro)
 			unsigned lvlidx= 0, onoff= 0;
 			/* parse, for example: fatal,error,warn,info,log,debug,dbg01 NOTE: no escape sequences */
 			size_t ll= strcspn(cp, ",");
-			while (*cp && lvlidx < 128) {
+			while (*cp && lvlidx < 64) {
 				if (ll) {
 					strncpy(trace_lvlcolors[lvlidx][onoff], cp, TRACE_MIN(ll, sizeof(trace_lvlcolors[0][0])));
 					trace_lvlcolors[lvlidx][onoff][TRACE_MIN(ll, sizeof(trace_lvlcolors[0][0]) - 1)]= '\0';
@@ -2902,7 +2902,7 @@ static int traceInit(const char *_name, int allow_ro)
 				if (*cp == ',') ++cp;
 				ll= strcspn(cp, ",");
 
-				onoff= !onoff;
+				if ((onoff= !onoff) == 0) ++lvlidx;
 			}
 		}
 		if ((cp= getenv("TRACE_PRINT_FD")) && (*cp)) {

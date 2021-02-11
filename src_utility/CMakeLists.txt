@@ -11,7 +11,8 @@ else (${cetmodules_FOUND})
   target_include_directories(
     trace_cntl
     PUBLIC $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+  install(TARGETS trace_cntl)
 endif (${cetmodules_FOUND})
 
 #install_source()

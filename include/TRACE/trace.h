@@ -3720,7 +3720,12 @@ public:
 
 	inline void delay_format(const long long unsigned int &r)
 	{
-		long long unsigned int *vp= (long long unsigned int *)param_va_ptr;
+		unsigned long nvp= (unsigned long)param_va_ptr;
+		long long unsigned int *vp= (long long unsigned int *)nvp;
+#	if defined(__arm__)
+		if (nvp & 7)
+			vp= (long long unsigned int*)((nvp + 7) & ~7); // alignment requirement
+#	endif
 		if (do_f || (vp + 1) > (long long unsigned int *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);
@@ -3743,7 +3748,12 @@ public:
 
 	inline void delay_format(const long long int &r)
 	{
-		long long int *vp= (long long int *)param_va_ptr;
+		unsigned long nvp= (unsigned long)param_va_ptr;
+		long long int *vp= (long long int *)nvp;
+#	if defined(__arm__)
+		if (nvp & 7)
+			vp= (long long int*)((nvp + 7) & ~7); // alignment requirement
+#	endif
 		if (do_f || (vp + 1) > (long long int *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);

@@ -3834,7 +3834,12 @@ public:
 
 	inline void delay_format(const float &r)
 	{
-		double *vp= (double *)param_va_ptr;  // note: floats get pushed onto stack as double
+		unsigned long nvp= (unsigned long)param_va_ptr;
+		double *vp= (double *)nvp;  // note: floats get pushed onto stack as double
+#	if defined(__arm__)
+		if (nvp & 7)
+			vp= (double*)((nvp + 7) & ~7); // alignment requirement
+#	endif
 		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);

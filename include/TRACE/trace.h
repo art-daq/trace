@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1508 $$Date: 2021-02-19 03:10:53 -0600 (Fri, 19 Feb 2021) $"
+#define TRACE_REV "$Revision: 1509 $$Date: 2021-02-19 04:03:46 -0600 (Fri, 19 Feb 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1508 $_$Date: 2021-02-19 03:10:53 -0600 (Fri, 19 Feb 2021) $
+#define TRACE_REVx $_$Revision: 1509 $_$Date: 2021-02-19 04:03:46 -0600 (Fri, 19 Feb 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2008,6 +2008,7 @@ static uint32_t trace_name2TID(const char *nn)
 	const char *name= (nn && nn[0]) ? nn : traceName; /* attempt argument (to trace_name2TID) safety checking */
 	char valid_name[TRACE_TN_BUFSZ];
 	int rehash= 0;
+	size_t zz = strlen(name);
 #if defined(__KERNEL__)
 	if (traceEntries_p == NULL) return -1;
 #elif defined(TRACE_DEBUG_INIT)
@@ -2017,7 +2018,6 @@ static uint32_t trace_name2TID(const char *nn)
 		path, the right side (end) has the most (significant) info. So, if
 		name length are greater than max, chop off from the left (beginning). 
 	 */
-	size_t zz = strlen(name);
 	if (zz > (traceControl_p->nam_arr_sz-1))
 		name += zz - (traceControl_p->nam_arr_sz-1);
 
@@ -3328,7 +3328,8 @@ public:
 			{
 #		ifdef __arm__  /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
 				va_list ap;
-				*(unsigned long*)&ap = (unsigned long)args;
+				unsigned long *ulp = (unsigned long*)&ap;
+				*ulp = (unsigned long)args;
 #		else
 				va_list ap= TRACE_VA_LIST_INIT((void *)args);  // warning: extended initializer lists only available with [since] -std=c++11 ...
 #		endif

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1500 $$Date: 2021-02-04 17:27:52 -0600 (Thu, 04 Feb 2021) $"
+#define TRACE_REV "$Revision: 1508 $$Date: 2021-02-19 03:10:53 -0600 (Fri, 19 Feb 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1500 $_$Date: 2021-02-04 17:27:52 -0600 (Thu, 04 Feb 2021) $
+#define TRACE_REVx $_$Revision: 1508 $_$Date: 2021-02-19 03:10:53 -0600 (Fri, 19 Feb 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -813,7 +813,8 @@ TRACE_DECL(unsigned, trace_lvlwidth,, = TRACE_LVLWIDTH);
 		{"[93m","[0m"},{"[93m","[0m"},{"[32m","[0m"},{"[32m","[0m"}} /* this is needed to hide the comma in first pass preprocessing to _not_ get wrong number of macro arguments error */
 #endif
 // clang-format on
-TRACE_DECL(char, trace_lvlcolors, [64][2][16], = TRACE_LVLCOLORS_INIT); /* [2] for 1)([0]) On, and 2)([1]) off */
+/* [2] for 1)([0]) On, and 2)([1]) off; [24] to support \033[38:2:<r>:<g>:<b>m  eg \033[38:2:255:165:100m */
+TRACE_DECL(char, trace_lvlcolors, [64][2][24], = TRACE_LVLCOLORS_INIT);
 
 #if defined(__KERNEL__)
 TRACE_DECL(int, trace_allow_printk, , = 0);                /* module_param */
@@ -2009,13 +2010,22 @@ static uint32_t trace_name2TID(const char *nn)
 	int rehash= 0;
 #if defined(__KERNEL__)
 	if (traceEntries_p == NULL) return -1;
+#elif defined(TRACE_DEBUG_INIT)
+	fprintf(stderr,"n2t=%p %s\n",name,name);
 #endif
-	/*fprintf(stderr,"n2t=%p %s\n",name,name);*/
+	/** Since names are mostly associated with the filename which can be a
+		path, the right side (end) has the most (significant) info. So, if
+		name length are greater than max, chop off from the left (beginning). 
+	 */
+	size_t zz = strlen(name);
+	if (zz > (traceControl_p->nam_arr_sz-1))
+		name += zz - (traceControl_p->nam_arr_sz-1);
+
 	/* First, starting at "start" search for the name. We can stop
 	   searching when either the string or an empty string is found.
 	   If the string is found, return. If an empty is found, go on
 	   to insert. */
-	if (strcmp(nn, "_TRACE_") == 0) /* if hashing, "_TRACE_" is special, so need to check */
+	if (strcmp(name, "_TRACE_") == 0) /* if hashing, "_TRACE_" is special, so need to check */
 		return (traceControl_p->num_namLvlTblEnts - 1);
 	ii= start= /*0;*/ trace_name_hash(name) % traceControl_p->num_namLvlTblEnts;
 	do {
@@ -2023,7 +2033,7 @@ static uint32_t trace_name2TID(const char *nn)
 		if (*namep == '\0')
 			break;
 		if (strncmp(namep, name, traceControl_p->nam_arr_sz - 1) == 0)
-			return (ii);
+			return (ii); /* found name -- it already exists! */
 		ii= (ii + 1) % traceControl_p->num_namLvlTblEnts;
 	} while (ii != start);
 
@@ -2070,11 +2080,11 @@ static uint32_t trace_name2TID(const char *nn)
 			if (traceControl_rwp->longest_name < len)
 				traceControl_rwp->longest_name= len;
 			trace_unlock(&traceControl_rwp->namelock);
-			return (ii);
+			return (ii); /* filled empty slot with new name and inited lvls */
 		}
 		if (strncmp(namep, valid_name, (traceControl_p->nam_arr_sz - 1)) == 0) {
 			trace_unlock(&traceControl_rwp->namelock);
-			return (ii);
+			return (ii); /* (non-empty) Existing slot/name matched -- i.e. (valid) name already exists */
 		}
 		ii= (ii + 1) % traceControl_p->num_namLvlTblEnts;
 	} while (ii != start);
@@ -2518,7 +2528,7 @@ static void trace_created_init(struct traceControl_s *t_p, struct traceControl_r
 	trace_tv_t tv;
 	TRACE_GETTIMEOFDAY(&tv);
 #	ifdef TRACE_DEBUG_INIT
-	trace_user(&tv, 0, 0, "", 1, "trace_created_init: tC_p=%p", t_p);
+	trace_user(&tv, 0, 0, "", __FILE__, __LINE__, __func__, 1, "trace_created_init: tC_p=%p", t_p);
 #	endif
 	strncpy(t_p->version_string, TRACE_REV, sizeof(t_p->version_string));
 	t_p->version_string[sizeof(t_p->version_string) - 1]= '\0';
@@ -2559,7 +2569,7 @@ static void trace_created_init(struct traceControl_s *t_p, struct traceControl_r
 	t_p->trace_initialized= 1;
 #	ifdef TRACE_DEBUG_INIT
 	tv.tv_sec= 0;
-	trace_user(&tv, 0, 0, "", 1, "trace_created_init: tC_p=%p", t_p);
+	trace_user(&tv, 0, 0, "", __FILE__, __LINE__, __func__, 1, "trace_created_init: tC_p=%p", t_p);
 #	endif
 } /* trace_created_init */
 
@@ -2808,7 +2818,7 @@ static int traceInit(const char *_name, int allow_ro)
 		TRACE_PRN("trace_lock: InitLck hung?\n");
 	}
 #		ifdef TRACE_DEBUG_INIT
-	printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", traceControl_p, traceControl_p_static, _name, traceTid, traceTID);
+	printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", (void*)traceControl_p, (void*)traceControl_p_static, _name, traceTid, traceTID);
 #		endif
 	if (traceControl_p == NULL) {
 #		if defined(__GLIBC_PREREQ)   // use this to indicate if we are in a GNU env
@@ -3012,7 +3022,7 @@ static int traceInit(const char *_name, int allow_ro)
 #		endif
 	}
 #		ifdef TRACE_DEBUG_INIT
-	printf("traceInit(debug:Z): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", traceControl_p, traceControl_p_static, _name, traceTid, traceTID);
+	printf("traceInit(debug:Z): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", (void*)traceControl_p, (void*)traceControl_p_static, _name, traceTid, traceTID);
 #		endif
 	trace_unlock(&traceInitLck);
 
@@ -3316,7 +3326,12 @@ public:
 			if (do_m)
 #	if (__cplusplus >= 201103L)
 			{
+#		ifdef __arm__  /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
+				va_list ap;
+				*(unsigned long*)&ap = (unsigned long)args;
+#		else
 				va_list ap= TRACE_VA_LIST_INIT((void *)args);  // warning: extended initializer lists only available with [since] -std=c++11 ...
+#		endif
 				vtrace(lclTime_p, tid_, lvl_, line_, function_, (uint8_t)argCount, msg, ap);
 			}
 #	else
@@ -3752,6 +3767,10 @@ public:
 	{
 		unsigned long nvp= (unsigned long)param_va_ptr;
 		double *vp= (double *)nvp;
+#	if defined(__arm__)
+		if (nvp & 7)
+			vp= (double*)((nvp + 7) & ~7); // alignment requirement
+#	endif
 		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);

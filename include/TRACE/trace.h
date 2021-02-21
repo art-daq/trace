@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1509 $$Date: 2021-02-19 04:03:46 -0600 (Fri, 19 Feb 2021) $"
+#define TRACE_REV "$Revision: 1511 $$Date: 2021-02-20 22:20:51 -0600 (Sat, 20 Feb 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1509 $_$Date: 2021-02-19 04:03:46 -0600 (Fri, 19 Feb 2021) $
+#define TRACE_REVx $_$Revision: 1511 $_$Date: 2021-02-20 22:20:51 -0600 (Sat, 20 Feb 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -647,6 +647,7 @@ union trace_mode_u {
 		unsigned S : 1; /* b1 printf (formatted) to Screen/Stdout */
 		unsigned reserved : 14;
 		int func : 2; /* func ==> 1=force on, 0=TRACE_PRINT, -1=force off */
+		unsigned fast_do_getcpu : 1;	/* some archs (e.g. __arm__), this is not (Feb, 2021) vDSO */
 	} bits;
 	struct
 	{
@@ -1853,7 +1854,11 @@ tod: 132348  133161
 	myEnt_p->pid= tracePid;
 	myEnt_p->tid= traceTid;
 #endif
+#ifdef __arm__
+	if (traceControl_rwp->mode.bits.fast_do_getcpu)
+#endif
 	myEnt_p->cpu= trace_getcpu(); /* for userspace, this costs alot :(*/
+
 	myEnt_p->linenum= (uint32_t)line;
 	myEnt_p->TrcId= trcId;
 	myEnt_p->lvl= lvl;
@@ -2206,6 +2211,7 @@ mapped			 n/a                             bool
 init             n/a                              0
 name			 char*				1             0
 mode[ MS]		 UL					1            old mode (uint16_t)
+getcpu           unsigned                         0
 lvlmskn[ MST]	 ULL				2            -1(error), 0 (success)
 lvlsetn[ MST]	 ULL				2            -1(error), 0 (success)
 lvlclrn[ MST]	 ULL				2            -1(error), 0 (success)
@@ -2217,6 +2223,7 @@ reset			 n/a                              0
 limit_ms		 UL UL [UL]			1            limit_cnt_limit (uint32_t)
 <unknown>                                        -1
 
+Note 0: "int" is 4 bytes on both.
 Note 1: 4 bytes on 32, 8 bytes on 64
 Note 2: 8 bytes (LL or ULL) on both 32 and 64 bit machines
 
@@ -2327,6 +2334,12 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			break;
 		default:
 			ret= -1;
+		}
+	} else if (strcmp(cmd, "getcpu") == 0) { /* ??? */
+		ret= traceControl_rwp->mode.bits.fast_do_getcpu;
+		if (nargs == 1) {
+			unsigned getcpu= va_arg(ap, unsigned);  // 4 bytes on both 32 and 64
+			traceControl_rwp->mode.bits.fast_do_getcpu= (getcpu != 0);
 		}
 	} else if ((strncmp(cmd, "lvlmskn", 7) == 0) || (strncmp(cmd, "lvlsetn", 7) == 0) || (strncmp(cmd, "lvlclrn", 7) == 0)) { /* TAKES 2 or 4 args: name,lvlX or name,lvlM,lvlS,lvlT */
 		uint64_t lvl, lvlm, lvls, lvlt;
@@ -2555,6 +2568,7 @@ static void trace_created_init(struct traceControl_s *t_p, struct traceControl_r
 	t_rwp->mode.words.mode= 0;
 	t_rwp->mode.bits.M= (modeM != 0);
 	t_rwp->mode.bits.S= 1;
+	t_rwp->mode.bits.fast_do_getcpu = 0; /* only checked if __arm__; default to false as syscall is heavy weight. Turn on via tcntl OR use kernel module. */
 
 	traceLvls_p= (struct traceLvls_s *)(t_rwp + 1);
 	traceNams_p= (char*)(&traceLvls_p[t_p->num_namLvlTblEnts]);

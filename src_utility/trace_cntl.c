@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1465 $$Date: 2021-01-12 21:54:27 -0600 (Tue, 12 Jan 2021) $"
+#define TRACE_CNTL_REV "$Revision: 1511 $$Date: 2021-02-20 22:20:51 -0600 (Sat, 20 Feb 2021) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -44,6 +44,7 @@ struct {
 	{"tids",""},
 	{"cntl",""},
 	{"mode[M|S]",""},
+	{"getcpu <1|0>","enable/disable system call to get cpu on ARM architecture (fast path)"},
 	{"lvlstrs",""},
 	{"lvl{msk,set,clr}<M|S|T>[g|G] <lvlmsk>","M=memory, S=slow/console, T=trig; G=only active (not empth), g=all (current and futur)"},
 	{"lvl{msk,set,clr}[g|G] <mskM> <mskS> <mskT>","provide all 3 masks; G=only active (not empth), g=all (current and futur)"},
@@ -70,6 +71,7 @@ commands:\n\
  mode <mode>\n\
  modeM <mode>\n\
  modeS <mode>\n\
+ getcpu <0|1>                      # for ARM architecture only\n\
  lvlstrs                           # print the lvlstrs arrary\n\
  lvlmsk[M|S|T][g] <lvlmsk>         # M=memory, S=slow/console, T=trig\n\
  lvlmsk[g|G] <mskM> <mskS> <mskT>  # g=current and future name slots; G=only active (not empty)\n\
@@ -1362,6 +1364,9 @@ void traceInfo(int quiet)
 		       "create time       = %s\n"
 		       "trace_initialized = %d\n"
 		       "fast/mem __func__ = %-8d    1=force on, 0=TRACE_PRINT, -1=force off\n"
+#	ifdef __arm__
+		       "fast/mem getcpu   = %d\n"
+#	endif
 		       "mode              = 0x%-8x  %s%s\n"
 		       "writeIdxCount     = 0x%08x  entries used: %u\n"
 		       "full              = %d\n"
@@ -1395,6 +1400,9 @@ void traceInfo(int quiet)
 		       , outstr
 		       , traceControl_p->trace_initialized
 		       , traceControl_rwp->mode.bits.func
+#	ifdef __arm__
+		       , traceControl_rwp->mode.bits.fast_do_getcpu
+#	endif
 		       , traceControl_rwp->mode.words.mode, traceControl_rwp->mode.bits.S?"Slow:ON, ":"Slow:off", traceControl_rwp->mode.bits.M?" Mem:ON":" Mem:off"
 		       , wrCopy, used
 		       , traceControl_rwp->full

@@ -621,7 +621,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case '%': printf("%%"); break;
 			case 'a': printf("%4u", myEnt_p->nargs); break;
 			case 'B': printf("%u", myEnt_p->param_bytes); break;
-			case 'C': printf("%" TRACE_STR(TRACE_CPU_WIDTH) "u", myEnt_p->cpu); break;
+			case 'C': printf("%" TRACE_STR(TRACE_CPU_WIDTH) "d", myEnt_p->cpu); break;
 			case 'D': /* ignore this "control" */ break;
 			case 'e':
 				snprintf(tbuf,sizeof(tbuf),"%s:%d",TRACE_TID2NAME(myEnt_p->TrcId),myEnt_p->linenum);

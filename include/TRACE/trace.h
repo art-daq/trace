@@ -1856,8 +1856,12 @@ tod: 132348  133161
 #endif
 #ifdef __arm__
 	if (traceControl_rwp->mode.bits.fast_do_getcpu)
-#endif
+		myEnt_p->cpu= trace_getcpu(); /* for userspace, this costs alot :(*/
+	else
+		myEnt_p->cpu= -1;
+#else
 	myEnt_p->cpu= trace_getcpu(); /* for userspace, this costs alot :(*/
+#endif
 
 	myEnt_p->linenum= (uint32_t)line;
 	myEnt_p->TrcId= trcId;

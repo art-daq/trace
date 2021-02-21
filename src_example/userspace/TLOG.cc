@@ -18,7 +18,7 @@ int main(/*int argc, char *argv[]*/)
 
 	// RECALL -- if no non-string args, no problem
 	TLOG(TLVL_LOG,1)            << "hi - TLOG(TLVL_LOG,1) - always a msg (w/ non-str arg) w/ % as in %MSG " << 1;
-	unsigned long old_modeS=TRACE_CNTL("modeS",0);
+	uint16_t old_modeS=(uint16_t)TRACE_CNTL("modeS",0);
 	TLOG(TLVL_LOG,1)            << "hi - TLOG(TLVL_LOG,1) - always a msg (w/ non-str arg) w/ % as in %MSG " << 1;
 	TLOG(TLVL_LOG)              << "hi - TLOG(TLVL_LOG)   - dly fmt if only fast - a msg w/ % as in %MSG and a non-str arg: " << 1;
 	TRACE_CNTL("modeS",old_modeS);

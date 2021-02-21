@@ -620,6 +620,23 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #	define TRACE_ENT_TV_FILLER      uint32_t x[2];
 #	define TRACE_TSC32(low)
 
+#elif defined(__arm__)
+
+#	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
+#	if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
+		/* need to assure arguments pushed on stack start on an 8 byte aligned address */
+#		define TRACE_XTRA_PASSED , 0
+#		define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__))
+#		define TRACE_PRINTF_FMT_ARG_NUM 8  // clang-format off
+#		define TRACE_ENT_TV_FILLER uint32_t x[2];
+#	else
+#		define TRACE_XTRA_PASSED 
+#		define TRACE_XTRA_UNUSED 
+#		define TRACE_PRINTF_FMT_ARG_NUM 7  // clang-format off
+#		define TRACE_ENT_TV_FILLER
+#	endif
+#	define TRACE_TSC32(low)
+
 #else
 
 #	define TRACE_XTRA_PASSED
@@ -2206,6 +2223,8 @@ passing _name: because this method will have to make sure trace is initialize
 and to avoid compiling in a (default) name into (hard-coding) the function in
 this header file, _name is passed. _name will then take on the value used when
 compiling calling of traceCntl via the TRACE_CNTL macro.
+NOTE: on 64 bit arch, ints (4 bytes) and shorts (2 bytes) are pushed as 8!!!
+      on 32 bit arch, shorts (2 bytes) are pushed as 4.
 
 cmd		   		 arg	      	  notes        returns
 ------           ---------		----------    ---------
@@ -2214,7 +2233,7 @@ namlvlset		 optional char*		1             0
 mapped			 n/a                             bool
 init             n/a                              0
 name			 char*				1             0
-mode[ MS]		 UL					1            old mode (uint16_t)
+mode[ MS]		 unsigned				1            old mode (uint16_t)
 getcpu           unsigned                         0
 lvlmskn[ MST]	 ULL				2            -1(error), 0 (success)
 lvlsetn[ MST]	 ULL				2            -1(error), 0 (success)
@@ -2306,7 +2325,7 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 		case '\0':
 			ret= traceControl_rwp->mode.words.mode;
 			if (nargs == 1) {
-				uint16_t mode= (uint16_t)va_arg(ap, long);  // long is 4 bytes on 32, 8 on 64
+				uint16_t mode= (uint16_t)va_arg(ap, unsigned);  // 4 bytes on both 32 and 64, but pushed as 64 on 64; va_arg knows this.
 				union trace_mode_u tmp= traceControl_rwp->mode;
 				tmp.words.mode= mode;
 #ifndef __KERNEL__
@@ -2325,14 +2344,14 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			}
 #endif
 			if (nargs == 1) {
-				unsigned long mode= va_arg(ap, unsigned long);  // 4 bytes on 32, 8 on 64
+				unsigned mode= va_arg(ap, unsigned);  // 4 bytes on both 32 and 64
 				traceControl_rwp->mode.bits.M= (mode != 0);
 			}
 			break;
 		case 'S':
 			ret= traceControl_rwp->mode.bits.S;
 			if (nargs == 1) {
-				unsigned long mode= va_arg(ap, unsigned long);  // 4 bytes on 32, 8 on 64
+				unsigned mode= va_arg(ap, unsigned);  // 4 bytes on both 32 and 64
 				traceControl_rwp->mode.bits.S= (mode != 0);
 			}
 			break;

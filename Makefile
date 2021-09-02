@@ -3,13 +3,14 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1469 $$Date: 2021-01-19 16:44:19 -0600 (Tue, 19 Jan 2021) $";
+ # rev="$Revision: 1519 $$Date: 2021-07-05 18:16:08 -0500 (Mon, 05 Jul 2021) $";
 
 # TOP LEVEL Makefile
 
 HELP=\
 echo "OUT=<dir> must be specified and <dir> must exist.";\
 echo "Examples:";\
+echo "  make <rpm|srpm>         \# actually makes 2 rpms - TRACE-utils and kmod-TRACE - placed under ~/rpmbuild/{,S}RPMS";\
 echo "  make OUT=\$$PWD -j4     \# the default is to build the 2 userspace programs";\
 echo "  make OUT=\$$PWD -j4 all \# build userspace programs and modules";\
 echo "  make OUT=\$$PWD src_utility src_example_user modules 2>&1 | egrep -iB4 'error|warn'";\
@@ -66,10 +67,12 @@ srpm: rpm_source
 	@: TRACE_FQ_DIR is cleared in spec file;\
 	rpmbuild -bs --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
 	@rm -f rpm/TRACE.tar.bz2
+	@echo Output srpms should be under ~/rpmbuild/SRPMS
 rpm: rpm_source
 	@: TRACE_FQ_DIR is cleared in spec file;\
 	rpmbuild -bb --quiet --define "_sourcedir ${PWD}/rpm" rpm/TRACE.spec
 	@rm -f rpm/TRACE.tar.bz2
+	@echo Output srpms should be under ~/rpmbuild/RPMS
 
 modules: src_module src_example_module
 

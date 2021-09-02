@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1511 $$Date: 2021-02-20 22:20:51 -0600 (Sat, 20 Feb 2021) $"
+#define TRACE_CNTL_REV "$Revision: 1522 $$Date: 2021-09-01 13:09:25 -0500 (Wed, 01 Sep 2021) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1937,8 +1937,9 @@ extern  int        optind;         /* for getopt */
 	} else if (strcmp(cmd,"lvlstrs") == 0) {
 		TRACE_CNTL("init");		/* for potential TRACE_LVLSTRS */
 		for (ii=0; ii<64; ++ii) {
+			int aa;
 			printf("%2d ", ii);
-			for (int aa=0; aa<trace_lvlstrs_aliases; ++aa)
+			for (aa=0; aa<trace_lvlstrs_aliases; ++aa)
 				printf("%*s ", trace_lvlwidth, trace_lvlstrs[aa][ii]);
 			printf("\n");
 		}
@@ -1980,10 +1981,10 @@ extern  int        optind;         /* for getopt */
 		if (opt_timing_stats)
 			t0_us = gettimeofday_us();
 		if (cmd[5]=='N')
-			for (int ii=0; ii<opt_loops; ++ii)
+			for (ii=0; ii<opt_loops; ++ii)
 				VTRACEN(argv[optind], lvl, nargs, argv[optind+2], args);
 		else
-			for (int ii=0; ii<opt_loops; ++ii)
+			for (ii=0; ii<opt_loops; ++ii)
 				VTRACE(lvl, nargs, argv[optind+1], args);
 		if (opt_timing_stats){
 			tdelta_us=(uint32_t)(gettimeofday_us()-t0_us);

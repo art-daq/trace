@@ -3,7 +3,7 @@
  or COPYING file. If you do not have such a file, one can be obtained by
  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  $RCSfile: compile_into_kernel.howto,v $
- rev="$Revision: 1365 $$Date: 2020-09-16 00:00:31 -0500 (Wed, 16 Sep 2020) $";
+ rev="$Revision: 1520 $$Date: 2021-07-05 18:41:02 -0500 (Mon, 05 Jul 2021) $";
 
 
 
@@ -12,7 +12,7 @@
 2b. copy or link $TRACE_INC/TRACE/trace.h into include/TRACE
     mkdir include/uapi/TRACE   # for headers_install into INSTALL_HDR_PATH
     ln -s ../../TRACE/trace.h include/uapi/TRACE
-3.  copy or link src_modules/trace_.c into init/
+3.  copy or link src_module/trace_.c into init/
 4.  edit or patch init/main.c (see below)
 5a. add TRACEs into other kernel source (e.g. net/socket.c - see below)
 5b. external modules can just include TRACE/trace.h and insert TRACEs

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1513 $$Date: 2021-02-21 10:48:52 -0600 (Sun, 21 Feb 2021) $"
+#define TRACE_REV "$Revision: 1521 $$Date: 2021-09-01 12:58:12 -0500 (Wed, 01 Sep 2021) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -50,7 +50,7 @@
 #define TRACE(lvl, ...)                                                                                                               \
 	do {																\
 		struct { char tn[TRACE_TN_BUFSZ]; } _trc_;						\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
 			trace_tv_t lclTime;                                                                                                   \
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			TRACE_SBUFDECL;                                                                                                                \
@@ -70,7 +70,7 @@
 #define TRACEN(nam, lvl, ...)											\
 	do {																\
 		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
 			static TRACE_THREAD_LOCAL int tid_ = -1;				\
 			trace_tv_t lclTime;											\
 			uint8_t lvl_ = (uint8_t)(lvl);								\
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1513 $_$Date: 2021-02-21 10:48:52 -0600 (Sun, 21 Feb 2021) $
+#define TRACE_REVx $_$Revision: 1521 $_$Date: 2021-09-01 12:58:12 -0500 (Wed, 01 Sep 2021) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -353,7 +353,15 @@ typedef struct timeval trace_tv_t;
 
 #endif /* __KERNEL__ */
 
+
 #define TRACE_MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+/* A trace (TLOG or TRACE) from a header before and trace from the compilation unit (__BASE_FILE__) is mess things up */
+#if defined(__GNUC__) || defined(__clang__)
+#	define __TRACE_FILE__ __BASE_FILE__
+#else
+#	define __TRACE_FILE__ __FILE__
+#endif
 
 #if (defined(__clang_major__) && (__clang_major__ >= 4)) || (defined __GNUC__ && defined __GNUC_MINOR__ && (10000 * __GNUC__ + 1000 * __GNUC_MINOR__) >= 49000)
 #	define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
@@ -476,7 +484,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #		define TRACEF(lvl, ...)													\
 	do {																\
 		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
 			static TRACE_THREAD_LOCAL limit_info_t _info = {/*TRACE_ATOMIC_INIT,*/ 0, lsFREE, 0}; \
 			trace_tv_t lclTime;                                                                                                   \
 			uint8_t lvl_ = (uint8_t)(lvl);								\
@@ -496,7 +504,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #		define TRACEFN(nam, lvl, ...)                                                                                                     \
 	do {																\
 		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
 			static TRACE_THREAD_LOCAL int tid_ = -1;                                                                              \
 			static TRACE_THREAD_LOCAL limit_info_t _info = {/*TRACE_ATOMIC_INIT,*/ 0, lsFREE, 0}; \
 			trace_tv_t lclTime;                                                                                               \
@@ -526,7 +534,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #	define TRACEN_(nam, lvl, ...)										\
 	do {																\
 		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
-		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
 			static TRACE_THREAD_LOCAL int tid_ = -1;				\
 			static TRACE_THREAD_LOCAL limit_info_t _info = {/*TRACE_ATOMIC_INIT,*/ 0, lsFREE, 0}; \
 			trace_tv_t lclTime;											\
@@ -1021,6 +1029,9 @@ static const char *trace_name(const char *_tname_, const char *file, char *buf, 
 {
 	const char *ret;
 
+#if !defined(__KERNEL__) && defined(TRACE_DEBUG_INIT)
+	fprintf(stderr,"file=%s\n",file);
+#endif
 	if ((_tname_) && (*_tname_))
 		ret= _tname_; /* we should be able to do better than "" */
 	else {
@@ -2038,7 +2049,7 @@ static uint32_t trace_name2TID(const char *nn)
 #if defined(__KERNEL__)
 	if (traceEntries_p == NULL) return -1;
 #elif defined(TRACE_DEBUG_INIT)
-	fprintf(stderr,"n2t=%p %s\n",name,name);
+	fprintf(stderr,"n2t=%p name=%s\n",name,name);
 #endif
 	/** Since names are mostly associated with the filename which can be a
 		path, the right side (end) has the most (significant) info. So, if
@@ -2564,7 +2575,7 @@ static void trace_created_init(struct traceControl_s *t_p, struct traceControl_r
 	trace_tv_t tv;
 	TRACE_GETTIMEOFDAY(&tv);
 #	ifdef TRACE_DEBUG_INIT
-	trace_user(&tv, 0, 0, "", __FILE__, __LINE__, __func__, 1, "trace_created_init: tC_p=%p", t_p);
+	trace_user(&tv, traceControl_p->num_namLvlTblEnts-1, 0, "", __FILE__, __LINE__, __func__, 1, "trace_created_init: tC_p=%p", t_p);
 #	endif
 	strncpy(t_p->version_string, TRACE_REV, sizeof(t_p->version_string));
 	t_p->version_string[sizeof(t_p->version_string) - 1]= '\0';
@@ -2606,7 +2617,7 @@ static void trace_created_init(struct traceControl_s *t_p, struct traceControl_r
 	t_p->trace_initialized= 1;
 #	ifdef TRACE_DEBUG_INIT
 	tv.tv_sec= 0;
-	trace_user(&tv, 0, 0, "", __FILE__, __LINE__, __func__, 1, "trace_created_init: tC_p=%p", t_p);
+	trace_user(&tv, traceControl_p->num_namLvlTblEnts-1, 0, "", __FILE__, __LINE__, __func__, 1, "trace_created_init: tC_p=%p", t_p);
 #	endif
 } /* trace_created_init */
 
@@ -2736,7 +2747,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 			return (0);
 		}
 		while (statbuf.st_size < (off_t)sizeof(struct traceControl_s)) {
-			fprintf(stderr, "stat again\n");
+			/* fprintf(stderr, "stat again\n"); This can/will happen in multiprocess env -- so not an error */
 			if (((stat_try++ >= 30) && (fprintf(stderr, "too many stat tries\n"), 1)) || ((fstat(fd, &statbuf) == -1) && (perror("fstat"), 1))) {
 				close(fd);
 				*tC_p= &(traceControl[0]);
@@ -2854,8 +2865,8 @@ static int traceInit(const char *_name, int allow_ro)
 	if (!trace_lock(&traceInitLck)) {
 		TRACE_PRN("trace_lock: InitLck hung?\n");
 	}
-#		ifdef TRACE_DEBUG_INIT
-	printf("traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", (void*)traceControl_p, (void*)traceControl_p_static, _name, traceTid, traceTID);
+#		if !defined(__KERNEL__) && defined(TRACE_DEBUG_INIT)
+	fprintf(stderr,"traceInit(debug:A): tC_p=%p static=%p _name=%p Tid=%d TrcId=%d\n", (void*)traceControl_p, (void*)traceControl_p_static, _name, traceTid, traceTID);
 #		endif
 	if (traceControl_p == NULL) {
 #		if defined(__GLIBC_PREREQ)   // use this to indicate if we are in a GNU env
@@ -3222,7 +3233,7 @@ typedef struct
 //                   args are: lvl, lvl/name/fmtnow_method, s_force
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
 			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
-				_trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+				_trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
 				&& (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? (int)trace_name2TID(_trc_.nn) : traceTID)) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
@@ -3231,7 +3242,7 @@ typedef struct
 #	else
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
-				 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+				 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
 				 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= (_trc_.nn[0] ? (int)trace_name2TID(_trc_.nn) : traceTID)) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
@@ -4095,7 +4106,7 @@ struct TSTREAMER_T_ {
 	}
 
 	// FOR TLOG(...)
-	inline void TLOG3(int _lvl= TLVL_LOG, bool fmt= false, const char* nam= "")
+	inline void TLOG3(int _lvl= TLVL_LOG, bool fmt= false, const char* nam= "") //  1
 	{
 		//if (_lvl < 0) _lvl= 0;
 		lvl= (tlvle_t)_lvl;
@@ -4103,21 +4114,22 @@ struct TSTREAMER_T_ {
 		else      flgs.fmtnow= 1;
 		nn= nam;
 	}
-	inline void TLOG3(int _lvl, bool fmt,           const std::string& nam)           { TLOG3(_lvl, fmt,       &nam[0]); }
-	inline void TLOG3(int _lvl, int  fmt,           const char*        nam="")        { TLOG3(_lvl, (bool)fmt, &nam[0]); }
-	inline void TLOG3(bool fmt, int _lvl=TLVL_LOG,  const char*        nam="")        { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(int _lvl, const char*        nam,           bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(int _lvl, const std::string& nam,           bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(int _lvl, const char*        nam,           int  fmt)           { TLOG3(_lvl, (bool)fmt, &nam[0]); }
-	inline void TLOG3(int _lvl, const std::string& nam,           int  fmt)           { TLOG3(_lvl, (bool)fmt, &nam[0]); }
-	inline void TLOG3(bool fmt, const char*        nam,           int _lvl=TLVL_LOG)  { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(bool fmt, const std::string& nam,           int _lvl=TLVL_LOG)  { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const char*        nam, int _lvl= TLVL_LOG, bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const std::string& nam, int _lvl= TLVL_LOG, bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const char*        nam, bool fmt,           int _lvl= TLVL_LOG) { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const std::string& nam, bool fmt,           int _lvl= TLVL_LOG) { TLOG3(_lvl, fmt, &nam[0]); }
-	inline void TLOG3(const char*        nam, int _lvl,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); }
-	inline void TLOG3(const std::string& nam, int _lvl,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); }
+	inline void TLOG3(int _lvl, bool fmt,           const std::string& nam)           { TLOG3(_lvl, fmt, &nam[0]); }       //  2
+	inline void TLOG3(bool fmt, int _lvl=TLVL_LOG,  const char*        nam="")        { TLOG3(_lvl, fmt, &nam[0]); }       //  3
+	inline void TLOG3(bool fmt, int _lvl,           const std::string& nam)           { TLOG3(_lvl, fmt, &nam[0]); }       //  4
+	inline void TLOG3(int _lvl, const char*        nam,           bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }       //  5
+	inline void TLOG3(int _lvl, const std::string& nam,           bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }       //  6
+	inline void TLOG3(bool fmt, const char*        nam,           int _lvl=TLVL_LOG)  { TLOG3(_lvl, fmt, &nam[0]); }       //  7
+	inline void TLOG3(bool fmt, const std::string& nam,           int _lvl=TLVL_LOG)  { TLOG3(_lvl, fmt, &nam[0]); }       //  8
+	inline void TLOG3(const char*        nam, int _lvl= TLVL_LOG, bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }       //  9
+	inline void TLOG3(const std::string& nam, int _lvl= TLVL_LOG, bool fmt=false)     { TLOG3(_lvl, fmt, &nam[0]); }       // 10
+	inline void TLOG3(const char*        nam, bool fmt,           int _lvl= TLVL_LOG) { TLOG3(_lvl, fmt, &nam[0]); }       // 11
+	inline void TLOG3(const std::string& nam, bool fmt,           int _lvl= TLVL_LOG) { TLOG3(_lvl, fmt, &nam[0]); }       // 12
+	inline void TLOG3(int _lvl, const char*        nam,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); } // 13
+	inline void TLOG3(int _lvl, const std::string& nam,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); } // 14
+	inline void TLOG3(const char*        nam, int _lvl,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); } // 15
+	inline void TLOG3(const std::string& nam, int _lvl,           int fmt)            { TLOG3(_lvl, (bool)fmt, &nam[0]); } // 16
+	inline void TLOG3(int _lvl,               int  fmt,   const char* nam="")         { TLOG3(_lvl, (bool)fmt, &nam[0]); } // 17
 
 	// FOR TLOG_DEBUG(...)
 	inline void TLOG_DEBUG3(int _lvl= 0, bool fmt= false, const char* nam= "")

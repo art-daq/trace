@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1522 $$Date: 2021-09-01 13:09:25 -0500 (Wed, 01 Sep 2021) $"
+#define TRACE_CNTL_REV "$Revision: 1524 $$Date: 2021-09-02 16:39:42 -0500 (Thu, 02 Sep 2021) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1469,7 +1469,8 @@ extern  int        optind;         /* for getopt */
         int        opt;            /* for how I use getopt */
 	int	        do_heading=1;
 	int	        show_opts=0;
-	unsigned    ii=0;
+	int         ii=0;
+	unsigned    uu=0;
 	char        test_name[0x100];
 	int         opt_loops=-1, opt_timing_stats=0, opt_help=0;
 	unsigned    opt_dly_ms=0;
@@ -1583,7 +1584,7 @@ extern  int        optind;         /* for getopt */
 			   , (void*)&((struct traceEntryHdr_s*)0)->tsc
 			   );
 
-		for (ii=0; ii<sizeof(ff)/sizeof(ff[0]); ++ii)  ff[ii]=(float)(2.5*ii);
+		for (uu=0; uu<sizeof(ff)/sizeof(ff[0]); ++uu)  ff[uu]=(float)(2.5*uu);
 
 		/* NOTE: using setenv method works in threading env where as additional
 		   threads initializing via TRACE will disable/undo the levels
@@ -1748,7 +1749,7 @@ extern  int        optind;         /* for getopt */
 				STRT_PRN(" 0x01 -%s const short msg %s","",(tstmod&0xc)?"(NO snprintf)":"");
 				//fprintf(stderr,STRT_FMT," 0x01 - const short msg (NO snprintf)");fflush(stderr);
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
+				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "any msg" );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 			}
@@ -1756,7 +1757,7 @@ extern  int        optind;         /* for getopt */
 			if (2 & test_mask) {
 				STRT_PRN(" 0x02 - 1 arg%s%s","","");
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
+				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is one small param: %u", 12345678 );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 			}
@@ -1764,39 +1765,39 @@ extern  int        optind;         /* for getopt */
 			if (4 & test_mask) {
 				STRT_PRN(" 0x04 - 2 args%s%s","","");
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
-					TRACE( TLVL_INFO, "this is 2 params: %u %u", 12345678, ii );
+				for (uu=0; uu<loops; ++uu) {
+					TRACE( TLVL_INFO, "this is 2 params: %u %u", 12345678, uu );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 			}
 
 			if (8 & test_mask) {
 				STRT_PRN(" 0x08 - 8 args (7 ints, 1 float)%s%s","","");
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
+				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is 8 params: %u %u %u %u %u %u %u %g"
-					      , 12345678, ii, ii*2, ii+6
-					      , 12345679, ii, ii-7, (float)ii*1.5 );
+					      , 12345678, uu, uu*2, uu+6
+					      , 12345679, uu, uu-7, (float)uu*1.5 );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 			}
 
 			if (0x10 & test_mask) {
 				STRT_PRN(" 0x10 - 8 args (1 ints, 7 float)%s%s","","");
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
+				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is 8 params: %u %g %g %g %g %g %g %g"
-					      , 12345678, (float)ii, (float)ii*2.5, (float)ii+3.14
-					      , (float)12345679, (float)ii/.25, (float)ii-2*3.14, (float)ii*1.5 );
+					      , 12345678, (float)uu, (float)uu*2.5, (float)uu+3.14
+					      , (float)12345679, (float)uu/.25, (float)uu-2*3.14, (float)uu*1.5 );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 			}
 
 			if (0x20 & test_mask) {
 				STRT_PRN(" 0x20 - snprintf of same 8 args%s%s","","");
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
+				for (uu=0; uu<loops; ++uu) {
 					snprintf( buffer, sizeof(buffer)
 					         , "this is 8 params: %u %g %g %g %g %g %g %g"
-					         , 12345678, (float)ii, (float)ii*2.5, (float)ii+3.14
-					         , (float)12345679, (float)ii/.25, (float)ii-2*3.14, (float)ii*1.5
+					         , 12345678, (float)uu, (float)uu*2.5, (float)uu+3.14
+					         , (float)12345679, (float)uu/.25, (float)uu-2*3.14, (float)uu*1.5
 					         );
 					TRACE( TLVL_INFO, buffer );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
@@ -1805,7 +1806,7 @@ extern  int        optind;         /* for getopt */
 			if (0x40 & test_mask) {
 				STRT_PRN(" 0x40 -%s const short msg %s",(1&test_mask)?" (repeat)":"",(tstmod&0xc)?"(NO snprintf)":"");
 				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
-				for (ii=0; ii<loops; ++ii) {
+				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "any msg" );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 			}
@@ -1838,12 +1839,12 @@ extern  int        optind;         /* for getopt */
 			TRACE_CNTL("lvlsetMg", 0xfLL<<TLVL_INFO); /* set INFO,DBG,DBG+1, and DBG+2 */
 			t0_us = gettimeofday_us();
 		}
-		for (ii=0; ii<num_threads; ii++) {
-			argsp[ii].tidx   = ii+1;
-			argsp[ii].loops  = (unsigned)loops;
-			argsp[ii].dly_ms = opt_dly_ms;
-			argsp[ii].burst  = opt_burst;
-			pthread_create(&(threads[ii]),NULL,thread_func,(void*)&argsp[ii] );
+		for (uu=0; uu<num_threads; uu++) {
+			argsp[uu].tidx   = uu+1;
+			argsp[uu].loops  = (unsigned)loops;
+			argsp[uu].dly_ms = opt_dly_ms;
+			argsp[uu].burst  = opt_burst;
+			pthread_create(&(threads[uu]),NULL,thread_func,(void*)&argsp[uu] );
 		}
 
 		args0.tidx   = 0;
@@ -1859,8 +1860,8 @@ extern  int        optind;         /* for getopt */
 		    sprintf( cmd, "echo trace_buffer mappings before join '(#2)' = `cat /proc/%d/maps | grep trace_buffer | wc -l`", getpid() );
 		    sts = system( cmd );
 		}
-		for (ii=0; ii<num_threads; ii++)
-		{	pthread_join(threads[ii], NULL);
+		for (uu=0; uu<num_threads; uu++)
+		{	pthread_join(threads[uu], NULL);
 		}
 		if (opt_timing_stats){
 			tdelta_us=(uint32_t)(gettimeofday_us()-t0_us);
@@ -1917,17 +1918,17 @@ extern  int        optind;         /* for getopt */
 			       , 18, TRACE_LONG_DASHES, 18, TRACE_LONG_DASHES
 			       , 18, TRACE_LONG_DASHES );
 		}
-		for (ii=0; ii<traceControl_p->num_namLvlTblEnts; ++ii)
+		for (uu=0; uu<traceControl_p->num_namLvlTblEnts; ++uu)
 		{
-			if (opt_all || TRACE_TID2NAME((int32_t)ii)[0]!='\0')
+			if (opt_all || TRACE_TID2NAME((int32_t)uu)[0]!='\0')
 			{	printf("%*d %*.*s 0x%016llx 0x%016llx 0x%016llx\n"
-				       , minw(3,namLvlTblEnts_digits), ii
+				       , minw(3,namLvlTblEnts_digits), uu
 					   , longest_name
 					   , longest_name
-				       , TRACE_TID2NAME((int32_t)ii)
-				       , (unsigned long long)traceLvls_p[ii].M
-				       , (unsigned long long)traceLvls_p[ii].S
-				       , (unsigned long long)traceLvls_p[ii].T
+				       , TRACE_TID2NAME((int32_t)uu)
+				       , (unsigned long long)traceLvls_p[uu].M
+				       , (unsigned long long)traceLvls_p[uu].S
+				       , (unsigned long long)traceLvls_p[uu].T
 				       );
 			}
 		}

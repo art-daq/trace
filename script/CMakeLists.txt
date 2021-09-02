@@ -1,5 +1,5 @@
 if (${cetmodules_FOUND})
-  cet_script(
+  cet_script( ALWAYS_COPY
 		big_ex.sh
 		bitN_to_mask
 		trace_delta

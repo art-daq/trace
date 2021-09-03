@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1524 $$Date: 2021-09-02 16:39:42 -0500 (Thu, 02 Sep 2021) $
+# $Revision: 1527 $$Date: 2021-09-03 08:12:46 -0500 (Fri, 03 Sep 2021) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -19,7 +19,7 @@ project(TRACE VERSION 3.17.03)
 # cetbuildtools contains our cmake modules
 
 #find_package(cetmodules 1.04.00 REQUIRED)
-find_package(cetmodules 1.04.00 QUIET)
+find_package(cetmodules 2.26.00 QUIET)
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmouldes.")
   include(CetCMakeEnv)

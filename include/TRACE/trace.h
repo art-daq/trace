@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1521 $$Date: 2021-09-01 12:58:12 -0500 (Wed, 01 Sep 2021) $"
+#define TRACE_REV "$Revision: 1531 $$Date: 2022-05-11 15:49:37 -0500 (Wed, 11 May 2022) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -128,7 +128,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1521 $_$Date: 2021-09-01 12:58:12 -0500 (Wed, 01 Sep 2021) $
+#define TRACE_REVx $_$Revision: 1531 $_$Date: 2022-05-11 15:49:37 -0500 (Wed, 11 May 2022) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1137,7 +1137,13 @@ static inline int trace_limit_do_print(trace_tv_t *tvp, limit_info_t *info, char
 	/* could lock  trace_lock( &(info->lock) );*/
 	delta_ms= tnow_ms - info->span_start_ms;
 	if (info->state == lsFREE) {
-		if (++(info->cnt) >= traceControl_rwp->limit_cnt_limit) {
+		if (delta_ms >= traceControl_rwp->limit_span_on_ms) { /* start new timespan */
+			info->span_start_ms= tnow_ms;
+			info->cnt= 1;
+			if (insert && sz) {
+				*insert= '\0';
+			}
+		} else if (++(info->cnt) >= traceControl_rwp->limit_cnt_limit) {
 			if (insert) {
 				strncpy(insert, "[RATE LIMIT]", sz);
 				/*fprintf( stderr, "[LIMIT (%u/%.1fs) REACHED]\n", traceControl_rwp->limit_cnt_limit, (float)traceControl_rwp->limit_span_on_ms/1000000);*/
@@ -1145,12 +1151,6 @@ static inline int trace_limit_do_print(trace_tv_t *tvp, limit_info_t *info, char
 			info->state= lsLIMITED;
 			info->span_start_ms= tnow_ms; /* start tsLIMITED timespan */
 			info->cnt= 0;
-		} else if (delta_ms >= traceControl_rwp->limit_span_on_ms) { /* start new timespan */
-			info->span_start_ms= tnow_ms;
-			info->cnt= 1;
-			if (insert && sz) {
-				*insert= '\0';
-			}
 		} else if (insert && sz) { /* counting messages in this period */
 			*insert= '\0';
 		}

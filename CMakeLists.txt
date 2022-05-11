@@ -15,13 +15,16 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
   unset(CMAKE_CXX_COMPILER)
 endif()
 
-project(TRACE VERSION 3.17.03)
+project(TRACE VERSION 3.17.04)
 # cetbuildtools contains our cmake modules
 
 #find_package(cetmodules 1.04.00 REQUIRED)
 find_package(cetmodules 2.26.00 QUIET)
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmouldes.")
+  set(CET_CETBUILDTOOLS_COMPAT TRUE)
+  include(Compatibility)
+  set(CET_WARN_DEPRECATED) 
   include(CetCMakeEnv)
   cet_cmake_env(PAD_MINOR ON NO_BUILDTYPE UPS_PRODUCT_NAME TRACE)
 else (${cetmodules_FOUND})
@@ -81,10 +84,10 @@ if (${cetmodules_FOUND})
   # these are minimum required versions, not the actual product versions
 
   include_directories(include)
-
+  cet_make_library(USE_PROJECT_NAME INTERFACE NO_SOURCE)
 else (${cetmodules_FOUND})
 
-  add_library(${PROJECT_NAME} INTERFACE)
+  add_library(${PROJECT_NAME} INTERFACE )
   # add alias so the project can be used with add_subdirectory
   add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
@@ -128,8 +131,6 @@ INSTALL(DIRECTORY include DESTINATION . PATTERN ".svn" EXCLUDE)
 add_subdirectory(script)
 
 if (${cetmodules_FOUND})
-  # ups - table and config files
-  add_subdirectory(ups)
 
   # doc - Some documentation...There should be a cet_ function for this...
   FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
@@ -139,6 +140,9 @@ if (${cetmodules_FOUND})
     "Built TRACE utilities using ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}\n")
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
     DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+
+  cet_cmake_config(CONFIG_FRAGMENTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/TRACEConfig.cmake.in)
+
 else  (${cetmodules_FOUND})
 
   # locations are provided by GNUInstallDirs
@@ -153,24 +157,24 @@ else  (${cetmodules_FOUND})
         NAMESPACE ${PROJECT_NAME}::
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 
-endif (${cetmodules_FOUND})
 
 
-#---------------------------------------------------------------------------------------------
+  #---------------------------------------------------------------------------------------------
 
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file("${PROJECT_NAME}ConfigVersion.cmake"
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file("${PROJECT_NAME}ConfigVersion.cmake"
                                  VERSION ${PROJECT_VERSION}
                                  COMPATIBILITY SameMajorVersion)
 
-configure_package_config_file(
-  "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
-  "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
-  INSTALL_DESTINATION
-  ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+  configure_package_config_file(
+    "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+    INSTALL_DESTINATION
+    ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 
-install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
               "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
 
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME} DESTINATION include)
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME} DESTINATION include)
+endif (${cetmodules_FOUND})

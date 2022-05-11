@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1527 $$Date: 2021-09-03 08:12:46 -0500 (Fri, 03 Sep 2021) $
+# $Revision: 1530 $$Date: 2022-05-11 15:04:54 -0500 (Wed, 11 May 2022) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 

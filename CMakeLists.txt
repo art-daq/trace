@@ -15,16 +15,14 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
   unset(CMAKE_CXX_COMPILER)
 endif()
 
+find_package(cetmodules 3.01.00 QUIET)
 project(TRACE VERSION 3.17.04)
-# cetbuildtools contains our cmake modules
-
-#find_package(cetmodules 1.04.00 REQUIRED)
-find_package(cetmodules 2.26.00 QUIET)
 if (${cetmodules_FOUND})
-  MESSAGE(STATUS "Found cetmouldes.")
+  MESSAGE(STATUS "Found cetmodules.")
   set(CET_CETBUILDTOOLS_COMPAT TRUE)
   include(Compatibility)
-  set(CET_WARN_DEPRECATED) 
+  set(CET_WARN_DEPRECATED)
+  set(CET_EXPORT EXPORT)
   include(CetCMakeEnv)
   cet_cmake_env(PAD_MINOR ON NO_BUILDTYPE UPS_PRODUCT_NAME TRACE)
 else (${cetmodules_FOUND})
@@ -55,7 +53,7 @@ endif (${cetmodules_FOUND})
 add_definitions(-DDO_THREADS)
 set(CMAKE_THREAD_PREFER_PTHREAD ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
+find_package(Threads REQUIRED ${CET_EXPORT})
 
 include(GNUInstallDirs)     # Note comments below
 
@@ -81,25 +79,27 @@ if (${cetmodules_FOUND})
 	endif()
   endif()
 
-  # these are minimum required versions, not the actual product versions
-
-  include_directories(include)
   cet_make_library(USE_PROJECT_NAME INTERFACE NO_SOURCE)
+  cet_make_library(LIBRARY_NAME MF INTERFACE
+    SOURCE
+    TRACE/tracemf.h
+    TRACE/tracemf2.h
+    TRACE/tracemf3.h
+    LIBRARIES INTERFACE
+    messagefacility::MF_MessageLogger
+    TRACE::TRACE
+  )
 else (${cetmodules_FOUND})
-
   add_library(${PROJECT_NAME} INTERFACE )
   # add alias so the project can be used with add_subdirectory
   add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-
-  # Adding the install interface generator expression makes sure that the include
-  # files are installed to the proper location (provided by GNUInstallDirs)
-  target_include_directories(
-    ${PROJECT_NAME}
-    INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
-
 endif (${cetmodules_FOUND})
-
+# Adding the install interface generator expression makes sure that the include
+# files are installed to the proper location (provided by GNUInstallDirs)
+target_include_directories(
+  ${PROJECT_NAME}
+  INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # We're going to install the source folders directly to make sure to have the correct Makefiles
 # for building kernel modules after deployment.

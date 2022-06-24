@@ -79,12 +79,22 @@ if (${cetmodules_FOUND})
 	endif()
   endif()
 
-  cet_make_library(USE_PROJECT_NAME INTERFACE NO_SOURCE)
+  find_package(messagefacility ${CET_EXPORT})
+  set(mflib "")
+  if(messagefacility_FOUND)
+    set(mflib messagefacility::MF_MessageLogger)
+  endif()
+
+  cet_make_library(USE_PROJECT_NAME INTERFACE 
+     SOURCE
+    include/TRACE/trace.h
+  )
+
   cet_make_library(LIBRARY_NAME MF INTERFACE
     SOURCE
-    TRACE/tracemf.h
-    TRACE/tracemf2.h
-    TRACE/tracemf3.h
+    include/TRACE/tracemf.h
+    include/TRACE/tracemf2.h
+    include/TRACE/tracemf3.h
     LIBRARIES INTERFACE
     messagefacility::MF_MessageLogger
     TRACE::TRACE

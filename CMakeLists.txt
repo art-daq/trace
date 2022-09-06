@@ -16,7 +16,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
 endif()
 
 find_package(cetmodules 3.01.00 QUIET)
-project(TRACE VERSION 3.17.05)
+project(TRACE VERSION 3.17.06)
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_CETBUILDTOOLS_COMPAT TRUE)

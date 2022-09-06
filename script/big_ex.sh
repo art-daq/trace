@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1477 $$Date: 2021-01-20 22:49:11 -0600 (Wed, 20 Jan 2021) $'
+ # rev='$Revision: 1537 $$Date: 2022-08-24 16:44:05 -0500 (Wed, 24 Aug 2022) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -21,6 +21,8 @@ def_loops=50
 def_process_forks=1
 def_stack=0x4000
 def_min_delta=-100
+def_delay_end_s=0
+def_sleep_loop_us=0
 USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
@@ -38,8 +40,9 @@ examples: `basename $0` ./big_ex.d
           TRACE_LIMIT_MS=4,1,4000 `basename $0` ./big_ex.d
 If directory does not exist, it will be created.
 Files in the dir will be overwritten (unless... see --rerun below).
+NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
 -v               more verbose
--d, --depth=     defalut is $opt_depth, but a better test might be 500. MIN 10
+--depth=         defalut is $opt_depth, but a better test might be 500. MIN 10
 -DTRACE_DECLARE  add -DTRACE_DECLARE to compile line
 -DTRACE_STATIC   add -DTRACE_STATIC to compile line
 --std=<c++std>,-std=<c++std)   both single and double - work default=$opt_std
@@ -50,12 +53,10 @@ Files in the dir will be overwritten (unless... see --rerun below).
 --no-declare     remove #define TRACE_DECLARE from subs (could also do -DTRACE_STATIC)
 --no-shared      do not make subs into .so files
 --mapcheck[=num] default=$do_mapcheck, the number of check LOOPS
--t<threads>      default $def_threads
--l<loops>        default $def_loops
--p<forks>        default $def_process_forks
---tlogs-per=[num] default $opt_tlogs_per
+--tlogs-per=[num] number of TLOG(...)'s in the subN(...) functions. default $opt_tlogs_per
 --check-opts=<opts> default=\"-t$def_threads -l$def_loops\"  See below. Note: thread and loops options added
 --check-numents=<ents>  default=calculated: ( depth * tlogs_per + 2 ) * threads * loops
+--delta-min=<num> threshhold for FAIL when analyzing traces. default=$def_min_delta
 --stack=[num]    stack used in all but last subroutine - default $def_stack
 -O<x>            compile optimization level. default: no -O
 --rerun          Only recompile main program (don't remake and compile all other files)
@@ -64,8 +65,11 @@ Files in the dir will be overwritten (unless... see --rerun below).
 Options passed to the program to be checked:
 -n<TRACE_NAME>
 -f<TRACE_FILE>
--l<loops>
--t<num_threads>   # in addition to main program
+-t<threads>      # in addition to main program. default $def_threads
+-p<forks>         # default $def_process_forks
+-l<loops>        # default $def_loops
+-s<useconds>      # sleep at end of each loop
+-d<seconds>       # delay at end to allow look at /proc/<pid> from another terminal
 -x<mask>  extra options - b0=count maps; b1=use sub-threads; b2=random delay in sub1 after 1st TRACE
 
 NOTE: the program can display the number of trace_buffer mappings which
@@ -88,7 +92,7 @@ while [ -n "${1-}" ];do
         \?*|h*)     eval $op1chr; do_help=1;;
         v*)         eval $op1chr; opt_v=`expr $opt_v + 1`;;
         x*)         eval $op1chr; test $opt_v -ge 1 && set -xv || set -x;;
-        d*|-depth)  eval $reqarg; opt_depth=$1;                        shift;;
+        -depth)  eval $reqarg; opt_depth=$1;                        shift;;
         D*)         eval $reqarg; compile_opts="$compile_opts -D$1";   shift;;
         O*)         eval $reqarg; compile_opts="$compile_opts -O$1";   shift;;
         -asan)      compile_opts="$compile_opts -fsanitize=address";   shift;;
@@ -97,8 +101,10 @@ while [ -n "${1-}" ];do
         -std)       eval $reqarg; opt_std=$1;                          shift;;
         std)                      opt_std=$1;                          shift;;
         t*)         eval $reqarg; opt_threads="$1";                    shift;;
-        l*)         eval $reqarg; opt_loops="$1";                      shift;;
         p*)         eval $reqarg; opt_forks="$1";                      shift;;
+        l*)         eval $reqarg; opt_loops="$1";                      shift;;
+        s*)         eval $reqarg; opt_sleep_loop_us="$1";              shift;;
+        d*)         eval $reqarg; opt_sleep_end_s="$1";                shift;;
         -stack)     eval $reqarg; opt_stack="$1";                      shift;;
         -tlogs-per) eval $reqarg; opt_tlogs_per="$1";                  shift;;
         -check-opts)eval $reqarg; check_opts=$1;                       shift;;
@@ -108,8 +114,9 @@ while [ -n "${1-}" ];do
         -rerun)     opt_rerun=1;;
         -mapcheck)  test -n "$leq"&&do_mapcheck=$1&&shift||do_mapcheck=1;;
         -check-numents)eval $reqarg; check_numents=$1;                 shift;;
+        -delta-min)    eval $reqarg; opt_min_delta=$1;                 shift;;
         -extra-ents)eval $reqarg; opt_extra_ents=$1;                   shift;;
-        -inactive)  do_trace_active=;;
+        -inactive)  do_trace_active=;;   # recall, run test with no memory/fast tracing, just slow/std*
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -128,13 +135,17 @@ test -n "${do_help-}" && help && exit
 test $opt_depth -ge 10 || { echo "depth option cannot less than 10"; exit 1; }
 hash trace_cntl || { echo "trace_cntl program must be in PATH"; exit 1; }
 
+test -z "${opt_min_delta-}" && opt_min_delta=$def_min_delta
 test -z "${opt_stack-}" && opt_stack=$def_stack
 test -z "${opt_threads-}" && opt_threads=$def_threads
-test -z "${opt_loops-}"   && opt_loops=$def_loops
 test -z "${opt_forks-}"   && opt_forks=$def_process_forks
+test -z "${opt_loops-}"   && opt_loops=$def_loops
+test -z "${opt_sleep_loop_us-}" && opt_sleep_loop_us=$def_sleep_loop_us
+test -z "${opt_sleep_end_s-}"   && opt_sleep_end_s=$def_delay_end_s
+
 test -z "${check_opts-}" \
- && check_opts="-l$opt_loops -t$opt_threads -p$opt_forks" \
- || check_opts="-l$opt_loops -t$opt_threads -p$opt_forks $check_opts"
+ && check_opts="-t$opt_threads -p$opt_forks -l$opt_loops -s$opt_sleep_loop_us -d$opt_sleep_end_s" \
+ || check_opts="-t$opt_threads -p$opt_forks -l$opt_loops -s$opt_sleep_loop_us -d$opt_sleep_end_s $check_opts"
 
 vprintf() { num=$1; shift; test $opt_v -ge $num && printf "`date`: ""$@"; }
 
@@ -166,14 +177,20 @@ elif [ $trace_revnum -le 1429 ];then
 else
     opt_def_trace_revnum=
 fi
-struct_args='struct args { pid_t tid; unsigned loop; int xtra_options; useconds_t dly_us; int thread_idx; unsigned char *tosp; }'
+struct_args='struct args {
+pid_t tid; unsigned loop;
+int xtra_options;
+useconds_t dly_1st_us;
+int thread_idx; unsigned char *tosp;
+useconds_t dly_loop_us;
+}'
 
 echo opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=$check_opts
 flags=$-
 nn=1
 while [ -z "${opt_rerun-}" -a $nn -lt $opt_depth ];do
     next=`expr $nn + 1`
-    test $nn -eq 1 && POTENTIAL_DELAY='if(aa->xtra_options&4){aa->dly_us=random()%5000;usleep(aa->dly_us);}'\
+    test $nn -eq 1 && POTENTIAL_DELAY='if(aa->xtra_options&4){aa->dly_1st_us=random()%5000;usleep(aa->dly_1st_us);}'\
                    || POTENTIAL_DELAY=
     expr $nn % 10 >/dev/null && do_TRACE_NAME= || do_TRACE_NAME="\
 #define TRACE_NAME \"sub$nn\""
@@ -266,7 +283,7 @@ void sub$last( struct args *aa )
 {   unsigned char tos;
     pthread_t     thread;
     TRACE( 2, "sub$last tid=%d loop=%.4f=dly ret %u=tIL_hung_max %ld=stack"
-          , aa->tid,aa->loop+aa->dly_us/10000.0,traceInitLck_hung_max, (long)(aa->tosp-&tos));
+          , aa->tid,aa->loop+aa->dly_1st_us/10000.0,traceInitLck_hung_max, (long)(aa->tosp-&tos));
     int sts=pthread_create(&thread,NULL,simple_thread_func,(void*)aa);
     if(sts!=0){perror("pthread_create-simple");exit(1);}
     pthread_join(thread, NULL);
@@ -316,7 +333,8 @@ options:\n\
 -t<num_threads>   # in addition to main program\n\
 -p<num_processes> # in addition to main program\n\
 -x<mask>  extra options - b0=count maps; b1=use sub-threads; b2=random delay in sub1 after 1st TRACE\n\
--s<seconds>       # sleep at end to allow /proc/<pid>/ examination from another terminal\n\
+-s<seconds>       # sleep at end of loop to see any RSS growth\n\
+-d<seconds>       # sleep at end to allow /proc/<pid>/ examination from another terminal\n\
 ", basename(argv[0]), basename(argv[0])
 
 $struct_args;
@@ -350,6 +368,7 @@ void* thread_func(void *arg)
             sub1(&aa);
             TRACE( 3, "tf tid=%d loop after (returned from) call to sub1",aa.tid );
         }
+        if(aa.dly_loop_us) usleep(aa.dly_loop_us);
     }
     if (aa.tid != 1) pthread_exit(NULL);
     else             return (NULL);                  // not a thread
@@ -367,9 +386,10 @@ extern  char        * optarg;        // for getopt
         unsigned      ii;
         struct args * args_p;
         int           xtra_options=1;
-        int           opt_sleep=0;
+        int           opt_sleep_loop_us=0;
+        int           opt_delay_end_s=0;
 
-    while ((opt=getopt(argc,argv,"?hn:f:l:p:t:x:s:")) != -1)
+    while ((opt=getopt(argc,argv,"?hd:n:f:l:p:t:x:s:")) != -1)
     {   switch (opt)
         { // '?' is also what you get w/ "invalid option -- -"
         case '?': case 'h': printf(USAGE);exit(0);    break;
@@ -379,7 +399,8 @@ extern  char        * optarg;        // for getopt
 	case 'p': num_processes=strtoul(optarg,NULL,0);break;
 	case 't': num_threads=strtoul(optarg,NULL,0); break;
         case 'x': xtra_options=strtoul(optarg,NULL,0);break;
-        case 's': opt_sleep=strtoul(optarg,NULL,0);   break;
+        case 's': opt_sleep_loop_us=strtoul(optarg,NULL,0); break;
+        case 'd': opt_delay_end_s=strtoul(optarg,NULL,0);   break;
         }
     }
     threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
@@ -391,7 +412,8 @@ extern  char        * optarg;        // for getopt
     if (num_threads>1) for (ii=0; ii<num_threads; ii++) {
         args_p[ii].loop = loops; // the initial "loops"
         args_p[ii].xtra_options = xtra_options;
-        args_p[ii].dly_us = 0;
+        args_p[ii].dly_1st_us = 0;   // filled in elsewhere
+        args_p[ii].dly_loop_us = opt_sleep_loop_us;
         args_p[ii].thread_idx = ii;
         args_p[ii].tid = 0;
         int sts=pthread_create(&threads[ii],NULL,thread_func,(void*)&args_p[ii]);
@@ -401,7 +423,8 @@ extern  char        * optarg;        // for getopt
         ii=0;
         args_p[ii].loop = loops; // the initial "loops"
         args_p[ii].xtra_options = xtra_options;
-        args_p[ii].dly_us = 0;
+        args_p[ii].dly_1st_us = 0;
+        args_p[ii].dly_loop_us = opt_sleep_loop_us;
         args_p[ii].thread_idx = ii;
         args_p[ii].tid = 1;
         thread_func( (void*)&args_p[ii] );
@@ -416,7 +439,8 @@ extern  char        * optarg;        // for getopt
         if((pids[ii]=fork()) == 0) {
             args_p[ii].loop = loops; // the initial "loops"
             args_p[ii].xtra_options = xtra_options;
-            args_p[ii].dly_us = 0;
+            args_p[ii].dly_1st_us = 0;
+            args_p[ii].dly_loop_us = opt_sleep_loop_us;
             args_p[ii].thread_idx = ii;
             args_p[ii].tid = 1;
             thread_func( (void*)&args_p[ii] );
@@ -450,8 +474,8 @@ extern  char        * optarg;        // for getopt
     TRACE( 1, "after thread(s) (pthread_join) traceControl_p=%p", traceControl_p );
     free( args_p );
     free( threads );
-    if (opt_sleep)
-        sleep(opt_sleep); /* sleep at end to allow another terminal to cat /proc/<pid>/maps */
+    if (opt_delay_end_s)
+        sleep(opt_delay_end_s); /* sleep at end to allow another terminal to cat /proc/<pid>/maps */
     return (0);
 }   /* main */
 EOF
@@ -491,7 +515,8 @@ test -n "${check_numents-}" \
 if [ "${do_mapcheck-0}" -gt 0 ];then
     export TRACE_PRINT
     TRACE_PRINT='%T %*n %*L %M'  # the old default (w/o __func__)
-    if [ -z "$do_trace_active" ];then
+    if [ -z "$do_trace_active" ];then # if it's zERO lenth, NOT active, i.e. inactive
+        # make sure memory mapped trace file is "inactive"
         unset TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS TRACE_NAMEMAX TRACE_NAME TRACE_FILE TRACE_LVLM
         opt_name=
     else
@@ -501,9 +526,15 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
         TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
         vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS"
+        # deal with potential trace module....
         test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset || { rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
         file_entries=`trace_cntl info | awk '/num_entries/{print$3;}'`
-        test $file_entries -lt $TRACE_NUMENTS && { echo "file_entries=$file_entries -lt calculated_entries=$TRACE_NUMENTS"; exit; }
+        if [ $file_entries -lt $TRACE_NUMENTS ];then
+            echo "file_entries=$file_entries -lt calculated_entries=$TRACE_NUMENTS with TRACE_FILE=$TRACE_FILE"
+            echo "Note: (from trace_maxents script) max TRACE_NUMENTS=`env -i TRACE_ARGSMAX=4 TRACE_MSGMAX=64 PATH=$PATH trace_maxents`"
+            #exit
+            do_trace_active=    # no TRACE_FILE analysis -- just std* log file analysis
+        fi
     fi
     echo check_opts=$check_opts
     uname=`uname`
@@ -565,7 +596,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
                 #vprintf 1 "start_idx=$start_idx show_count=$show_count\n"
                 delta_min=`TRACE_SHOW=%T trace_cntl show | head -$show_count | trace_delta -d 0 -stats|awk '/^  *min /{print$2;}'`
             fi
-            if [ $delta_min -lt $def_min_delta -a $opt_v -ge 1 ];then
+            if [ $delta_min -lt $opt_min_delta -a $opt_v -ge 1 ];then
                 TRACE_SHOW=%H%T trace_cntl show -c$show_count -s$start_idx | trace_delta | grep -C5 " $delta_min "
             fi
             vprintf 1 'done calculating\n'
@@ -595,7 +626,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
         test \( $uniq2 -eq $expect_declare -o $uniq2 -eq $expect_static \) || fail="$fail uniq_addrs"
         test "$sub10_trc_id" -eq $sub10_trc_id_                            || fail="$fail sub10_trc_id"
         test -z "$_TRACE_"                                                 || fail="$fail _TRACE_tid"
-        test $delta_min -ge $def_min_delta                                 || fail="$fail delta_min=$delta_min"
+        test $delta_min -ge $opt_min_delta                                 || fail="$fail delta_min=$delta_min"
         if [ "$uname" = Linux ];then
             # additional checks
             test $num_maps -eq $uniq2                                      || fail="$fail num_maps($num_maps!=$uniq2)"

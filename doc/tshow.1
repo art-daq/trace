@@ -4,50 +4,62 @@ tshow, tdelta
 .SH SYNOPSIS 
 .TP 20
 .I \fBtshow\fR [\fIopt\fR]
--- show the buffer (pipe to pager, head or tail)
+-- show the buffer (pipe to, e.g., head or tail)
 .TP
 .B tdelta
 
 .SH DESCRIPTION
-If the TRACE environment is not activated, this will be blank. Information displayed by \fBtshow\fR can be controlled by the TRACE_SHOW environment variable. See the last line of \fBtinfo\fR to see default \fITRACE_SHOW\fR (scroll down to EXAMPLES section to see this now). Use \fBexport PAGER=less\fR to make it as if \fBtshow\fR is doing \fBtshow | less\fR without the need to type \fB| less\fR after every \fBtshow\fR. It is common to use \fBtshow | <some filter> | tdelta\fR
+If the TRACE environment is not activated, this will be blank. Information displayed by \fBtshow\fR can be controlled
+by the TRACE_SHOW environment variable.
+See the last line of \fBtinfo\fR to see default \fITRACE_SHOW\fR (scroll down to EXAMPLES section to see this now).
+Use \fBexport PAGER=less\fR to make it as if \fBtshow\fR is doing \fBtshow | less\fR without the need to type \fB| less\fR
+after every \fBtshow\fR. It is common to use \fBtshow | <some filter> | tdelta\fR
 .PP
-The information displayed by \fBtshow\fR, which can be changed by redefining \fITRACE_SHOW\fR (via removing, adding, rearranging letters in \fBTRACE_SHOW=HxNTPiCnLR tshow\fR) is shown below: 
+The information displayed by \fBtshow\fR, which can be changed by redefining \fITRACE_SHOW\fR (via removing, adding,
+rearranging letters in \fBTRACE_SHOW="%H%x%N %T %P %i %C %n %.3L %m" tshow\fR) is shown below: 
 .TP 20
-.I idx
--- INDEX, 'N'
+.I %H
+-- 2 line Header
 .TP
-.I us_tod
--- time of day, 'T'
+.I %x
+-- filter nl, replace newlines in the message with ';'
 .TP
-.I pid
--- PID, 'P'
+.I %N
+-- INDEX
 .TP
-.I tid
--- TID, 'i'
+.I %T
+-- time of day (useconds since epoch)
 .TP
-.I cpu
--- CPU, 'C'
+.I %P
+-- PID
 .TP
-.I name
--- NAME, 'n'
+.I %i
+-- TID
 .TP
-.I lvl
--- LEVEL, 'L'
+.I %C
+-- CPU
 .TP
-.I r
--- retry index, 'R'
+.I %n
+-- TRACE NAME
 .TP
-.I msg
--- MESSAGE (this is always printed last and cannot be removed)
+.I %.3L
+-- TRACE LEVEL (limited to a width of 3 characters)
 .TP
-.I ------
--- Header, 'H' (header will not show if placed anywhere other than first)
+.I %m
+-- MESSAGE, mainly useful when message is not the last item; if omitted, message will be printed last
+
+.PP
+Other format specifiers:
+
 .TP
-.I ---
--- adding a lowercase 'm' will print only the message format and no declared variables 
+.I %a
+-- integer number of arguments involved in delay format
 .TP 
-.I ---
--- unformatted message output, 'x'
+.I %B
+-- fundamental parameter size (in bytes) - allows for mixed 32/64 bit executables to used the same trace buffer
+.TP
+.I
+--
 .PP
 The \fBtshow\fR output can be piped into \fBtdelta\fR which converts the time column (\fI-ct 1\fR) and also adds a delta column based on the time column (\fI-d 1\fR).
 \"tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }

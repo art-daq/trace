@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1524 $$Date: 2021-09-02 16:39:42 -0500 (Thu, 02 Sep 2021) $"
+#define TRACE_CNTL_REV "$Revision: 1537 $$Date: 2022-08-24 16:44:05 -0500 (Wed, 24 Aug 2022) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -39,7 +39,7 @@ struct {
 	const char* cmd;
 	const char* hlp;
 } subcmdhlp[] = {
-	{"show [-HqF|-L<LC_NUMERIC_val>|-c<count>|-s<startSlotIdx>","[opts] [file]...   # Note: -s option invalid with multiple files"},
+	{"show [-HqF|-L<LC_NUMERIC_val>|-c<count>|-s<startSlotIdx>","[opts] [file[:off_usec]]...   # Note: -s option invalid with multiple files"},
 	{"info",""},
 	{"tids",""},
 	{"cntl",""},
@@ -734,10 +734,11 @@ typedef struct trace_ptrs {
 	struct traceEntryHdr_s *entries_p;
 	uint32_t                rdIdx;
 	uint32_t                max;
+	int32_t                 offset_adjust; /* for trace file from different nodes */
 	struct timeval          ref_tv;
 } trace_ptrs_t;
 
-void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file )
+void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file, int32_t off_adjust )
 {
 	if (idx == 0)
 		trace_ptrs[idx].prev = NULL;
@@ -751,6 +752,7 @@ void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file )
 	trace_ptrs[idx].lvls_p = traceLvls_p;
 	trace_ptrs[idx].nams_p = traceNams_p;
 	trace_ptrs[idx].entries_p = traceEntries_p;
+	trace_ptrs[idx].offset_adjust = off_adjust;
 	
 	trace_ptrs[idx].next = NULL;
 } /* trace_ptrs_store */
@@ -815,21 +817,26 @@ uint32_t rdIdx_has_lines( uint32_t wrIdxCnt, uint32_t rdIdx, int for_rev )
 	}
 } /* rdIdx_has_lines */
 
-
-int tvcmp( struct timeval *t1, struct timeval *t2)
+int tvcmp( struct timeval *tvp1, int32_t off1, struct timeval *tvp2, int32_t off2)
 {
-	if        (t1->tv_sec  < t2->tv_sec) {
-		return (-1);
-	} else if (t1->tv_sec == t2->tv_sec) {
-		if        (t1->tv_usec < t2->tv_usec) {
-			return (-1);
-		} else if (t1->tv_usec == t2->tv_usec) {
-			return (0);
-		} else
-			return (1);
-	} else
-		return (1);
+	uint64_t t1 = tvp1->tv_sec*1000000 + tvp1->tv_usec;
+	uint64_t t2 = tvp2->tv_sec*1000000 + tvp2->tv_usec;
+	t1 += off1;  // off1 could be negative
+	t2 += off2;  // off1 could be negative
+	if      (t1  < t2) return (-1);
+	else if (t1 == t2) return (0);
+	return (1);
 } /* tvcmp */
+
+char *check_off_adjust(char *fname)
+{
+	char *cp=fname+strlen(fname);
+	char *last_ch=--cp;
+	while (*cp >= '0' && *cp <= '9' && *cp != ':' && *cp!= '-' && cp != fname) --cp;
+	if (*cp=='-' && cp != fname) --cp;
+	if (cp!=last_ch && *cp==':' && cp!=fname) return cp;  /* watch out for fname=':123" */
+	return NULL;
+} /* check_off_adjust */
 
 /*
    ospec is TRACE_SHOW or DFLT_SHOW
@@ -870,6 +877,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	int                     memlen_out_unused __attribute__((__unused__));
 	trace_ptrs_t		  * t_ptrs, * trace_ptrs_list_start, *t_ptrs_use;
 	struct timeval        * tv_p_use;
+	int32_t                 off_use;
 	uint32_t                name_width=0;
 	uint32_t                num_entries_total;
 	uint32_t                siz_msg_largest;
@@ -891,12 +899,14 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	if (argc == 0) {
 		traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. */
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*1);
-		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile );
+		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile, 0 );
 	} else {
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*(unsigned)argc);
 		memset( trace_ptrs_list_start, 0, sizeof(trace_ptrs_t)*(unsigned)argc );
 		trace_ptrs_list_start[0].prev = NULL;
 		for (ii=0; ii<argc; ++ii) {
+			char *off_adjust_ptr = check_off_adjust(argv[ii]); /* check for :[0-9]+$ */
+			if (off_adjust_ptr) *off_adjust_ptr++ = '\0'; /* overwrite ':' with '\0' */
 			if (access(argv[ii],R_OK) != 0) {
 				fprintf( stderr, "Warning: cannot access %s\n", argv[ii] );
 				continue;
@@ -917,7 +927,8 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 						break;
 				}
 				if (jj==files_to_show) {
-					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, argv[ii] );
+					int32_t off_adjust = off_adjust_ptr? atoi(off_adjust_ptr): 0;
+					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, argv[ii], off_adjust );
 				}
 			}
 		}
@@ -1251,7 +1262,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			break;
 		
  forward_check:
-		t_ptrs_use = 0; tv_p_use = 0;
+		t_ptrs_use = 0; off_use = 0; tv_p_use = 0;
 		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
 			traceControl_p = t_ptrs->ro_p; // used in rdIdx_has_lines
  reset_check:
@@ -1278,22 +1289,25 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				if(!t_ptrs_use) {
 					t_ptrs_use=t_ptrs;
 					tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+					off_use = t_ptrs->offset_adjust;
 				} else {
 					// Compare differently depending on whether forward or reverse.
 					// Race condition -- rdIdx might have just changed and time could be being overwritten :(
 					// Frozen trace buffers are the safest!
-					if (tvcmp(tv_p_use,&idxCnt2entPtr(t_ptrs->rdIdx)->time) == for_rev) {
+					if (tvcmp(tv_p_use,off_use,&idxCnt2entPtr(t_ptrs->rdIdx)->time,t_ptrs->offset_adjust) == for_rev) {
 						t_ptrs_use=t_ptrs;
 						tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+						off_use = t_ptrs->offset_adjust;
 					}
 				}
 			} else if (forward_continuous) { /* and lines==0 (obviously) */
 				/* special check where, e.g.: treset; tcntl test */
 				if (t_ptrs->ref_tv.tv_sec) {
 					uint32_t prvIdx=TRACE_IDXCNT_ADD(t_ptrs->rdIdx, -1);
-					if (tvcmp(&t_ptrs->ref_tv,&idxCnt2entPtr(prvIdx)->time)) {
+					if (tvcmp(&t_ptrs->ref_tv,0,&idxCnt2entPtr(prvIdx)->time,0)) {
 						t_ptrs->rdIdx = 0;
 						t_ptrs->ref_tv.tv_sec=0;
+						t_ptrs->offset_adjust=0;
 						goto reset_check;
 					}
 				}
@@ -1312,6 +1326,13 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		trace_ptrs_restore( t_ptrs_use );
 		memcpy( myEnt_p, idxCnt2entPtr(t_ptrs_use->rdIdx), traceControl_p->siz_entry );
 
+		// adjust myEnt_p->time
+		{
+			uint64_t tt= myEnt_p->time.tv_sec*1000000 + myEnt_p->time.tv_usec;
+			tt += t_ptrs_use->offset_adjust;
+			myEnt_p->time.tv_sec = tt/1000000;
+			myEnt_p->time.tv_usec = tt%1000000;
+		}
 		printEnt(  ospec, opts, myEnt_p
 		         , local_msg, local_params, params_sizes
 		         , bufSlot_width, N_width, (int)name_width, printed, t_ptrs_use->rdIdx
@@ -1748,7 +1769,7 @@ extern  int        optind;         /* for getopt */
 			if (1 & test_mask) {
 				STRT_PRN(" 0x01 -%s const short msg %s","",(tstmod&0xc)?"(NO snprintf)":"");
 				//fprintf(stderr,STRT_FMT," 0x01 - const short msg (NO snprintf)");fflush(stderr);
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "any msg" );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
@@ -1756,7 +1777,7 @@ extern  int        optind;         /* for getopt */
 
 			if (2 & test_mask) {
 				STRT_PRN(" 0x02 - 1 arg%s%s","","");
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is one small param: %u", 12345678 );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
@@ -1764,7 +1785,7 @@ extern  int        optind;         /* for getopt */
 
 			if (4 & test_mask) {
 				STRT_PRN(" 0x04 - 2 args%s%s","","");
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is 2 params: %u %u", 12345678, uu );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
@@ -1772,7 +1793,7 @@ extern  int        optind;         /* for getopt */
 
 			if (8 & test_mask) {
 				STRT_PRN(" 0x08 - 8 args (7 ints, 1 float)%s%s","","");
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is 8 params: %u %u %u %u %u %u %u %g"
 					      , 12345678, uu, uu*2, uu+6
@@ -1782,7 +1803,7 @@ extern  int        optind;         /* for getopt */
 
 			if (0x10 & test_mask) {
 				STRT_PRN(" 0x10 - 8 args (1 ints, 7 float)%s%s","","");
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "this is 8 params: %u %g %g %g %g %g %g %g"
 					      , 12345678, (float)uu, (float)uu*2.5, (float)uu+3.14
@@ -1792,7 +1813,7 @@ extern  int        optind;         /* for getopt */
 
 			if (0x20 & test_mask) {
 				STRT_PRN(" 0x20 - snprintf of same 8 args%s%s","","");
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					snprintf( buffer, sizeof(buffer)
 					         , "this is 8 params: %u %g %g %g %g %g %g %g"
@@ -1805,7 +1826,7 @@ extern  int        optind;         /* for getopt */
 
 			if (0x40 & test_mask) {
 				STRT_PRN(" 0x40 -%s const short msg %s",(1&test_mask)?" (repeat)":"",(tstmod&0xc)?"(NO snprintf)":"");
-				if(tstmod&6)TRACE_CNTL("reset"); mark = gettimeofday_us();
+				if(tstmod&6){TRACE_CNTL("reset");} mark = gettimeofday_us();
 				for (uu=0; uu<loops; ++uu) {
 					TRACE( TLVL_INFO, "any msg" );
 				} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);

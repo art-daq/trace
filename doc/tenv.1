@@ -9,50 +9,81 @@ tenv
 .SH DESCRIPTION
 If you desire to have TRACE activate automatically when logging in, open your \fB.bash_profile\fR and add \fBexport TRACE_MSGMAX=0\fR, or some other desired default environment variable.
 .PP
-Memory mapped file tracing.
-.PP
-The tenv function lists the environment variables, indicates there presence in the environment
+The tenv function lists the environment variables, indicates there presence in the environment (by appending "=")
 and displays their values, if any. 
 .PP
-In the following list, setting one of the first seven (set either for the duration of session with \fBexport\fR [\fBTRACE_ENVVAR\fR]\fB=NUM\fR, or for one command with \fBTRACE_ENVVAR tinfo | grep num_entries\fR) to an appropriate value will activate memory tracing (Environment variables can also be "unset," via \fBunset\fR [\fBTRACE_ENVVAR\fR]).:
+In the following list, setting one of the first eight (set either for the duration of session with
+\fBexport\fR [\fBTRACE_ENVVAR\fR]\fB=NUM\fR, or for one command with, e.g., \fBTRACE_ENVVAR tinfo | grep num_entries\fR)
+to an appropriate value will activate memory tracing (Environment variables can also be "unset," via
+\fBunset\fR [\fBTRACE_ENVVAR\fR]).:
 .TP 20
 .I TRACE_NAMTBLENTS
+-- Used to activate memory tracing. Value ignore if file exists. If file does not exists, file will be
+created with the number of name table entries specified. If 1 is specified, it is changed to 2. A reasonable value might
+be several thousand.
+.TP
+.I TRACE_NAMEMAX 
 -- Used to activate memory tracing. Value ignore if file exists.
+Specifies the maximum number of bytes allocated for each name including a null terminator.
 .TP
 .I TRACE_NUMENTS 
--- Used to activate memory tracing. Value ignore if file exists. The maximum number depends on the values of TRACE_NAMTBLENTS, TRACE_ARGSMAX, TRACE_MSGMAX. Example TRACE_NUMENTS maximums:
+-- Used to activate memory tracing. Value ignore if file exists. The maximum number depends on the values of
+TRACE_NAMTBLENTS, TRACE_ARGSMAX, TRACE_MSGMAX. Example TRACE_NUMENTS maximums:
 \n
 \tTRACE_MSGMAX=128 TRACE_NUMENTS=8388319; TRACE_MSGMAX=192 TRACE_NUMENTS=6710655
 .TP 20
 .I TRACE_ARGSMAX
--- Used to activate memory tracing. Value ignore if file exists. The default is 10.
+-- Used to activate memory tracing. Value ignore if file exists. When creating the trace buffer file, the value
+specified is the number of 64 bit parameters that can be saved for \fBdelayed formatting\fR. Long double values take 2 parameter
+slots. The default is 10.
 .TP
 .I TRACE_MSGMAX
--- Used to activate memory tracing. Value ignore if file exists. The special case of setting this to 0 will cause the default value (128) to be used. This value, along with TRACE_ARGSMAX effects the entry size. With the default values, the entry size is 256 bytes - which is a cache line size multiple.
+-- Used to activate memory tracing. Value ignore if file exists. The special case of setting this to 0 will cause the default value
+(192) to be used. This value, along with TRACE_ARGSMAX effects the entry size. With the default values, the entry size is 320
+bytes - which is a cache line size multiple (5*64bytes).
 .TP
 .I TRACE_NAME
--- Used to activate memory tracing. The TRACE and TRACE_ macros in files where the TRACE_NAME macro has not been defined will uses this name (instead of the default name "TRACE") unless or until a TRACE_CNTL( "name",<name>) occurs.
+-- Used to activate memory tracing. The TRACE/TLOG macros in files where the TRACE_NAME macro has not been defined will uses
+this name unless or until a \fBTRACE_CNTL("name",<name>)\fR occurs. This variable should be used with caution as many
+files will not #define TRACE_NAME in favor of allowing the TRACE system to use the (filename derived) default.
 .TP
 .I TRACE_FILE
--- Used to activate memory tracing using the named file as opposed to the default which is /tmp/trace_buffer_%u where the "%u" is replace by the value of environment variable $LOGNAME or $USERNAME or $USER or "" (if no env.var. set).
+-- Used to activate memory tracing using the named file as opposed to the default which is /tmp/trace_buffer_%u where the "%u"
+is replace by the value of environment variable $LOGNAME or $USERNAME or $USER or "" (if no env.var. set). NOTE: It makes the most
+sense to have the TRACE_FILE live in a ramdisk because of the way dirty pages are eventually written to their backing media (none
+in the case of a ramdisk). In modern Linux distributions, /tmp is often a ramdisk. There is no problems when TRACE_FILE is
+associated with local physical disk -- just realize that every so often dirty pages will be written to the physical disk by
+a kernel thread. There is no check against specifying the TRACE_FILE to be on an NFS disk. This is not supported and could lead to
+problems if two different network nodes are accessing the same NFS trace buffer file simultaneously. If only one system is
+a NFS trace buffer file (perhaps if hostname is encoded into the file path) then there will not be any problems.
 .TP
 .I TRACE_LVLM
--- Used to activate memory tracing, IFF non-zero, setting the memory levels mask for all names and future names to this value. The command line level adjusting functions can change this, but not for new names created by the processes/threads running in the environment where this env. var. is set.
-.TP
-.I TRACE_ENDL
--- If TRACE stdout (or TRACE_PRINT_FD) needs to have an end-of-message indicator, use this env.var.
+-- Used to activate memory tracing, IFF non-zero, setting the memory levels mask for all names and future names to this value.
+The command line level adjusting functions can change this, as can the value of the TRACE_LVLSTRS.
 .TP
 .I TRACE_LIMIT_MS
--- Set this variable to a triplet "count,ms on,ms off" (e.g. export TRACE_LIMIT_MS=8,80,800). The stdout (or TRACE_PRINT_FD) TRACEs will be limited by these parameters. The first TRACE starts an on time span and if count messages occur before the span ends, "[RATE LIMIT] " is prepended to the message and the off time span is started. Along with the first message after the off time span, the string "[RESUMING dropped: %u] " is prepended.
+-- Set this variable to a triplet "count,ms on,ms off" (e.g. export TRACE_LIMIT_MS=8,80,800). The stdout (or TRACE_PRINT_FD)
+TRACEs will be limited by these parameters. The first TRACE starts an \fBon time span\fR and if count messages occur before
+the span ends, "[RATE LIMIT] " is prepended to the message and the off time span is started. Along with the first message
+after the off time span, the string "[RESUMING dropped: %u] " is prepended.
+.TP
+.I TRACE_LVLCOLORS
+-- 
 .TP
 .I TRACE_LVLS
 -- This acts like TRACE_LVLM above except for the stdout (or TRACE_PRINT_FD) destination (and memory tracing is not activated).
+.TP
+.I TRACE_LVLSTRS
+-- 
 .TP
 .I TRACE_MODE
 -- This variable is only checked when TRACE_NAMLVLSET is set. It sets the mode. If memory tracing is enabled, the mode will be set in the memory file.
 .TP
 .I TRACE_NAMLVLSET
--- Can be used to set the level masks for a list of names" 
+-- Can be used to set the level masks for a list of names.
+.TP
+.I TRACE_PRINT
+-- 
 .TP
 .I TRACE_PRINT_FD
 -- If TRACE_PRINT_FD is set to 2, stdout TRACEs become stderr. The program could also, before the TRACE is initialized, establish a pipe or open a file and set this env var to the associated fd.

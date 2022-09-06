@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1531 $$Date: 2022-05-11 15:49:37 -0500 (Wed, 11 May 2022) $"
+#define TRACE_REV "$Revision: 1551 $$Date: 2022-09-05 20:37:46 -0500 (Mon, 05 Sep 2022) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -38,6 +38,38 @@
 #	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+
+#  if __cplusplus >= 201703L
+
+/*  Log entering and leaving/returning from method/functions.
+    This macro takes 0,1, or 2 optional args: Level (default is 43), name (mainly useful for use in header files).
+    Note: the exit level is 1 greater than enter level (unless >=55).
+    Use:
+    TLOG_ENTEX();
+ or TLOG_ENTEX() << __PRETTY__FUNCTION__;
+ or TLOG_ENTEX() << __PRETTY__FUNCTION__ << " p1=" << p1;
+ or etc.
+	The use of TSTREAMER_T_ in this macro allows for 1) default lvl processing and 2) different ent/ex lvls.
+    If a common return variable is returned (e.g. return retval;), the following could be done:
+    ...
+    TLOG_DEBUG(42) << "Enter - p1=" << p1;
+    int retval; TRACE_EXIT { TLOG_DEBUG(43) << "Exit - retval=" << retval;
+    ...
+ */
+#   ifndef TLOG_ENTEX_DBGLVL
+#		define TLOG_ENTEX_DBGLVL 42
+#	endif
+#   define TLOG_ENTEX(...) \
+	TSTREAMER_T_ TRACE_VARIABLE(_trc_)((tlvle_t)0, TRACE_GET_STATIC()); \
+	TRACE_VARIABLE(_trc_).TLOG_DEBUG3(__VA_ARGS__); \
+	TRACE_VARIABLE(_trc_).lvl = (tlvle_t)((int)TRACE_VARIABLE(_trc_).lvl-TLVL_DEBUG); \
+	if (   TRACE_VARIABLE(_trc_).lvl==0								\
+	    && (TRACE_VARIABLE(_trc_).TLOG3(__VA_ARGS__),TRACE_VARIABLE(_trc_).lvl)==TLVL_LOG ) \
+		TRACE_VARIABLE(_trc_).lvl = (tlvle_t)TLOG_ENTEX_DBGLVL; \
+	TRACE_EXIT { TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl+1,TRACE_VARIABLE(_trc_).nn) << "Exit"; };	\
+	TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl,TRACE_VARIABLE(_trc_).nn) << "Enter "
+
+#  endif // __cplusplus >= 201703L
 
 #endif
 
@@ -128,7 +160,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1531 $_$Date: 2022-05-11 15:49:37 -0500 (Wed, 11 May 2022) $
+#define TRACE_REVx $_$Revision: 1551 $_$Date: 2022-09-05 20:37:46 -0500 (Mon, 05 Sep 2022) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2271,7 +2303,7 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 { /* . . . . . . . . . . . . . . . . nargs is args after cmd */
 	int64_t ret= 0;
 	va_list ap;
-	unsigned ii;
+	unsigned uu;
 	struct {
 		char tn[TRACE_TN_BUFSZ];
 	} _trc_;
@@ -2398,38 +2430,38 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 		name_spec= va_arg(ap, char *);
 		/* find first match */
 		ee= traceControl_p->num_namLvlTblEnts;
-		for (ii= 0; ii < ee; ++ii) {
-			if (TRACE_TID2NAME((int32_t)ii)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)ii))) {
+		for (uu= 0; uu < ee; ++uu) {
+			if (TRACE_TID2NAME((int32_t)uu)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)uu))) {
 				break;
 			}
 		}
-		if (ii == ee) {
+		if (uu == ee) {
 			va_end(ap);
 			return (0);
 		}
 		lvl= va_arg(ap, uint64_t);
 		switch (cmd[7]) {
 		case 'M':
-			ret= (long)traceLvls_p[ii].M; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
-			for (; ii < ee; ++ii) {
-				if (TRACE_TID2NAME((int32_t)ii)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)ii))) {
-					trace_msk_op(&traceLvls_p[ii].M, op, lvl);
+			ret= (long)traceLvls_p[uu].M; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
+			for (; uu < ee; ++uu) {
+				if (TRACE_TID2NAME((int32_t)uu)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)uu))) {
+					trace_msk_op(&traceLvls_p[uu].M, op, lvl);
 				}
 			}
 			break;
 		case 'S':
-			ret= (long)traceLvls_p[ii].S; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
-			for (; ii < ee; ++ii) {
-				if (TRACE_TID2NAME((int32_t)ii)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)ii))) {
-					trace_msk_op(&traceLvls_p[ii].S, op, lvl);
+			ret= (long)traceLvls_p[uu].S; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
+			for (; uu < ee; ++uu) {
+				if (TRACE_TID2NAME((int32_t)uu)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)uu))) {
+					trace_msk_op(&traceLvls_p[uu].S, op, lvl);
 				}
 			}
 			break;
 		case 'T':
-			ret= (long)traceLvls_p[ii].T; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
-			for (; ii < ee; ++ii) {
-				if (TRACE_TID2NAME((int32_t)ii)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)ii))) {
-					trace_msk_op(&traceLvls_p[ii].T, op, lvl);
+			ret= (long)traceLvls_p[uu].T; /* FIXME - mask is uint64_t (on 32/64 systems), ret val is signed and 32 bits on 32 bit systems */
+			for (; uu < ee; ++uu) {
+				if (TRACE_TID2NAME((int32_t)uu)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)uu))) {
+					trace_msk_op(&traceLvls_p[uu].T, op, lvl);
 				}
 			}
 			break;
@@ -2442,11 +2474,11 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			lvlm= lvl; /* arg from above */
 			lvls= va_arg(ap, uint64_t);
 			lvlt= va_arg(ap, uint64_t);
-			for (; ii < ee; ++ii) {
-				if (TRACE_TID2NAME((int32_t)ii)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)ii))) {
-					trace_msk_op(&traceLvls_p[ii].M, op, lvlm);
-					trace_msk_op(&traceLvls_p[ii].S, op, lvls);
-					trace_msk_op(&traceLvls_p[ii].T, op, lvlt);
+			for (; uu < ee; ++uu) {
+				if (TRACE_TID2NAME((int32_t)uu)[0] && TMATCHCMP(name_spec, TRACE_TID2NAME((int32_t)uu))) {
+					trace_msk_op(&traceLvls_p[uu].M, op, lvlm);
+					trace_msk_op(&traceLvls_p[uu].S, op, lvls);
+					trace_msk_op(&traceLvls_p[uu].T, op, lvlt);
 				}
 			}
 		}
@@ -2462,36 +2494,36 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			op= 2;
 		}
 		if ((cmd[6] == 'g') || ((cmd[6]) && (cmd[7] == 'g'))) {
-			ii= 0;
+			uu= 0;
 			ee= traceControl_p->num_namLvlTblEnts;
 		} else if ((cmd[6] == 'G') || ((cmd[6]) && (cmd[7] == 'G'))) {
-			ii= 0;
+			uu= 0;
 			ee= traceControl_p->num_namLvlTblEnts;
 			doNew= 0; /* Capital G short ciruits the "set for future/new trace ids */
 		} else {
-			ii= (unsigned)traceTID;
+			uu= (unsigned)traceTID;
 			ee= (unsigned)traceTID + 1;
 		}
 		lvl= va_arg(ap, uint64_t); /* "FIRST" ARG SHOULD ALWAYS BE THERE */
 		switch (cmd[6]) {
 		case 'M':
-			for (; ii < ee; ++ii) {
-				if (doNew || TRACE_TID2NAME((int32_t)ii)[0]) {
-					trace_msk_op(&traceLvls_p[ii].M, op, lvl);
+			for (; uu < ee; ++uu) {
+				if (doNew || TRACE_TID2NAME((int32_t)uu)[0]) {
+					trace_msk_op(&traceLvls_p[uu].M, op, lvl);
 				}
 			}
 			break;
 		case 'S':
-			for (; ii < ee; ++ii) {
-				if (doNew || TRACE_TID2NAME((int32_t)ii)[0]) {
-					trace_msk_op(&traceLvls_p[ii].S, op, lvl);
+			for (; uu < ee; ++uu) {
+				if (doNew || TRACE_TID2NAME((int32_t)uu)[0]) {
+					trace_msk_op(&traceLvls_p[uu].S, op, lvl);
 				}
 			}
 			break;
 		case 'T':
-			for (; ii < ee; ++ii) {
-				if (doNew || TRACE_TID2NAME((int32_t)ii)[0]) {
-					trace_msk_op(&traceLvls_p[ii].T, op, lvl);
+			for (; uu < ee; ++uu) {
+				if (doNew || TRACE_TID2NAME((int32_t)uu)[0]) {
+					trace_msk_op(&traceLvls_p[uu].T, op, lvl);
 				}
 			}
 			break;
@@ -2504,13 +2536,13 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			lvlm= lvl; /* "FIRST" arg from above */
 			lvls= va_arg(ap, uint64_t);
 			lvlt= va_arg(ap, uint64_t);
-			for (; ii < ee; ++ii) {
-				if (!doNew && !TRACE_TID2NAME((int32_t)ii)[0]) {
+			for (; uu < ee; ++uu) {
+				if (!doNew && !TRACE_TID2NAME((int32_t)uu)[0]) {
 					continue;
 				}
-				trace_msk_op(&traceLvls_p[ii].M, op, lvlm);
-				trace_msk_op(&traceLvls_p[ii].S, op, lvls);
-				trace_msk_op(&traceLvls_p[ii].T, op, lvlt);
+				trace_msk_op(&traceLvls_p[uu].M, op, lvlm);
+				trace_msk_op(&traceLvls_p[uu].S, op, lvls);
+				trace_msk_op(&traceLvls_p[uu].T, op, lvlt);
 			}
 		}
 	} else if (strcmp(cmd, "trig") == 0) { /* takes 1 or 2 args: postEntries [lvlmsk] - optional 3rd arg will suppress warnings */
@@ -2557,6 +2589,25 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			TRACE_PRN("limit needs 0 or 2 or 3 args (cnt,span_of[,span_off]) %d given\n", nargs);
 			va_end(ap);
 			return (-1);
+		}
+	} else if (strcmp(cmd, "printfd") == 0) {
+		if (nargs) {
+			char buf[512]; /* C++ would help here; oh well */
+			unsigned  oo=0;
+			size_t buflen=sizeof(buf);
+			if (nargs > 64) nargs=64;
+			for (uu=0; uu<(unsigned)nargs; ++uu) {
+				int fd=va_arg(ap, int);
+				tracePrintFd[uu] = fd;
+				/* Could build mirror value for TRACE_PRINT_FD ... */
+				if (oo < sizeof(buf)) {
+					int xx=snprintf(&buf[oo],buflen-oo,",%d", fd);
+					oo += TRACE_SNPRINTED(xx,buflen-oo);
+				}
+			}
+			/* ... and put it in environment. */
+			setenv("TRACE_PRINT_FD",&buf[1],1);
+			for (    ; uu<64;    ++uu) tracePrintFd[uu]= tracePrintFd[uu - 1];
 		}
 	} else {
 		ret= -1;
@@ -3078,7 +3129,7 @@ static int traceInit(const char *_name, int allow_ro)
 	{	/* This stuff gets done once per process */
 		if ((cp= getenv("TRACE_LVLS")) && (*cp)) /* TRACE_TLVLM above as it "activates" */
 		{                                        /* Note "g" in lvl*Mg -- TRACE_NAME not needed */
-			char *endptr;
+			char *endptr;               /* 2 formats: 1) TRACE_LVLS=<mask>, 2) TRACE_LVLS=<set>,<clr>  clr first, then set */
 			trace_lvlS= strtoull(cp, &endptr, 0); /* set for future new traceTIDs (from this process) regardless of cmd line tonSg or toffSg - if non-zero! */
 			if (endptr != cp && *endptr == ',') {
 				trace_lvl_off= strtoull(endptr + 1, NULL, 0);
@@ -3305,13 +3356,13 @@ public:
 	explicit TraceStreamer()
 		: msg_sz(0), argCount(0), param_va_ptr(args)
 	{
-		T_STREAM_DBG << "TraceStreamer CONSTRUCTOR\n";
+		T_STREAM_DBG << "TraceStreamer CONSTRUCTOR for this=" << this << " at line "<< __LINE__ << "\n";
 		std::ios::init(0);
 	}
 
 	inline ~TraceStreamer()
 	{
-		T_STREAM_DBG << "TraceStreamer DESTRUCTOR\n";
+		T_STREAM_DBG << "TraceStreamer DESTRUCTOR for this=" << this << " at line "<< __LINE__ << "\n";
 #	if TRACE_USE_STATIC_STREAMER != 1
 		str();
 #	endif
@@ -3347,6 +3398,7 @@ public:
 			return *this;
 #	if TRACE_USE_STATIC_STREAMER == 1
 		} else {
+			T_STREAM_DBG << "TraceStreamer.init(...):" << __LINE__ << " returning new TraceStreamer()\n";
 			return (new TraceStreamer())->init(tid, lvl, flgs, file, line, function, tvp, ins, user_fun_ptr);
 		}
 #	endif
@@ -3358,7 +3410,7 @@ public:
 
 	inline void str()
 	{
-		T_STREAM_DBG << "Message is " << msg << std::endl;
+		T_STREAM_DBG << "TraceStreamer.str(), msg=\"" << msg << "\"\n";
 		while (msg_sz && msg[msg_sz - 1] == '\n') {
 			msg[msg_sz - 1]= '\0';
 			--msg_sz;
@@ -3536,7 +3588,7 @@ public:
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, "%p", static_cast<const void *>(r));
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 1T rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer delay_format line " << __LINE__ << ", snprintf 1T rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			msg_append("%p", 2);
 			++argCount;
@@ -3635,7 +3687,7 @@ public:
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
-			T_STREAM_DBG << "streamer snprintf 5 rr=" << rr << " ss=" << ss << "\n";
+			T_STREAM_DBG << "streamer delay_format line " << __LINE__ << ", snprintf 5 rr=" << rr << " ss=" << ss << " msg=\"" << msg << "\"\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
 			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
@@ -4096,10 +4148,12 @@ struct TSTREAMER_T_ {
 		, stmr__(&__tstreamer)
 #	endif
 	{
+		T_STREAM_DBG << "TSTREAMER_T_ CONSTRUCTOR for this=" << this << " at line "<< __LINE__ << "\n";
 		tv.tv_sec= 0;
 	}
 	inline ~TSTREAMER_T_() // implementation below (or not)
 	{
+		T_STREAM_DBG << "TSTREAMER_T_ DESTRUCTOR for this=" << this << " at line "<< __LINE__ << "\n";
 #	if TRACE_USE_STATIC_STREAMER == 1
 		if (stmr__ != (void*)&__tstreamer) delete (TraceStreamer*)stmr__;
 #	endif
@@ -4186,17 +4240,53 @@ static inline bool trace_do_streamer(TSTREAMER_T_ *ts_p)
 	return (ts_p->flgs.do_m || ts_p->flgs.do_s);
 }
 
-//inline TSTREAMER_T_::TSTREAMER_T_(tlvle_t llv, tinfo_t* infop)
-//inline TSTREAMER_T_::~TSTREAMER_T_()
 
-//  The following use gnu extension of "##" connecting "," with empty __VA_ARGS__
-//  which eats "," when __VA_ARGS__ is empty.
-//	pragma GCC diagnostic ignored "-Wvariadic-macros" // doesn't seem to work.
-//  Neither does pragma GCC diagnostic ignored "-Wpedantic" // g++ -std=c++11 --help=warnings | egrep -i 'variadic|pedantic'
-//  These are last because "pragma GCC system_header" only get undone at the end of the file.
-//  This issue is fix in -std=c++2a
-#	if (__cplusplus < 201709L)
-#		pragma GCC system_header
+#	if __cplusplus >= 201703L
+
+#		define TRACE_EXIT \
+	auto TRACE_VARIABLE(TRACE_EXIT_STATE) \
+	= ::detail::TraceGuardOnExit() + [&]() noexcept
+
+#define TRACENATE_IMPL(s1, s2)   s1##s2
+#define TRACENATE(s1, s2)        TRACENATE_IMPL(s1, s2)
+
+#ifdef __COUNTER__XX  // cannot use counter as it can only be used once in macro where as __LINE__ is can be used multiple
+                      // as will be the starting line of multiline macro.
+#       define TRACE_VARIABLE(pre) TRACENATE(pre,__COUNTER__)
+#else
+#       define TRACE_VARIABLE(pre) TRACENATE(pre,__LINE__)
+#endif
+
+namespace detail {
+
+	template <class Fun>
+	class TraceGuard {
+		Fun f_;
+		bool active_;
+	public:
+		TraceGuard(Fun f) : f_(std::move(f)), active_(true) {}
+		~TraceGuard() { if (active_) f_(); }
+		void dismiss() { active_ = false; }
+		TraceGuard() = delete;
+		TraceGuard( const TraceGuard&) = delete;
+		TraceGuard& operator=(const TraceGuard&) = delete;
+		TraceGuard(TraceGuard&& rhs) : f_(std::move(rhs.f_)), active_(rhs.active_) { rhs.dismiss(); }
+	};
+
+	enum class TraceGuardOnExit {};
+
+	template <class Fun>
+	TraceGuard<Fun> scopeGuard(Fun f) {
+		return TraceGuard<Fun>(std::move(f));
+	}
+        
+	template<typename Fun>
+	TraceGuard<Fun> operator+(TraceGuardOnExit, Fun&& fn) {    // to allow the saving of the lambda
+		return TraceGuard<Fun>(std::forward<Fun>(fn));
+	}  
+
+} // namespace detail
+
 #	endif
 
 #endif /* __cplusplus */

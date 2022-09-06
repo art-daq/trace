@@ -53,7 +53,7 @@
     If a common return variable is returned (e.g. return retval;), the following could be done:
     ...
     TLOG_DEBUG(42) << "Enter - p1=" << p1;
-    int retval; TRACE_EXIT { TLOG_DEBUG(43) << "Exit - retval=" << retval;
+    int retval; TRACE_EXIT { TLOG_DEBUG(43) << "Exit - retval=" << retval; };
     ...
  */
 #   ifndef TLOG_ENTEX_DBGLVL

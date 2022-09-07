@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1537 $$Date: 2022-08-24 16:44:05 -0500 (Wed, 24 Aug 2022) $"
+#define TRACE_CNTL_REV "$Revision: 1555 $$Date: 2022-09-07 01:16:17 -0500 (Wed, 07 Sep 2022) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -192,6 +192,7 @@ unsigned long *add_double_arg(unsigned long *args_ptr, unsigned long *end_ptr, d
 #define DFLT_TEST_COMPARE_ITERS 500000
 #define minw(a,b) ((b)<(a)?a:b)     /* min width -- really max of the 2 numbers - argh */
 
+#define DFLT_FILE_WIDTH ((int)sizeof("file")-1)
 #ifdef __linux__
 //# define DFLT_SHOW         "HxNTPiCnLR"
 # define DFLT_SHOW         "%H%x%N %T %P %i %C %n %.3L %m"
@@ -460,10 +461,65 @@ int countDigits(int n)
 		: 1;
 }
 
+/*
+	terse      medium     verbose       Important: for "verbose"*, must allow %*L for "auto right justify"
+1	 3            6          8                     * verbose would be the default, to get "terse", use TRACE_LVLSTRS
+F	FTL         FATAL        FATAL                   use TRACE_LVLSTRS vs "trace_lvlstrs[altidx]" ???
+E	ERR         ERROR        ERROR
+W	WRN          WARN      WARNING
+I	NFO          INFO         INFO      super verbose: INFORMATION??? 
+L	LOG           LOG          LOG
+D	D55        DBG_55     DEBUG_55
+
+
+
+     mem/fast                 cout/slow		valid flags
+    TRACE_SHOW               TRACE_PRINT	-----------
+%a    nargs              <->
+%b    tbuf fileIdx                          %-7b => print last 7 chars of file; %7b => print first 7 chars of file
+%B    paramBytes                
+%C    cpu               *<->  
+%D    inDent
+%e    combined name:ln#
+%F    [prepend to msg?]       function		%nF 0(or none)=abbreviated; 1=long      to get "short/consistent" C/C++ (__func__/__PRETTY_FUNCTION__)????
+%f    raw_message_format      file_name		%nf n=#path_components #=strstr_search_follows
+%H    Header            *
+%I    TrcID              <->  
+%i    threadID          *<->  
+%L    lvStr             *<->* lvStr		%*L  *=auto_width  %.1L gets rid of %S (below)
+%l    lvNum              <->   
+%M                          * msgInsert+Msg
+%m    message           *<->
+%N    idx               *     TrcName_nopad                 
+%n    TrcNamePadded     *<->* TrcNamePadded	%*n   *auto_padded  %n would be no padding
+%P    processID         *<->   
+%R    retries           *
+%S    severity_char      <->                             CAN GET RID OF THIS. REPLACED BY %.1L
+%s    slt                     
+%T    time              *<->* time
+%t    tsc                     insert (if !null)
+%u    linenum            <->
+%x    filterNewline
+%X    eXamine arg data                               for tshow <file>...
+
+<-> indicates same for both
+*   indicates default
+default TRACE_SHOW="%H%x%N %T %P %i %C %n %L %R %m"
+default TRACE_PRINT="%T %n %L %M"
+SHOW  others: a:nargs b:fileIdx B:paramBytes D:inDent f:convertedMsgfmt_only I:trcId l:lvl_int s:slot t:tsc
+PRINT others: C:core s:severity I:trcId i:threadID f:file N:unpadded_trcName P:pid u:line
+
+
+TRACE_NAME=%-f     <----<<< could add program name here (via %p???), but should still have a way to put it in TRACE_PRINT also???
+TRACE_NAME=%p-%-f  NOTE: TRACE_NAME is not meant to be a "big" string (so the filename is usually the basename 
+*/
+
+
+
 void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
               , char *local_msg, uint8_t *local_params, struct sizepush *params_sizes
               , int bufSlot_width, int N_width, int name_width, unsigned printed, uint32_t rdIdx
-              , char *tfmt, int tfmt_len
+              , char *tfmt, int tfmt_len, const char* file
               )
 {
 	unsigned                uu;
@@ -620,6 +676,22 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			switch (*sp) {
 			case '%': printf("%%"); break;
 			case 'a': printf("%4u", myEnt_p->nargs); break;
+			case 'b':
+				if (!width_state) {
+					int last=DFLT_FILE_WIDTH;
+					if (last>strlen(file)) last=strlen(file);
+					printf("%*.*s", DFLT_FILE_WIDTH, DFLT_FILE_WIDTH, file+strlen(file)-last);
+				}else {
+					int field_width=abs(width_ia[0]);
+					if (field_width<DFLT_FILE_WIDTH) field_width=DFLT_FILE_WIDTH;
+					if (width_ia[0]<0) {
+						/* print the end of the filename */
+						width_ia[0] = abs(width_ia[0]);
+						if (width_ia[0]>strlen(file)) width_ia[0]=strlen(file);
+						printf("%*.*s", field_width, width_ia[0], file+strlen(file)-width_ia[0]);
+					}else               printf("%*.*s", field_width,abs(width_ia[0]),file);
+				}
+				break;
 			case 'B': printf("%u", myEnt_p->param_bytes); break;
 			case 'C': printf("%" TRACE_STR(TRACE_CPU_WIDTH) "d", myEnt_p->cpu); break;
 			case 'D': /* ignore this "control" */ break;
@@ -694,7 +766,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				if (!width_state) printf("%" TRACE_STR(TRACE_LINENUM_WIDTH) "u", myEnt_p->linenum);
 				else              printf("%*u", width_ia[0], myEnt_p->linenum);
 				break;
-			case 'x': /* ignore this "control" */ break;
+			case 'x': /* ignore this "control" (filter_newline_ is set in opts) */ break;
 			case 'X': params_p=(uint64_t*)param_va_ptr;
 				      for (uu=0; uu<myEnt_p->nargs; ++uu) printf( "0x%016llx ", (unsigned long long)params_p[uu] );
 					  msg_spec_included=1;
@@ -726,7 +798,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 typedef struct trace_ptrs {
 	struct trace_ptrs      *next;
 	struct trace_ptrs      *prev;
-	const char             *file; /* for debugging */
+	const char             *file;
+	int                    file_idx;
 	struct traceControl_s  *ro_p;
 	struct traceControl_rw *rw_p;
 	struct traceLvls_s     *lvls_p;
@@ -747,6 +820,7 @@ void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file, int
 		trace_ptrs[idx-1].next = &trace_ptrs[idx];
 	}
 	trace_ptrs[idx].file = file;
+	trace_ptrs[idx].file_idx = idx;
 	trace_ptrs[idx].ro_p = traceControl_p;
 	trace_ptrs[idx].rw_p = traceControl_rwp;
 	trace_ptrs[idx].lvls_p = traceLvls_p;
@@ -773,13 +847,14 @@ void trace_ptrs_discard( trace_ptrs_t *tptr, trace_ptrs_t **list_start )
 		*list_start=NULL;
 } /* trace_ptrs_discard */
 
-void trace_ptrs_restore( trace_ptrs_t *tptr )
+const char* trace_ptrs_restore( trace_ptrs_t *tptr )
 {
 	traceControl_p   = tptr->ro_p;
 	traceControl_rwp = tptr->rw_p;
 	traceLvls_p      = tptr->lvls_p;
 	traceNams_p      = tptr->nams_p;
 	traceEntries_p   = tptr->entries_p;
+	return tptr->file;
 } /* trace_ptrs_restore */
 
 /*  rdIdx and wrIdxCnt are BOTH non-modulo.
@@ -874,6 +949,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	int                     forward_continuous=0; /* continuous==1 will force for_rev=1 */
 	int                     msg_spec_included;
 	int						files_to_show=0;
+	const char            * file="";
 	int                     memlen_out_unused __attribute__((__unused__));
 	trace_ptrs_t		  * t_ptrs, * trace_ptrs_list_start, *t_ptrs_use;
 	struct timeval        * tv_p_use;
@@ -1071,6 +1147,14 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			switch (*sp) {
 			case '%': printf("%%"); break;
 			case 'a': printf("args");break;
+			case 'b':
+				if (!width_state) printf("%*.*s",DFLT_FILE_WIDTH,DFLT_FILE_WIDTH,"file");
+				else {
+					if      (width_ia[0]<0 && width_ia[0]>-DFLT_FILE_WIDTH) width_ia[0]=-DFLT_FILE_WIDTH;
+					else if (width_ia[0]>=0 && width_ia[0]<DFLT_FILE_WIDTH) width_ia[0]=DFLT_FILE_WIDTH;
+					printf("%*.*s", abs(width_ia[0]),abs(width_ia[0]),"file");
+				}
+				break;
 			case 'B': printf("B"); break;
 			case 'C': printf("cpu"); break;
 			case 'D': /* ignore this "control" */ break;
@@ -1178,6 +1262,14 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			switch (*sp) {
 			case '%': printf("-"); break;
 			case 'a': printf("----");break;
+			case 'b':
+				if (!width_state) printf("%*.*s",DFLT_FILE_WIDTH,DFLT_FILE_WIDTH,TRACE_LONG_DASHES);
+				else {
+					if      (width_ia[0]<0 && width_ia[0]>-DFLT_FILE_WIDTH) width_ia[0]=-DFLT_FILE_WIDTH;
+					else if (width_ia[0]>=0 && width_ia[0]<DFLT_FILE_WIDTH) width_ia[0]=DFLT_FILE_WIDTH;
+					printf("%*.*s", abs(width_ia[0]),abs(width_ia[0]),TRACE_LONG_DASHES);
+				}
+				break;
 			case 'B': printf("-"); break;
 			case 'C': printf("---"); break;
 			case 'D': /* ignore this "control" */ break;
@@ -1285,7 +1377,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 					t_ptrs->ref_tv.tv_sec=0;
 					goto reset_check;
 				}
-				trace_ptrs_restore( t_ptrs ); // for idxCnt2entPtr to get time
+				file = trace_ptrs_restore( t_ptrs ); // for idxCnt2entPtr to get time
 				if(!t_ptrs_use) {
 					t_ptrs_use=t_ptrs;
 					tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
@@ -1323,7 +1415,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 		// had (possibly just changed) t_ptrs_use->rdIdx for a while -- race condition -
 		// could be being written to as we are copying :( -- frozen buffers are the safest
-		trace_ptrs_restore( t_ptrs_use );
+		file = trace_ptrs_restore( t_ptrs_use );
 		memcpy( myEnt_p, idxCnt2entPtr(t_ptrs_use->rdIdx), traceControl_p->siz_entry );
 
 		// adjust myEnt_p->time
@@ -1336,7 +1428,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		printEnt(  ospec, opts, myEnt_p
 		         , local_msg, local_params, params_sizes
 		         , bufSlot_width, N_width, (int)name_width, printed, t_ptrs_use->rdIdx
-		         , tfmt, tfmt_len );
+		         , tfmt, tfmt_len, file );
 		++printed;
 		t_ptrs_use->ref_tv = myEnt_p->time;
 		t_ptrs_use->rdIdx = TRACE_IDXCNT_ADD( t_ptrs_use->rdIdx, for_rev );
@@ -1414,7 +1506,7 @@ void traceInfo(int quiet)
 		       "buffer_offset     = 0x%lx\n"
 		       "memlen            = 0x%x          %s\n"
 		       "default TRACE_TIME_FMT=\"%s\"\n"
-		       "default TRACE_SHOW=\"%s\" others: a:nargs B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line X:examineArgData\n"
+		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileIdx B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
 		       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# [n]f:file F:func I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName O/o:color P:pid S:severity t:insert u:line\n"
 		       , TRACE_REV
 		       , traceControl_p->version_string

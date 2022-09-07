@@ -35,7 +35,7 @@ def TRACE( lvl, msg, name=None ):
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE( name, lvl, f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_DEBUG( dbg_lvl, msg, name=None ):
@@ -43,7 +43,7 @@ def TRACE_DEBUG( dbg_lvl, msg, name=None ):
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_DBG+dbg_lvl,f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_ERROR( msg, name=None ):
@@ -51,7 +51,7 @@ def TRACE_ERROR( msg, name=None ):
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_ERROR,f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_WARN( msg, name=None ):
@@ -59,7 +59,7 @@ def TRACE_WARN( msg, name=None ):
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_WARN,f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_INFO( msg, name=None ):
@@ -67,7 +67,7 @@ def TRACE_INFO( msg, name=None ):
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_INFO,f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_LOG( msg, name=None ):
@@ -75,12 +75,12 @@ def TRACE_LOG( msg, name=None ):
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_LOG,f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_CNTL( cmd, *args ):
     f=sys._getframe(1); co=f.f_code; name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     nargs=len(args)
     if type(cmd) != type(b''): cmd = cmd.encode()
-    if Instance: name = Instance+b'_'+name
+    if Instance: name = Instance+b':'+name
     libtrace.TRACE_CNTL(name,name,nargs,cmd,*args)

@@ -51,6 +51,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("run via: treset;./test_trace.py 1 | PAGER= tdelta -d 1 -i && TRACE_SHOW='%H%x%N %T %P %i %C %e %.3L %m' tshow | PAGER= tdelta")
         sys.exit(0)
+    TRACE.Instance = sys.argv[1].encode()
     lvl=7
     one_level(lvl)
     two_level(lvl)

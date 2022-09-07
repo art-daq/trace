@@ -26,52 +26,61 @@ TLVL_WARNING=TLVL_WARN
 TLVL_DEBUG=TLVL_DBG
 TLVL_TRACE=TLVL_DEBUG_1
 
+Instance=b''  # must be bytes
+
 # See https://docs.python.org/3/library/ctypes.html
 # C type "char*" goes to Python type "bytes"
-def TRACE( lvl, msg, nam=None ):
+def TRACE( lvl, msg, name=None ):
     f=sys._getframe(1); co=f.f_code
-    if nam == None: nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
-    if type(nam) != type(b''): nam = nam.encode()
+    if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
+    if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    libtrace.TRACE( nam, lvl, f.f_lineno, co.co_name.encode(), msg )
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE( name, lvl, f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_DEBUG( dbg_lvl, msg, nam=None ):
+def TRACE_DEBUG( dbg_lvl, msg, name=None ):
     f=sys._getframe(1); co=f.f_code
-    if nam == None: nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
-    if type(nam) != type(b''): nam = nam.encode()
+    if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
+    if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    libtrace.TRACE( nam,TLVL_DBG+dbg_lvl,f.f_lineno, co.co_name.encode(), msg )
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE( name,TLVL_DBG+dbg_lvl,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_ERROR( msg, nam=None ):
+def TRACE_ERROR( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
-    if nam == None: nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
-    if type(nam) != type(b''): nam = nam.encode()
+    if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
+    if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    libtrace.TRACE( nam,TLVL_ERROR,f.f_lineno, co.co_name.encode(), msg )
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE( name,TLVL_ERROR,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_WARN( msg, nam=None ):
+def TRACE_WARN( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
-    if nam == None: nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
-    if type(nam) != type(b''): nam = nam.encode()
+    if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
+    if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    libtrace.TRACE( nam,TLVL_WARN,f.f_lineno, co.co_name.encode(), msg )
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE( name,TLVL_WARN,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_INFO( msg, nam=None ):
+def TRACE_INFO( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
-    if nam == None: nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
-    if type(nam) != type(b''): nam = nam.encode()
+    if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
+    if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    libtrace.TRACE( nam,TLVL_INFO,f.f_lineno, co.co_name.encode(), msg )
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE( name,TLVL_INFO,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_LOG( msg, nam=None ):
+def TRACE_LOG( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
-    if nam == None: nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
-    if type(nam) != type(b''): nam = nam.encode()
+    if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
+    if type(name) != type(b''): name = name.encode()
     if type(msg) != type(b''): msg = msg.encode()
-    libtrace.TRACE( nam,TLVL_LOG,f.f_lineno, co.co_name.encode(), msg )
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE( name,TLVL_LOG,f.f_lineno, co.co_name.encode(), msg )
 
 def TRACE_CNTL( cmd, *args ):
-    f=sys._getframe(1); co=f.f_code; nam=co.co_filename; nam=nam[nam.rfind("/")+1:].encode()
+    f=sys._getframe(1); co=f.f_code; name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     nargs=len(args)
     if type(cmd) != type(b''): cmd = cmd.encode()
-    libtrace.TRACE_CNTL(nam,nam,nargs,cmd,*args)
+    if Instance: name = Instance+b'_'+name
+    libtrace.TRACE_CNTL(name,name,nargs,cmd,*args)

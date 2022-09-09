@@ -12,9 +12,9 @@ import TRACE
 import subprocess
 
 def sub1():
-    TRACE.TRACE_INFO('hello')
+    TRACE.INFO('hello')
 
 if __name__ == '__main__':
     p0= subprocess.Popen(['tee','-a','test.log'],stdin=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
-    TRACE.TRACE_CNTL('printfd',p0.stdin.fileno())
+    TRACE.CNTL('printfd',p0.stdin.fileno())
     sub1()

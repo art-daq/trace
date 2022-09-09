@@ -38,7 +38,7 @@ def TRACE( lvl, msg, name=None ):
     if Instance: name = Instance+b':'+name
     libtrace.TRACE( name, lvl, f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_DEBUG( dbg_lvl, msg, name=None ):
+def DEBUG( dbg_lvl, msg, name=None ):
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -46,7 +46,7 @@ def TRACE_DEBUG( dbg_lvl, msg, name=None ):
     if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_DBG+dbg_lvl,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_ERROR( msg, name=None ):
+def ERROR( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -54,7 +54,7 @@ def TRACE_ERROR( msg, name=None ):
     if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_ERROR,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_WARN( msg, name=None ):
+def WARN( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -62,7 +62,7 @@ def TRACE_WARN( msg, name=None ):
     if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_WARN,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_INFO( msg, name=None ):
+def INFO( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -70,7 +70,7 @@ def TRACE_INFO( msg, name=None ):
     if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_INFO,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_LOG( msg, name=None ):
+def LOG( msg, name=None ):
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -78,7 +78,7 @@ def TRACE_LOG( msg, name=None ):
     if Instance: name = Instance+b':'+name
     libtrace.TRACE( name,TLVL_LOG,f.f_lineno, co.co_name.encode(), msg )
 
-def TRACE_CNTL( cmd, *args ):
+def CNTL( cmd, *args ):
     f=sys._getframe(1); co=f.f_code; name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     nargs=len(args)
     if type(cmd) != type(b''): cmd = cmd.encode()

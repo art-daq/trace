@@ -7,6 +7,7 @@ if (${cetmodules_FOUND})
 		trace_envvars
 		trace_feature_test.sh
 		trace_functions.sh
+		trace_color
   )
 
   if( DEFINED $ENV{DO_BIGEX_TEXT} )

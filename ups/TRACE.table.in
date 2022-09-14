@@ -93,6 +93,7 @@ endif ( test $?shell = 1 )
 	addAlias( toffSg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 `bitN_to_mask %s` 0 )
 	addAlias( toffTg,  ${${UPS_PROD_NAME_UC}_BIN}/trace_cntl lvlclrg 0 0 `bitN_to_mask %s` )
 	addAlias( tenv,    ${${UPS_PROD_NAME_UC}_BIN}/trace_envvars %s )
+	addAlias( tcolor,  ${${UPS_PROD_NAME_UC}_BIN}/trace_color %s )
 
 	Action = GetFQDir
 	       envSet ( ${UPS_PROD_NAME_UC}_FQ_DIR, ${UPS_PROD_DIR}/@UPS_PRODUCT_FQ@ )

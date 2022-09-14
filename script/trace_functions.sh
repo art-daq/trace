@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1400 $
-#   $Date: 2020-10-13 20:18:50 -0500 (Tue, 13 Oct 2020) $
+#   $Revision: 1560 $
+#   $Date: 2022-09-14 10:31:08 -0500 (Wed, 14 Sep 2022) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -42,6 +42,7 @@ toffSg()   { trace_cntl lvlclrg 0 `bitN_to_mask "$@"` 0; }
 toffTg()   { trace_cntl lvlclrg 0 0 `bitN_to_mask "$@"`; }
 
 tenv()     { trace_envvars "$@"; }
+tcolor()   { trace_color "$@"; }
 
 tlvlsSave() {
   if [ $# -ne 1 ];then

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1555 $$Date: 2022-09-07 01:16:17 -0500 (Wed, 07 Sep 2022) $"
+#define TRACE_CNTL_REV "$Revision: 1564 $$Date: 2022-09-16 07:23:55 -0500 (Fri, 16 Sep 2022) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -476,7 +476,7 @@ D	D55        DBG_55     DEBUG_55
      mem/fast                 cout/slow		valid flags
     TRACE_SHOW               TRACE_PRINT	-----------
 %a    nargs              <->
-%b    tbuf fileIdx                          %-7b => print last 7 chars of file; %7b => print first 7 chars of file
+%b    tbuf fileName                          %-7b => print last 7 chars of file; %7b => print first 7 chars of file
 %B    paramBytes                
 %C    cpu               *<->  
 %D    inDent
@@ -506,7 +506,7 @@ D	D55        DBG_55     DEBUG_55
 *   indicates default
 default TRACE_SHOW="%H%x%N %T %P %i %C %n %L %R %m"
 default TRACE_PRINT="%T %n %L %M"
-SHOW  others: a:nargs b:fileIdx B:paramBytes D:inDent f:convertedMsgfmt_only I:trcId l:lvl_int s:slot t:tsc
+SHOW  others: a:nargs b:fileName B:paramBytes D:inDent f:convertedMsgfmt_only I:trcId l:lvl_int s:slot t:tsc
 PRINT others: C:core s:severity I:trcId i:threadID f:file N:unpadded_trcName P:pid u:line
 
 
@@ -1506,7 +1506,7 @@ void traceInfo(int quiet)
 		       "buffer_offset     = 0x%lx\n"
 		       "memlen            = 0x%x          %s\n"
 		       "default TRACE_TIME_FMT=\"%s\"\n"
-		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileIdx B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
+		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
 		       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# [n]f:file F:func I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName O/o:color P:pid S:severity t:insert u:line\n"
 		       , TRACE_REV
 		       , traceControl_p->version_string

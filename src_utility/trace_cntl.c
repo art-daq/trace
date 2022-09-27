@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1564 $$Date: 2022-09-16 07:23:55 -0500 (Fri, 16 Sep 2022) $"
+#define TRACE_CNTL_REV "$Revision: 1565 $$Date: 2022-09-27 17:09:45 -0500 (Tue, 27 Sep 2022) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -679,7 +679,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case 'b':
 				if (!width_state) {
 					int last=DFLT_FILE_WIDTH;
-					if (last>strlen(file)) last=strlen(file);
+					if (last>(int)strlen(file)) last=strlen(file);
 					printf("%*.*s", DFLT_FILE_WIDTH, DFLT_FILE_WIDTH, file+strlen(file)-last);
 				}else {
 					int field_width=abs(width_ia[0]);
@@ -687,7 +687,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 					if (width_ia[0]<0) {
 						/* print the end of the filename */
 						width_ia[0] = abs(width_ia[0]);
-						if (width_ia[0]>strlen(file)) width_ia[0]=strlen(file);
+						if (width_ia[0]>(int)strlen(file)) width_ia[0]=strlen(file);
 						printf("%*.*s", field_width, width_ia[0], file+strlen(file)-width_ia[0]);
 					}else               printf("%*.*s", field_width,abs(width_ia[0]),file);
 				}

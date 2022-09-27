@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1554 $$Date: 2022-09-06 16:33:57 -0500 (Tue, 06 Sep 2022) $"
+#define TRACE_REV "$Revision: 1565 $$Date: 2022-09-27 17:09:45 -0500 (Tue, 27 Sep 2022) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -160,7 +160,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1554 $_$Date: 2022-09-06 16:33:57 -0500 (Tue, 06 Sep 2022) $
+#define TRACE_REVx $_$Revision: 1565 $_$Date: 2022-09-27 17:09:45 -0500 (Tue, 27 Sep 2022) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2590,6 +2590,7 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			va_end(ap);
 			return (-1);
 		}
+#ifndef __KERNEL__
 	} else if (strcmp(cmd, "printfd") == 0) {
 		if (nargs) {
 			char buf[512]; /* C++ would help here; oh well */
@@ -2609,6 +2610,7 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 			setenv("TRACE_PRINT_FD",&buf[1],1);
 			for (    ; uu<64;    ++uu) tracePrintFd[uu]= tracePrintFd[uu - 1];
 		}
+#endif
 	} else {
 		ret= -1;
 	}

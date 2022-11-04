@@ -19,7 +19,6 @@ jobs:
     strategy:
       matrix:
         build-type: [ 'd', 'p' ]
-        qualifiers: [ 's112-e20', 's118-e20', 's118-e26' ]
 
     steps:
     - uses: cvmfs-contrib/github-action-cvmfs@v3
@@ -57,15 +56,14 @@ jobs:
         source /cvmfs/fermilab.opensciencegrid.org/products/artdaq/setup || true
         
         export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
-        export quals=`echo ${{ matrix.qualifiers }}|sed 's/-/:/g'`
-        export buildname="build_\${REPO}_${{ matrix.build-type }}_${{ matrix.qualifiers }}"
+        export buildname="build_\${REPO}_${{ matrix.build-type }}"
 
         mkdir \$buildname
         cd \$buildname
 
         echo "Logging to /scratch/\$buildname.log"
-        echo "Calling source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} \$quals || true"
-        source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} \$quals || true
+        echo "Calling source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} || true"
+        source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} || true
 
         echo "Active UPS products:"
         ups active || true

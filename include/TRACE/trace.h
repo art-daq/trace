@@ -2985,6 +2985,7 @@ static int traceInit(const char *_name, int allow_ro)
 				ll= strcspn(cp, ",");
 			}
 			/* look at last/previous */
+            if ( !lvlidx ) ++lvlidx;
 			cp= strpbrk(trace_lvlstrs[0][lvlidx - 1], "0123456789");
 			if (cp && sscanf(cp, "%u", &dbgidx)) {
 				int ii= (int)(cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */

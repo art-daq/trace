@@ -1402,7 +1402,7 @@ static void vtrace_user(trace_tv_t *tvp, int TrcId, uint8_t lvl, const char *ins
 			}
 			continue; /* avoid any further adjustment to "printed" variable */
 		case 'S':     /* "severity" -- just first charater of level string - e.g. %%MSG-%S */
-			if (printed < (TRACE_ROOM_FOR_NL) && trace_lvlstrs[0][lvl & TLVLBITSMSK]) {
+			if (printed < (TRACE_ROOM_FOR_NL) && trace_lvlstrs[0][lvl & TLVLBITSMSK][0] != '\0') {
 				char alternate=0;
 				if (flags_sz && flags_ca[0] == '#')
 					alternate = 0x20;
@@ -2985,6 +2985,7 @@ static int traceInit(const char *_name, int allow_ro)
 				ll= strcspn(cp, ",");
 			}
 			/* look at last/previous */
+            if ( !lvlidx ) ++lvlidx;
 			cp= strpbrk(trace_lvlstrs[0][lvlidx - 1], "0123456789");
 			if (cp && sscanf(cp, "%u", &dbgidx)) {
 				int ii= (int)(cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */

@@ -1760,6 +1760,7 @@ static void trace_pid_atfork(void)
 #		if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
 #			pragma GCC diagnostic push
 #			pragma GCC diagnostic ignored "-Wformat-security"
+#			pragma GCC diagnostic ignored "-Wformat-truncation"
 #		endif
 	TRACEN("TRACE", 61,
 		   (somebuf[0]
@@ -2989,9 +2990,10 @@ static int traceInit(const char *_name, int allow_ro)
 			cp= strpbrk(trace_lvlstrs[0][lvlidx - 1], "0123456789");
 			if (cp && sscanf(cp, "%u", &dbgidx)) {
 				int ii= (int)(cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */
-				cp= trace_lvlstrs[0][lvlidx - 1];                 /* reset to the beginning of the "template" */
+				char* tmp = (char*)malloc(ii + 1);
+				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], ii);                 /* reset to the beginning of the "template" */
 				for (; lvlidx < 64; ++lvlidx) {
-					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%.*s%02u", ii, cp, ++dbgidx);
+					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%s%02u", tmp, ++dbgidx);
 					//trace_lvlstrs[0][lvlidx][sizeof(trace_lvlstrs[0][0])-1] = '\0'; SHOULD NOT be needed
 					if ((ll= strlen(trace_lvlstrs[0][lvlidx])) > tmp_lvlwidth) tmp_lvlwidth= (unsigned)ll;
 				}

@@ -2989,11 +2989,12 @@ static int traceInit(const char *_name, int allow_ro)
             if ( !lvlidx ) ++lvlidx;
 			cp= strpbrk(trace_lvlstrs[0][lvlidx - 1], "0123456789");
 			if (cp && sscanf(cp, "%u", &dbgidx)) {
+				char tmp[16];
 				int ii= (int)(cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */
-				char* tmp = (char*)malloc(ii + 1);
-				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], ii);                 /* reset to the beginning of the "template" */
+				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], ii);       /* reset to the beginning of the "template" */
+				tmp[ii]='\0';
 				for (; lvlidx < 64; ++lvlidx) {
-					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%s%02u", tmp, ++dbgidx);
+					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%.13s%02u", tmp, ++dbgidx);
 					//trace_lvlstrs[0][lvlidx][sizeof(trace_lvlstrs[0][0])-1] = '\0'; SHOULD NOT be needed
 					if ((ll= strlen(trace_lvlstrs[0][lvlidx])) > tmp_lvlwidth) tmp_lvlwidth= (unsigned)ll;
 				}

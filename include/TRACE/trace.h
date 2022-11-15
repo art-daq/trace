@@ -2595,7 +2595,7 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 	} else if (strcmp(cmd, "printfd") == 0) {
 		if (nargs) {
 			char buf[512]; /* C++ would help here; oh well */
-			unsigned  oo=0;
+			size_t  oo=0;
 			size_t buflen=sizeof(buf);
 			if (nargs > 64) nargs=64;
 			for (uu=0; uu<(unsigned)nargs; ++uu) {

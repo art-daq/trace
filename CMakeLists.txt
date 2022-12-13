@@ -137,6 +137,10 @@ INSTALL(DIRECTORY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
 INSTALL(DIRECTORY include DESTINATION . PATTERN ".svn" EXCLUDE)
 
+# The python directory (aka the core of TRACE)
+FILE(COPY python DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
+
 # scripts, including the trace_delta.pl script used for tdelta
 add_subdirectory(script)
 

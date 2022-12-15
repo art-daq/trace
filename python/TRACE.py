@@ -11,10 +11,11 @@ import os
 import sys
 
 tracelibpath=None
-for pp in sys.path:
-    if pp == '': pp="."
-    tracelibpath=pp+os.path.sep+"libtracelib.so"
-    if os.path.exists(tracelibpath): break
+#for pp in sys.path:
+#    if pp == '': pp="."
+#    tracelibpath=pp+os.path.sep+"libtracelib.so"
+#    if os.path.exists(tracelibpath): break
+tracelibpath='libtracelib.so' # LD_LIBRARY_PATH should be searched
 #print("tracelibpath=%s"%(tracelibpath,))
 libtrace = ctypes.CDLL(tracelibpath); # what about ctypes.CDLL(ff,ctypes.RTLD_GLOBAL )
 ctrace0 = libtrace.ctrace0

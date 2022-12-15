@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1553 $$Date: 2022-09-06 15:00:02 -0500 (Tue, 06 Sep 2022) $
+# $Revision: 1569 $$Date: 2022-12-15 08:20:40 -0600 (Thu, 15 Dec 2022) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -138,6 +138,7 @@ FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
 INSTALL(DIRECTORY include DESTINATION . PATTERN ".svn" EXCLUDE)
 
 # The python directory (aka the core of TRACE)
+add_subdirectory(python)
 FILE(COPY python DESTINATION . PATTERN ".svn" EXCLUDE)
 INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
 

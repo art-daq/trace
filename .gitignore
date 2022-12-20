@@ -6,3 +6,4 @@ obj/*
 *.vcxproj*
 rpm/TRACE.tar.bz2
 CMakePresets.json
+*.pyc

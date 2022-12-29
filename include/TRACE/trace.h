@@ -1760,7 +1760,9 @@ static void trace_pid_atfork(void)
 #		if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
 #			pragma GCC diagnostic push
 #			pragma GCC diagnostic ignored "-Wformat-security"
-#			pragma GCC diagnostic ignored "-Wformat-truncation"
+#			if !defined(__clang__) || (__clang_major__ > 7)
+#				pragma GCC diagnostic ignored "-Wformat-truncation"
+#			endif
 #		endif
 	TRACEN("TRACE", 61,
 		   (somebuf[0]

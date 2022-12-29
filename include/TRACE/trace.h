@@ -1760,7 +1760,7 @@ static void trace_pid_atfork(void)
 #		if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
 #			pragma GCC diagnostic push
 #			pragma GCC diagnostic ignored "-Wformat-security"
-#			if !defined(__clang__) || (__clang_major__ > 7)
+#			if !defined(__clang__)
 #				pragma GCC diagnostic ignored "-Wformat-truncation"
 #			endif
 #		endif
@@ -3559,8 +3559,11 @@ public:
 		return *this;
 	}
 #	else
+#	ifndef _LIBCPP_ABI_NAMESPACE
+#		define _LIBCPP_ABI_NAMESPACE __1
+#	endif
 	//setprecision
-	inline TraceStreamer &operator<<(std::__1::__iom_t5 r)
+	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t5 r)
 	{
 		std::ostringstream ss;
 		ss << r;
@@ -3568,7 +3571,7 @@ public:
 		return *this;
 	}
 	//setwidth
-	inline TraceStreamer &operator<<(std::__1::__iom_t6 r)
+	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t6 r)
 	{
 		std::ostringstream ss;
 		ss << r;

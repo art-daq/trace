@@ -15,7 +15,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
   unset(CMAKE_CXX_COMPILER)
 endif()
 
-find_package(cetmodules 3.01.00 QUIET)
+find_package(cetmodules 3.01.00)
 project(TRACE VERSION 3.17.06)
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
@@ -58,7 +58,7 @@ find_package(Threads REQUIRED ${CET_EXPORT})
 include(GNUInstallDirs)     # Note comments below
 
 if (${cetmodules_FOUND})
-  cet_report_compiler_flags()
+  #cet_report_compiler_flags()
 
   if(DEFINED ENV{USE_ASAN})
 	if($ENV{USE_ASAN} GREATER 0)
@@ -79,7 +79,7 @@ if (${cetmodules_FOUND})
 	endif()
   endif()
 
-  find_package(messagefacility ${CET_EXPORT})
+  find_package(messagefacility QUIET ${CET_EXPORT})
   set(mflib "")
   if(messagefacility_FOUND)
     set(mflib messagefacility::MF_MessageLogger)

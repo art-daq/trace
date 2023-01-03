@@ -4,7 +4,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL GNU AND
                PROPERTY COMPILE_OPTIONS -Wno-strict-aliasing)
 endif()
 if (${cetmodules_FOUND})
-  cet_make_exec(trace_cntl SOURCE trace_cntl.c LIBRARIES PRIVATE TRACE::TRACE Threads::Threads)
+  cet_make_exec(NAME trace_cntl SOURCE trace_cntl.c LIBRARIES PRIVATE TRACE::TRACE Threads::Threads)
 else (${cetmodules_FOUND})
   add_executable(trace_cntl trace_cntl.c)
   target_link_libraries(trace_cntl TRACE::TRACE Threads::Threads)

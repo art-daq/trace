@@ -34,8 +34,15 @@ void TRACE( char *namp, uint8_t lvl, int32_t line, const char *function, const c
 		if (tid_ == -1) tid_ = (int)trace_name2TID(&(namp)[0]);
 		lclTime.tv_sec = 0;
 		if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) {
+#			if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
+#				pragma GCC diagnostic push
+#				pragma GCC diagnostic ignored "-Wformat-security"
+#			endif
 			/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */
-			trace(&lclTime, tid_, lvl_, line, function, 0 TRACE_XTRA_PASSED, msg);
+				trace(&lclTime, tid_, lvl_, line, function, 0 TRACE_XTRA_PASSED, msg);
+#			if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
+#				pragma GCC diagnostic pop
+#			endif
 		}
 		if (traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_))) {
 			TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {

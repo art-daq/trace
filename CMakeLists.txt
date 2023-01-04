@@ -79,6 +79,10 @@ if (${cetmodules_FOUND})
   set(mflib "")
   if(messagefacility_FOUND)
     set(mflib messagefacility::MF_MessageLogger)
+  else()
+    if(${WANT_MF})
+        message(FATAL_ERROR "MessageFacility not found and MF build requested! Aborting...")
+    endif()
   endif()
 
   cet_make_library(USE_PROJECT_NAME INTERFACE 
@@ -96,6 +100,10 @@ if (${cetmodules_FOUND})
     TRACE::TRACE
   )
 else (${cetmodules_FOUND})
+
+  if(${WANT_MF})
+      message(FATAL_ERROR "MessageFacility build requested, requires CETModules! Aborting...")
+  endif()
   add_library(${PROJECT_NAME} INTERFACE )
   # add alias so the project can be used with add_subdirectory
   add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

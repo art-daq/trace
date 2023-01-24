@@ -7,3 +7,4 @@ obj/*
 rpm/TRACE.tar.bz2
 CMakePresets.json
 *.pyc
+ups/TRACE.table

@@ -31,3 +31,14 @@ print log messages in the circular buffer. THere are several other features."""
         # except Exception as e:
         #     msg = 'unexpected error when sourcing file [{0}]'
         #     print(msg.format(str(e)),file=sys.stderr)
+    def setup_dependent_run_environment(self, env):     # for when the "loading" happens when trace is dependent
+                                                        # (i.e via another package)
+        file_to_source = self.prefix.join("bin/trace_functions.sh")
+        #print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
+        print(f'source {file_to_source}')
+        # try:
+        #     env.extend(EnvironmentModifications.from_sourcing_file(
+        #         file_to_source, clean=True ))
+        # except Exception as e:
+        #     msg = 'unexpected error when sourcing file [{0}]'
+        #     print(msg.format(str(e)),file=sys.stderr)

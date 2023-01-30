@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1580 $$Date: 2023-01-09 16:04:21 -0600 (Mon, 09 Jan 2023) $"
+#define TRACE_REV "$Revision: 1586 $$Date: 2023-01-29 22:48:57 -0600 (Sun, 29 Jan 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -160,7 +160,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1580 $_$Date: 2023-01-09 16:04:21 -0600 (Mon, 09 Jan 2023) $
+#define TRACE_REVx $_$Revision: 1586 $_$Date: 2023-01-29 22:48:57 -0600 (Sun, 29 Jan 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2689,8 +2689,14 @@ static char *tsnprintf(char *obuf, size_t bsz, const char *input)
 {
 	size_t outoff, ii;
 	const char *inp= input;
-	char loguid[15];
-	char *cp_uname= NULL, *cp_uid= NULL;
+	char loguid[32];
+	char hstnam[256]; /* man gethostname - SUSv2 guarantees that "Host names
+                             are limited to 255 bytes".  POSIX.1-2001 guarantees
+                             that "Host names (not including the terminating
+                             null byte) are limited to HOST_NAME_MAX bytes".
+                             On  Linux, HOST_NAME_MAX is defined with the value
+                             64, which has been the limit since Linux 1.0 */
+	char *cp_uname= NULL, *cp_uid= NULL, *cp_hostname= NULL;
 
 	for (outoff= 0; outoff < bsz && *inp != '\0'; ++inp) {
 		if (*inp == '%') {
@@ -2715,6 +2721,21 @@ static char *tsnprintf(char *obuf, size_t bsz, const char *input)
 				}
 				for (ii= 0; outoff < bsz && cp_uid[ii] != '\0'; ++ii) {
 					obuf[outoff++]= cp_uid[ii];
+				}
+				break;
+			case 'h':
+				if (cp_hostname == NULL) {
+					cp_hostname= getenv("HOSTNAME");
+					if (cp_hostname == NULL) {
+						/* try gethostname */
+						char *period;
+						(void)gethostname(hstnam,sizeof(hstnam)); /* not EFAULT, EINVAL, or ENAMETOOLONG */
+						if ((period=strchr(hstnam,'.'))) *period= '\0';  /* alway return "short" hostname */
+						cp_hostname= hstnam;
+					}
+				}
+				for (ii= 0; outoff < bsz && cp_hostname[ii] != '\0'; ++ii) {
+					obuf[outoff++]= cp_hostname[ii];
 				}
 				break;
 			case '\0':

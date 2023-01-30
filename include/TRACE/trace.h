@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1586 $$Date: 2023-01-29 22:48:57 -0600 (Sun, 29 Jan 2023) $"
+#define TRACE_REV "$Revision: 1587 $$Date: 2023-01-29 23:30:12 -0600 (Sun, 29 Jan 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -160,7 +160,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1586 $_$Date: 2023-01-29 22:48:57 -0600 (Sun, 29 Jan 2023) $
+#define TRACE_REVx $_$Revision: 1587 $_$Date: 2023-01-29 23:30:12 -0600 (Sun, 29 Jan 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -2726,7 +2726,7 @@ static char *tsnprintf(char *obuf, size_t bsz, const char *input)
 			case 'h':
 				if (cp_hostname == NULL) {
 					cp_hostname= getenv("HOSTNAME");
-					if (cp_hostname == NULL) {
+					if (cp_hostname == NULL || *cp_hostname == '\0') { /* HOSTNAME='' is invalid */
 						/* try gethostname */
 						char *period;
 						(void)gethostname(hstnam,sizeof(hstnam)); /* not EFAULT, EINVAL, or ENAMETOOLONG */

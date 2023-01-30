@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1565 $$Date: 2022-09-27 17:09:45 -0500 (Tue, 27 Sep 2022) $"
+#define TRACE_CNTL_REV "$Revision: 1585 $$Date: 2023-01-27 16:27:33 -0600 (Fri, 27 Jan 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -960,6 +960,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	uint32_t                siz_entry_largest=0;
 	uint32_t                num_params_largest;
 	int                     N_width;
+	char                    file_during_fun[PATH_MAX];
 
 	if ((slotStart != -1) && (argc >= 2)) {
 		fprintf( stderr, "-s<startSlotIndex> invalid with multiple files\n" );
@@ -974,8 +975,9 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 	if (argc == 0) {
 		traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. */
+		(void)tsnprintf(file_during_fun, sizeof(file_during_fun),getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile);
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*1);
-		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile, 0 );
+		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, file_during_fun, 0 );
 	} else {
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*(unsigned)argc);
 		memset( trace_ptrs_list_start, 0, sizeof(trace_ptrs_t)*(unsigned)argc );

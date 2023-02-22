@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1585 $$Date: 2023-01-27 16:27:33 -0600 (Fri, 27 Jan 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1588 $$Date: 2023-02-22 07:31:24 -0600 (Wed, 22 Feb 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -39,7 +39,7 @@ struct {
 	const char* cmd;
 	const char* hlp;
 } subcmdhlp[] = {
-	{"show [-HqF|-L<LC_NUMERIC_val>|-c<count>|-s<startSlotIdx>","[opts] [file[:off_usec]]...   # Note: -s option invalid with multiple files"},
+	{"show [-HqF|-L<LC_NUMERIC_val>|-c<count>|-s<startSlotIdx>","[opts] [file[:off_usec]]...   # Note: -s invalid with multiple files"},
 	{"info",""},
 	{"tids",""},
 	{"cntl",""},
@@ -64,7 +64,7 @@ examples: tcntl test-compar\n\
 #define USAGE "\
 %s [opts] <cmd> [command opt/args]\n\
 commands:\n\
- show [opts] [file]...   # Note: -s option invalid with multiple files\n\
+ show [opts] [file[:off_usec]]...   # Note: files... feature: -s invalid; mixed 32/64 environs not supported.\n\
  info\n\
  tids                    # show raw level bit masks for \n\
  cntl <int>              # __func__ prepended to memory msg - 1=always, 0=TRACE_PRINT %%F, -1=never\n\
@@ -1421,7 +1421,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		memcpy( myEnt_p, idxCnt2entPtr(t_ptrs_use->rdIdx), traceControl_p->siz_entry );
 
 		// adjust myEnt_p->time
-		{
+		if (t_ptrs_use->offset_adjust != 0) { // FIXME - currently does not work for mixed 32/64 bit environment!
 			uint64_t tt= myEnt_p->time.tv_sec*1000000 + myEnt_p->time.tv_usec;
 			tt += t_ptrs_use->offset_adjust;
 			myEnt_p->time.tv_sec = tt/1000000;

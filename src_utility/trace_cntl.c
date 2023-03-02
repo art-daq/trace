@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1588 $$Date: 2023-02-22 07:31:24 -0600 (Wed, 22 Feb 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1589 $$Date: 2023-03-01 20:42:56 -0600 (Wed, 01 Mar 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -559,19 +559,18 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				local_msg[--slen] = '\0';  // adjust strlen and terminate
 		}
 
-		/* determine if args need to be copied */
+		/* Determine if args need to be copied/converted (32/64-bit)
+		   Because timestamps need to be adjusted and compared in traceShow,
+           they have already been 32/64-bit adjusted
+		 */
+		seconds	 = myEnt_p->time.tv_sec;
+		useconds = (int)myEnt_p->time.tv_usec;
 		if        (	 ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
 		           ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
-		{	seconds	 = myEnt_p->time.tv_sec;
-			useconds = (int)myEnt_p->time.tv_usec;
-			param_va_ptr = (void*)params_p;
+		{	param_va_ptr = (void*)params_p;
 		}
 		else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
 		{	// Entry made by 32bit program, being readout by 64bit
-			void *xx = &(myEnt_p->time);
-			int *ptr=(int*)xx;
-			seconds	 = *ptr++;
-			useconds = (int)*ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
 			for (uu=0; uu<myEnt_p->nargs && params_sizes[uu].push!=0; ++uu)
@@ -606,10 +605,6 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 		}
 		else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
 		{	// Entry made by 64bit program, being shown by 32bit
-			void *xx=&myEnt_p->time;
-			long long *ptr=(long long*)xx;
-			seconds	 = (time_t)*ptr++;
-			useconds = (int)*ptr;
 			ent_param_ptr = (uint8_t*)params_p;
 			lcl_param_ptr = local_params;
 			for (uu=0; uu<myEnt_p->nargs && params_sizes[uu].push!=0; ++uu)
@@ -808,7 +803,7 @@ typedef struct trace_ptrs {
 	uint32_t                rdIdx;
 	uint32_t                max;
 	int32_t                 offset_adjust; /* for trace file from different nodes */
-	struct timeval          ref_tv;
+	struct timeval          ref_tv;   // last/previously processed
 } trace_ptrs_t;
 
 void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file, int32_t off_adjust )
@@ -892,6 +887,30 @@ uint32_t rdIdx_has_lines( uint32_t wrIdxCnt, uint32_t rdIdx, int for_rev )
 	}
 } /* rdIdx_has_lines */
 
+void tv_from_ent( struct timeval *tvp, struct traceEntryHdr_s* myEnt_p)
+{
+	if        (	 ((myEnt_p->param_bytes==4) && (sizeof(long)==4))
+	           ||((myEnt_p->param_bytes==8) && (sizeof(long)==8)) )
+	{   // 32, 32 or 64, 64 - no translation needed
+		tvp->tv_sec  = myEnt_p->time.tv_sec;
+		tvp->tv_usec = myEnt_p->time.tv_usec;
+	}
+	else if (  ((myEnt_p->param_bytes==4) && (sizeof(long)==8)) )
+	{	// Entry made by 32bit program, being readout by 64bit
+		void *xx = &(myEnt_p->time);
+		int *ptr=(int*)xx;
+		tvp->tv_sec	 = *ptr++;
+		tvp->tv_usec = (int)*ptr;
+	}
+	else /* (  ((myEnt_p->param_bytes==8) && (sizeof(long)==4)) ) */
+	{	// Entry made by 64bit program, being shown by 32bit
+		void *xx=&myEnt_p->time;
+		long long *ptr=(long long*)xx;
+		tvp->tv_sec	 = (time_t)*ptr++;
+		tvp->tv_usec = (int)*ptr;
+	}
+}
+
 int tvcmp( struct timeval *tvp1, int32_t off1, struct timeval *tvp2, int32_t off2)
 {
 	uint64_t t1 = tvp1->tv_sec*1000000 + tvp1->tv_usec;
@@ -952,7 +971,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	const char            * file="";
 	int                     memlen_out_unused __attribute__((__unused__));
 	trace_ptrs_t		  * t_ptrs, * trace_ptrs_list_start, *t_ptrs_use;
-	struct timeval        * tv_p_use;
+	struct timeval          tv_use, tv2;
 	int32_t                 off_use;
 	uint32_t                name_width=0;
 	uint32_t                num_entries_total;
@@ -1356,7 +1375,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			break;
 		
  forward_check:
-		t_ptrs_use = 0; off_use = 0; tv_p_use = 0;
+		t_ptrs_use = 0; off_use = 0;
 		for (t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next ) {
 			traceControl_p = t_ptrs->ro_p; // used in rdIdx_has_lines
  reset_check:
@@ -1382,15 +1401,16 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				file = trace_ptrs_restore( t_ptrs ); // for idxCnt2entPtr to get time
 				if(!t_ptrs_use) {
 					t_ptrs_use=t_ptrs;
-					tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+					tv_from_ent( &tv_use, idxCnt2entPtr(t_ptrs->rdIdx) );
 					off_use = t_ptrs->offset_adjust;
 				} else {
 					// Compare differently depending on whether forward or reverse.
 					// Race condition -- rdIdx might have just changed and time could be being overwritten :(
 					// Frozen trace buffers are the safest!
-					if (tvcmp(tv_p_use,off_use,&idxCnt2entPtr(t_ptrs->rdIdx)->time,t_ptrs->offset_adjust) == for_rev) {
+					tv_from_ent( &tv2, idxCnt2entPtr(t_ptrs->rdIdx) );
+					if (tvcmp(&tv_use,off_use,&tv2,t_ptrs->offset_adjust) == for_rev) {
 						t_ptrs_use=t_ptrs;
-						tv_p_use = &idxCnt2entPtr(t_ptrs->rdIdx)->time;
+						tv_use = tv2;
 						off_use = t_ptrs->offset_adjust;
 					}
 				}
@@ -1398,7 +1418,8 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				/* special check where, e.g.: treset; tcntl test */
 				if (t_ptrs->ref_tv.tv_sec) {
 					uint32_t prvIdx=TRACE_IDXCNT_ADD(t_ptrs->rdIdx, -1);
-					if (tvcmp(&t_ptrs->ref_tv,0,&idxCnt2entPtr(prvIdx)->time,0)) {
+					tv_from_ent( &tv2, idxCnt2entPtr(prvIdx) );
+					if (tvcmp(&t_ptrs->ref_tv,0,&tv2,0)) {
 						t_ptrs->rdIdx = 0;
 						t_ptrs->ref_tv.tv_sec=0;
 						t_ptrs->offset_adjust=0;
@@ -1421,12 +1442,14 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		memcpy( myEnt_p, idxCnt2entPtr(t_ptrs_use->rdIdx), traceControl_p->siz_entry );
 
 		// adjust myEnt_p->time
+		tv_from_ent( &tv2, idxCnt2entPtr(t_ptrs_use->rdIdx) );
 		if (t_ptrs_use->offset_adjust != 0) { // FIXME - currently does not work for mixed 32/64 bit environment!
-			uint64_t tt= myEnt_p->time.tv_sec*1000000 + myEnt_p->time.tv_usec;
+			uint64_t tt;
+			tt  = tv2.tv_sec*1000000 + tv2.tv_usec;
 			tt += t_ptrs_use->offset_adjust;
 			myEnt_p->time.tv_sec = tt/1000000;
 			myEnt_p->time.tv_usec = tt%1000000;
-		}
+		} else myEnt_p->time = tv2;
 		printEnt(  ospec, opts, myEnt_p
 		         , local_msg, local_params, params_sizes
 		         , bufSlot_width, N_width, (int)name_width, printed, t_ptrs_use->rdIdx

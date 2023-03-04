@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1587 $$Date: 2023-01-29 23:30:12 -0600 (Sun, 29 Jan 2023) $"
+#define TRACE_REV "$Revision: 1590 $$Date: 2023-03-03 21:34:27 -0600 (Fri, 03 Mar 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -19,10 +19,10 @@
 #ifdef __cplusplus
 
 /* clang-format off */
-//  This group takes 0, 1 or 2 optional args: Name, and/or FormatControl
+//  This group takes 0, 1 or 2 optional args: Name, and/or FormatControl; in any order.
 //  Name is a const char* or std::string&
 //  FormatControl is an int:  0 - format if slow enabled
-//                           >0 - streamer format even if just fast/mem
+//                           >0 - streamer format even if just fast/mem (useful if "%" is in format)
 //                           <0 - sprintf format
 #	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
 #	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
@@ -30,7 +30,7 @@
 #	define TLOG_TRACE(...)   TRACE_STREAMER(TLVL_TRACE,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_TRACE))
 
 //  This group takes 0, 1, 2, or 3 optional args: Level, and/or Name, and/or FormatControl
-//  Name and FormatControl are same as above.
+//  Name is same as above, but FormatControl is either false (format if slow) or true (format even if just fast/mem)
 //  Level - an int or TLVL_* enum -- 0 to 55 for TLOG_DEBUG/TLOG_DBG
 //                                   0 to 63 for TLOG/TLOG_ARB
 //  TLOG_DEBUG and TLOG_DBG are duplicates as are TLOG and TLOG_ARB
@@ -42,7 +42,8 @@
 #  if __cplusplus >= 201703L
 
 /*  Log entering and leaving/returning from method/functions.
-    This macro takes 0,1, or 2 optional args: Level (default is 43), name (mainly useful for use in header files).
+    This macro takes 0, 1, 2 or 3 optional args: Level (default is 43),
+    name (mainly useful for use in header files), and/or FormatControl.
     Note: the exit level is 1 greater than enter level (unless >=55).
     Use:
     TLOG_ENTEX();
@@ -66,8 +67,8 @@
 	if (   TRACE_VARIABLE(_trc_).lvl==0								\
 	    && (TRACE_VARIABLE(_trc_).TLOG3(__VA_ARGS__),TRACE_VARIABLE(_trc_).lvl)==TLVL_LOG ) \
 		TRACE_VARIABLE(_trc_).lvl = (tlvle_t)TLOG_ENTEX_DBGLVL; \
-	TRACE_EXIT { TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl+1,TRACE_VARIABLE(_trc_).nn) << "Exit"; };	\
-	TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl,TRACE_VARIABLE(_trc_).nn) << "Enter "
+	TRACE_EXIT { TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl+1,TRACE_VARIABLE(_trc_).nn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Exit"; }; \
+	TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl,TRACE_VARIABLE(_trc_).nn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Enter "
 
 #  endif // __cplusplus >= 201703L
 
@@ -160,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1587 $_$Date: 2023-01-29 23:30:12 -0600 (Sun, 29 Jan 2023) $
+#define TRACE_REVx $_$Revision: 1590 $_$Date: 2023-03-03 21:34:27 -0600 (Fri, 03 Mar 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -3248,7 +3249,7 @@ static void traceInitNames(struct traceControl_s *tC_p, struct traceControl_rw *
 
 #endif /* !defined(__KERNEL__) || defined(TRACE_IMPL) */
 
-static struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
+static inline struct traceEntryHdr_s *idxCnt2entPtr(uint32_t idxCnt)
 {
 	uint32_t idx;
 	off_t off;
@@ -3277,7 +3278,8 @@ static inline char *idx2namsPtr(int32_t idx) /* formerly idx2namLvlsPtr(int32_t 
 /* fmtnow can be:
    1 = do msg formating in streamer for both slow and/or mem
    0 = format in streamer for slow and mem if slow path enabled
-  -1 = don't format in streamer, even if slow enabled -- pass args to mem and slow output function  */
+  -1 = don't format in streamer, even if slow enabled -- pass args to mem and slow output function. Only available via TLOG2(...)
+*/
 struct tstreamer_flags {
 	unsigned do_m : 1;
 	unsigned do_s : 1;
@@ -4247,8 +4249,9 @@ struct TSTREAMER_T_ {
 	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and possibly TLOG when only TLVL_LOG
 	inline void TLOG2(int fmt= 0, const char* nam= "")
 	{
-		if (fmt == 0) flgs.fmtnow= 0;
-		else          flgs.fmtnow= 1;
+		if      (fmt==0) flgs.fmtnow=  0;
+		else if (fmt >0) flgs.fmtnow=  1;
+		else             flgs.fmtnow= -1;
 		nn= nam;
 	}
 	inline void TLOG2(int fmt, const std::string& nam) { TLOG2(fmt, &nam[0]); }

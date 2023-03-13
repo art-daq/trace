@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1583 $$Date: 2023-01-11 12:28:00 -0600 (Wed, 11 Jan 2023) $
+# $Revision: 1593 $$Date: 2023-03-13 11:40:42 -0500 (Mon, 13 Mar 2023) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -16,7 +16,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
 endif()
 
 find_package(cetmodules 3.01.00)
-project(TRACE VERSION 3.17.08)    # may wish to sync version in spack/packages/trace/package.py
+project(TRACE VERSION 3.17.09)    # may wish to sync version in spack/packages/trace/package.py
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)

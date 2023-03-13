@@ -19,7 +19,7 @@ print log messages in the circular buffer. THere are several other features."""
     homepage = "https://github.com/art-daq/trace"
     git      = "https://github.com/art-daq/trace.git"
 
-    version('3.17.08') # commit hash can be added when the package is in another spack repo
+    version('3.17.09') # commit hash can be added when the package is in another spack repo
 
     def setup_run_environment(self, env):
         file_to_source = self.prefix.join("bin/trace_functions.sh")

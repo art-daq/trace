@@ -21,7 +21,7 @@ static struct basic_c_s  before = {{0},{0}};
 #include "TRACE/trace.h"		/* TRACE */
 static struct basic_c_s  after = {{0},{0}};
 
-int main( )
+int main(void)
 {
 	unsigned ii;
 	unsigned char *byte_ptr;

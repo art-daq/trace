@@ -253,7 +253,7 @@ void* thread_func(void *arg)
 } /* thread_func */
 
 
-static uint64_t gettimeofday_us()
+static uint64_t gettimeofday_us(void)
 {	struct timeval tv;
 	gettimeofday( &tv, NULL );
 	return (uint64_t)(tv.tv_sec*1000000+tv.tv_usec);

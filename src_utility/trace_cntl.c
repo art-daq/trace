@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1592 $$Date: 2023-03-13 10:39:10 -0500 (Mon, 13 Mar 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1594 $$Date: 2023-03-15 12:43:51 -0500 (Wed, 15 Mar 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1679,9 +1679,11 @@ extern  int        optind;         /* for getopt */
 		sprintf( addr_str, "%p", vp );
 		sprintf( msg_str,"Hi %%d. \"c 2.5 -5 5000000000 0x87654321 2.6 %p\" ", vp );
 		strcat( msg_str, "should be repeated here: %c %.1f %hd %lld %p %.1Lf %s" );
+		tdelta_us = opt_dly_ms * 1000;
 		for (trace_cnt=1; trace_cnt<=loops; ++trace_cnt)
 		{	TRACE( TLVL_INFO, msg_str, trace_cnt
 				  , 'c',2.5,(short)-5,(long long)5000000000LL,(void*)0x87654321,(long double)2.6, addr_str );
+			if (opt_dly_ms) usleep(opt_dly_ms*1000);
 		}
 	}
 	else if (strcmp(cmd,"test") == 0)

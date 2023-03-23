@@ -553,6 +553,12 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	    tracepoint_probe_unregister( tp, _sys_enter, NULL );
 	else if (strcmp(tp->name,"sys_exit") == 0)
 	    tracepoint_probe_unregister( tp, _sys_exit, NULL );
+	else if (strcmp(tp->name,"rcu_utilization") == 0)
+	    tracepoint_probe_unregister( tp, _rcu_utilization, NULL );
+	else if (strcmp(tp->name,"rcu_stall_warning") == 0)
+	    tracepoint_probe_unregister( tp, _rcu_stall_warning, NULL );
+	else if (strcmp(tp->name,"alarmtimer_fired") == 0)
+	    tracepoint_probe_unregister( tp, _alarmtimer_fired, NULL );
 }
 # endif
 #endif

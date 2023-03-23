@@ -1851,19 +1851,6 @@ tod: 132348  133161
 	 */
 	/* ---^---^---^---^---^---^---^---^---^---^---^---^---^---^---^---^--- */
 
-#ifdef __KERNEL__
-	/* There are some places in the kernel where the gettimeofday routine
-	   cannot be called (i.e. kernel/notifier.c routines). For these routines,
-	   add 64 for the level (i.e. 22+64) */
-	if (lvl >= 64) {
-		tvp->tv_sec= 1;
-		tvp->tv_usec= 0;
-	} else
-#endif
-		if (tvp->tv_sec == 0) {
-		TRACE_GETTIMEOFDAY(tvp); /* hopefully NOT a system call */
-	}
-
 #define TRACE_TSC_EXPERIMENT 0 /* is TSC "consistent" across all core? (only negative is rollover) */
 							   /* experiment shows that if time were always retrieved exactly with idx, it
 	   would always increment, but this garuntee would cause TRACE to take near 10x longer, realizing
@@ -1896,15 +1883,28 @@ tod: 132348  133161
 	}
 #endif
 
-	/* Now, "desired" is the count (and myIdxCnt is the index) */
-	if (desired == traceControl_p->num_entries) {
-		traceControl_rwp->full= 1; /* now we'll know if wrIdxCnt has rolled over */
-	}
-
+	/* Now, "desired" is the count (full check below) and myIdxCnt is the index */
 	myEnt_p= idxCnt2entPtr(myIdxCnt);
+
+#ifdef __KERNEL__
+	/* There are some places in the kernel where the gettimeofday routine
+	   cannot be called (i.e. kernel/notifier.c routines). For these routines,
+	   add 64 for the level (i.e. 22+64) */
+	if (lvl >= 64) {
+		tvp->tv_sec= 1;
+		tvp->tv_usec= 0;
+	} else
+#endif
+		if (tvp->tv_sec == 0) {
+		TRACE_GETTIMEOFDAY(tvp); /* hopefully NOT a system call */
+	}
 
 	/*myEnt_p->time = *tvp;   move to end - reasonable time is indication of complete */
 	TRACE_TSC32(myEnt_p->tsc);
+
+	if (desired == traceControl_p->num_entries) {
+		traceControl_rwp->full= 1; /* now we'll know if wrIdxCnt has rolled over */
+	}
 
 #if TRACE_TSC_EXPERIMENT == 1
 	trace_unlock(&traceControl_rwp->namelock);

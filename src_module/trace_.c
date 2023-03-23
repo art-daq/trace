@@ -510,6 +510,69 @@ static void _mm_lru_activate(
 	TRACE( 37, "cpu=%d mm_lru_activate", raw_smp_processor_id());
 }
 
+static void _powernv_throttle(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 38, "cpu=%d powernv_throttle", raw_smp_processor_id());
+}
+
+static void _cpu_frequency(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 30, "cpu=%d cpu_frequency", raw_smp_processor_id());
+}
+
+static void _cpu_frequency_limits(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 40, "cpu=%d cpu_frequency_limits", raw_smp_processor_id());
+}
+
+static void _cpu_migrate_begin(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 41, "cpu=%d cpu_migrate_begin", raw_smp_processor_id());
+}
+
+static void _mm_migrate_pages(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 42, "cpu=%d mm_migrate_pages", raw_smp_processor_id());
+}
+
+static void _ipi_entry(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 43, "cpu=%d ipi_entry", raw_smp_processor_id());
+}
+
+static void _ipi_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 44, "cpu=%d ipi_exit", raw_smp_processor_id());
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -574,6 +637,34 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	    *ret = tracepoint_probe_register( tp, _mm_lru_activate, NULL );
 		printk("TRACE tracepoint_probe_register mm_lru_activate returned %d\n", *ret );
 	}
+	else if (strcmp(tp->name,"powernv_throttle") == 0) {
+	    *ret = tracepoint_probe_register( tp, _powernv_throttle, NULL );
+		printk("TRACE tracepoint_probe_register powernv_throttle returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"cpu_frequency") == 0) {
+	    *ret = tracepoint_probe_register( tp, _cpu_frequency, NULL );
+		printk("TRACE tracepoint_probe_register cpu_frequency returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"cpu_frequency_limits") == 0) {
+	    *ret = tracepoint_probe_register( tp, _cpu_frequency_limits, NULL );
+		printk("TRACE tracepoint_probe_register cpu_frequency_limits returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"cpu_migrate_begin") == 0) {
+	    *ret = tracepoint_probe_register( tp, _cpu_migrate_begin, NULL );
+		printk("TRACE tracepoint_probe_register cpu_migrate_begin returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"mm_migrate_pages") == 0) {
+	    *ret = tracepoint_probe_register( tp, _mm_migrate_pages, NULL );
+		printk("TRACE tracepoint_probe_register mm_migrate_pages returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"ipi_entry") == 0) {
+	    *ret = tracepoint_probe_register( tp, _ipi_entry, NULL );
+		printk("TRACE tracepoint_probe_register ipi_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"ipi_exit") == 0) {
+	    *ret = tracepoint_probe_register( tp, _ipi_exit, NULL );
+		printk("TRACE tracepoint_probe_register ipi_exit returned %d\n", *ret );
+	}
 }
 # ifdef MODULE
 static void unregfunc(struct tracepoint *tp, void *ignore)
@@ -604,6 +695,20 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	    tracepoint_probe_unregister( tp, _mm_lru_insertion, NULL );
 	else if (strcmp(tp->name,"mm_lru_activate") == 0)
 	    tracepoint_probe_unregister( tp, _mm_lru_activate, NULL );
+	else if (strcmp(tp->name,"powernv_throttle") == 0)
+	    tracepoint_probe_unregister( tp, _powernv_throttle, NULL );
+	else if (strcmp(tp->name,"cpu_frequency") == 0)
+	    tracepoint_probe_unregister( tp, _cpu_frequency, NULL );
+	else if (strcmp(tp->name,"cpu_frequency_limits") == 0)
+	    tracepoint_probe_unregister( tp, _cpu_frequency_limits, NULL );
+	else if (strcmp(tp->name,"cpu_migrate_begin") == 0)
+	    tracepoint_probe_unregister( tp, _cpu_migrate_begin, NULL );
+	else if (strcmp(tp->name,"mm_migrate_pages") == 0)
+	    tracepoint_probe_unregister( tp, _mm_migrate_pages, NULL );
+	else if (strcmp(tp->name,"ipi_entry") == 0)
+	    tracepoint_probe_unregister( tp, _ipi_entry, NULL );
+	else if (strcmp(tp->name,"ipi_exit") == 0)
+	    tracepoint_probe_unregister( tp, _ipi_exit, NULL );
 }
 # endif
 #endif

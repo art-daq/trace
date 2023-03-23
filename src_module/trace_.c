@@ -474,6 +474,15 @@ static void _rcu_stall_warning(
 	TRACE( 33, "cpu=%d rcu_stall_warning", raw_smp_processor_id());
 }
 
+static void _alarmtimer_fired(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 33, "cpu=%d alarmtimer_fired", raw_smp_processor_id());
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -521,6 +530,10 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	else if (strcmp(tp->name,"rcu_stall_warning") == 0) {
 	    *ret = tracepoint_probe_register( tp, _rcu_stall_warning, NULL );
 		printk("TRACE tracepoint_probe_register rcu_stall_warning returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"alarmtimer_fired") == 0) {
+	    *ret = tracepoint_probe_register( tp, _alarmtimer_fired, NULL );
+		printk("TRACE tracepoint_probe_register alarmtimer_fired returned %d\n", *ret );
 	}
 }
 # ifdef MODULE

@@ -456,6 +456,25 @@ static void _sys_exit(
 
 }   // _sys_exit
 
+static void _rcu_utilization(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 32, "cpu=%d rcu_utilization", raw_smp_processor_id());
+}
+
+static void _rcu_stall_warning(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 33, "cpu=%d rcu_stall_warning", raw_smp_processor_id());
+}
+
+
 
 // ---------------------------------------------------------------------------
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
@@ -494,6 +513,14 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	else if (strcmp(tp->name,"sys_exit") == 0) {
 	    *ret = tracepoint_probe_register( tp, _sys_exit, NULL );
 		printk("TRACE tracepoint_probe_register sys_exit returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"rcu_utilization") == 0) {
+	    *ret = tracepoint_probe_register( tp, _rcu_utilization, NULL );
+		printk("TRACE tracepoint_probe_register rcu_utilization returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"rcu_stall_warning") == 0) {
+	    *ret = tracepoint_probe_register( tp, _rcu_stall_warning, NULL );
+		printk("TRACE tracepoint_probe_register rcu_stall_warning returned %d\n", *ret );
 	}
 }
 # ifdef MODULE

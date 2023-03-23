@@ -278,7 +278,7 @@ int str2enum(const char *ss)
 	}
 	// 2 of 3 - enum tlvle_t definition
 	for (retidx=0; lvlstr; ++retidx,lvlstr=endptr) {
-		savptr = endptr = strpbrk(lvlstr,",= ");
+		savptr = endptr = strpbrk(lvlstr,",= "); // savptr used below to delimit individual enum strings
 		if (endptr){
 			if(*endptr == '=') {
 				int  rettmp;
@@ -294,9 +294,10 @@ int str2enum(const char *ss)
 			while (isspace(*endptr)) ++endptr; /* space before ',' */
 			++endptr;  /* must be ',' */
 			while (isspace(*endptr))++endptr; /* space after ',' */
-			*savptr='\0';		/* terminate to allow strcmp */
+			*savptr='\0';		/* terminate to allow strcmp (e.g. lvlstr points to "TLVL_WARNING")*/
 		}
 		if (strcasecmp(ss,lvlstr) == 0) return (retidx);
+		else if ((cp=index(lvlstr,'_'))!=NULL && strcasecmp(ss,++cp)==0) return (retidx); // match when [^_]*_ prefix removed
 	}
 	// 3 of 3 - trace_lvlstrs, which could be loaded by TRACE_LVLSTRS (comma sep list of lvlstrs e.g export TRACE_LVLSTRS=mylvl0
 	for (retidx=0; retidx<64; ++retidx){

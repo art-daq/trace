@@ -480,7 +480,7 @@ static void _alarmtimer_fired(
 # endif
 			       struct pt_regs *regs, long ret )
 {
-	TRACE( 33, "cpu=%d alarmtimer_fired", raw_smp_processor_id());
+	TRACE( 34, "cpu=%d alarmtimer_fired", raw_smp_processor_id());
 }
 
 

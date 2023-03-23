@@ -483,6 +483,33 @@ static void _alarmtimer_fired(
 	TRACE( 34, "cpu=%d alarmtimer_fired", raw_smp_processor_id());
 }
 
+static void _nmi_handler(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 35, "cpu=%d nmi_handler", raw_smp_processor_id());
+}
+
+static void _mm_lru_insertion(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 36, "cpu=%d mm_lru_insertion", raw_smp_processor_id());
+}
+
+static void _mm_lru_activate(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 37, "cpu=%d mm_lru_activate", raw_smp_processor_id());
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -535,6 +562,18 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	    *ret = tracepoint_probe_register( tp, _alarmtimer_fired, NULL );
 		printk("TRACE tracepoint_probe_register alarmtimer_fired returned %d\n", *ret );
 	}
+	else if (strcmp(tp->name,"nmi_handler") == 0) {
+	    *ret = tracepoint_probe_register( tp, _nmi_handler, NULL );
+		printk("TRACE tracepoint_probe_register nmi_handler returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"mm_lru_insertion") == 0) {
+	    *ret = tracepoint_probe_register( tp, _mm_lru_insertion, NULL );
+		printk("TRACE tracepoint_probe_register mm_lru_insertion returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"mm_lru_activate") == 0) {
+	    *ret = tracepoint_probe_register( tp, _mm_lru_activate, NULL );
+		printk("TRACE tracepoint_probe_register mm_lru_activate returned %d\n", *ret );
+	}
 }
 # ifdef MODULE
 static void unregfunc(struct tracepoint *tp, void *ignore)
@@ -559,6 +598,12 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	    tracepoint_probe_unregister( tp, _rcu_stall_warning, NULL );
 	else if (strcmp(tp->name,"alarmtimer_fired") == 0)
 	    tracepoint_probe_unregister( tp, _alarmtimer_fired, NULL );
+	else if (strcmp(tp->name,"nmi_handler") == 0)
+	    tracepoint_probe_unregister( tp, _nmi_handler, NULL );
+	else if (strcmp(tp->name,"mm_lru_insertion") == 0)
+	    tracepoint_probe_unregister( tp, _mm_lru_insertion, NULL );
+	else if (strcmp(tp->name,"mm_lru_activate") == 0)
+	    tracepoint_probe_unregister( tp, _mm_lru_activate, NULL );
 }
 # endif
 #endif

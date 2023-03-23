@@ -573,6 +573,42 @@ static void _ipi_exit(
 	TRACE( 44, "cpu=%d ipi_exit", raw_smp_processor_id());
 }
 
+static void _timer_expire_entry(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 45, "cpu=%d timer_expire_entry", raw_smp_processor_id());
+}
+
+static void _timer_expire_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 46, "cpu=%d timer_expire_exit", raw_smp_processor_id());
+}
+
+static void _hrtimer_expire_entry(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 47, "cpu=%d hrtimer_expire_entry", raw_smp_processor_id());
+}
+
+static void _hrtimer_expire_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 48, "cpu=%d hrtimer_expire_exit", raw_smp_processor_id());
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -665,6 +701,22 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	    *ret = tracepoint_probe_register( tp, _ipi_exit, NULL );
 		printk("TRACE tracepoint_probe_register ipi_exit returned %d\n", *ret );
 	}
+	else if (strcmp(tp->name,"timer_expire_entry") == 0) {
+	    *ret = tracepoint_probe_register( tp, _timer_expire_entry, NULL );
+		printk("TRACE tracepoint_probe_register timer_expire_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"timer_expire_exit") == 0) {
+	    *ret = tracepoint_probe_register( tp, _timer_expire_exit, NULL );
+		printk("TRACE tracepoint_probe_register timer_expire_exit returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"hrtimer_expire_entry") == 0) {
+	    *ret = tracepoint_probe_register( tp, _hrtimer_expire_entry, NULL );
+		printk("TRACE tracepoint_probe_register hrtimer_expire_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"hrtimer_expire_exit") == 0) {
+	    *ret = tracepoint_probe_register( tp, _hrtimer_expire_exit, NULL );
+		printk("TRACE tracepoint_probe_register hrtimer_expire_exit returned %d\n", *ret );
+	}
 }
 # ifdef MODULE
 static void unregfunc(struct tracepoint *tp, void *ignore)
@@ -709,6 +761,14 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	    tracepoint_probe_unregister( tp, _ipi_entry, NULL );
 	else if (strcmp(tp->name,"ipi_exit") == 0)
 	    tracepoint_probe_unregister( tp, _ipi_exit, NULL );
+	else if (strcmp(tp->name,"timer_expire_entry") == 0)
+	    tracepoint_probe_unregister( tp, _timer_expire_entry, NULL );
+	else if (strcmp(tp->name,"timer_expire_exit") == 0)
+	    tracepoint_probe_unregister( tp, _timer_expire_exit, NULL );
+	else if (strcmp(tp->name,"hrtimer_expire_entry") == 0)
+	    tracepoint_probe_unregister( tp, _hrtimer_expire_entry, NULL );
+	else if (strcmp(tp->name,"hrtimer_expire_exit") == 0)
+	    tracepoint_probe_unregister( tp, _hrtimer_expire_exit, NULL );
 }
 # endif
 #endif

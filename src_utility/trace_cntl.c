@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1594 $$Date: 2023-03-15 12:43:51 -0500 (Wed, 15 Mar 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -794,7 +794,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 typedef struct trace_ptrs {
 	struct trace_ptrs      *next;
 	struct trace_ptrs      *prev;
-	const char             *file;
+	char                   file[PATH_MAX];
 	int                    file_idx;
 	struct traceControl_s  *ro_p;
 	struct traceControl_rw *rw_p;
@@ -815,7 +815,7 @@ void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file, int
 		trace_ptrs[idx].prev = &trace_ptrs[idx-1];
 		trace_ptrs[idx-1].next = &trace_ptrs[idx];
 	}
-	trace_ptrs[idx].file = file;
+	strcpy(trace_ptrs[idx].file,file);
 	trace_ptrs[idx].file_idx = idx;
 	trace_ptrs[idx].ro_p = traceControl_p;
 	trace_ptrs[idx].rw_p = traceControl_rwp;
@@ -1005,16 +1005,17 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		for (ii=0; ii<argc; ++ii) {
 			char *off_adjust_ptr = check_off_adjust(argv[ii]); /* check for :[0-9]+$ */
 			if (off_adjust_ptr) *off_adjust_ptr++ = '\0'; /* overwrite ':' with '\0' */
-			if (access(argv[ii],R_OK) != 0) {
-				fprintf( stderr, "Warning: cannot access %s\n", argv[ii] );
+			(void)tsnprintf(file_during_fun, sizeof(file_during_fun), argv[ii]);
+			if (access(file_during_fun,R_OK) != 0) {
+				fprintf( stderr, "Warning: cannot access %s\n", file_during_fun );
 				continue;
 			}
-			setenv("TRACE_FILE", argv[ii], 1 );
+			setenv("TRACE_FILE", file_during_fun, 1 );
 # if 1
 			traceControl_p = traceControl_p_static = NULL; // trick to allow traceInit to (re)mmap (another) file
 			traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. NOTE: multiple "register_atfork" will occur, but should be tolerated be this non-forking app */
 # else
-			trace_mmap_file( argv[ii],&memlen_out_unused,&traceControl_p, &traceControl_rwp // NOTE: traceNamLvls_p, traceEntries_p are iniitalized
+			trace_mmap_file( file_during_fun,&memlen_out_unused,&traceControl_p, &traceControl_rwp // NOTE: traceNamLvls_p, traceEntries_p are iniitalized
 			                , 0,0,0,0, 1 );
 # endif
 			if (TRACE_CNTL("mapped")) {
@@ -1026,7 +1027,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				}
 				if (jj==files_to_show) {
 					int32_t off_adjust = off_adjust_ptr? atoi(off_adjust_ptr): 0;
-					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, argv[ii], off_adjust );
+					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, file_during_fun, off_adjust );
 				}
 			}
 		}
@@ -1686,6 +1687,19 @@ extern  int        optind;         /* for getopt */
 				  , 'c',2.5,(short)-5,(long long)5000000000LL,(void*)0x87654321,(long double)2.6, addr_str );
 			if (opt_dly_ms) usleep(opt_dly_ms*1000);
 		}
+	}
+	else if (strcmp(cmd,"file") == 0) {
+		char file[PATH_MAX];
+		if (argc - optind < 1) {
+			printf( "Need file\n" );
+#			if DO_HELP
+			do_help("");
+#			else
+			printf(USAGE);exit(0);
+#			endif
+		}
+		(void)tsnprintf(file,sizeof(file),argv[optind++]);
+		printf("%s\n",file);
 	}
 	else if (strcmp(cmd,"test") == 0)
 	{	float	 ff[10];

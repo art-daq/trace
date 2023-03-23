@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1590 $$Date: 2023-03-03 21:34:27 -0600 (Fri, 03 Mar 2023) $"
+#define TRACE_REV "$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1590 $_$Date: 2023-03-03 21:34:27 -0600 (Fri, 03 Mar 2023) $
+#define TRACE_REVx $_$Revision: 1595 $_$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

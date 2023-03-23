@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1537 $$Date: 2022-08-24 16:44:05 -0500 (Wed, 24 Aug 2022) $'
+ # rev='$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -388,6 +388,7 @@ extern  char        * optarg;        // for getopt
         int           xtra_options=1;
         int           opt_sleep_loop_us=0;
         int           opt_delay_end_s=0;
+        char          file[PATH_MAX];
 
     while ((opt=getopt(argc,argv,"?hd:n:f:l:p:t:x:s:")) != -1)
     {   switch (opt)
@@ -453,21 +454,22 @@ extern  char        * optarg;        // for getopt
         if(waitpid(pids[ii],&wstatus,0)==-1){perror("waitpid");exit(EXIT_FAILURE);}
     }
 
+    (void)tsnprintf(file,sizeof(file),"$TRACE_FILE");
     if (xtra_options & 1)
-    {   char          cmd[200];
-	sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = \`cat /proc/%d/maps | grep $TRACE_FILE | wc -l\`", getpid() );
+    {   char          cmd[PATH_MAX+200];
+	sprintf( cmd, "echo trace_buffer mappings before join '(#1)' = \`cat /proc/%d/maps | grep %s | wc -l\`", getpid(),file );
 	system( cmd );
-	sprintf( cmd, "echo trace_buffer mappings before join '(#2)' = \`cat /proc/%d/maps | grep $TRACE_FILE | wc -l\`", getpid() );
+	sprintf( cmd, "echo trace_buffer mappings before join '(#2)' = \`cat /proc/%d/maps | grep %s | wc -l\`", getpid(),file );
 	system( cmd );
     }
     if (num_threads>1) for (ii=0; ii<num_threads; ii++) {
         pthread_join(threads[ii], NULL);
     }
     if (xtra_options & 1)
-    {   char          cmd[200];
-	sprintf( cmd, "echo trace_buffer mappings after join '(#1)' = \`cat /proc/%d/maps | grep $TRACE_FILE >big_ex_maps;wc -l big_ex_maps\`", getpid() );
+    {   char          cmd[PATH_MAX+200];
+	sprintf( cmd, "echo trace_buffer mappings after join '(#1)' = \`cat /proc/%d/maps | grep %s >big_ex_maps;wc -l big_ex_maps\`", getpid(),file );
 	system( cmd );
-	sprintf( cmd, "echo trace_buffer mappings after join '(#2)' = \`cat /proc/%d/maps | grep $TRACE_FILE | wc -l\`", getpid() );
+	sprintf( cmd, "echo trace_buffer mappings after join '(#2)' = \`cat /proc/%d/maps | grep %s | wc -l\`", getpid(),file );
 	system( cmd );
     }
     printf("test-threads - after join loop\n");
@@ -527,7 +529,8 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
         vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS"
         # deal with potential trace module....
-        test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset || { rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
+        test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset \
+                || { TRACE_FILE=`trace_cntl file $TRACE_FILE`; rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
         file_entries=`trace_cntl info | awk '/num_entries/{print$3;}'`
         if [ $file_entries -lt $TRACE_NUMENTS ];then
             echo "file_entries=$file_entries -lt calculated_entries=$TRACE_NUMENTS with TRACE_FILE=$TRACE_FILE"

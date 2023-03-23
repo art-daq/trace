@@ -525,7 +525,7 @@ static void _cpu_frequency(
 # endif
 			       struct pt_regs *regs, long ret )
 {
-	TRACE( 30, "cpu=%d cpu_frequency", raw_smp_processor_id());
+	TRACE( 39, "cpu=%d cpu_frequency", raw_smp_processor_id());
 }
 
 static void _cpu_frequency_limits(

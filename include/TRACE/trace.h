@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $"
+#define TRACE_REV "$Revision: 1597 $$Date: 2023-03-28 14:17:12 -0500 (Tue, 28 Mar 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -42,7 +42,7 @@
 #  if __cplusplus >= 201703L
 
 /*  Log entering and leaving/returning from method/functions.
-    This macro takes 0, 1, 2 or 3 optional args: Level (default is 43),
+    This macro takes 0, 1, 2 or 3 optional args: Level (default is 42 for enter, 43 for exit),
     name (mainly useful for use in header files), and/or FormatControl.
     Note: the exit level is 1 greater than enter level (unless >=55).
     Use:
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1595 $_$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $
+#define TRACE_REVx $_$Revision: 1597 $_$Date: 2023-03-28 14:17:12 -0500 (Tue, 28 Mar 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

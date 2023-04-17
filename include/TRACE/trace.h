@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1597 $$Date: 2023-03-28 14:17:12 -0500 (Tue, 28 Mar 2023) $"
+#define TRACE_REV "$Revision: 1599 $$Date: 2023-04-16 23:19:30 -0500 (Sun, 16 Apr 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1597 $_$Date: 2023-03-28 14:17:12 -0500 (Tue, 28 Mar 2023) $
+#define TRACE_REVx $_$Revision: 1599 $_$Date: 2023-04-16 23:19:30 -0500 (Sun, 16 Apr 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -626,8 +626,8 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #	define TRACE_PRINTF_FMT_ARG_NUM 7
 #	define TRACE_VA_LIST_INIT(addr) (va_list) addr
 #	define TRACE_ENT_TV_FILLER
-#	define TRACE_TSC32(low) __asm__ __volatile__("rdtsc;movl %%eax,%0" \
-												  : "=m"(low)::"eax", "edx")
+static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rdtsc\n\t": "=a" (eax), "=d" (edx)); return (uint64_t)eax | (uint64_t)edx << 32; } /*NOLINT*/
+#	define TRACE_TSC32(low) low = rdtsc()
 
 #elif defined(__i386__)
 
@@ -636,8 +636,8 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #	define TRACE_PRINTF_FMT_ARG_NUM 7
 #	define TRACE_VA_LIST_INIT(addr) (va_list) addr
 #	define TRACE_ENT_TV_FILLER      uint32_t x[2];
-#	define TRACE_TSC32(low)         __asm__ __volatile__("rdtsc;movl %%eax,%0" \
-												  : "=m"(low)::"eax", "edx")
+static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rdtsc\n\t": "=a" (eax), "=d" (edx)); return (uint64_t)eax | (uint64_t)edx << 32; } /*NOLINT*/
+#	define TRACE_TSC32(low) low = rdtsc()
 
 #elif defined(__x86_64__)
 
@@ -647,10 +647,8 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 #	define TRACE_PRINTF_FMT_ARG_NUM 16  // clang-format off
 #	define TRACE_VA_LIST_INIT(addr) { { 6*8, 6*8 + 8*16, addr, addr } } // clang-format of
 #	define TRACE_ENT_TV_FILLER
-#	define TRACE_TSC32(low) __asm__ __volatile__("rdtsc"     \
-												  : "=a"(low) \
-												  :           \
-												  : "edx") /*NOLINT*/
+static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rdtsc\n\t": "=a" (eax), "=d" (edx)); return (uint64_t)eax | (uint64_t)edx << 32; } /*NOLINT*/
+#	define TRACE_TSC32(low) low = rdtsc()
 
 #elif defined(__powerpc__) && !defined(__powerpc64__)
 

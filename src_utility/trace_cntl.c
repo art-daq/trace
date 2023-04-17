@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1598 $$Date: 2023-04-16 23:19:10 -0500 (Sun, 16 Apr 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -757,7 +757,10 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 						  useconds = (int)((double)useconds/div+0.5); // div, round and cast back to unsigned
 					  }
 					  printf(tbuf, useconds); } break;
-			case 't': printf("%10u", (unsigned)myEnt_p->tsc); break;
+			case 't':
+				if (!width_state) printf("%10u",            (unsigned)myEnt_p->tsc);
+				else              printf("%20llu",(unsigned long long)myEnt_p->tsc);
+				break;
 			case 'u':
 				if (!width_state) printf("%" TRACE_STR(TRACE_LINENUM_WIDTH) "u", myEnt_p->linenum);
 				else              printf("%*u", width_ia[0], myEnt_p->linenum);
@@ -1224,7 +1227,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 'S': printf("%c", 'S' ); break; /* Severity (1st character of lvlstr) */
 			case 's': printf("%*s", bufSlot_width, "slt" ); break;
 			case 'T': if(tfmt_len)printf("%*.*s", tfmt_len,tfmt_len,&("us_tod"[tfmt_len>=6?0:6-tfmt_len])); break;
-			case 't': printf("       tsc"); break;
+			case 't':
+				if (!width_state) printf("       tsc");
+				else              printf("                 tsc");
+				break;
 			case 'u': 
 				if (!width_state) printf("%" TRACE_STR(TRACE_LINENUM_WIDTH) "s", "ln#");
 				else              printf("%*s", width_ia[0], "ln#");

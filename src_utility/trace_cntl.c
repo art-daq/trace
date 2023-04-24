@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1600 $$Date: 2023-04-18 16:19:54 -0500 (Tue, 18 Apr 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1603 $$Date: 2023-04-23 20:06:30 -0500 (Sun, 23 Apr 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1544,6 +1544,7 @@ void traceInfo(int quiet)
 		       "default TRACE_TIME_FMT=\"%s\"\n"
 		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
 		       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# [n]f:file F:func I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName O/o:color P:pid S:severity t:insert u:line\n"
+		       "Some SHOW/PRINT specifiers take optional modifiers. E.g. PRINT: %#n.mf#/src#\n"
 		       , TRACE_REV
 		       , traceControl_p->version_string
 		       , outstr

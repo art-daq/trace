@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1594 $$Date: 2023-03-15 12:43:51 -0500 (Wed, 15 Mar 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -195,10 +195,10 @@ unsigned long *add_double_arg(unsigned long *args_ptr, unsigned long *end_ptr, d
 #define DFLT_FILE_WIDTH ((int)sizeof("file")-1)
 #ifdef __linux__
 //# define DFLT_SHOW         "HxNTPiCnLR"
-# define DFLT_SHOW         "%H%x%N %T %P %i %C %n %.3L %m"
+# define DFLT_SHOW         "%H%x%N %T %P %i %C %e %.3L %m"
 #else
 //# define DFLT_SHOW         "HxNTPinLR"
-# define DFLT_SHOW         "%H%x%N %T %P %i %n %.3L %m"
+# define DFLT_SHOW         "%H%x%N %T %P %i %e %.3L %m"
 #endif
 
 #define NUMTHREADS 4
@@ -278,7 +278,7 @@ int str2enum(const char *ss)
 	}
 	// 2 of 3 - enum tlvle_t definition
 	for (retidx=0; lvlstr; ++retidx,lvlstr=endptr) {
-		savptr = endptr = strpbrk(lvlstr,",= ");
+		savptr = endptr = strpbrk(lvlstr,",= "); // savptr used below to delimit individual enum strings
 		if (endptr){
 			if(*endptr == '=') {
 				int  rettmp;
@@ -294,9 +294,10 @@ int str2enum(const char *ss)
 			while (isspace(*endptr)) ++endptr; /* space before ',' */
 			++endptr;  /* must be ',' */
 			while (isspace(*endptr))++endptr; /* space after ',' */
-			*savptr='\0';		/* terminate to allow strcmp */
+			*savptr='\0';		/* terminate to allow strcmp (e.g. lvlstr points to "TLVL_WARNING")*/
 		}
 		if (strcasecmp(ss,lvlstr) == 0) return (retidx);
+		else if ((cp=index(lvlstr,'_'))!=NULL && strcasecmp(ss,++cp)==0) return (retidx); // match when [^_]*_ prefix removed
 	}
 	// 3 of 3 - trace_lvlstrs, which could be loaded by TRACE_LVLSTRS (comma sep list of lvlstrs e.g export TRACE_LVLSTRS=mylvl0
 	for (retidx=0; retidx<64; ++retidx){
@@ -756,7 +757,10 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 						  useconds = (int)((double)useconds/div+0.5); // div, round and cast back to unsigned
 					  }
 					  printf(tbuf, useconds); } break;
-			case 't': printf("%10u", (unsigned)myEnt_p->tsc); break;
+			case 't':
+				if (!width_state) printf("%10u",            (unsigned)myEnt_p->tsc);
+				else              printf("%20llu",(unsigned long long)myEnt_p->tsc);
+				break;
 			case 'u':
 				if (!width_state) printf("%" TRACE_STR(TRACE_LINENUM_WIDTH) "u", myEnt_p->linenum);
 				else              printf("%*u", width_ia[0], myEnt_p->linenum);
@@ -793,7 +797,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 typedef struct trace_ptrs {
 	struct trace_ptrs      *next;
 	struct trace_ptrs      *prev;
-	const char             *file;
+	char                   file[PATH_MAX];
 	int                    file_idx;
 	struct traceControl_s  *ro_p;
 	struct traceControl_rw *rw_p;
@@ -814,7 +818,7 @@ void trace_ptrs_store( int idx, trace_ptrs_t *trace_ptrs, const char * file, int
 		trace_ptrs[idx].prev = &trace_ptrs[idx-1];
 		trace_ptrs[idx-1].next = &trace_ptrs[idx];
 	}
-	trace_ptrs[idx].file = file;
+	strcpy(trace_ptrs[idx].file,file);
 	trace_ptrs[idx].file_idx = idx;
 	trace_ptrs[idx].ro_p = traceControl_p;
 	trace_ptrs[idx].rw_p = traceControl_rwp;
@@ -993,7 +997,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	opts |= (trace_strflg(ospec,'x')?filter_newline_:0);
 
 	if (argc == 0) {
-		traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. */
+		traceInit("_TRACE_",1); /* init traceControl_p, traceControl_rwp, etc. Use "_TRACE_" to assure non-write to corrupted TRACE_FILE where "TRACE" may not exist */
 		(void)tsnprintf(file_during_fun, sizeof(file_during_fun),getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile);
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*1);
 		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, file_during_fun, 0 );
@@ -1004,16 +1008,17 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		for (ii=0; ii<argc; ++ii) {
 			char *off_adjust_ptr = check_off_adjust(argv[ii]); /* check for :[0-9]+$ */
 			if (off_adjust_ptr) *off_adjust_ptr++ = '\0'; /* overwrite ':' with '\0' */
-			if (access(argv[ii],R_OK) != 0) {
-				fprintf( stderr, "Warning: cannot access %s\n", argv[ii] );
+			(void)tsnprintf(file_during_fun, sizeof(file_during_fun), argv[ii]);
+			if (access(file_during_fun,R_OK) != 0) {
+				fprintf( stderr, "Warning: cannot access %s\n", file_during_fun );
 				continue;
 			}
-			setenv("TRACE_FILE", argv[ii], 1 );
+			setenv("TRACE_FILE", file_during_fun, 1 );
 # if 1
 			traceControl_p = traceControl_p_static = NULL; // trick to allow traceInit to (re)mmap (another) file
-			traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. NOTE: multiple "register_atfork" will occur, but should be tolerated be this non-forking app */
+			traceInit("_TRACE_",1); /* init traceControl_p, traceControl_rwp, etc. NOTE: multiple "register_atfork" will occur, but should be tolerated be this non-forking app */
 # else
-			trace_mmap_file( argv[ii],&memlen_out_unused,&traceControl_p, &traceControl_rwp // NOTE: traceNamLvls_p, traceEntries_p are iniitalized
+			trace_mmap_file( file_during_fun,&memlen_out_unused,&traceControl_p, &traceControl_rwp // NOTE: traceNamLvls_p, traceEntries_p are iniitalized
 			                , 0,0,0,0, 1 );
 # endif
 			if (TRACE_CNTL("mapped")) {
@@ -1025,7 +1030,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				}
 				if (jj==files_to_show) {
 					int32_t off_adjust = off_adjust_ptr? atoi(off_adjust_ptr): 0;
-					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, argv[ii], off_adjust );
+					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, file_during_fun, off_adjust );
 				}
 			}
 		}
@@ -1040,8 +1045,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 	if (trace_strflg(ospec,'n') || trace_strflg(ospec,'e'))
 		for (name_width=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
-			if (name_width < t_ptrs->rw_p->longest_name)
+			if (name_width < t_ptrs->rw_p->longest_name) {
 				name_width = t_ptrs->rw_p->longest_name;
+				if (name_width > t_ptrs->ro_p->nam_arr_sz) name_width = t_ptrs->ro_p->nam_arr_sz;
+			}
 	for (num_entries_total=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
 		num_entries_total += t_ptrs->ro_p->num_entries;
 	for (siz_msg_largest=0, num_params_largest=0, t_ptrs=trace_ptrs_list_start;
@@ -1222,7 +1229,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 'S': printf("%c", 'S' ); break; /* Severity (1st character of lvlstr) */
 			case 's': printf("%*s", bufSlot_width, "slt" ); break;
 			case 'T': if(tfmt_len)printf("%*.*s", tfmt_len,tfmt_len,&("us_tod"[tfmt_len>=6?0:6-tfmt_len])); break;
-			case 't': printf("       tsc"); break;
+			case 't':
+				if (!width_state) printf("       tsc");
+				else              printf("                 tsc");
+				break;
 			case 'u': 
 				if (!width_state) printf("%" TRACE_STR(TRACE_LINENUM_WIDTH) "s", "ln#");
 				else              printf("%*s", width_ia[0], "ln#");
@@ -1337,7 +1347,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 'S': printf("-"); break; /* Severity (1st character of lvlstr) */
 			case 's': printf("%.*s", bufSlot_width, TRACE_LONG_DASHES); break;
 			case 'T': if(tfmt_len)printf("%.*s", tfmt_len, TRACE_LONG_DASHES); break;
-			case 't': printf("----------"); break;
+			case 't':
+				if (!width_state) printf("----------");
+				else              printf("--------------------");
+				break;
 			case 'u':
 				if (!width_state) printf("%." TRACE_STR(TRACE_LINENUM_WIDTH) "s", TRACE_LONG_DASHES);
 				else              printf("%.*s", width_ia[0], TRACE_LONG_DASHES);
@@ -1531,8 +1544,9 @@ void traceInfo(int quiet)
 		       "buffer_offset     = 0x%lx\n"
 		       "memlen            = 0x%x          %s\n"
 		       "default TRACE_TIME_FMT=\"%s\"\n"
-		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
+		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent n:nam f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
 		       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# [n]f:file F:func I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName O/o:color P:pid S:severity t:insert u:line\n"
+		       "Some SHOW/PRINT specifiers take optional modifiers. E.g. PRINT: %%#n.mf#/src#\n"
 		       , TRACE_REV
 		       , traceControl_p->version_string
 		       , outstr
@@ -1685,6 +1699,19 @@ extern  int        optind;         /* for getopt */
 				  , 'c',2.5,(short)-5,(long long)5000000000LL,(void*)0x87654321,(long double)2.6, addr_str );
 			if (opt_dly_ms) usleep(opt_dly_ms*1000);
 		}
+	}
+	else if (strcmp(cmd,"file") == 0) {
+		char file[PATH_MAX];
+		if (argc - optind < 1) {
+			printf( "Need file\n" );
+#			if DO_HELP
+			do_help("");
+#			else
+			printf(USAGE);exit(0);
+#			endif
+		}
+		(void)tsnprintf(file,sizeof(file),argv[optind++]);
+		printf("%s\n",file);
 	}
 	else if (strcmp(cmd,"test") == 0)
 	{	float	 ff[10];
@@ -2033,14 +2060,15 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strncmp(cmd,"info",4) == 0)
 	{
-		traceInit(NULL,1);
+		traceInit("_TRACE_",1); /* Use "_TRACE_" incase corrupted TRACE_FILE where "TRACE" may not exist and write undesired */
 		traceInfo(opt_quiet);
 	}
 	else if (strcmp(cmd,"tids") == 0)
 	{	uint32_t longest_name;
 		int      namLvlTblEnts_digits;
-		traceInit(NULL,1);
+		traceInit("_TRACE_",1);
 		longest_name = traceControl_rwp->longest_name;
+		if (longest_name > traceControl_p->nam_arr_sz) longest_name = traceControl_p->nam_arr_sz;
 		/*printf("longest_name=%d\n",longest_name);*/
 		namLvlTblEnts_digits=countDigits((int)traceControl_p->num_namLvlTblEnts-1);
 		if (do_heading) {

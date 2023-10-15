@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta.pl,v $
-$version = '$Revision: 1483 $';
-#   $Date: 2021-01-25 12:35:36 -0600 (Mon, 25 Jan 2021) $
+$version = '$Revision: 1596 $';
+#   $Date: 2023-03-26 17:34:55 -0500 (Sun, 26 Mar 2023) $
 
 use Time::Local; # timelocal()
 #use File::Basename;
@@ -97,8 +97,8 @@ sub col_spec_to_re
                                              # i.e. use col_spec_to_re( tmp )
                                              # to pass tmp_col_spec
                                              # and return re in tmp_re
-    #print STDERR "col_spec_to_re(spec=$spec)\n";
-    #print STDERR "col_spec=$col_spec\n";
+    #print STDERR "col_spec_to_re:",__LINE__," called col_spec_to_re(spec=$spec)\n";
+    #print STDERR "col_spec_to_re:",__LINE__," col_spec=$col_spec\n";
     if ($col_spec =~ /^\d+$/)  # if col_spec is a column _number_
     {   if ($col_spec == 0)
 	{   $re = '(\s*\S+)';
@@ -119,6 +119,7 @@ sub col_spec_to_re
     if (!"$data")
     {   die "problem finding column associated with \"$col_spec\" in first line\n";
     }
+    #print STDERR "col_spec_to_re:",__LINE__," ${spec}_re=$re\n";
     eval "\$${spec}_re = \$re";
 }
 
@@ -127,10 +128,9 @@ sub col_spec_to_re
 if ("$opt_ct" ne "")  # "ct" is short for "convert time"
 {   use POSIX;			# for strftime  NOTE: this is "used" at compile
     $ct_col_spec = $opt_ct;     # time, i.e. even if -ct is not specified.
-    &col_spec_to_re( ct );
+    #print STDERR ":",__LINE__," calling col_spec_to_re(...)\n";
+    &col_spec_to_re( "ct" );
 }
-
-$delta_idx=0;
 
 sub get_cpu_re
 {   if ($cpu_col_spec =~ /\d+/)
@@ -146,6 +146,8 @@ sub get_cpu_re
     }
     else { &col_spec_to_re( cpu ); } # refine cpu_re
 }
+
+$delta_idx=0;
 
 #print STDERR "before if (opt_dc) opt_dc=$opt_dc\n";
 if ("$opt_dc" ne "")      # "dc" is short for "deltas - *cpu specific*" (columns)
@@ -173,12 +175,12 @@ if ("$opt_dc" ne "")      # "dc" is short for "deltas - *cpu specific*" (columns
 }
 
 #print STDERR "before if (opt_d) opt_d=$opt_d\n";
-if ("$opt_d" ne "")      # if "columns for *cpu specific* deltas" where specified
+if ("$opt_d" ne "")      # if "columns for *non-cpu_specific* deltas" where specified
 {   eval "\@opt_eval = ($opt_d)";
     #print STDERR "in if (opt_d) opt_d=$opt_d\n";
     foreach $col (@opt_eval)
     {   $tmp_col_spec = $col;
-	#print STDERR "calling col_spec_to_re( tmp )\n";
+	#print STDERR ":",__LINE__," calling col_spec_to_re( tmp )\n";
 	&col_spec_to_re( tmp );
 	$delta_cntl[$delta_idx]{do_delta} = 1;
 	$delta_cntl[$delta_idx]{re}   = $tmp_re;
@@ -192,9 +194,16 @@ if ("$opt_d" ne "")      # if "columns for *cpu specific* deltas" where specifie
     }
 }
 
-if ("$opt_d" eq "" && "$opt_ct" ne "")
+# NOTE: handle opt_ct -- including when opt_ct alone OR if opt_ct NOT in opt_d
+if ("$opt_d" ne "" && "$opt_ct" ne "") {
+    eval "\@opt_eval = ($opt_d)";
+    @ct_in_d=grep(/$opt_ct/,@opt_eval);
+    #print STDERR ":",__LINE__," \$#ct_in_d=$#ct_in_d  \@ct_in_d=@ct_in_d\n";
+}
+if (  ("$opt_d" eq "" && "$opt_ct" ne "")
+    ||("$opt_d" ne "" && "$opt_ct" ne "" &&  $#ct_in_d eq -1) )
 {   $tmp_col_spec = $opt_ct;  # let's just say only one ct column for now
-    #print STDERR "calling col_spec_to_re( tmp )\n";
+    #print STDERR ":",__LINE__," calling col_spec_to_re( tmp )\n";
     &col_spec_to_re( tmp );
     $delta_cntl[$delta_idx]{re}   = $tmp_re;
     #print STDERR "default_col[$delta_idx] = $tmp_re\n";
@@ -328,11 +337,14 @@ else
 {   # build output_cntl that outputs all input columns in order
 
     # sort -d and -dc
-    sort @default_col;
+    #print STDERR ":",__LINE__," default_col=@default_col\n";
+    @tmp = sort @default_col;
+    @default_col = @tmp;
+    #print STDERR ":",__LINE__," default_col=@default_col\n";
 
     $prev="";
     #print STDERR "delta_cntl=$#delta_cntl\n";
-    foreach $idx (0..$#delta_cntl)
+    foreach $idx (0..$#delta_cntl)         # NOTE: if opt_ct not in opt_d array, delta_cnt in more than just deltas
     {   $default_col[$idx] =~ /^(\.*)/; $leader = $1;
 	$prev =~ s/[()]//g;
 	if ("$prev") { $leader =~ s/$prev//; } # subtract prev from leader
@@ -351,6 +363,7 @@ else
 	if ($delta_cntl[$delta_idx]{rel})
 	{   $col_cntl[$cntl_idx]{rel} = 1;
 	}
+	#if ("$opt_ct" ne ""){ print STDERR ":",__LINE__," idx=$idx checking $col_cntl[$cntl_idx]{re} eq $ct_re\n";}
 	if ("$opt_ct" ne "" && $col_cntl[$cntl_idx]{re} eq $ct_re)
 	{   $col_cntl[$cntl_idx]{ct} = 1;
 	}

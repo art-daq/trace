@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+ // rev="$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $";
 
 #include <stdio.h>		// printf
 #include "ex_traceln.h"
@@ -12,7 +12,7 @@
 //#define __FIL__ "/x/srcs/this/that/then"
 #define __FIL__ "ex_traceln.cc"
 //#define TRACE_NAME (strstr(&__FIL__[0], "/srcs/") ? strstr(&__FIL__[0], "/srcs/") + 6 : __FIL__)
-#define TRACE_NAME &std::string(__FIL__).substr(std::string(__FIL__).rfind('/',std::string(__FIL__).rfind('/')-1)+1)[0]
+//#define TRACE_NAME &std::string(__FIL__).substr(std::string(__FIL__).rfind('/',std::string(__FIL__).rfind('/')-1)+1)[0]
 
 #define Q(X) #X
 #define QUOTE(X) Q(X)

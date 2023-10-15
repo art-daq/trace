@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1603 $$Date: 2023-04-23 20:06:30 -0500 (Sun, 23 Apr 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -195,10 +195,10 @@ unsigned long *add_double_arg(unsigned long *args_ptr, unsigned long *end_ptr, d
 #define DFLT_FILE_WIDTH ((int)sizeof("file")-1)
 #ifdef __linux__
 //# define DFLT_SHOW         "HxNTPiCnLR"
-# define DFLT_SHOW         "%H%x%N %T %P %i %C %n %.3L %m"
+# define DFLT_SHOW         "%H%x%N %T %P %i %C %e %.3L %m"
 #else
 //# define DFLT_SHOW         "HxNTPinLR"
-# define DFLT_SHOW         "%H%x%N %T %P %i %n %.3L %m"
+# define DFLT_SHOW         "%H%x%N %T %P %i %e %.3L %m"
 #endif
 
 #define NUMTHREADS 4
@@ -997,7 +997,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 	opts |= (trace_strflg(ospec,'x')?filter_newline_:0);
 
 	if (argc == 0) {
-		traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. */
+		traceInit("_TRACE_",1); /* init traceControl_p, traceControl_rwp, etc. Use "_TRACE_" to assure non-write to corrupted TRACE_FILE where "TRACE" may not exist */
 		(void)tsnprintf(file_during_fun, sizeof(file_during_fun),getenv("TRACE_FILE")?getenv("TRACE_FILE"):traceFile);
 		trace_ptrs_list_start = (trace_ptrs_t*)malloc(sizeof(trace_ptrs_t)*1);
 		trace_ptrs_store( files_to_show++, trace_ptrs_list_start, file_during_fun, 0 );
@@ -1016,7 +1016,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			setenv("TRACE_FILE", file_during_fun, 1 );
 # if 1
 			traceControl_p = traceControl_p_static = NULL; // trick to allow traceInit to (re)mmap (another) file
-			traceInit(NULL,1); /* init traceControl_p, traceControl_rwp, etc. NOTE: multiple "register_atfork" will occur, but should be tolerated be this non-forking app */
+			traceInit("_TRACE_",1); /* init traceControl_p, traceControl_rwp, etc. NOTE: multiple "register_atfork" will occur, but should be tolerated be this non-forking app */
 # else
 			trace_mmap_file( file_during_fun,&memlen_out_unused,&traceControl_p, &traceControl_rwp // NOTE: traceNamLvls_p, traceEntries_p are iniitalized
 			                , 0,0,0,0, 1 );
@@ -1045,8 +1045,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 
 	if (trace_strflg(ospec,'n') || trace_strflg(ospec,'e'))
 		for (name_width=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
-			if (name_width < t_ptrs->rw_p->longest_name)
+			if (name_width < t_ptrs->rw_p->longest_name) {
 				name_width = t_ptrs->rw_p->longest_name;
+				if (name_width > t_ptrs->ro_p->nam_arr_sz) name_width = t_ptrs->ro_p->nam_arr_sz;
+			}
 	for (num_entries_total=0, t_ptrs=trace_ptrs_list_start; t_ptrs!=NULL; t_ptrs=t_ptrs->next )
 		num_entries_total += t_ptrs->ro_p->num_entries;
 	for (siz_msg_largest=0, num_params_largest=0, t_ptrs=trace_ptrs_list_start;
@@ -1542,9 +1544,9 @@ void traceInfo(int quiet)
 		       "buffer_offset     = 0x%lx\n"
 		       "memlen            = 0x%x          %s\n"
 		       "default TRACE_TIME_FMT=\"%s\"\n"
-		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent e:nam:ln# f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
+		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent n:nam f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
 		       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# [n]f:file F:func I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName O/o:color P:pid S:severity t:insert u:line\n"
-		       "Some SHOW/PRINT specifiers take optional modifiers. E.g. PRINT: %#n.mf#/src#\n"
+		       "Some SHOW/PRINT specifiers take optional modifiers. E.g. PRINT: %%#n.mf#/src#\n"
 		       , TRACE_REV
 		       , traceControl_p->version_string
 		       , outstr
@@ -2058,14 +2060,15 @@ extern  int        optind;         /* for getopt */
 	}
 	else if (strncmp(cmd,"info",4) == 0)
 	{
-		traceInit(NULL,1);
+		traceInit("_TRACE_",1); /* Use "_TRACE_" incase corrupted TRACE_FILE where "TRACE" may not exist and write undesired */
 		traceInfo(opt_quiet);
 	}
 	else if (strcmp(cmd,"tids") == 0)
 	{	uint32_t longest_name;
 		int      namLvlTblEnts_digits;
-		traceInit(NULL,1);
+		traceInit("_TRACE_",1);
 		longest_name = traceControl_rwp->longest_name;
+		if (longest_name > traceControl_p->nam_arr_sz) longest_name = traceControl_p->nam_arr_sz;
 		/*printf("longest_name=%d\n",longest_name);*/
 		namLvlTblEnts_digits=countDigits((int)traceControl_p->num_namLvlTblEnts-1);
 		if (do_heading) {

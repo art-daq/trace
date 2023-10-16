@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $"
+#define TRACE_REV "$Revision: 1608 $$Date: 2023-10-15 19:21:43 -0500 (Sun, 15 Oct 2023) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1604 $_$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $
+#define TRACE_REVx $_$Revision: 1608 $_$Date: 2023-10-15 19:21:43 -0500 (Sun, 15 Oct 2023) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -426,10 +426,10 @@ typedef struct timeval trace_tv_t;
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ  192
 #define TRACE_DFLT_MAX_PARAMS  10
-#define TRACE_DFLT_NAMTBL_ENTS 1022 /* this is for creating new trace_buffer file -- it currently matches the */
-                                    /* "trace DISABLED" number that fits into traceControl[1] (see below) */
-#define TRACE_DFLT_NAM_CHR_MAX 39   /* Really the hardcoded max name len. Name buffers should be +1 (for null */
-                                    /* terminator) - 40 was the value with 8K pages which gave 127 NAMTBL_ENTS */
+#define TRACE_DFLT_NAMTBL_ENTS 1022 /* this is for creating new trace_buffer file -- it currently <= the */
+                                    /* "trace DISABLED" number that fits into traceControl[1-2] (see below) */
+#define TRACE_DFLT_NAM_CHR_MAX 63   /* Really the hardcoded max name len. Name buffers should be +1 (for null */
+                                    /* terminator). See: env -i ${TRACE_BIN}/trace_cntl info | grep namLvlTbl_ents */
 	/* with "trace DISBALED". Search for trace_created_init(...) call in "DISABLE" case. */
 	/* Names can have this many characters (and always be null terminated - so names can be printed from nam tbl) */
 
@@ -847,7 +847,7 @@ struct trace_vtrace_cntl_s {
 /*#define TRACE_THREAD_LOCALX TRACE_THREAD_LOCAL    * use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
 #define TRACE_THREAD_LOCALX
 
-TRACE_DECL(struct traceControl_s, traceControl, [2], ); /* for when TRACE is disabled. NOTE: traceLvls_p should always point to traceControl_p+1 */
+TRACE_DECL(struct traceControl_s, traceControl, [3], ); /* for when TRACE is disabled. NOTE: traceLvls_p should always point to traceControl_p+1 */
 TRACE_DECL(TRACE_THREAD_LOCALX struct traceControl_s *, traceControl_p, , = NULL);
 TRACE_DECL(TRACE_THREAD_LOCALX struct traceControl_rw *, traceControl_rwp, , = NULL);
 TRACE_DECL(TRACE_THREAD_LOCALX struct traceLvls_s *, traceLvls_p, , = (struct traceLvls_s *)&traceControl[1]);

@@ -664,7 +664,7 @@ static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rd
 #	define TRACE_ENT_TV_FILLER      uint32_t x[2];
 #	define TRACE_TSC32(low)
 
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
 
 #	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
 #	if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
@@ -1929,7 +1929,7 @@ tod: 132348  133161
 	myEnt_p->pid= tracePid;
 	myEnt_p->tid= traceTid;
 #endif
-#ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 	if (traceControl_rwp->mode.bits.fast_do_getcpu)
 		myEnt_p->cpu= trace_getcpu(); /* for userspace, this costs alot :(*/
 	else
@@ -3493,7 +3493,7 @@ public:
 			if (do_m)
 #	if (__cplusplus >= 201103L)
 			{
-#		ifdef __arm__  /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
+#		if defined(__arm__) || defined(__aarch64__) /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
 				va_list ap;
 				unsigned long *ulp = (unsigned long*)&ap;
 				*ulp = (unsigned long)args;
@@ -3892,7 +3892,7 @@ public:
 	{
 		unsigned long nvp= (unsigned long)param_va_ptr;
 		long long unsigned int *vp= (long long unsigned int *)nvp;
-#	if defined(__arm__)
+#	if defined(__arm__) || defined(__aarch64__)
 		if (nvp & 7)
 			vp= (long long unsigned int*)((nvp + 7) & ~7); // alignment requirement
 #	endif
@@ -3920,7 +3920,7 @@ public:
 	{
 		unsigned long nvp= (unsigned long)param_va_ptr;
 		long long int *vp= (long long int *)nvp;
-#	if defined(__arm__)
+#	if defined(__arm__) || defined(__aarch64__)
 		if (nvp & 7)
 			vp= (long long int*)((nvp + 7) & ~7); // alignment requirement
 #	endif
@@ -3948,7 +3948,7 @@ public:
 	{
 		unsigned long nvp= (unsigned long)param_va_ptr;
 		double *vp= (double *)nvp;
-#	if defined(__arm__)
+#	if defined(__arm__) || defined(__aarch64__)
 		if (nvp & 7)
 			vp= (double*)((nvp + 7) & ~7); // alignment requirement
 #	endif
@@ -4006,7 +4006,7 @@ public:
 	{
 		unsigned long nvp= (unsigned long)param_va_ptr;
 		double *vp= (double *)nvp;  // note: floats get pushed onto stack as double
-#	if defined(__arm__)
+#	if defined(__arm__) || defined(__aarch64__)
 		if (nvp & 7)
 			vp= (double*)((nvp + 7) & ~7); // alignment requirement
 #	endif

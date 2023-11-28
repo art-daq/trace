@@ -588,7 +588,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				}
 				else if (params_sizes[uu].push == 12) // i.e. long double
 				{
-# if defined(__arm__) || defined(__powerpc__)
+# if defined(__arm__) || defined(__aarch64__) || defined(__powerpc__)
 					*(long double*)lcl_param_ptr = 0.0; // __arm__: error: unable to emulate 'XC'; 
 # else
 					typedef _Complex float __attribute__((mode(XC))) _float80;
@@ -616,7 +616,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				}
 				else if (params_sizes[uu].size == 16) // i.e. long double
 				{
-# if defined(__APPLE__) || defined(__arm__) || defined(__powerpc__)  // Basically mixed 32/64 env w/ long double is not supported on Mac/clang; shouldn't be a big deal
+#if defined(__APPLE__) || defined(__arm__) || defined(__aarch64__) || \
+	defined(__powerpc__)  // Basically mixed 32/64 env w/ long double is not supported on Mac/clang; shouldn't be a big deal
 					*(long double*)lcl_param_ptr = 0.0;
 # else
 					*(long double*)lcl_param_ptr = *(long double*)(__float128*)ent_param_ptr;
@@ -1515,7 +1516,7 @@ void traceInfo(int quiet)
 		       "create time       = %s\n"
 		       "trace_initialized = %d\n"
 		       "fast/mem __func__ = %-8d    1=force on, 0=TRACE_PRINT, -1=force off\n"
-#	ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 		       "fast/mem getcpu   = %d\n"
 #	endif
 		       "mode              = 0x%-8x  %s%s\n"
@@ -1552,7 +1553,7 @@ void traceInfo(int quiet)
 		       , outstr
 		       , traceControl_p->trace_initialized
 		       , traceControl_rwp->mode.bits.func
-#	ifdef __arm__
+#if defined(__arm__) || defined(__aarch64__)
 		       , traceControl_rwp->mode.bits.fast_do_getcpu
 #	endif
 		       , traceControl_rwp->mode.words.mode, traceControl_rwp->mode.bits.S?"Slow:ON, ":"Slow:off", traceControl_rwp->mode.bits.M?" Mem:ON":" Mem:off"

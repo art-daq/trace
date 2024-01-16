@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+ // rev="$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $";
 
 #include <stdio.h>		// printf
 #include "TRACE/traceln.h"
@@ -12,5 +12,8 @@
 class ExTraceLn
 {
 public:
-	void trc(void) { TLOG(2,HDRNAME) << "from header"; };
+	void trc(void) {
+		TLOG()          << "LOG()   from header";
+		TLOG(2,HDRNAME) << "TLOG(2) from header";
+	};
 };

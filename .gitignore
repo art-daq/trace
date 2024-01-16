@@ -10,3 +10,5 @@ CMakePresets.json
 ups/TRACE.table
 Linux64bit*
 module
+.vscode
+build

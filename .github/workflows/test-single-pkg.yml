@@ -6,9 +6,6 @@ on:
       build-type:
         description: 'build type, d or p'
         default: 'd'
-      quals:
-        description: 'qualifiers'
-        default: 's112:e20'
 
 jobs:
 
@@ -54,7 +51,7 @@ jobs:
 
         mkdir build_$REPO
         cd build_$REPO
-        source ../$REPO/ups/setup_for_development -${{ github.matrix.build-type }} ${{ github.matrix.qualifiers }} || true
+        source ../$REPO/ups/setup_for_development -${{ github.matrix.build-type }} || true
         buildtool -t 2>&1 | tee build.log
         EOT
         chmod +x build_pkg.sh

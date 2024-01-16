@@ -19,9 +19,11 @@ print log messages in the circular buffer. THere are several other features."""
     homepage = "https://github.com/art-daq/trace"
     git      = "https://github.com/art-daq/trace.git"
 
-    version('3.17.08') # commit hash can be added when the package is in another spack repo
+    version('develop') # A "versioned" version should have a commit hash. E.g. version('3.17.09', commit='d93a64f45e57bec87c0b890b9bbaaf94eb0b2e69')
 
     def setup_run_environment(self, env):
+        #env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking
+        env.prepend_path('PYTHONPATH', self.prefix.python)
         file_to_source = self.prefix.join("bin/trace_functions.sh")
         #print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
         print(f'source {file_to_source}')
@@ -33,6 +35,8 @@ print log messages in the circular buffer. THere are several other features."""
         #     print(msg.format(str(e)),file=sys.stderr)
     def setup_dependent_run_environment(self, env):     # for when the "loading" happens when trace is dependent
                                                         # (i.e via another package)
+        #env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking
+        env.prepend_path('PYTHONPATH', self.prefix.python)
         file_to_source = self.prefix.join("bin/trace_functions.sh")
         #print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
         print(f'source {file_to_source}')

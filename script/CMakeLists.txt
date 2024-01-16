@@ -8,6 +8,7 @@ if (${cetmodules_FOUND})
 		trace_feature_test.sh
 		trace_functions.sh
 		trace_color
+		trace-cmd-merge
   )
 
   if( DEFINED $ENV{DO_BIGEX_TEXT} )
@@ -23,7 +24,7 @@ if (${cetmodules_FOUND})
 
   endif()
 else (${cetmodules_FOUND})
-  install(PROGRAMS bitN_to_mask trace_envvars trace_delta DESTINATION bin)
+  install(PROGRAMS bitN_to_mask trace_envvars trace_delta trace-cmd-merge DESTINATION bin)
   install(PROGRAMS trace_functions.sh DESTINATION etc/profile.d)
   install(PROGRAMS trace_functions.sh DESTINATION bin)  # OK of DUNE patch (to this file) causes double bin install
 endif (${cetmodules_FOUND})

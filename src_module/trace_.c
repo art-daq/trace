@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1365 $$Date: 2020-09-16 00:00:31 -0500 (Wed, 16 Sep 2020) $";
+    rev="$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -456,6 +456,160 @@ static void _sys_exit(
 
 }   // _sys_exit
 
+static void _rcu_utilization(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 32, "cpu=%d rcu_utilization", raw_smp_processor_id());
+}
+
+static void _rcu_stall_warning(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 33, "cpu=%d rcu_stall_warning", raw_smp_processor_id());
+}
+
+static void _alarmtimer_fired(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 34, "cpu=%d alarmtimer_fired", raw_smp_processor_id());
+}
+
+static void _nmi_handler(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 35, "cpu=%d nmi_handler", raw_smp_processor_id());
+}
+
+static void _mm_lru_insertion(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 36, "cpu=%d mm_lru_insertion", raw_smp_processor_id());
+}
+
+static void _mm_lru_activate(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 37, "cpu=%d mm_lru_activate", raw_smp_processor_id());
+}
+
+static void _powernv_throttle(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 38, "cpu=%d powernv_throttle", raw_smp_processor_id());
+}
+
+static void _cpu_frequency(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 39, "cpu=%d cpu_frequency", raw_smp_processor_id());
+}
+
+static void _cpu_frequency_limits(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 40, "cpu=%d cpu_frequency_limits", raw_smp_processor_id());
+}
+
+static void _cpu_migrate_begin(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 41, "cpu=%d cpu_migrate_begin", raw_smp_processor_id());
+}
+
+static void _mm_migrate_pages(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 42, "cpu=%d mm_migrate_pages", raw_smp_processor_id());
+}
+
+static void _ipi_entry(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 43, "cpu=%d ipi_entry", raw_smp_processor_id());
+}
+
+static void _ipi_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 44, "cpu=%d ipi_exit", raw_smp_processor_id());
+}
+
+static void _timer_expire_entry(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 45, "cpu=%d timer_expire_entry", raw_smp_processor_id());
+}
+
+static void _timer_expire_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 46, "cpu=%d timer_expire_exit", raw_smp_processor_id());
+}
+
+static void _hrtimer_expire_entry(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 47, "cpu=%d hrtimer_expire_entry", raw_smp_processor_id());
+}
+
+static void _hrtimer_expire_exit(
+# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+			       void *ignore,
+# endif
+			       struct pt_regs *regs, long ret )
+{
+	TRACE( 48, "cpu=%d hrtimer_expire_exit", raw_smp_processor_id());
+}
+
+
 
 // ---------------------------------------------------------------------------
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
@@ -495,6 +649,74 @@ static void regfunc(struct tracepoint *tp, void *priv)
 	    *ret = tracepoint_probe_register( tp, _sys_exit, NULL );
 		printk("TRACE tracepoint_probe_register sys_exit returned %d\n", *ret );
 	}
+	else if (strcmp(tp->name,"rcu_utilization") == 0) {
+	    *ret = tracepoint_probe_register( tp, _rcu_utilization, NULL );
+		printk("TRACE tracepoint_probe_register rcu_utilization returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"rcu_stall_warning") == 0) {
+	    *ret = tracepoint_probe_register( tp, _rcu_stall_warning, NULL );
+		printk("TRACE tracepoint_probe_register rcu_stall_warning returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"alarmtimer_fired") == 0) {
+	    *ret = tracepoint_probe_register( tp, _alarmtimer_fired, NULL );
+		printk("TRACE tracepoint_probe_register alarmtimer_fired returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"nmi_handler") == 0) {
+	    *ret = tracepoint_probe_register( tp, _nmi_handler, NULL );
+		printk("TRACE tracepoint_probe_register nmi_handler returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"mm_lru_insertion") == 0) {
+	    *ret = tracepoint_probe_register( tp, _mm_lru_insertion, NULL );
+		printk("TRACE tracepoint_probe_register mm_lru_insertion returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"mm_lru_activate") == 0) {
+	    *ret = tracepoint_probe_register( tp, _mm_lru_activate, NULL );
+		printk("TRACE tracepoint_probe_register mm_lru_activate returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"powernv_throttle") == 0) {
+	    *ret = tracepoint_probe_register( tp, _powernv_throttle, NULL );
+		printk("TRACE tracepoint_probe_register powernv_throttle returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"cpu_frequency") == 0) {
+	    *ret = tracepoint_probe_register( tp, _cpu_frequency, NULL );
+		printk("TRACE tracepoint_probe_register cpu_frequency returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"cpu_frequency_limits") == 0) {
+	    *ret = tracepoint_probe_register( tp, _cpu_frequency_limits, NULL );
+		printk("TRACE tracepoint_probe_register cpu_frequency_limits returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"cpu_migrate_begin") == 0) {
+	    *ret = tracepoint_probe_register( tp, _cpu_migrate_begin, NULL );
+		printk("TRACE tracepoint_probe_register cpu_migrate_begin returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"mm_migrate_pages") == 0) {
+	    *ret = tracepoint_probe_register( tp, _mm_migrate_pages, NULL );
+		printk("TRACE tracepoint_probe_register mm_migrate_pages returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"ipi_entry") == 0) {
+	    *ret = tracepoint_probe_register( tp, _ipi_entry, NULL );
+		printk("TRACE tracepoint_probe_register ipi_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"ipi_exit") == 0) {
+	    *ret = tracepoint_probe_register( tp, _ipi_exit, NULL );
+		printk("TRACE tracepoint_probe_register ipi_exit returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"timer_expire_entry") == 0) {
+	    *ret = tracepoint_probe_register( tp, _timer_expire_entry, NULL );
+		printk("TRACE tracepoint_probe_register timer_expire_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"timer_expire_exit") == 0) {
+	    *ret = tracepoint_probe_register( tp, _timer_expire_exit, NULL );
+		printk("TRACE tracepoint_probe_register timer_expire_exit returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"hrtimer_expire_entry") == 0) {
+	    *ret = tracepoint_probe_register( tp, _hrtimer_expire_entry, NULL );
+		printk("TRACE tracepoint_probe_register hrtimer_expire_entry returned %d\n", *ret );
+	}
+	else if (strcmp(tp->name,"hrtimer_expire_exit") == 0) {
+	    *ret = tracepoint_probe_register( tp, _hrtimer_expire_exit, NULL );
+		printk("TRACE tracepoint_probe_register hrtimer_expire_exit returned %d\n", *ret );
+	}
 }
 # ifdef MODULE
 static void unregfunc(struct tracepoint *tp, void *ignore)
@@ -513,6 +735,40 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	    tracepoint_probe_unregister( tp, _sys_enter, NULL );
 	else if (strcmp(tp->name,"sys_exit") == 0)
 	    tracepoint_probe_unregister( tp, _sys_exit, NULL );
+	else if (strcmp(tp->name,"rcu_utilization") == 0)
+	    tracepoint_probe_unregister( tp, _rcu_utilization, NULL );
+	else if (strcmp(tp->name,"rcu_stall_warning") == 0)
+	    tracepoint_probe_unregister( tp, _rcu_stall_warning, NULL );
+	else if (strcmp(tp->name,"alarmtimer_fired") == 0)
+	    tracepoint_probe_unregister( tp, _alarmtimer_fired, NULL );
+	else if (strcmp(tp->name,"nmi_handler") == 0)
+	    tracepoint_probe_unregister( tp, _nmi_handler, NULL );
+	else if (strcmp(tp->name,"mm_lru_insertion") == 0)
+	    tracepoint_probe_unregister( tp, _mm_lru_insertion, NULL );
+	else if (strcmp(tp->name,"mm_lru_activate") == 0)
+	    tracepoint_probe_unregister( tp, _mm_lru_activate, NULL );
+	else if (strcmp(tp->name,"powernv_throttle") == 0)
+	    tracepoint_probe_unregister( tp, _powernv_throttle, NULL );
+	else if (strcmp(tp->name,"cpu_frequency") == 0)
+	    tracepoint_probe_unregister( tp, _cpu_frequency, NULL );
+	else if (strcmp(tp->name,"cpu_frequency_limits") == 0)
+	    tracepoint_probe_unregister( tp, _cpu_frequency_limits, NULL );
+	else if (strcmp(tp->name,"cpu_migrate_begin") == 0)
+	    tracepoint_probe_unregister( tp, _cpu_migrate_begin, NULL );
+	else if (strcmp(tp->name,"mm_migrate_pages") == 0)
+	    tracepoint_probe_unregister( tp, _mm_migrate_pages, NULL );
+	else if (strcmp(tp->name,"ipi_entry") == 0)
+	    tracepoint_probe_unregister( tp, _ipi_entry, NULL );
+	else if (strcmp(tp->name,"ipi_exit") == 0)
+	    tracepoint_probe_unregister( tp, _ipi_exit, NULL );
+	else if (strcmp(tp->name,"timer_expire_entry") == 0)
+	    tracepoint_probe_unregister( tp, _timer_expire_entry, NULL );
+	else if (strcmp(tp->name,"timer_expire_exit") == 0)
+	    tracepoint_probe_unregister( tp, _timer_expire_exit, NULL );
+	else if (strcmp(tp->name,"hrtimer_expire_entry") == 0)
+	    tracepoint_probe_unregister( tp, _hrtimer_expire_entry, NULL );
+	else if (strcmp(tp->name,"hrtimer_expire_exit") == 0)
+	    tracepoint_probe_unregister( tp, _hrtimer_expire_exit, NULL );
 }
 # endif
 #endif

@@ -3,7 +3,7 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1398 $$Date: 2020-10-01 22:44:25 -0500 (Thu, 01 Oct 2020) $";
+	rev="$Revision: 1592 $$Date: 2023-03-13 10:39:10 -0500 (Mon, 13 Mar 2023) $";
 	*/
 /*
     # Just:
@@ -21,7 +21,7 @@ static struct basic_c_s  before = {{0},{0}};
 #include "TRACE/trace.h"		/* TRACE */
 static struct basic_c_s  after = {{0},{0}};
 
-int main( )
+int main(void)
 {
 	unsigned ii;
 	unsigned char *byte_ptr;

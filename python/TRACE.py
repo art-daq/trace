@@ -20,6 +20,7 @@ tracelibpath='libtracelib.so' # LD_LIBRARY_PATH should be searched
 libtrace = ctypes.CDLL(tracelibpath); # what about ctypes.CDLL(ff,ctypes.RTLD_GLOBAL )
 ctrace0 = libtrace.ctrace0
 
+# Note: TRACE LEVELS mirror (mostly) linux kernel syslog levels. See syslog(2)
 TLVL_EMERG,TLVL_ALERT,TLVL_CRIT,TLVL_ERROR,TLVL_WARN,TLVL_NOTICE,TLVL_INFO,TLVL_LOG,TLVL_DBG,TLVL_DEBUG_1=0,1,2,3,4,5,6,7,8,9
 # aliases
 TLVL_FATAL=TLVL_EMERG
@@ -32,6 +33,7 @@ Instance=b''  # must be bytes
 # See https://docs.python.org/3/library/ctypes.html
 # C type "char*" goes to Python type "bytes"
 def TRACE( lvl, msg, name=None ):
+    "TRACE( lvl, msg, name=None )"
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -40,6 +42,7 @@ def TRACE( lvl, msg, name=None ):
     libtrace.TRACE( name, lvl, f.f_lineno, co.co_name.encode(), msg )
 
 def DEBUG( dbg_lvl, msg, name=None ):
+    "DEBUG( dbg_lvl, msg, name=None )"
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -48,6 +51,7 @@ def DEBUG( dbg_lvl, msg, name=None ):
     libtrace.TRACE( name,TLVL_DBG+dbg_lvl,f.f_lineno, co.co_name.encode(), msg )
 
 def ERROR( msg, name=None ):
+    "ERROR( msg, name=None )"
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -56,6 +60,7 @@ def ERROR( msg, name=None ):
     libtrace.TRACE( name,TLVL_ERROR,f.f_lineno, co.co_name.encode(), msg )
 
 def WARN( msg, name=None ):
+    "WARN( msg, name=None )"
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -64,6 +69,7 @@ def WARN( msg, name=None ):
     libtrace.TRACE( name,TLVL_WARN,f.f_lineno, co.co_name.encode(), msg )
 
 def INFO( msg, name=None ):
+    "INFO( msg, name=None )"
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -72,6 +78,7 @@ def INFO( msg, name=None ):
     libtrace.TRACE( name,TLVL_INFO,f.f_lineno, co.co_name.encode(), msg )
 
 def LOG( msg, name=None ):
+    "LOG( msg, name=None )"
     f=sys._getframe(1); co=f.f_code
     if name == None: name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     if type(name) != type(b''): name = name.encode()
@@ -80,6 +87,8 @@ def LOG( msg, name=None ):
     libtrace.TRACE( name,TLVL_LOG,f.f_lineno, co.co_name.encode(), msg )
 
 def CNTL( cmd, *args ):
+    """CNTL( cmd, *args )
+example: TRACE.CNTL("printfd",5)"""
     f=sys._getframe(1); co=f.f_code; name=co.co_filename; name=name[name.rfind("/")+1:].encode()
     nargs=len(args)
     if type(cmd) != type(b''): cmd = cmd.encode()

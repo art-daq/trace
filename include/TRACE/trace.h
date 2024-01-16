@@ -3502,8 +3502,8 @@ public:
 			if (do_m)
 #	if (__cplusplus >= 201103L)
 			{
-#		ifdef __arm__  /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
-				va_list ap;
+#		if defined(__arm__) || defined(__aarch64__) /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
+				va_list ap={}; // clear
 				unsigned long *ulp = (unsigned long*)&ap;
 				*ulp = (unsigned long)args;
 #		else

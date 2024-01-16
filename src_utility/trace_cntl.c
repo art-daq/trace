@@ -586,9 +586,9 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 					}
 					lcl_param_ptr += sizeof(long);
 				}
-				else if (params_sizes[uu].push == 12) // i.e. long double
+				else if (params_sizes[uu].push == 12) // i.e. i686 long double - arm and ppc do not have 12 byte (long) double
 				{
-# if defined(__arm__) || defined(__aarch64__) || defined(__powerpc__)
+# if defined(__arm__) || defined(__powerpc__) || defined(__aarch64__)
 					*(long double*)lcl_param_ptr = 0.0; // __arm__: error: unable to emulate 'XC'; 
 # else
 					typedef _Complex float __attribute__((mode(XC))) _float80;
@@ -619,6 +619,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 #if defined(__APPLE__) || defined(__arm__) || defined(__aarch64__) || \
 	defined(__powerpc__)  // Basically mixed 32/64 env w/ long double is not supported on Mac/clang; shouldn't be a big deal
 					*(long double*)lcl_param_ptr = 0.0;
+# elif defined(__aarch64__)
+					*(long double*)lcl_param_ptr = *(long double*)ent_param_ptr;
 # else
 					*(long double*)lcl_param_ptr = *(long double*)(__float128*)ent_param_ptr;
 # endif
@@ -1820,13 +1822,13 @@ extern  int        optind;         /* for getopt */
 		printf("\n");
 		TRACE( TLVL_WARNING, "hello %d\n\tthere\n", 1 );
 		TRACE( TLVL_INFO, "hello %d %d", 1, 2 );
-		TRACE( TLVL_DEBUG, "hello %d %d %d", 1,2,3 );
-		TRACE( TLVL_DEBUG, "hello %d %d %d %d %d %d %d %d %d %d %d"
+		TRACE( TLVL_DEBUG, "hello %d %d %d - make sure debug+1 is enabled", 1,2,3 );
+		TRACE( TLVL_DEBUG, "hello %d %d %d %d %d %d %d %d %d %d %d - should be 1 2 3 4 5 6 7 8 9 10 *d"
 			  , 1,2,3,4,5,6,7,8,9,10, 11 );	  /* extra param does not get saved in buffer */
-		TRACE( TLVL_DEBUG, "hello %f %f %f %f %f %f %f %f %f %f"
+		TRACE( TLVL_DEBUG, "hello %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f - should be 1.00 2.00 3.00 4.00 12.50 6.00 7.00 8.00 9.00 10.00"
 			  , 1.0,2.0,3.0,4.0, ff[5],6.0,7.0,8.0,9.0,10.0 );
-		TRACE( TLVL_DBG+1, "hello %d %d %f  %d %d %f	 %d %d there is tabs after 2nd float"
-			  ,	          1, 2,3.3,4, 5, 6.6, 7, 8 );
+		TRACE( TLVL_DBG+1, "hello %d %d %.1f %d %d %.1f		%d %d %.1f %.1f. Should be 1 2 3.3 4 5 6.6		7 8 9.0 10.0 there is tabs after 2nd float"
+			  ,	          1, 2,3.3,4, 5, 6.6, 7, 8, 9.0, 10.0 );
 		TRACE( TLVL_DBG+1, TSPRINTF("%s:%%d- int=%%d __FILE__=%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,__FILE__)
 		      , __LINE__, 5 );
 		TRACE( TLVL_DBG+1, TSPRINTF("%s%s%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,":%d- int=%d __FILE__=",__FILE__)

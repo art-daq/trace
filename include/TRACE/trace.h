@@ -664,7 +664,16 @@ static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rd
 #	define TRACE_ENT_TV_FILLER      uint32_t x[2];
 #	define TRACE_TSC32(low)
 
-#elif defined(__arm__) || defined(__aarch64__)
+#elif defined(__aarch64__)
+
+#	define TRACE_XTRA_PASSED , 0, .0, .0, .0, .0, .0, .0, .0, .0
+#	define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__)), double d0 __attribute__((__unused__)), double d1 __attribute__((__unused__)), double d2 __attribute__((__unused__)), double d3 __attribute__((__unused__)), double d4 __attribute__((__unused__)), double d5 __attribute__((__unused__)), double d6 __attribute__((__unused__)), double d7 __attribute__((__unused__))
+#	define TRACE_PRINTF_FMT_ARG_NUM 16 // clang-format off
+#	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
+#	define TRACE_ENT_TV_FILLER
+#	define TRACE_TSC32(low)
+
+#elif defined(__arm__)
 
 #	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
 #	if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
@@ -3494,7 +3503,7 @@ public:
 #	if (__cplusplus >= 201103L)
 			{
 #		if defined(__arm__) || defined(__aarch64__) /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
-				va_list ap;
+				va_list ap={}; // clear
 				unsigned long *ulp = (unsigned long*)&ap;
 				*ulp = (unsigned long)args;
 #		else

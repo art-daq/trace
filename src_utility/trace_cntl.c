@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1609 $$Date: 2024-01-16 16:01:45 -0600 (Tue, 16 Jan 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.

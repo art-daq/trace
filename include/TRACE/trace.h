@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1609 $$Date: 2024-01-16 16:01:45 -0600 (Tue, 16 Jan 2024) $"
+#define TRACE_REV "$Revision: 1610 $$Date: 2024-01-17 13:26:56 -0600 (Wed, 17 Jan 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1609 $_$Date: 2024-01-16 16:01:45 -0600 (Tue, 16 Jan 2024) $
+#define TRACE_REVx $_$Revision: 1610 $_$Date: 2024-01-17 13:26:56 -0600 (Wed, 17 Jan 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1073,24 +1073,25 @@ SUPPRESS_NOT_USED_WARN
 static const char *trace_name(const char *_tname_, const char *file, char *buf, size_t buflen)
 {
 	const char *ret;
+	const char *name;
+	size_t oo= 0;
 
 #if !defined(__KERNEL__) && defined(TRACE_DEBUG_INIT)
 	fprintf(stderr,"file=%s\n",file);
 #endif
+	ret= buf;
 	if ((_tname_) && (*_tname_))
-		ret= _tname_; /* we should be able to do better than "" */
+		name= _tname_; /* we should be able to do better than "" */
 	else {
-		size_t oo= 0;
-		const char *name;
-		ret= buf;
 #ifndef __KERNEL__
 		name= getenv("TRACE_NAME");
 		if (!(name && *name))
 #endif
 			name= TRACE_DFLT_NAME;
+	} /* '}' here (instead of before return) allows TRACE_NAME (usually passed in via _tname_, which would likely be set in the BASE_FILE, to have '%' processing would env.var. if TRACE_NAME not set */
 
 #define TRACE_SNPRINTED(rr, ss)  ((((size_t)(rr) + 1) < (ss)) ? (size_t)(rr) : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
-		while (oo < (buflen - 1) && *name) {
+	while (oo < (buflen - 1) && *name && (*name!=' ')) {
 			if (*name != '%') {
 				buf[oo++]= *name++;
 			} else {
@@ -1153,9 +1154,8 @@ static const char *trace_name(const char *_tname_, const char *file, char *buf, 
 					buf[oo++]= *name++;
 				}
 			}
-		}
-		buf[oo]= '\0';
 	}
+		buf[oo]= '\0';
 	return ret;
 } /* trace_name */
 
@@ -2134,7 +2134,7 @@ static uint32_t trace_name2TID(const char *nn)
 	   name was valid, giving the caller the benefit of the doubt, for
 	   efficiency sake, but here we will make sure the name is valid */
 	for (ii= 0; name[ii] != '\0' && ii < (traceControl_p->nam_arr_sz - 1); ++ii) {
-		if (isgraph(name[ii]))
+		if (isgraph(name[ii])) /* checks for any printable character except space. */
 			valid_name[ii]= name[ii];
 		else {
 			valid_name[ii]= '_';
@@ -2636,11 +2636,10 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 		}
 #endif
 	} else {
+		TRACE_EPRN("TRACE: invalid control string %s nargs=%d\n", cmd, nargs);
 		ret= -1;
 	}
 	va_end(ap);
-	if (ret == -1)
-		TRACE_EPRN("TRACE: invalid control string %s nargs=%d\n", cmd, nargs);
 	return (ret);
 } /* traceCntl */
 
@@ -2953,7 +2952,7 @@ static int traceInit(const char *_name, int allow_ro)
 	uint32_t msgmax_, argsmax_, numents_, namtblents_, nammax_;
 	const char *cp;
 #	ifndef __KERNEL__
-	uint64_t trace_lvl_off;
+	uint64_t trace_lvl_off, lvlM_lcl=0;
 	char *lvlM_endptr;
 	int sts;
 	int activate= 0;
@@ -3010,7 +3009,7 @@ static int traceInit(const char *_name, int allow_ro)
 		((cp= getenv("TRACE_NUMENTS")) && (numents_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (numents_= TRACE_DFLT_NUM_ENTRIES);
 		((cp= getenv("TRACE_NAMTBLENTS")) && (namtblents_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (namtblents_= TRACE_DFLT_NAMTBL_ENTS);
 		((cp= getenv("TRACE_NAMEMAX")) && (nammax_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (nammax_= TRACE_DFLT_NAM_CHR_MAX + 1);
-		((cp= getenv("TRACE_LVLM")) && (trace_lvlM= strtoull(cp, &lvlM_endptr, 0)) && (activate= 1)); /* activate if non-zero */
+		((cp= getenv("TRACE_LVLM")) && (lvlM_lcl= strtoull(cp, &lvlM_endptr, 0)) && (activate= 1)); /* activate if non-zero */
 
 		/* TRACE_LVLSTRS, TRACE_LVLS and TRACE_PRINT_FD can be used when active or inactive.
 		   See also processing in bitN_to_mask script. */
@@ -3034,10 +3033,10 @@ static int traceInit(const char *_name, int allow_ro)
 			cp= strpbrk(trace_lvlstrs[0][lvlidx - 1], "0123456789");
 			if (cp && sscanf(cp, "%u", &dbgidx)) {
 				char tmp[16];
-				int ii= (int)(cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */
-				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], ii);       /* reset to the beginning of the "template" */
+				long ii= (cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */
+				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], (size_t)ii);       /* reset to the beginning of the "template" */
 				for (; lvlidx < 64; ++lvlidx) {
-					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%.*s%02u", ii, tmp, ++dbgidx);
+					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%.*s%02u", (int)ii, tmp, ++dbgidx);
 					//trace_lvlstrs[0][lvlidx][sizeof(trace_lvlstrs[0][0])-1] = '\0'; SHOULD NOT be needed
 					if ((ll= strlen(trace_lvlstrs[0][lvlidx])) > tmp_lvlwidth) tmp_lvlwidth= (unsigned)ll;
 				}
@@ -3188,14 +3187,16 @@ static int traceInit(const char *_name, int allow_ro)
 			} else
 				TRACE_CNTL("lvlmskSg", trace_lvlS);
 		}
-		if (trace_lvlM) /* env "activate" is above -- Note "g" in lvl*Mg -- TRACE_NAME not needed */
+		if (lvlM_lcl) /* env "activate" is above -- Note "g" in lvl*Mg -- TRACE_NAME not needed */
 		{               /* all current and future (until cmdline tonMg/toffMg) (and new from this process regardless of cmd line tonSg or toffSg) */
 			if (*lvlM_endptr == ',') { /* NOTE: lvlM_endptr is only set (above) when traceControl_p_was_NULL */
 				trace_lvl_off= strtoull(lvlM_endptr + 1, NULL, 0);
 				TRACE_CNTL("lvlclrMg", trace_lvl_off);
-				TRACE_CNTL("lvlsetMg", trace_lvlM);
-			} else
-				TRACE_CNTL("lvlmskMg", trace_lvlM);
+				TRACE_CNTL("lvlsetMg", lvlM_lcl);
+			} else {
+				TRACE_CNTL("lvlmskMg", lvlM_lcl);
+				trace_lvlM = lvlM_lcl; /* save this "msk" value*/
+			}
 		}
 		trace_namLvlSet(); /* more env vars checked - I want this to be done once,
 							  but after TRACE_LVLS and/or TRACE_LVLM processing.

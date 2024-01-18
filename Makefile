@@ -159,7 +159,7 @@ script: OUT_check
 ${OUT}/ups/TRACE.table: ${CURDIR}/ups/TRACE.table.in
 	test -d "${OUT}/ups" || mkdir "${OUT}/ups"
 	@${FLAVOR_SUBDIR};\
-	ups_prod_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION */v/;s/).*//;s/\./_/g;p}' CMakeLists.txt`;\
+	ups_prod_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION */v/;s/).*//;s/\./_/g;p;}' CMakeLists.txt`;\
 	sed -e "s/@UPS_PRODUCT_NAME@/TRACE/;\
 	s/@UPS_PROUDCT_VERSION@/$$ups_prod_ver/;\
 	s/@UPS_QUALIFIER_STRING@//;\

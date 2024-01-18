@@ -55,7 +55,7 @@ MODULE_PARM_DESC( trace_lvlS, "default printk lvl" );
 module_param(     trace_lvlM, ullong, 0644 ); // defined in trace.h
 MODULE_PARM_DESC( trace_lvlM, "default memory lvl" );
 #  endif
-#else
+#else      /* MODULE */
 # define KSTRVAL( str, parm, xx,fmt )				\
 	unsigned long val;\
 	if (kstrtoul(str, 0, &val)) {\
@@ -163,7 +163,7 @@ static struct file_operations trace_proc_control_file_ops = {
     .write=   trace_proc_control_write,	   /* write        */
 	.read=    trace_proc_control_read,	   /* read         */
 };
-#endif	/* MODULE */
+#endif	/* else MODULE */
 
 static int trace_proc_buffer_mmap(  struct file              *file
 				  , struct vm_area_struct    *vma )
@@ -253,7 +253,7 @@ static struct file_operations trace_proc_buffer_file_ops = {
 #  else
     .unlocked_ioctl=NULL,         	/* ioctl        */
 #  endif
-# endif
+# endif   /* 0 */
     .mmap=    trace_proc_buffer_mmap,   /* mmap         */
     .open=    NULL/*trace_proc_buffer_open generic_file_open*/,   /* open     */
     .flush=   NULL,                       	/* flush        */
@@ -264,7 +264,7 @@ static struct file_operations trace_proc_buffer_file_ops = {
                            	/* revalidate   */
                            	/* lock         */
 };
-#endif
+#endif    /* else LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0) */
 
 
 static struct proc_dir_entry *trace_proc_root=NULL;
@@ -321,7 +321,7 @@ int  trace_3_proc_add( int len )
         return (1);
     }
 #  endif
-# endif
+# endif      /* else LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0) */
     return (0);
 }   // trace_proc_add
 
@@ -336,7 +336,7 @@ static void trace_proc_remove( void )
 #  endif
     remove_proc_entry( "trace",   0 );
 }   // trace_proc_remove
-# endif
+# endif   /* MODULE */
 
 // =========================================================================
 
@@ -456,158 +456,112 @@ static void _sys_exit(
 
 }   // _sys_exit
 
-static void _rcu_utilization(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+
+static void _rcu_utilization(  void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 32, "cpu=%d rcu_utilization", raw_smp_processor_id());
 }
 
-static void _rcu_stall_warning(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _rcu_stall_warning(void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 33, "cpu=%d rcu_stall_warning", raw_smp_processor_id());
 }
 
-static void _alarmtimer_fired(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _alarmtimer_fired( void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 34, "cpu=%d alarmtimer_fired", raw_smp_processor_id());
 }
 
-static void _nmi_handler(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _nmi_handler(      void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 35, "cpu=%d nmi_handler", raw_smp_processor_id());
 }
 
-static void _mm_lru_insertion(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _mm_lru_insertion( void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 36, "cpu=%d mm_lru_insertion", raw_smp_processor_id());
 }
 
-static void _mm_lru_activate(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _mm_lru_activate(  void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 37, "cpu=%d mm_lru_activate", raw_smp_processor_id());
 }
 
-static void _powernv_throttle(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _powernv_throttle( void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 38, "cpu=%d powernv_throttle", raw_smp_processor_id());
 }
 
-static void _cpu_frequency(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _cpu_frequency(    void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 39, "cpu=%d cpu_frequency", raw_smp_processor_id());
 }
 
-static void _cpu_frequency_limits(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
-			       struct pt_regs *regs, long ret )
+static void _cpu_frequency_limits(void *ignore,
+			          struct pt_regs *regs, long ret )
 {
 	TRACE( 40, "cpu=%d cpu_frequency_limits", raw_smp_processor_id());
 }
 
-static void _cpu_migrate_begin(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _cpu_migrate_begin(void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 41, "cpu=%d cpu_migrate_begin", raw_smp_processor_id());
 }
 
-static void _mm_migrate_pages(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _mm_migrate_pages( void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 42, "cpu=%d mm_migrate_pages", raw_smp_processor_id());
 }
 
-static void _ipi_entry(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _ipi_entry(        void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 43, "cpu=%d ipi_entry", raw_smp_processor_id());
 }
 
-static void _ipi_exit(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _ipi_exit(         void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 44, "cpu=%d ipi_exit", raw_smp_processor_id());
 }
 
-static void _timer_expire_entry(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
-			       struct pt_regs *regs, long ret )
+static void _timer_expire_entry(void *ignore,
+			        struct pt_regs *regs, long ret )
 {
 	TRACE( 45, "cpu=%d timer_expire_entry", raw_smp_processor_id());
 }
 
-static void _timer_expire_exit(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
+static void _timer_expire_exit(void *ignore,
 			       struct pt_regs *regs, long ret )
 {
 	TRACE( 46, "cpu=%d timer_expire_exit", raw_smp_processor_id());
 }
 
-static void _hrtimer_expire_entry(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
-			       struct pt_regs *regs, long ret )
+static void _hrtimer_expire_entry(void *ignore,
+			          struct pt_regs *regs, long ret )
 {
 	TRACE( 47, "cpu=%d hrtimer_expire_entry", raw_smp_processor_id());
 }
 
-static void _hrtimer_expire_exit(
-# if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-			       void *ignore,
-# endif
-			       struct pt_regs *regs, long ret )
+static void _hrtimer_expire_exit(void *ignore,
+			         struct pt_regs *regs, long ret )
 {
 	TRACE( 48, "cpu=%d hrtimer_expire_exit", raw_smp_processor_id());
 }
+
+#endif     /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0) */
 
 
 
@@ -770,8 +724,8 @@ static void unregfunc(struct tracepoint *tp, void *ignore)
 	else if (strcmp(tp->name,"hrtimer_expire_exit") == 0)
 	    tracepoint_probe_unregister( tp, _hrtimer_expire_exit, NULL );
 }
-# endif
-#endif
+# endif     /* MODULE */
+#endif      /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0) */
 
 //static
 int  trace_3_sched_switch_hook_add( void )

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $"
+#define TRACE_REV "$Revision: 1610 $$Date: 2024-01-17 13:26:56 -0600 (Wed, 17 Jan 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1604 $_$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $
+#define TRACE_REVx $_$Revision: 1610 $_$Date: 2024-01-17 13:26:56 -0600 (Wed, 17 Jan 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -426,10 +426,10 @@ typedef struct timeval trace_tv_t;
 /* 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320 */
 #define TRACE_DFLT_MAX_MSG_SZ  192
 #define TRACE_DFLT_MAX_PARAMS  10
-#define TRACE_DFLT_NAMTBL_ENTS 1022 /* this is for creating new trace_buffer file -- it currently matches the */
-                                    /* "trace DISABLED" number that fits into traceControl[1] (see below) */
-#define TRACE_DFLT_NAM_CHR_MAX 39   /* Really the hardcoded max name len. Name buffers should be +1 (for null */
-                                    /* terminator) - 40 was the value with 8K pages which gave 127 NAMTBL_ENTS */
+#define TRACE_DFLT_NAMTBL_ENTS 1022 /* this is for creating new trace_buffer file -- it currently <= the */
+                                    /* "trace DISABLED" number that fits into traceControl[1-2] (see below) */
+#define TRACE_DFLT_NAM_CHR_MAX 63   /* Really the hardcoded max name len. Name buffers should be +1 (for null */
+                                    /* terminator). See: env -i ${TRACE_BIN}/trace_cntl info | grep namLvlTbl_ents */
 	/* with "trace DISBALED". Search for trace_created_init(...) call in "DISABLE" case. */
 	/* Names can have this many characters (and always be null terminated - so names can be printed from nam tbl) */
 
@@ -664,6 +664,15 @@ static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rd
 #	define TRACE_ENT_TV_FILLER      uint32_t x[2];
 #	define TRACE_TSC32(low)
 
+#elif defined(__aarch64__)
+
+#	define TRACE_XTRA_PASSED , 0, .0, .0, .0, .0, .0, .0, .0, .0
+#	define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__)), double d0 __attribute__((__unused__)), double d1 __attribute__((__unused__)), double d2 __attribute__((__unused__)), double d3 __attribute__((__unused__)), double d4 __attribute__((__unused__)), double d5 __attribute__((__unused__)), double d6 __attribute__((__unused__)), double d7 __attribute__((__unused__))
+#	define TRACE_PRINTF_FMT_ARG_NUM 16 // clang-format off
+#	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
+#	define TRACE_ENT_TV_FILLER
+#	define TRACE_TSC32(low)
+
 #elif defined(__arm__)
 
 #	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
@@ -847,7 +856,7 @@ struct trace_vtrace_cntl_s {
 /*#define TRACE_THREAD_LOCALX TRACE_THREAD_LOCAL    * use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
 #define TRACE_THREAD_LOCALX
 
-TRACE_DECL(struct traceControl_s, traceControl, [2], ); /* for when TRACE is disabled. NOTE: traceLvls_p should always point to traceControl_p+1 */
+TRACE_DECL(struct traceControl_s, traceControl, [3], ); /* for when TRACE is disabled. NOTE: traceLvls_p should always point to traceControl_p+1 */
 TRACE_DECL(TRACE_THREAD_LOCALX struct traceControl_s *, traceControl_p, , = NULL);
 TRACE_DECL(TRACE_THREAD_LOCALX struct traceControl_rw *, traceControl_rwp, , = NULL);
 TRACE_DECL(TRACE_THREAD_LOCALX struct traceLvls_s *, traceLvls_p, , = (struct traceLvls_s *)&traceControl[1]);
@@ -1064,24 +1073,25 @@ SUPPRESS_NOT_USED_WARN
 static const char *trace_name(const char *_tname_, const char *file, char *buf, size_t buflen)
 {
 	const char *ret;
+	const char *name;
+	size_t oo= 0;
 
 #if !defined(__KERNEL__) && defined(TRACE_DEBUG_INIT)
 	fprintf(stderr,"file=%s\n",file);
 #endif
+	ret= buf;
 	if ((_tname_) && (*_tname_))
-		ret= _tname_; /* we should be able to do better than "" */
+		name= _tname_; /* we should be able to do better than "" */
 	else {
-		size_t oo= 0;
-		const char *name;
-		ret= buf;
 #ifndef __KERNEL__
 		name= getenv("TRACE_NAME");
 		if (!(name && *name))
 #endif
 			name= TRACE_DFLT_NAME;
+	} /* '}' here (instead of before return) allows TRACE_NAME (usually passed in via _tname_, which would likely be set in the BASE_FILE, to have '%' processing would env.var. if TRACE_NAME not set */
 
 #define TRACE_SNPRINTED(rr, ss)  ((((size_t)(rr) + 1) < (ss)) ? (size_t)(rr) : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
-		while (oo < (buflen - 1) && *name) {
+	while (oo < (buflen - 1) && *name && (*name!=' ')) {
 			if (*name != '%') {
 				buf[oo++]= *name++;
 			} else {
@@ -1144,9 +1154,8 @@ static const char *trace_name(const char *_tname_, const char *file, char *buf, 
 					buf[oo++]= *name++;
 				}
 			}
-		}
-		buf[oo]= '\0';
 	}
+		buf[oo]= '\0';
 	return ret;
 } /* trace_name */
 
@@ -2125,7 +2134,7 @@ static uint32_t trace_name2TID(const char *nn)
 	   name was valid, giving the caller the benefit of the doubt, for
 	   efficiency sake, but here we will make sure the name is valid */
 	for (ii= 0; name[ii] != '\0' && ii < (traceControl_p->nam_arr_sz - 1); ++ii) {
-		if (isgraph(name[ii]))
+		if (isgraph(name[ii])) /* checks for any printable character except space. */
 			valid_name[ii]= name[ii];
 		else {
 			valid_name[ii]= '_';
@@ -2627,11 +2636,10 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 		}
 #endif
 	} else {
+		TRACE_EPRN("TRACE: invalid control string %s nargs=%d\n", cmd, nargs);
 		ret= -1;
 	}
 	va_end(ap);
-	if (ret == -1)
-		TRACE_EPRN("TRACE: invalid control string %s nargs=%d\n", cmd, nargs);
 	return (ret);
 } /* traceCntl */
 
@@ -2944,7 +2952,7 @@ static int traceInit(const char *_name, int allow_ro)
 	uint32_t msgmax_, argsmax_, numents_, namtblents_, nammax_;
 	const char *cp;
 #	ifndef __KERNEL__
-	uint64_t trace_lvl_off;
+	uint64_t trace_lvl_off, lvlM_lcl=0;
 	char *lvlM_endptr;
 	int sts;
 	int activate= 0;
@@ -3001,7 +3009,7 @@ static int traceInit(const char *_name, int allow_ro)
 		((cp= getenv("TRACE_NUMENTS")) && (numents_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (numents_= TRACE_DFLT_NUM_ENTRIES);
 		((cp= getenv("TRACE_NAMTBLENTS")) && (namtblents_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (namtblents_= TRACE_DFLT_NAMTBL_ENTS);
 		((cp= getenv("TRACE_NAMEMAX")) && (nammax_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (nammax_= TRACE_DFLT_NAM_CHR_MAX + 1);
-		((cp= getenv("TRACE_LVLM")) && (trace_lvlM= strtoull(cp, &lvlM_endptr, 0)) && (activate= 1)); /* activate if non-zero */
+		((cp= getenv("TRACE_LVLM")) && (lvlM_lcl= strtoull(cp, &lvlM_endptr, 0)) && (activate= 1)); /* activate if non-zero */
 
 		/* TRACE_LVLSTRS, TRACE_LVLS and TRACE_PRINT_FD can be used when active or inactive.
 		   See also processing in bitN_to_mask script. */
@@ -3025,10 +3033,10 @@ static int traceInit(const char *_name, int allow_ro)
 			cp= strpbrk(trace_lvlstrs[0][lvlidx - 1], "0123456789");
 			if (cp && sscanf(cp, "%u", &dbgidx)) {
 				char tmp[16];
-				int ii= (int)(cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */
-				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], ii);       /* reset to the beginning of the "template" */
+				long ii= (cp - trace_lvlstrs[0][lvlidx - 1]); /* length of the non-numeric part (i.e. "template") */
+				strncpy(tmp, trace_lvlstrs[0][lvlidx - 1], (size_t)ii);       /* reset to the beginning of the "template" */
 				for (; lvlidx < 64; ++lvlidx) {
-					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%.*s%02u", ii, tmp, ++dbgidx);
+					snprintf(trace_lvlstrs[0][lvlidx], sizeof(trace_lvlstrs[0][0]), "%.*s%02u", (int)ii, tmp, ++dbgidx);
 					//trace_lvlstrs[0][lvlidx][sizeof(trace_lvlstrs[0][0])-1] = '\0'; SHOULD NOT be needed
 					if ((ll= strlen(trace_lvlstrs[0][lvlidx])) > tmp_lvlwidth) tmp_lvlwidth= (unsigned)ll;
 				}
@@ -3179,14 +3187,16 @@ static int traceInit(const char *_name, int allow_ro)
 			} else
 				TRACE_CNTL("lvlmskSg", trace_lvlS);
 		}
-		if (trace_lvlM) /* env "activate" is above -- Note "g" in lvl*Mg -- TRACE_NAME not needed */
+		if (lvlM_lcl) /* env "activate" is above -- Note "g" in lvl*Mg -- TRACE_NAME not needed */
 		{               /* all current and future (until cmdline tonMg/toffMg) (and new from this process regardless of cmd line tonSg or toffSg) */
 			if (*lvlM_endptr == ',') { /* NOTE: lvlM_endptr is only set (above) when traceControl_p_was_NULL */
 				trace_lvl_off= strtoull(lvlM_endptr + 1, NULL, 0);
 				TRACE_CNTL("lvlclrMg", trace_lvl_off);
-				TRACE_CNTL("lvlsetMg", trace_lvlM);
-			} else
-				TRACE_CNTL("lvlmskMg", trace_lvlM);
+				TRACE_CNTL("lvlsetMg", lvlM_lcl);
+			} else {
+				TRACE_CNTL("lvlmskMg", lvlM_lcl);
+				trace_lvlM = lvlM_lcl; /* save this "msk" value*/
+			}
 		}
 		trace_namLvlSet(); /* more env vars checked - I want this to be done once,
 							  but after TRACE_LVLS and/or TRACE_LVLM processing.
@@ -3493,8 +3503,8 @@ public:
 			if (do_m)
 #	if (__cplusplus >= 201103L)
 			{
-#		ifdef __arm__  /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
-				va_list ap;
+#		if defined(__arm__) || defined(__aarch64__) /* address an alleged compiler bug (dealing with initializer) with the gnu arm compiler circa Feb, 2021 */
+				va_list ap={}; // clear
 				unsigned long *ulp = (unsigned long*)&ap;
 				*ulp = (unsigned long)args;
 #		else

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1604 $$Date: 2023-10-14 22:51:04 -0500 (Sat, 14 Oct 2023) $"
+#define TRACE_CNTL_REV "$Revision: 1611 $$Date: 2024-01-17 15:14:16 -0600 (Wed, 17 Jan 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -107,6 +107,7 @@ tests:  (use %s show after test)\n\
  test1 [-lloops]  a single TRACE lvl 2 [or more if loops != 0]\n\
  test-ro        test first page of mmap read-only (for kernel module)\n\
  test-compare [-lloops] [test [modes [outfile]]]  compare TRACE fmt+args vs. format+args converted (via sprintf). dflt loops=%d\n\
+                NOTE: \"loops\" gets multipled: \"disabled\" mode - 10x; \"mem only\" - 5x\n\
                 for ff in '' ' %%F:';do TRACE_PRINT=\"%%T %%n %%*L$ff %%M\" tcntl test-compare 1 2;done\n\
                 tcntl test-compare 8 0xa t.t; tshow|tdelta -stats|tail -5; cat t.t|tdelta -d 1 -i -stats|tail -5\n\
  test-threads [-t] [-x<thread_opts>] [-lloops] [-bburst] [-ddly_ms] [num_threads]  Tests threading. loops\n\
@@ -207,7 +208,7 @@ static int trace_thread_option=0;
 typedef struct {
 	unsigned tidx;
 	unsigned loops;
-	unsigned dly_ms;
+	float    dly_ms;
 	unsigned burst;
 } args_t;
 
@@ -215,7 +216,7 @@ void* thread_func(void *arg)
 {
 	args_t *argsp=(args_t*)arg;
 	unsigned tidx  =argsp->tidx;
-	unsigned dly_ms=argsp->dly_ms;
+	float    dly_ms=argsp->dly_ms;
 	unsigned burst =argsp->burst;
 	unsigned loops =argsp->loops;
 	unsigned lp;
@@ -586,9 +587,9 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 					}
 					lcl_param_ptr += sizeof(long);
 				}
-				else if (params_sizes[uu].push == 12) // i.e. long double
+				else if (params_sizes[uu].push == 12) // i.e. i686 long double - arm and ppc do not have 12 byte (long) double
 				{
-# if defined(__arm__) || defined(__powerpc__)
+# if defined(__arm__) || defined(__powerpc__) || defined(__aarch64__)
 					*(long double*)lcl_param_ptr = 0.0; // __arm__: error: unable to emulate 'XC'; 
 # else
 					typedef _Complex float __attribute__((mode(XC))) _float80;
@@ -618,6 +619,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				{
 # if defined(__APPLE__) || defined(__arm__) || defined(__powerpc__)  // Basically mixed 32/64 env w/ long double is not supported on Mac/clang; shouldn't be a big deal
 					*(long double*)lcl_param_ptr = 0.0;
+# elif defined(__aarch64__)
+					*(long double*)lcl_param_ptr = *(long double*)ent_param_ptr;
 # else
 					*(long double*)lcl_param_ptr = *(long double*)(__float128*)ent_param_ptr;
 # endif
@@ -1625,7 +1628,7 @@ extern  int        optind;         /* for getopt */
 	unsigned    uu=0;
 	char        test_name[0x100];
 	int         opt_loops=-1, opt_timing_stats=0, opt_help=0;
-	unsigned    opt_dly_ms=0;
+	float       opt_dly_ms=0;
 	unsigned    opt_burst=1;
 	int         opt_quiet=0;
 	int         opt_all=0;
@@ -1642,7 +1645,7 @@ extern  int        optind;         /* for getopt */
 		case 'a': opt_all=1;                                       break;
 		case 'b': opt_burst=(unsigned)strtoul(optarg,NULL,0);      break;
 		case 'c': opt_count=(int)strtoul(optarg,NULL,0);           break;
-		case 'd': opt_dly_ms=(unsigned)strtoul(optarg,NULL,0);     break;
+		case 'd': opt_dly_ms=strtof(optarg,NULL);                  break;
         case 'F': show_opts|=forward_;                             break;
 		case 'f': setenv("TRACE_FILE",optarg,1);                   break;
 		case 'H': do_heading=0;                                    break;
@@ -1693,11 +1696,11 @@ extern  int        optind;         /* for getopt */
 		sprintf( addr_str, "%p", vp );
 		sprintf( msg_str,"Hi %%d. \"c 2.5 -5 5000000000 0x87654321 2.6 %p\" ", vp );
 		strcat( msg_str, "should be repeated here: %c %.1f %hd %lld %p %.1Lf %s" );
-		tdelta_us = opt_dly_ms * 1000;
+		tdelta_us = (uint32_t)(opt_dly_ms * 1000);
 		for (trace_cnt=1; trace_cnt<=loops; ++trace_cnt)
 		{	TRACE( TLVL_INFO, msg_str, trace_cnt
 				  , 'c',2.5,(short)-5,(long long)5000000000LL,(void*)0x87654321,(long double)2.6, addr_str );
-			if (opt_dly_ms) usleep(opt_dly_ms*1000);
+			if (tdelta_us) usleep(tdelta_us);
 		}
 	}
 	else if (strcmp(cmd,"file") == 0) {
@@ -1819,13 +1822,13 @@ extern  int        optind;         /* for getopt */
 		printf("\n");
 		TRACE( TLVL_WARNING, "hello %d\n\tthere\n", 1 );
 		TRACE( TLVL_INFO, "hello %d %d", 1, 2 );
-		TRACE( TLVL_DEBUG, "hello %d %d %d", 1,2,3 );
-		TRACE( TLVL_DEBUG, "hello %d %d %d %d %d %d %d %d %d %d %d"
+		TRACE( TLVL_DEBUG, "hello %d %d %d - make sure debug+1 is enabled", 1,2,3 );
+		TRACE( TLVL_DEBUG, "hello %d %d %d %d %d %d %d %d %d %d %d - should be 1 2 3 4 5 6 7 8 9 10 *d"
 			  , 1,2,3,4,5,6,7,8,9,10, 11 );	  /* extra param does not get saved in buffer */
-		TRACE( TLVL_DEBUG, "hello %f %f %f %f %f %f %f %f %f %f"
+		TRACE( TLVL_DEBUG, "hello %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f %.2f - should be 1.00 2.00 3.00 4.00 12.50 6.00 7.00 8.00 9.00 10.00"
 			  , 1.0,2.0,3.0,4.0, ff[5],6.0,7.0,8.0,9.0,10.0 );
-		TRACE( TLVL_DBG+1, "hello %d %d %f  %d %d %f	 %d %d there is tabs after 2nd float"
-			  ,	          1, 2,3.3,4, 5, 6.6, 7, 8 );
+		TRACE( TLVL_DBG+1, "hello %d %d %.1f %d %d %.1f		%d %d %.1f %.1f. Should be 1 2 3.3 4 5 6.6		7 8 9.0 10.0 there is tabs after 2nd float"
+			  ,	          1, 2,3.3,4, 5, 6.6, 7, 8, 9.0, 10.0 );
 		TRACE( TLVL_DBG+1, TSPRINTF("%s:%%d- int=%%d __FILE__=%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,__FILE__)
 		      , __LINE__, 5 );
 		TRACE( TLVL_DBG+1, TSPRINTF("%s%s%s",strrchr(__FILE__,'/')?strrchr(__FILE__,'/')+1:__FILE__,":%d- int=%d __FILE__=",__FILE__)
@@ -2000,7 +2003,7 @@ extern  int        optind;         /* for getopt */
 		threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
 		argsp   =    (args_t*)malloc(num_threads*sizeof(args_t));
 
-		TRACE( TLVL_INFO, "before pthread_create - main_tid=%u loops=%d, threads=%u, dly_ms=%u traceControl_p=%p"
+		TRACE( TLVL_INFO, "before pthread_create - main_tid=%u loops=%d, threads=%u, dly_ms=%.3f traceControl_p=%p"
 		      , main_tid, loops, num_threads, opt_dly_ms, (void*)traceControl_p );
 		if (opt_timing_stats){
 			TRACE_CNTL("lvlsetMg", 0xfLL<<TLVL_INFO); /* set INFO,DBG,DBG+1, and DBG+2 */
@@ -2144,17 +2147,22 @@ extern  int        optind;         /* for getopt */
 		}
 
 		TRACE_CNTL("init");		/* for potential TRACE_LVLSTRS */
+		tdelta_us = opt_dly_ms * 1000;
 		lvl = (uint8_t)strtoul(lvlptr,&eptr,0); /* traceInit should be called before this to pickup any trace_lvlstrs changes */
 		if (lvlptr == eptr)
 			lvl = (uint8_t)str2enum(lvlptr);
 		if (opt_timing_stats)
 			t0_us = gettimeofday_us();
 		if (cmd[5]=='N')
-			for (ii=0; ii<opt_loops; ++ii)
+			for (ii=0; ii<opt_loops; ++ii) {
+				if (tdelta_us && ii) usleep(tdelta_us);
 				VTRACEN(argv[optind], lvl, nargs, argv[optind+2], args);
+			}
 		else
-			for (ii=0; ii<opt_loops; ++ii)
+			for (ii=0; ii<opt_loops; ++ii) {
+				if (tdelta_us && ii) usleep(tdelta_us);
 				VTRACE(lvl, nargs, argv[optind+1], args);
+			}
 		if (opt_timing_stats){
 			tdelta_us=(uint32_t)(gettimeofday_us()-t0_us);
 			fprintf(stderr,"%lld usec, %.3f usec/TRACE, %.3f Mtraces/s\n",

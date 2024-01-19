@@ -184,6 +184,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	include <errno.h>                                                /* errno */
 #	include <fcntl.h>                                                /* open, O_RDWR */
 #	include <fnmatch.h>                                              /* fnmatch */
+#	include <libgen.h>                                               /* basename */
 #	include <limits.h>                                               /* PATH_MAX */
 #	include <stdarg.h>                                               /* va_list */
 #	include <stdint.h>                                               /* uint64_t */
@@ -3395,14 +3396,14 @@ int trace_tlog_name_(const char* given, const char *FILEp, char *buf, size_t buf
                 ret = trace_name2TID(given);
         } else {
 			const char *bn_cp = basename((char*)FILEp);
-                --buflen;
+                --buflen; /* So I do not have to keep doing "buflen-1" */
                 if (strcmp(basename((char*)__TRACE_FILE__),bn_cp) != 0) {
                         const char *bf = TRACE_TID2NAME(traceTID);
-                        int chars_copied = (int)( (char*)mempcpy(buf,               bf,   strnlen(bf,buflen))                 - buf );
+                        int chars_copied = (int)( stpncpy(buf,               bf,   buflen)              - buf );
                         //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( (char*)mempcpy(&buf[chars_copied],"..", TRACE_MIN(2,buflen-chars_copied))         - buf );
+                        chars_copied     = (int)( stpncpy(&buf[chars_copied],"..", buflen-chars_copied) - buf );
                         //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( (char*)mempcpy(&buf[chars_copied],bn_cp,strnlen(bn_cp,buflen-chars_copied)) - buf );
+                        chars_copied     = (int)( stpncpy(&buf[chars_copied],bn_cp,buflen-chars_copied) - buf );
                         buf[chars_copied] = '\0';
                         ret = trace_name2TID(buf);
                 } else

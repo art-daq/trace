@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1610 $$Date: 2024-01-17 13:26:56 -0600 (Wed, 17 Jan 2024) $"
+#define TRACE_REV "$Revision: 1613 $$Date: 2024-01-19 12:15:35 -0600 (Fri, 19 Jan 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -161,7 +161,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1610 $_$Date: 2024-01-17 13:26:56 -0600 (Wed, 17 Jan 2024) $
+#define TRACE_REVx $_$Revision: 1613 $_$Date: 2024-01-19 12:15:35 -0600 (Fri, 19 Jan 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -184,6 +184,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	include <errno.h>                                                /* errno */
 #	include <fcntl.h>                                                /* open, O_RDWR */
 #	include <fnmatch.h>                                              /* fnmatch */
+#	include <libgen.h>                                               /* basename */
 #	include <limits.h>                                               /* PATH_MAX */
 #	include <stdarg.h>                                               /* va_list */
 #	include <stdint.h>                                               /* uint64_t */
@@ -666,9 +667,15 @@ static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rd
 
 #elif defined(__aarch64__)
 
-#	define TRACE_XTRA_PASSED , 0, .0, .0, .0, .0, .0, .0, .0, .0
-#	define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__)), double d0 __attribute__((__unused__)), double d1 __attribute__((__unused__)), double d2 __attribute__((__unused__)), double d3 __attribute__((__unused__)), double d4 __attribute__((__unused__)), double d5 __attribute__((__unused__)), double d6 __attribute__((__unused__)), double d7 __attribute__((__unused__))
-#	define TRACE_PRINTF_FMT_ARG_NUM 16 // clang-format off
+#       ifdef __KERNEL__  /* __aarch64__, by default, doesn't like floating point in the kernel */
+#	 define TRACE_XTRA_PASSED , 0
+#	 define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__))
+#	 define TRACE_PRINTF_FMT_ARG_NUM 8 // clang-format off
+#       else
+#	 define TRACE_XTRA_PASSED , 0, .0, .0, .0, .0, .0, .0, .0, .0
+#	 define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__)), double d0 __attribute__((__unused__)), double d1 __attribute__((__unused__)), double d2 __attribute__((__unused__)), double d3 __attribute__((__unused__)), double d4 __attribute__((__unused__)), double d5 __attribute__((__unused__)), double d6 __attribute__((__unused__)), double d7 __attribute__((__unused__))
+#	 define TRACE_PRINTF_FMT_ARG_NUM 16 // clang-format off
+#       endif 
 #	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
 #	define TRACE_ENT_TV_FILLER
 #	define TRACE_TSC32(low)
@@ -3389,14 +3396,14 @@ int trace_tlog_name_(const char* given, const char *FILEp, char *buf, size_t buf
                 ret = trace_name2TID(given);
         } else {
 			const char *bn_cp = basename((char*)FILEp);
-                --buflen;
+                --buflen; /* So I do not have to keep doing "buflen-1" */
                 if (strcmp(basename((char*)__TRACE_FILE__),bn_cp) != 0) {
                         const char *bf = TRACE_TID2NAME(traceTID);
-                        int chars_copied = (int)( (char*)mempcpy(buf,               bf,   strnlen(bf,buflen))                 - buf );
+                        int chars_copied = (int)( stpncpy(buf,               bf,   buflen)              - buf );
                         //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( (char*)mempcpy(&buf[chars_copied],"..", TRACE_MIN(2,buflen-chars_copied))         - buf );
+                        chars_copied     = (int)( stpncpy(&buf[chars_copied],"..", buflen-chars_copied) - buf );
                         //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( (char*)mempcpy(&buf[chars_copied],bn_cp,strnlen(bn_cp,buflen-chars_copied)) - buf );
+                        chars_copied     = (int)( stpncpy(&buf[chars_copied],bn_cp,buflen-chars_copied) - buf );
                         buf[chars_copied] = '\0';
                         ret = trace_name2TID(buf);
                 } else

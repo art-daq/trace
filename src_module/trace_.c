@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_.c,v $
-    rev="$Revision: 1612 $$Date: 2024-01-19 10:42:54 -0600 (Fri, 19 Jan 2024) $";
+    rev="$Revision: 1614 $$Date: 2024-01-22 13:53:07 -0600 (Mon, 22 Jan 2024) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
@@ -13,7 +13,9 @@
 #include <linux/init.h>		// module_init,_exit
 #include <linux/kernel.h>	// KERN_INFO, printk
 #include <linux/version.h>      /* KERNEL_VERSION */
-//#include <linux/interrupt.h>	// struct softirq_action  PROBLEM: many "redefined" and "conflicting type"
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0)
+# include <linux/interrupt.h>	// struct softirq_action  PROBLEM: many "redefined" and "conflicting type"; struct tasklet_struct
+#endif
 #include <linux/mm.h>           /* do_mmap, vm_area_struct */
 #include <linux/io.h>		/* ioremap_page_range */
 #include <linux/proc_fs.h>      /* create_proc_entry, struct proc_dir_entry */
@@ -385,7 +387,9 @@ static void _hirq_exit(
         //local_irq_restore(flags);
 }   // my_trace_irq_exit
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
 struct softirq_action { void (*action)(struct softirq_action *); };
+#endif
 static void _sirq_enter(
 # if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
 				void *new,

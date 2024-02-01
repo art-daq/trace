@@ -442,7 +442,7 @@ typedef struct timeval trace_tv_t;
 #define TRACE_DFLT_NUM_ENTRIES 500000
 #define TRACE_DFLT_TIME_FMT    "%m-%d %H:%M:%S.%%06d" /* match default in trace_delta.pl */
 #ifndef TRACE_DFLT_NAME
-#	define TRACE_DFLT_NAME        "%-0f"
+#	define TRACE_DFLT_NAME        "%f %H"
 #endif
 #define TRACE_DFLT_LVLS        ((1ULL << (TLVL_DEBUG + 0)) - 1) /* non-debug for slow path -- NOT ERS COMPAT (ERS has */
 	                                                     /* DEBUG_0 enabled by default, but I think "debug is debug") */
@@ -1067,6 +1067,102 @@ static const char *trace_path_components(const char *in_cp, int n_additional_com
 	return (tmp_cp);
 } /* trace_path_components */
 
+SUPPRESS_NOT_USED_WARN
+static const char *trace_name_path( const char* spec, const char*file, const char*hdrf, char*buf, size_t bufsz)
+{
+	char stop, special='%';
+	char *obuf=buf;
+	int  spec_off=1;/*, no_ext=0;;*/
+	const char *ccp, *bn, *extp;
+	size_t cpylen=0;
+	int additional_path=0;
+	if (strchr(spec,' ')) stop=' ';
+	else                  stop='\0';
+	--bufsz;					/* so I don't have to keep doing 'bufsz-1' */
+	while(*spec != stop) {
+		if(*spec != special) {
+			*obuf++ = *spec;          /* NOT TERMINATED!!! */
+			if (--bufsz == 0) break;  /* "goto out" */
+			++spec;
+		} else {
+			switch (spec[spec_off]) {
+			case '-': /*no_ext=1;*/ ++spec_off; continue;
+			case '0': case '1': case '2': case '3': case '4':
+			case '5': case '6': case '7': case '8': case '9':
+				if (spec_off == 1) additional_path = spec[spec_off]&0xf;
+				++spec_off;
+				continue;
+			case 'F':
+				/*if (no_ext) goto no_ext;*/
+				ccp=trace_path_components(file,additional_path);
+				cpylen=TRACE_MIN(strlen(ccp),bufsz);
+#	if __GNUC__ >= 8
+#		pragma GCC diagnostic push
+					// With -O3, I get warnings. I do not get warning if -O2 or -O0
+#		pragma GCC diagnostic ignored "-Wstringop-truncation"
+#	endif
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case 'f':			/* without extension */
+				/*no_ext:*/
+				ccp=trace_path_components(file,additional_path);
+				extp=strrchr(trace_path_components(ccp,0),'.');
+				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
+				else      cpylen=TRACE_MIN(strlen(ccp),bufsz);
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case 'H':
+				ccp=trace_path_components(hdrf,additional_path);
+				cpylen=TRACE_MIN(strlen(ccp),bufsz);
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case 'h':			/* without extension */
+				ccp=trace_path_components(hdrf,additional_path);
+				extp=strrchr((bn=trace_path_components(ccp,0)),'.');
+				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
+				else      cpylen=TRACE_MIN(strlen(ccp),bufsz);
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+#	if __GNUC__ >= 8
+#		pragma GCC diagnostic pop
+#	endif
+				break;
+/*#	define TRACE_DO__PROGNAME*/
+#	ifdef TRACE_DO__PROGNAME
+			case 'p':
+				{
+					extern char *__progname;
+					cpylen=TRACE_MIN(strlen(__progname),bufsz);
+					strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				}
+				break;
+#	endif
+			case '!':
+				special='\0';
+				break;
+			case '%':
+				*obuf++ = spec[spec_off];
+				if (--bufsz == 0) goto out;
+				break;
+			case '\0': --spec_off; /* Fall Through */
+			default:
+				for (int uu=0;uu<=spec_off;++uu) {
+					*obuf++ = spec[uu];
+					if (--bufsz == 0) goto out;
+				}					
+			}
+			//TRACE(TLVL_LOG,"%c cpylen=%ld",spec[spec_off], cpylen);
+			spec+=spec_off+1; spec_off=1; /*no_ext=0;*/
+			if (bufsz==0) break;
+		}
+	}
+ out:
+	*obuf = '\0';				/* make sure terminated */
+	//TRACE(TLVL_LOG,buf);
+	return (buf);
+} /* trace_name_path */
+
+#define TRACE_SNPRINTED(rr, ss)  ((((size_t)(rr) + 1) < (ss)) ? (size_t)(rr) : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
+
 /*  There are two recognized patterns:
     1) %%
 	2) %[-][0-9]f
@@ -1077,92 +1173,24 @@ static const char *trace_path_components(const char *in_cp, int n_additional_com
     If a pattern besides the 2 indicated occurs, it will be transferred to the output.
  */
 SUPPRESS_NOT_USED_WARN
-static const char *trace_name(const char *_tname_, const char *file, char *buf, size_t buflen)
+static const char *trace_name(const char *name, const char *file, char *buf, size_t bufsz)
 {
 	const char *ret;
-	const char *name;
-	size_t oo= 0;
+	const char*spec;
 
 #if !defined(__KERNEL__) && defined(TRACE_DEBUG_INIT)
 	fprintf(stderr,"file=%s\n",file);
 #endif
-	ret= buf;
-	if ((_tname_) && (*_tname_))
-		name= _tname_; /* we should be able to do better than "" */
+	// ASSUME ALWAYS main/base file -- Just call xxx -- it will determine if "name" has " "  ????
+	if (name && *name) spec = name;
 	else {
 #ifndef __KERNEL__
-		name= getenv("TRACE_NAME");
+		spec= getenv("TRACE_NAME");
 		if (!(name && *name))
 #endif
-			name= TRACE_DFLT_NAME;
-	} /* '}' here (instead of before return) allows TRACE_NAME (usually passed in via _tname_, which would likely be set in the BASE_FILE, to have '%' processing would env.var. if TRACE_NAME not set */
-
-#define TRACE_SNPRINTED(rr, ss)  ((((size_t)(rr) + 1) < (ss)) ? (size_t)(rr) : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
-	while (oo < (buflen - 1) && *name && (*name!=' ')) {
-			if (*name != '%') {
-				buf[oo++]= *name++;
-			} else {
-				/* OK, we have '%' the potential */
-				if (*(name + 1) == '%') { /* "%%" results in a single "%" */
-					buf[oo++]= *name;
-					name+= 2;
-				} else if (*(name + 1) == 'f') {
-#	if __GNUC__ >= 8
-#		pragma GCC diagnostic push
-					// With -O3, I get warnings. I do not get warning if -O2 or -O0
-#		pragma GCC diagnostic ignored "-Wstringop-truncation"
-#	endif
-					strncpy(&buf[oo], file, buflen - oo - 1);
-					oo+= TRACE_MIN(buflen - oo - 1, strlen(file));
-					name+= 2;
-				} else if (*(name + 1) == '-' && *(name + 2) == 'f') {
-					size_t ll= strlen(file), min;
-					while (ll && file[ll - 1] != '.' && file[ll - 1] != '/')
-						--ll;
-					if (ll && file[ll - 1] == '.') {
-						--ll;
-					} else
-						ll= strlen(file);
-					min = TRACE_MIN(buflen - oo - 1, ll);
-					strncpy(&buf[oo], file, min);
-					oo+= min;//TRACE_MIN(buflen - oo - 1, ll);
-					name+= 3;
-				} else if (*(name + 1) == '-' && *(name + 2) >= '0' && *(name + 2) <= '9' && *(name + 3) == 'f') {
-					const char *ff= trace_path_components(file, *(name + 2) - '0');
-					size_t ll= strlen(ff), min;
-					while (ll && ff[ll - 1] != '.' && ff[ll - 1] != '/')
-						--ll;
-					if (ll && ff[ll - 1] == '.') {
-						--ll;
-					} else
-						ll= strlen(ff);
-					min = TRACE_MIN(buflen - oo - 1, ll);
-					strncpy(&buf[oo], ff, min);
-					oo+= min;//TRACE_MIN(buflen - oo - 1, ll);
-					name+= 4;
-				} else if (*(name + 1) >= '0' && *(name + 1) <= '9' && *(name + 2) == 'f') {
-					const char *ff= trace_path_components(file, *(name + 1) - '0');
-					strncpy(&buf[oo], ff, buflen - oo - 1);
-#	if __GNUC__ >= 8
-#		pragma GCC diagnostic pop
-#	endif
-					oo+= TRACE_MIN(buflen - oo - 1, strlen(ff));
-					name+= 3;
-/*#	define TRACE_DO__PROGNAME*/
-#	ifdef TRACE_DO__PROGNAME
-				} else if (*(name + 1) == 'p') {
-					extern char *__progname;
-					int xx=snprintf(&buf[oo],buflen-oo,"%s",__progname);
-					oo += TRACE_SNPRINTED(xx,buflen-oo);
-					name+=2;
-#	endif
-				} else {
-					/* invalid - just output */
-					buf[oo++]= *name++;
-				}
-			}
+			spec= TRACE_DFLT_NAME;
 	}
-		buf[oo]= '\0';
+	ret = trace_name_path( spec, file, file, buf, bufsz );
 	return ret;
 } /* trace_name */
 
@@ -3344,7 +3372,7 @@ typedef struct
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
 			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
-					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
@@ -3353,7 +3381,7 @@ typedef struct
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
-				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
@@ -3389,27 +3417,40 @@ typedef void *trace_ptr_t;
 namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
 
 SUPPRESS_NOT_USED_WARN
-int trace_tlog_name_(const char* given, const char *FILEp, char *buf, size_t buflen)
+int trace_tlog_name_(const char* given, const char *base_file, const char *FILEp, char *buf, size_t buflen)
 {
-        int ret;
-        if (given && *given) {
-                ret = trace_name2TID(given);
-        } else {
-			const char *bn_cp = basename((char*)FILEp);
-                --buflen; /* So I do not have to keep doing "buflen-1" */
-                if (strcmp(basename((char*)__TRACE_FILE__),bn_cp) != 0) {
-                        const char *bf = TRACE_TID2NAME(traceTID);
-                        int chars_copied = (int)( stpncpy(buf,               bf,   buflen)              - buf );
-                        //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( stpncpy(&buf[chars_copied],"..", buflen-chars_copied) - buf );
-                        //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( stpncpy(&buf[chars_copied],bn_cp,buflen-chars_copied) - buf );
-                        buf[chars_copied] = '\0';
-                        ret = trace_name2TID(buf);
-                } else
-                        ret = traceTID;
-        }
-        return ret;
+	int ret;
+	const char *spec;
+
+	if (given && *given) {
+		ret = (int)trace_name2TID(given);
+	} else {
+		if (base_file==NULL) base_file="";
+		if (FILEp    ==NULL) FILEp="";
+		if (strcmp(base_file,FILEp) == 0)
+			ret = traceTID;			/* in main/base file -- name already determined */
+		else {
+			const char *xx;
+			// in included (header) file (NOT main/base file)
+			// IF no ' ' then I could EITHER 1) pass DFLT_HNAME spec
+			//                            OR 2) pass DFLT_NAME w/ base_file=FILEp (the only way to get "base..file" is by having ' ' in TRACE_NAME or getenv("TRACE_NAME")
+			if (TRACE_NAME && *TRACE_NAME) {
+				// need to check for ' '
+				spec=TRACE_NAME;
+			} else {
+				spec= getenv("TRACE_NAME");
+				if (spec && *spec) {
+					// need to check for ' '
+				} else spec= TRACE_DFLT_NAME; // no need to check for ' '   OR spec=TRACE_DFLT_NAME and base_file=FILEp
+			}
+			if ((xx=strchr(spec,' '))) {
+				spec=xx+1;
+				ret = (int)trace_name2TID(trace_name_path(spec,base_file,FILEp,buf,buflen));
+			} else
+				ret = (int)trace_name2TID(trace_name_path(spec,FILEp,FILEp,buf,buflen));
+		}
+	}
+	return ret;	                     
 }
 
 

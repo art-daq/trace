@@ -11,9 +11,19 @@
 
 // The C++ streamer style macros...............................................
 /*
-      TLOG() << "hello";
-      TLOG(TLVL_INFO) << "hello";
-	  TLOG("name",lvl) << "a param is: " << std::hex << param;
+    TLOG() << "hello";
+    TLOG(TLVL_INFO) << "hello";
+    TLOG("name",lvl) << "a param is: " << std::hex << param;
+
+    The perferred macros:   TLOG()         logging at TLVL_LOG    (level value 7)
+                            TLOG_INFO()    logging at TLVL_INFO   (level value 6)
+                            TLOG_WARNING() logging at TLVL_WARNING(level value 4)
+                            TLOG_ERROR()   logging at TLVL_ERROR  (level value 3)
+                            TLOG_DEBUG()   logging at TLVL_DEBUG  (level value 8 or debug level 0)
+    For OTHER debug levels: TLOG_DEBUG(lvl) where lvl can be 1 through 55
+    For remaining levels:   TLOG(lvl) where lvl would TLVL_FATAL(0), TLVL_EMERG(also 0),
+                                        TLVL_ALERT(1), TLVL_CRIT(2), and TLVL_NOTICE(5).
+    Note: The first 7 values (0-6) can mirror Linux syslog values.
  */
 
 #ifdef __cplusplus
@@ -22,7 +32,7 @@
 //  This group takes 0, 1 or 2 optional args: Name, and/or FormatControl; in any order.
 //  Name is a const char* or std::string&
 //  FormatControl is an int:  0 - format if slow enabled
-//                           >0 - streamer format even if just fast/mem (useful if "%" is in format)
+//                           >0 - streamer format even if just fast/mem (useful if "%" is in msg w/ delay format)
 //                           <0 - sprintf format
 #	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
 #	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
@@ -38,6 +48,7 @@
 #	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+//#	define TLOG_ENTEX(...)   See below
 
 #  if __cplusplus >= 201703L
 

@@ -136,6 +136,7 @@
 		}                                                                                                                         \
 	} while (0)
 
+#define TRACEH(lvl, ...) TRACEN("", lvl, __VA_ARGS__) /* for use in header file -- to get automatic TRACE_NAME (%f, etc) */
 
 #ifndef TRACE_LVL_ENUM_0_9
 /* Note: these should match values in the bitN_to_mask script */

@@ -1080,8 +1080,15 @@ static const char *trace_path_components(const char *in_cp, int n_additional_com
 	return (tmp_cp);
 } /* trace_path_components */
 
+/* spec can be the first or second part of a 2 part (space separated) name spec (i.e. "%f %H"
+   file  -- most likely __BASE_FILE__
+   hdrf  -- most likely __FILE__
+   buf   -- work/output buffer
+   bufsz -- sizeof above
+   flag  -- Currently only 0 (nothing) or non-0 (force file extension)
+ */
 SUPPRESS_NOT_USED_WARN
-static const char *trace_name_path( const char* spec, const char*file, const char*hdrf, char*buf, size_t bufsz)
+static const char *trace_name_path( const char* spec, const char*file, const char*hdrf, char*buf, size_t bufsz, int flag)
 {
 	char stop, special='%';
 	char *obuf=buf;
@@ -1107,6 +1114,7 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				continue;
 			case 'F':
 				/*if (no_ext) goto no_ext;*/
+			forceF:
 				ccp=trace_path_components(file,additional_path);
 				cpylen=TRACE_MIN(strlen(ccp),bufsz);
 #	if __GNUC__ >= 8
@@ -1118,6 +1126,7 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				break;
 			case 'f':			/* without extension */
 				/*no_ext:*/
+				if (flag) goto forceF;
 				ccp=trace_path_components(file,additional_path);
 				extp=strrchr(trace_path_components(ccp,0),'.');
 				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
@@ -1125,11 +1134,13 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
 				break;
 			case 'H':
+			forceH:
 				ccp=trace_path_components(hdrf,additional_path);
 				cpylen=TRACE_MIN(strlen(ccp),bufsz);
 				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
 				break;
 			case 'h':			/* without extension */
+				if (flag) goto forceH;
 				ccp=trace_path_components(hdrf,additional_path);
 				extp=strrchr((bn=trace_path_components(ccp,0)),'.');
 				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
@@ -1203,7 +1214,7 @@ static const char *trace_name(const char *name, const char *file, char *buf, siz
 #endif
 			spec= TRACE_DFLT_NAME;
 	}
-	ret = trace_name_path( spec, file, file, buf, bufsz );
+	ret = trace_name_path( spec, file, file, buf, bufsz, 0 );
 	return ret;
 } /* trace_name */
 
@@ -1238,10 +1249,13 @@ static int trace_tlog_name_(const char* given, const char *base_file, const char
 				} else spec= TRACE_DFLT_NAME; // no need to check for ' '   OR spec=TRACE_DFLT_NAME and base_file=FILEp
 			}
 			if ((xx=strchr(spec,' '))) {
-				spec=xx+1;
-				ret = (int)trace_name2TID(trace_name_path(spec,base_file,FILEp,buf,buflen));
-			} else
-				ret = (int)trace_name2TID(trace_name_path(spec,FILEp,FILEp,buf,buflen));
+				spec=xx+1;		/* The 2nd part could refer to both base and FILEp */
+				ret = (int)trace_name2TID(trace_name_path(spec,base_file,FILEp,buf,buflen,0));
+			} else {
+				/* It would be nice if I could change any %[-0-9]*[fF] to DFLT (%H) */
+				/* Could add a options param to TN_FORCE_EXT (force extensiion */
+				ret = (int)trace_name2TID(trace_name_path(spec,FILEp,FILEp,buf,buflen,1));
+			}
 		}
 	}
 	return ret;

@@ -1168,8 +1168,11 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				*obuf++ = spec[spec_off];
 				if (--bufsz == 0) goto out;
 				break;
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
 			case '\0': --spec_off; /* Fall Through */
 			default:
+#		pragma GCC diagnostic pop
 				for (int uu=0;uu<=spec_off;++uu) {
 					*obuf++ = spec[uu];
 					if (--bufsz == 0) goto out;
@@ -1211,7 +1214,7 @@ static const char *trace_name(const char *name, const char *file, char *buf, siz
 	else {
 #ifndef __KERNEL__
 		spec= getenv("TRACE_NAME");
-		if (!(name && *name))
+		if (!(spec && *spec))
 #endif
 			spec= TRACE_DFLT_NAME;
 	}
@@ -1244,10 +1247,13 @@ static int trace_tlog_name_(const char* given, const char *base_file, const char
 				// need to check for ' '
 				spec=TRACE_NAME;
 			} else {
+#ifndef __KERNEL__
 				spec= getenv("TRACE_NAME"); /* THIS IS/COULD BE costly :( -- THIS WILL HAPPENS (once) FOR EVERY TLOG/TRACEN in a header/included file!!! */
 				if (spec && *spec) {
 					// need to check for ' '
-				} else spec= TRACE_DFLT_NAME; // no need to check for ' '   OR spec=TRACE_DFLT_NAME and base_file=FILEp
+				} else
+#endif
+					spec= TRACE_DFLT_NAME; // no need to check for ' '   OR spec=TRACE_DFLT_NAME and base_file=FILEp
 			}
 			if ((xx=strchr(spec,' '))) {
 				spec=xx+1;		/* The 2nd part could refer to both base and FILEp */
@@ -3544,8 +3550,8 @@ public:
 			lvl_= lvl;
 			do_m= flgs.do_m;  // m=memory, aka "fast", but not to be confused with "format"
 			do_s= flgs.do_s;
-			do_f= (flgs.fmtnow == -1) ? 0 : (flgs.do_s || flgs.fmtnow);  // here "f" is "format", not "fast"
-			ins_= ins;
+			do_f= (flgs.fmtnow == -1) ? 0 : (flgs.do_s || flgs.fmtnow);  /* here "f" is "format in streamer processing (as we go, using snprintf)", */
+			ins_= ins;			                                         /* not "fast" (i.e do_f means no delayed formating) */
 			file_= file;
 			line_= line;
 			function_= function;
@@ -4382,7 +4388,7 @@ struct TSTREAMER_T_ {
 	inline void TLOG_DEBUG3(const char*        nam, int _lvl,           int fmt)        { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
 	inline void TLOG_DEBUG3(const std::string& nam, int _lvl,           int fmt)        { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
 
-	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and possibly TLOG when only TLVL_LOG
+	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and TLOG_TRACE
 	inline void TLOG2(int fmt= 0, const char* nam= "")
 	{
 		if      (fmt==0) flgs.fmtnow=  0;

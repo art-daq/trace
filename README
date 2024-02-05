@@ -5,16 +5,43 @@ standard is desirable.
 
 RPM packaging provided by Pat Riehecky on the Scientific Linux team.
 
-tar files with binaries at:
-  https://cdcvs.fnal.gov/redmine/projects/trace
-  http://oink.fnal.gov/distro/packages/TRACE/
 Public readonly GIT access via:
-  git clone http://cdcvs.fnal.gov/projects/trace-git trace
+  git clone https://github.com/art-daq/trace
+tar files with binaries at:
+  https://scisoft.fnal.gov/scisoft/packages/TRACE/
 Public svn export
   svn export http://cdcvs.fnal.gov/subversion/trace-svn/trunk/ trace
 Authorized read-write SVN access via:
   svn co svn+ssh://p-trace@cdcvs.fnal.gov:/cvs/projects/trace-svn/trunk trace
 
-cd trace
-make OUT=$PWD XTRA_CFLAGS=-std=c11 XTRA_CXXFLAGS=-std=c++11\
-  src_utility src_example_user modules 2>&1|tee make.out|egrep -iB4 'error|warn'
+BUILDING:
+  make:
+    cd trace
+    make OUT=$PWD 
+    PATH=$PWD/*/bin:$PATH
+    . script/trace_functions.sh
+    # if UPS environment, 2 lines above can be replaced by: setup -r$PWD-z$PWD TRACE 
+
+  cmake
+    cd trace
+    mkdir build; cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=$PWD
+    make install
+    PATH=$PWD/bin:$PATH
+    . etc/profile.d/trace_functions.sh
+
+
+  spack - work-in-progress
+    spack find --format "{name}@{version}%{compiler}/{hash} {arch}={platform}-{os}-{target}" trace
+    cd trace
+    spack repo add $PWD/spack
+    spack install --reuse trace@develop arch=`uname -m`    # 
+
+    # for "No valid compiler version found..." do:
+    spack compiler find  # and then redo spack install... (above)
+
+    # for other errors you may have to:
+    spack uninstall trace@develop # and/or:
+    spack repo rm trace # and then do spack repo add... (above)
+
+    spack load trace@develop

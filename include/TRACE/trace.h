@@ -11,9 +11,19 @@
 
 // The C++ streamer style macros...............................................
 /*
-      TLOG() << "hello";
-      TLOG(TLVL_INFO) << "hello";
-	  TLOG("name",lvl) << "a param is: " << std::hex << param;
+    TLOG() << "hello";
+    TLOG(TLVL_INFO) << "hello";
+    TLOG("name",lvl) << "a param is: " << std::hex << param;
+
+    The perferred macros:   TLOG()         logging at TLVL_LOG    (level value 7)
+                            TLOG_INFO()    logging at TLVL_INFO   (level value 6)
+                            TLOG_WARNING() logging at TLVL_WARNING(level value 4)
+                            TLOG_ERROR()   logging at TLVL_ERROR  (level value 3)
+                            TLOG_DEBUG()   logging at TLVL_DEBUG  (level value 8 or debug level 0)
+    For OTHER debug levels: TLOG_DEBUG(lvl) where lvl can be 1 through 55
+    For remaining levels:   TLOG(lvl) where lvl would TLVL_FATAL(0), TLVL_EMERG(also 0),
+                                        TLVL_ALERT(1), TLVL_CRIT(2), and TLVL_NOTICE(5).
+    Note: The first 7 values (0-6) can mirror Linux syslog values.
  */
 
 #ifdef __cplusplus
@@ -22,7 +32,7 @@
 //  This group takes 0, 1 or 2 optional args: Name, and/or FormatControl; in any order.
 //  Name is a const char* or std::string&
 //  FormatControl is an int:  0 - format if slow enabled
-//                           >0 - streamer format even if just fast/mem (useful if "%" is in format)
+//                           >0 - streamer format even if just fast/mem (useful if "%" is in msg w/ delay format)
 //                           <0 - sprintf format
 #	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
 #	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
@@ -38,6 +48,7 @@
 #	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+//#	define TLOG_ENTEX(...)   See below
 
 #  if __cplusplus >= 201703L
 
@@ -56,6 +67,9 @@
     TLOG_DEBUG(42) << "Enter - p1=" << p1;
     int retval; TRACE_EXIT { TLOG_DEBUG(43) << "Exit - retval=" << retval; };
     ...
+	NOTE: with simple concatenation of command statements (end at ';'), the TLOG_DEBUG3 and TLOG3
+	method must copy any name argument (which may come from a tempary std::string
+	arg, created and destroy as a function call arg, at the end of a command statement (end at ';').
  */
 #   ifndef TLOG_ENTEX_DBGLVL
 #		define TLOG_ENTEX_DBGLVL 42
@@ -67,8 +81,8 @@
 	if (   TRACE_VARIABLE(_trc_).lvl==0								\
 	       && (TRACE_VARIABLE(_trc_).TLOG3(__VA_ARGS__),TRACE_VARIABLE(_trc_).lvl)==TLVL_LOG ) /* use TLOG3 to detect no lvl entered */ \
 		TRACE_VARIABLE(_trc_).lvl = (tlvle_t)TLOG_ENTEX_DBGLVL; \
-	TRACE_EXIT { TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl+1,TRACE_VARIABLE(_trc_).nn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Exit"; }; \
-	TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl,TRACE_VARIABLE(_trc_).nn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Enter "
+	TRACE_EXIT { TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl+1,TRACE_VARIABLE(_trc_).tn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Exit"; }; \
+	TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl,TRACE_VARIABLE(_trc_).tn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Enter "
 
 #  endif // __cplusplus >= 201703L
 
@@ -108,7 +122,7 @@
 			trace_tv_t lclTime;											\
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			TRACE_SBUFDECL;													\
-			if (tid_ == -1) tid_ = (int)trace_name2TID(&(nam)[0]);			\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn)); \
 			lclTime.tv_sec = 0;											\
 			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) { \
 				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
@@ -122,6 +136,7 @@
 		}                                                                                                                         \
 	} while (0)
 
+#define TRACEH(lvl, ...) TRACEN("", lvl, __VA_ARGS__) /* for use in header file -- to get automatic TRACE_NAME (%f, etc) */
 
 #ifndef TRACE_LVL_ENUM_0_9
 /* Note: these should match values in the bitN_to_mask script */
@@ -184,7 +199,6 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	include <errno.h>                                                /* errno */
 #	include <fcntl.h>                                                /* open, O_RDWR */
 #	include <fnmatch.h>                                              /* fnmatch */
-#	include <libgen.h>                                               /* basename */
 #	include <limits.h>                                               /* PATH_MAX */
 #	include <stdarg.h>                                               /* va_list */
 #	include <stdint.h>                                               /* uint64_t */
@@ -442,7 +456,7 @@ typedef struct timeval trace_tv_t;
 #define TRACE_DFLT_NUM_ENTRIES 500000
 #define TRACE_DFLT_TIME_FMT    "%m-%d %H:%M:%S.%%06d" /* match default in trace_delta.pl */
 #ifndef TRACE_DFLT_NAME
-#	define TRACE_DFLT_NAME        "%-0f"
+#	define TRACE_DFLT_NAME        "%f %H"
 #endif
 #define TRACE_DFLT_LVLS        ((1ULL << (TLVL_DEBUG + 0)) - 1) /* non-debug for slow path -- NOT ERS COMPAT (ERS has */
 	                                                     /* DEBUG_0 enabled by default, but I think "debug is debug") */
@@ -546,7 +560,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 			char _ins[32];                                                                         \
 			std::string _ss; \
 			lclTime.tv_sec = 0;                                                                                                   \
-			if (tid_ == -1) tid_ = (int)trace_name2TID(&(nam)[0]);			\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
 			bool do_m = traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_)); \
 			bool do_s = traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_)) && trace_limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
 			if (do_m || do_s) {											\
@@ -574,7 +588,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 			trace_tv_t lclTime;											\
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			char _ins[32];												\
-			if (tid_ == -1) tid_ = trace_name2TID(&(nam)[0]);			\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
 			lclTime.tv_sec = 0;											\
 			bool do_m = traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_));	\
 			bool do_s = traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_)) && trace_limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
@@ -1067,6 +1081,116 @@ static const char *trace_path_components(const char *in_cp, int n_additional_com
 	return (tmp_cp);
 } /* trace_path_components */
 
+/* spec can be the first or second part of a 2 part (space separated) name spec (i.e. "%f %H"
+   file  -- most likely __BASE_FILE__
+   hdrf  -- most likely __FILE__
+   buf   -- work/output buffer
+   bufsz -- sizeof above
+   flag  -- Currently only 0 (nothing) or non-0 (force file extension)
+ */
+SUPPRESS_NOT_USED_WARN
+static const char *trace_name_path( const char* spec, const char*file, const char*hdrf, char*buf, size_t bufsz, int flag)
+{
+	char stop, special='%';
+	char *obuf=buf;
+	int  spec_off=1;/*, no_ext=0;;*/
+	const char *ccp, *bn, *extp;
+	size_t cpylen=0;
+	int additional_path=0;
+	if (strchr(spec,' ')) stop=' ';
+	else                  stop='\0';
+	--bufsz;					/* so I don't have to keep doing 'bufsz-1' */
+	while(*spec != stop) {
+		if(*spec != special) {
+			*obuf++ = *spec;          /* NOT TERMINATED!!! */
+			if (--bufsz == 0) break;  /* "goto out" */
+			++spec;
+		} else {
+			switch (spec[spec_off]) {
+			case '-': /*no_ext=1;*/ ++spec_off; continue;
+			case '0': case '1': case '2': case '3': case '4':
+			case '5': case '6': case '7': case '8': case '9':
+				if (spec_off == 1) additional_path = spec[spec_off]&0xf;
+				++spec_off;
+				continue;
+			case 'F':
+				/*if (no_ext) goto no_ext;*/
+			forceF:
+				ccp=trace_path_components(file,additional_path);
+				cpylen=TRACE_MIN(strlen(ccp),bufsz);
+#	if __GNUC__ >= 8
+#		pragma GCC diagnostic push
+					// With -O3, I get warnings. I do not get warning if -O2 or -O0
+#		pragma GCC diagnostic ignored "-Wstringop-truncation"
+#	endif
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case 'f':			/* without extension */
+				/*no_ext:*/
+				if (flag) goto forceF;
+				ccp=trace_path_components(file,additional_path);
+				extp=strrchr(trace_path_components(ccp,0),'.');
+				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
+				else      cpylen=TRACE_MIN(strlen(ccp),bufsz);
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case 'H':
+			forceH:
+				ccp=trace_path_components(hdrf,additional_path);
+				cpylen=TRACE_MIN(strlen(ccp),bufsz);
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case 'h':			/* without extension */
+				if (flag) goto forceH;
+				ccp=trace_path_components(hdrf,additional_path);
+				extp=strrchr((bn=trace_path_components(ccp,0)),'.');
+				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
+				else      cpylen=TRACE_MIN(strlen(ccp),bufsz);
+				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+/*#	define TRACE_DO__PROGNAME*/
+#	ifdef TRACE_DO__PROGNAME
+			case 'p':
+				{
+					extern char *__progname;
+					cpylen=TRACE_MIN(strlen(__progname),bufsz);
+					strncpy(obuf,__progname,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				}
+				break;
+#	endif
+#	if __GNUC__ >= 8
+#		pragma GCC diagnostic pop
+#	endif
+			case '!':
+				special='\0';
+				break;
+			case '%':
+				*obuf++ = spec[spec_off];
+				if (--bufsz == 0) goto out;
+				break;
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wimplicit-fallthrough="
+			case '\0': --spec_off; /* Fall Through */
+			default:
+#		pragma GCC diagnostic pop
+				for (int uu=0;uu<=spec_off;++uu) {
+					*obuf++ = spec[uu];
+					if (--bufsz == 0) goto out;
+				}					
+			}
+			//TRACE(TLVL_LOG,"%c cpylen=%ld",spec[spec_off], cpylen);
+			spec+=spec_off+1; spec_off=1; /*no_ext=0;*/
+			if (bufsz==0) break;
+		}
+	}
+ out:
+	*obuf = '\0';				/* make sure terminated */
+	//TRACE(TLVL_LOG,buf);
+	return (buf);
+} /* trace_name_path */
+
+#define TRACE_SNPRINTED(rr, ss)  ((((size_t)(rr) + 1) < (ss)) ? (size_t)(rr) : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
+
 /*  There are two recognized patterns:
     1) %%
 	2) %[-][0-9]f
@@ -1077,94 +1201,72 @@ static const char *trace_path_components(const char *in_cp, int n_additional_com
     If a pattern besides the 2 indicated occurs, it will be transferred to the output.
  */
 SUPPRESS_NOT_USED_WARN
-static const char *trace_name(const char *_tname_, const char *file, char *buf, size_t buflen)
+static const char *trace_name(const char *name, const char *file, char *buf, size_t bufsz)
 {
 	const char *ret;
-	const char *name;
-	size_t oo= 0;
+	const char*spec;
 
 #if !defined(__KERNEL__) && defined(TRACE_DEBUG_INIT)
 	fprintf(stderr,"file=%s\n",file);
 #endif
-	ret= buf;
-	if ((_tname_) && (*_tname_))
-		name= _tname_; /* we should be able to do better than "" */
+	// ASSUME ALWAYS main/base file -- Just call xxx -- it will determine if "name" has " "  ????
+	if (name && *name) spec = name;
 	else {
 #ifndef __KERNEL__
-		name= getenv("TRACE_NAME");
-		if (!(name && *name))
+		spec= getenv("TRACE_NAME");
+		if (!(spec && *spec))
 #endif
-			name= TRACE_DFLT_NAME;
-	} /* '}' here (instead of before return) allows TRACE_NAME (usually passed in via _tname_, which would likely be set in the BASE_FILE, to have '%' processing would env.var. if TRACE_NAME not set */
-
-#define TRACE_SNPRINTED(rr, ss)  ((((size_t)(rr) + 1) < (ss)) ? (size_t)(rr) : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
-	while (oo < (buflen - 1) && *name && (*name!=' ')) {
-			if (*name != '%') {
-				buf[oo++]= *name++;
-			} else {
-				/* OK, we have '%' the potential */
-				if (*(name + 1) == '%') { /* "%%" results in a single "%" */
-					buf[oo++]= *name;
-					name+= 2;
-				} else if (*(name + 1) == 'f') {
-#	if __GNUC__ >= 8
-#		pragma GCC diagnostic push
-					// With -O3, I get warnings. I do not get warning if -O2 or -O0
-#		pragma GCC diagnostic ignored "-Wstringop-truncation"
-#	endif
-					strncpy(&buf[oo], file, buflen - oo - 1);
-					oo+= TRACE_MIN(buflen - oo - 1, strlen(file));
-					name+= 2;
-				} else if (*(name + 1) == '-' && *(name + 2) == 'f') {
-					size_t ll= strlen(file), min;
-					while (ll && file[ll - 1] != '.' && file[ll - 1] != '/')
-						--ll;
-					if (ll && file[ll - 1] == '.') {
-						--ll;
-					} else
-						ll= strlen(file);
-					min = TRACE_MIN(buflen - oo - 1, ll);
-					strncpy(&buf[oo], file, min);
-					oo+= min;//TRACE_MIN(buflen - oo - 1, ll);
-					name+= 3;
-				} else if (*(name + 1) == '-' && *(name + 2) >= '0' && *(name + 2) <= '9' && *(name + 3) == 'f') {
-					const char *ff= trace_path_components(file, *(name + 2) - '0');
-					size_t ll= strlen(ff), min;
-					while (ll && ff[ll - 1] != '.' && ff[ll - 1] != '/')
-						--ll;
-					if (ll && ff[ll - 1] == '.') {
-						--ll;
-					} else
-						ll= strlen(ff);
-					min = TRACE_MIN(buflen - oo - 1, ll);
-					strncpy(&buf[oo], ff, min);
-					oo+= min;//TRACE_MIN(buflen - oo - 1, ll);
-					name+= 4;
-				} else if (*(name + 1) >= '0' && *(name + 1) <= '9' && *(name + 2) == 'f') {
-					const char *ff= trace_path_components(file, *(name + 1) - '0');
-					strncpy(&buf[oo], ff, buflen - oo - 1);
-#	if __GNUC__ >= 8
-#		pragma GCC diagnostic pop
-#	endif
-					oo+= TRACE_MIN(buflen - oo - 1, strlen(ff));
-					name+= 3;
-/*#	define TRACE_DO__PROGNAME*/
-#	ifdef TRACE_DO__PROGNAME
-				} else if (*(name + 1) == 'p') {
-					extern char *__progname;
-					int xx=snprintf(&buf[oo],buflen-oo,"%s",__progname);
-					oo += TRACE_SNPRINTED(xx,buflen-oo);
-					name+=2;
-#	endif
-				} else {
-					/* invalid - just output */
-					buf[oo++]= *name++;
-				}
-			}
+			spec= TRACE_DFLT_NAME;
 	}
-		buf[oo]= '\0';
+	ret = trace_name_path( spec, file, file, buf, bufsz, 0 );
 	return ret;
 } /* trace_name */
+
+/*  Note: this function was originally developed for use in TLOG calls, but now
+	is also used in the TRACEN* macros.
+ */
+SUPPRESS_NOT_USED_WARN
+static int trace_tlog_name_(const char* given, const char *base_file, const char *FILEp, char *buf, size_t buflen)
+{
+	int ret;
+	const char *spec;
+
+	if (given && *given) {
+		ret = (int)trace_name2TID(given);  /* THE MOST Efficient */
+	} else {
+		if (base_file==NULL) base_file="";
+		if (FILEp    ==NULL) FILEp="";
+		if (strcmp(base_file,FILEp) == 0)
+			ret = traceTID;			/* in main/base file -- name already determined THIS IS AN IMPORTANT OPTIMISATION */
+		else {						/* -- TRACE_NAME or env(TRACE_NAME) are not "dynamic" (at least not in BASE_FILE)!!! */
+			const char *xx;
+			// in included (header) file (NOT main/base file)
+			// IF no ' ' then I could EITHER 1) pass DFLT_HNAME spec
+			//                            OR 2) pass DFLT_NAME w/ base_file=FILEp (the only way to get "base..file" is by having ' ' in TRACE_NAME or getenv("TRACE_NAME")
+			if (TRACE_NAME && *TRACE_NAME) {
+				// need to check for ' '
+				spec=TRACE_NAME;
+			} else {
+#ifndef __KERNEL__
+				spec= getenv("TRACE_NAME"); /* THIS IS/COULD BE costly :( -- THIS WILL HAPPENS (once) FOR EVERY TLOG/TRACEN in a header/included file!!! */
+				if (spec && *spec) {
+					// need to check for ' '
+				} else
+#endif
+					spec= TRACE_DFLT_NAME; // no need to check for ' '   OR spec=TRACE_DFLT_NAME and base_file=FILEp
+			}
+			if ((xx=strchr(spec,' '))) {
+				spec=xx+1;		/* The 2nd part could refer to both base and FILEp */
+				ret = (int)trace_name2TID(trace_name_path(spec,base_file,FILEp,buf,buflen,0));
+			} else {
+				/* It would be nice if I could change any %[-0-9]*[fF] to DFLT (%H) */
+				/* Could add a options param to TN_FORCE_EXT (force extensiion */
+				ret = (int)trace_name2TID(trace_name_path(spec,FILEp,FILEp,buf,buflen,1));
+			}
+		}
+	}
+	return ret;
+} /* trace_tlog_name_ */
 
 /* if a "do print" (return true/1) and if insert is provided and sz
    is non-zero, it will be NULL terminated */
@@ -3335,6 +3437,11 @@ typedef struct
 //          note: fmtnow can be used to force formatting env if Memory only;
 // arg3   - force_s = force_slow - override tlvlmskS&lvl==0
 // NOTE: I use the gnu extension __PRETTY_FUNCTION__ as opposed to __func__ b/c in C++ a method/function can have different arguments
+// NOTE: any temporary (created within the for statement) std::string seems will
+//       only be destroyed at the end of the comma (',') separated statement. This
+//       allows saving the address in .nn and using .nn later. Because this
+//       is not the case for TLOG_ENTEX, so the string needs to be copied. This
+//       means, for TRACE_STREAMER, the string is copied superfluously.
 #	ifndef TRACE_USE_STATIC_STREAMER
 #		define TRACE_USE_STATIC_STREAMER 1
 #	endif
@@ -3344,7 +3451,7 @@ typedef struct
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
 			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
-					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
@@ -3353,7 +3460,7 @@ typedef struct
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
-				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
@@ -3387,31 +3494,6 @@ typedef struct
 typedef void *trace_ptr_t;
 
 namespace {  // unnamed namespace (i.e. static (for each compliation unit only))
-
-SUPPRESS_NOT_USED_WARN
-int trace_tlog_name_(const char* given, const char *FILEp, char *buf, size_t buflen)
-{
-        int ret;
-        if (given && *given) {
-                ret = trace_name2TID(given);
-        } else {
-			const char *bn_cp = basename((char*)FILEp);
-                --buflen; /* So I do not have to keep doing "buflen-1" */
-                if (strcmp(basename((char*)__TRACE_FILE__),bn_cp) != 0) {
-                        const char *bf = TRACE_TID2NAME(traceTID);
-                        int chars_copied = (int)( stpncpy(buf,               bf,   buflen)              - buf );
-                        //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( stpncpy(&buf[chars_copied],"..", buflen-chars_copied) - buf );
-                        //buf[chars_copied] = '\0';
-                        chars_copied     = (int)( stpncpy(&buf[chars_copied],bn_cp,buflen-chars_copied) - buf );
-                        buf[chars_copied] = '\0';
-                        ret = trace_name2TID(buf);
-                } else
-                        ret = traceTID;
-        }
-        return ret;
-}
-
 
 struct TraceStreamer : std::ios {
 	typedef unsigned long long arg;                                 // room for 64 bit args (i.e double on 32 or 64bit machines)
@@ -3468,8 +3550,8 @@ public:
 			lvl_= lvl;
 			do_m= flgs.do_m;  // m=memory, aka "fast", but not to be confused with "format"
 			do_s= flgs.do_s;
-			do_f= (flgs.fmtnow == -1) ? 0 : (flgs.do_s || flgs.fmtnow);  // here "f" is "format", not "fast"
-			ins_= ins;
+			do_f= (flgs.fmtnow == -1) ? 0 : (flgs.do_s || flgs.fmtnow);  /* here "f" is "format in streamer processing (as we go, using snprintf)", */
+			ins_= ins;			                                         /* not "fast" (i.e do_f means no delayed formating) */
 			file_= file;
 			line_= line;
 			function_= function;
@@ -4254,6 +4336,9 @@ struct TSTREAMER_T_ {
 		if (!fmt) flgs.fmtnow= 0;
 		else      flgs.fmtnow= 1;
 		nn= nam;
+		size_t sz = strlen(nam);
+		if (sz<sizeof(tn)) strcpy(tn,nam);
+		else { strncpy(tn,nam,sizeof(tn)-1);tn[sizeof(tn)-1]='\0';}
 	}
 	inline void TLOG3(int _lvl, bool fmt,           const std::string& nam)           { TLOG3(_lvl, fmt, &nam[0]); }       //  2
 	inline void TLOG3(bool fmt, int _lvl=TLVL_LOG,  const char*        nam="")        { TLOG3(_lvl, fmt, &nam[0]); }       //  3
@@ -4283,6 +4368,9 @@ struct TSTREAMER_T_ {
 		if (!fmt) flgs.fmtnow= 0;
 		else      flgs.fmtnow= 1;
 		nn= nam;
+		size_t sz = strlen(nam);
+		if (sz<sizeof(tn)) strcpy(tn,nam);
+		else { strncpy(tn,nam,sizeof(tn)-1);tn[sizeof(tn)-1]='\0';}
 	}
 	inline void TLOG_DEBUG3(int _lvl, bool fmt,           const std::string& nam)       { TLOG_DEBUG3(_lvl, fmt,       &nam[0]); }
 	inline void TLOG_DEBUG3(int _lvl, int  fmt,           const char*        nam="")    { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
@@ -4300,13 +4388,16 @@ struct TSTREAMER_T_ {
 	inline void TLOG_DEBUG3(const char*        nam, int _lvl,           int fmt)        { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
 	inline void TLOG_DEBUG3(const std::string& nam, int _lvl,           int fmt)        { TLOG_DEBUG3(_lvl, (bool)fmt, &nam[0]); }
 
-	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and possibly TLOG when only TLVL_LOG
+	// FOR TLOG_ERROR, TLOG_WARNING, TLOG_INFO and TLOG_TRACE
 	inline void TLOG2(int fmt= 0, const char* nam= "")
 	{
 		if      (fmt==0) flgs.fmtnow=  0;
 		else if (fmt >0) flgs.fmtnow=  1;
 		else             flgs.fmtnow= -1;
 		nn= nam;
+		size_t sz = strlen(nam);
+		if (sz<sizeof(tn)) strcpy(tn,nam);
+		else { strncpy(tn,nam,sizeof(tn)-1);tn[sizeof(tn)-1]='\0';}
 	}
 	inline void TLOG2(int fmt, const std::string& nam) { TLOG2(fmt, &nam[0]); }
 	inline void TLOG2(const char* nam, int fmt= 0) { TLOG2(fmt, &nam[0]); }
@@ -4339,7 +4430,7 @@ static inline bool trace_do_streamer(TSTREAMER_T_ *ts_p)
 #define TRACENATE(s1, s2)        TRACENATE_IMPL(s1, s2)
 
 #ifdef __COUNTER__XX  // cannot use counter as it can only be used once in macro where as __LINE__ is can be used multiple
-                      // as will be the starting line of multiline macro.
+                      // times; it will be the starting line of multiline macro.
 #       define TRACE_VARIABLE(pre) TRACENATE(pre,__COUNTER__)
 #else
 #       define TRACE_VARIABLE(pre) TRACENATE(pre,__LINE__)

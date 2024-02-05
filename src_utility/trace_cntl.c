@@ -1138,7 +1138,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 		msg_spec_included=0;
 		/*                  123456789112345678921234*/
 # define TRACE_MSG_DASHES  "------------------------"
-# define TRACE_LONG_DASHES "------------------------------------------------"
+# define TRACE_LONG_DASHES "------------------------------------------------------------------------------"
 		for (sp=ospec; *sp; ++sp) {
 			char tbuf[0x100];
 			int width_state, width_ia[2]= {0}; /* allow up to 3 widths w[.w] */

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1615 $$Date: 2024-02-05 08:37:59 -0600 (Mon, 05 Feb 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1617 $$Date: 2024-02-09 11:02:30 -0600 (Fri, 09 Feb 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -640,7 +640,8 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			char tbuf[0x100];
 			int width_state, width_ia[2]= {0}; /* allow up to 3 widths w[.w] */
 			char width_ca[2][9];               /* need to save the string for leading "0" (e.g. "-04"*/
-			char flags_ca[4];                  /*  */
+			char flags_ca[4],*sncp;            /*  */
+			int snlen;
 			size_t flags_sz;
 			//const char *default_unknown_sav;
 			char *endptr;
@@ -695,11 +696,14 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case 'C': printf("%" TRACE_STR(TRACE_CPU_WIDTH) "d", myEnt_p->cpu); break;
 			case 'D': /* ignore this "control" */ break;
 			case 'e':
-				snprintf(tbuf,sizeof(tbuf),"%s:%d",TRACE_TID2NAME(myEnt_p->TrcId),myEnt_p->linenum);
+				snlen = snprintf(tbuf,sizeof(tbuf),"%s:%d",TRACE_TID2NAME(myEnt_p->TrcId),myEnt_p->linenum);
 				if (!width_state) printf("%*.*s",name_width+1+TRACE_LINENUM_WIDTH,name_width+1+TRACE_LINENUM_WIDTH,tbuf);
 				else {
-					if (width_ia[0]<TRACE_LINENUM_WIDTH) width_ia[0]=TRACE_LINENUM_WIDTH;
-					printf("%*.*s",name_width+1+width_ia[0],name_width+1+width_ia[0],tbuf);
+					if (width_ia[0]<(TRACE_LINENUM_WIDTH+1)) width_ia[0]=(TRACE_LINENUM_WIDTH+1);
+					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz+TRACE_LINENUM_WIDTH)) width_ia[0]=(int)(traceControl_p->nam_arr_sz+TRACE_LINENUM_WIDTH);
+					if (snlen > width_ia[0]) sncp = &tbuf[snlen-width_ia[0]];
+					else                     sncp = &tbuf[0];
+					printf("%*s",width_ia[0],sncp);
 				}
 				break;
 			case 'f': printf("%s",local_msg); msg_spec_included=1; break;
@@ -734,7 +738,17 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 				msg_spec_included=1;
 				break;
 			case 'N': printf("%*u", N_width, printed ); break;
-			case 'n': printf("%*.*s",name_width,name_width,TRACE_TID2NAME(myEnt_p->TrcId));break;
+			case 'n':
+				if (!width_state) printf("%*.*s",name_width,name_width,TRACE_TID2NAME(myEnt_p->TrcId));
+				else {
+					if (width_ia[0]<strlen("trcname")) width_ia[0]=strlen("trcname");
+					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz-1)) width_ia[0]=(int)(traceControl_p->nam_arr_sz-1);
+					sncp = TRACE_TID2NAME(myEnt_p->TrcId);
+					snlen = strlen(sncp);
+					if (snlen > width_ia[0]) sncp = &sncp[snlen-width_ia[0]];
+					printf("%*.*s",width_ia[0],width_ia[0],sncp);
+				}
+				break;
 			case 'O': printf("%s",trace_lvlcolors[(myEnt_p->lvl)&TLVLBITSMSK][0]); break;
 			case 'o': printf("%s",trace_lvlcolors[(myEnt_p->lvl)&TLVLBITSMSK][1]); break;
 			case 'P': printf("%*d", TRACE_TID_WIDTH, myEnt_p->pid); break; /* /proc/sys/kernel/pid_max has 32768 or 458752 (on mu2edaq13) */
@@ -1144,6 +1158,8 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			int width_state, width_ia[2]= {0}; /* allow up to 3 widths w[.w] */
 			char width_ca[2][9];               /* need to save the string for leading "0" (e.g. "-04"*/
 			char flags_ca[4];                  /*  */
+			const char *sncp;
+			int snlen;
 			size_t flags_sz;
 			//const char *default_unknown_sav;
 			char *endptr;
@@ -1190,12 +1206,15 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 'C': printf("cpu"); break;
 			case 'D': /* ignore this "control" */ break;
 			case 'e':
-				if (!width_state) printf("%*s", name_width+1+TRACE_LINENUM_WIDTH,"trcname:ln#");
+				sncp="trcname:ln#"; snlen=strlen(sncp);
+				if (!width_state) printf("%*s", name_width+1+TRACE_LINENUM_WIDTH,sncp); // +1 for ':'
 				else {
-					if (width_ia[0]<TRACE_LINENUM_WIDTH) width_ia[0]=TRACE_LINENUM_WIDTH;
-					printf("%*s", (int)name_width+1+width_ia[0],"trcname:ln#");
+					if (width_ia[0]<(TRACE_LINENUM_WIDTH+1)) width_ia[0]=TRACE_LINENUM_WIDTH+1;
+					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz+TRACE_LINENUM_WIDTH)) width_ia[0]=(int)(traceControl_p->nam_arr_sz+TRACE_LINENUM_WIDTH);
+					if (snlen > width_ia[0]) sncp = &sncp[snlen-width_ia[0]];
+					printf("%*s",width_ia[0],sncp);
 				}
-				break; // +1 for ':'
+				break;
 			case 'f': printf("%-*s", (int)strlen(TRACE_MSG_DASHES),"msg"); msg_spec_included=1; break;
 			case 'H': /* ignore this "control" */ break;
 			case 'I': printf(" TID"); break;
@@ -1224,7 +1243,14 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				break;
 			case 'm': printf("%-*s", (int)strlen(TRACE_MSG_DASHES),"msg"); msg_spec_included=1; break;
 			case 'N': printf("%*s", N_width, "idx" ); break;
-			case 'n': printf("%*s", name_width,"trcname");break;
+			case 'n':
+				if (!width_state) printf("%*s", name_width+1+TRACE_LINENUM_WIDTH,"trcname");
+				else {
+					if (width_ia[0]<7) width_ia[0]=7;
+					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz-1)) width_ia[0]=(int)(traceControl_p->nam_arr_sz-1);
+					printf("%*s", width_ia[0],"trcname");
+				}
+				break;
 			case 'O': /* ignore here */ break;
 			case 'o': /* ignore here */ break;
 			case 'P': printf("%" TRACE_STR(TRACE_TID_WIDTH) "s","pid"); break;
@@ -1310,8 +1336,9 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 'e':
 				if (!width_state) printf("%.*s", name_width+1+TRACE_LINENUM_WIDTH,TRACE_LONG_DASHES);
 				else {
-					if (width_ia[0]<TRACE_LINENUM_WIDTH) width_ia[0]=TRACE_LINENUM_WIDTH;
-					printf("%.*s", (int)name_width+1+width_ia[0],TRACE_LONG_DASHES);
+					if (width_ia[0]<(TRACE_LINENUM_WIDTH+1)) width_ia[0]=(TRACE_LINENUM_WIDTH+1);
+					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz+TRACE_LINENUM_WIDTH)) width_ia[0]=(int)(traceControl_p->nam_arr_sz+TRACE_LINENUM_WIDTH);
+					printf("%.*s", width_ia[0],TRACE_LONG_DASHES);
 				}
 				break;
 			case 'f': printf(TRACE_MSG_DASHES); msg_spec_included=1; break;
@@ -1342,7 +1369,14 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 				break;
 			case 'm': printf(TRACE_MSG_DASHES); msg_spec_included=1; break;
 			case 'N': printf("%.*s", N_width, TRACE_LONG_DASHES); break;
-			case 'n': printf("%.*s", name_width,TRACE_LONG_DASHES);break;
+			case 'n':
+				if (!width_state) printf("%.*s", name_width,TRACE_LONG_DASHES);
+				else {
+					if (width_ia[0]<strlen("trcname")) width_ia[0]=strlen("trcname");
+					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz-1)) width_ia[0]=(int)(traceControl_p->nam_arr_sz-1);
+					printf("%.*s", width_ia[0],TRACE_LONG_DASHES);
+				}
+				break;
 			case 'O': /* ignore here */ break;
 			case 'o': /* ignore here */ break;
 			case 'P': printf("%." TRACE_STR(TRACE_TID_WIDTH) "s", TRACE_LONG_DASHES); break;

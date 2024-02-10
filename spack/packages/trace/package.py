@@ -20,6 +20,7 @@ print log messages in the circular buffer. THere are several other features."""
     git      = "https://github.com/art-daq/trace.git"
 
     version('develop') # A "versioned" version should have a commit hash. E.g. version('3.17.09', commit='d93a64f45e57bec87c0b890b9bbaaf94eb0b2e69')
+    version('trace', git=os.environ['HOME']+"/trace") # from git clone. One can create a link in their home dir.
 
     def setup_run_environment(self, env):
         #env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking

@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1617 $$Date: 2024-02-09 11:02:30 -0600 (Fri, 09 Feb 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1622 $$Date: 2024-02-10 19:01:38 -0600 (Sat, 10 Feb 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -741,7 +741,7 @@ void printEnt(  const char *ospec, int opts, struct traceEntryHdr_s* myEnt_p
 			case 'n':
 				if (!width_state) printf("%*.*s",name_width,name_width,TRACE_TID2NAME(myEnt_p->TrcId));
 				else {
-					if (width_ia[0]<strlen("trcname")) width_ia[0]=strlen("trcname");
+					if (width_ia[0]<(int)strlen("trcname")) width_ia[0]=strlen("trcname");
 					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz-1)) width_ia[0]=(int)(traceControl_p->nam_arr_sz-1);
 					sncp = TRACE_TID2NAME(myEnt_p->TrcId);
 					snlen = strlen(sncp);
@@ -1372,7 +1372,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 			case 'n':
 				if (!width_state) printf("%.*s", name_width,TRACE_LONG_DASHES);
 				else {
-					if (width_ia[0]<strlen("trcname")) width_ia[0]=strlen("trcname");
+					if (width_ia[0]<(int)strlen("trcname")) width_ia[0]=strlen("trcname");
 					if (width_ia[0]>(int)(traceControl_p->nam_arr_sz-1)) width_ia[0]=(int)(traceControl_p->nam_arr_sz-1);
 					printf("%.*s", width_ia[0],TRACE_LONG_DASHES);
 				}

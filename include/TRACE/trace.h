@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1616 $$Date: 2024-02-07 09:14:03 -0600 (Wed, 07 Feb 2024) $"
+#define TRACE_REV "$Revision: 1626 $$Date: 2024-02-11 21:38:03 -0600 (Sun, 11 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1616 $_$Date: 2024-02-07 09:14:03 -0600 (Wed, 07 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1626 $_$Date: 2024-02-11 21:38:03 -0600 (Sun, 11 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1096,7 +1096,7 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 	int  spec_off=1;/*, no_ext=0;;*/
 	const char *ccp, *bn, *extp;
 	size_t cpylen=0;
-	int additional_path=0;
+	int uu, additional_path=0;
 	if (strchr(spec,' ')) stop=' ';
 	else                  stop='\0';
 	--bufsz;					/* so I don't have to keep doing 'bufsz-1' */
@@ -1170,11 +1170,13 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				if (--bufsz == 0) goto out;
 				break;
 #		pragma GCC diagnostic push
+#	if __GNUC__ >= 8
 #		pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#	endif
 			case '\0': --spec_off; /* Fall Through */
 			default:
 #		pragma GCC diagnostic pop
-				for (int uu=0;uu<=spec_off;++uu) {
+				for (uu=0;uu<=spec_off;++uu) {
 					*obuf++ = spec[uu];
 					if (--bufsz == 0) goto out;
 				}					

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1626 $$Date: 2024-02-11 21:38:03 -0600 (Sun, 11 Feb 2024) $"
+#define TRACE_REV "$Revision: 1632 $$Date: 2024-02-13 09:05:52 -0600 (Tue, 13 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -122,7 +122,7 @@
 			trace_tv_t lclTime;											\
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			TRACE_SBUFDECL;													\
-			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn)); \
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn)); \
 			lclTime.tv_sec = 0;											\
 			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) { \
 				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1626 $_$Date: 2024-02-11 21:38:03 -0600 (Sun, 11 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1632 $_$Date: 2024-02-13 09:05:52 -0600 (Tue, 13 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -560,7 +560,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 			char _ins[32];                                                                         \
 			std::string _ss; \
 			lclTime.tv_sec = 0;                                                                                                   \
-			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
 			bool do_m = traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_)); \
 			bool do_s = traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_)) && trace_limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
 			if (do_m || do_s) {											\
@@ -588,7 +588,7 @@ static const char *TRACE_PRINT__= "%T %*n %*L %F: %M"; /* Msg Limit Insert will 
 			trace_tv_t lclTime;											\
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			char _ins[32];												\
-			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
 			lclTime.tv_sec = 0;											\
 			bool do_m = traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_));	\
 			bool do_s = traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_)) && trace_limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
@@ -1229,7 +1229,7 @@ static const char *trace_name(const char *name, const char *file, char *buf, siz
 	is also used in the TRACEN* macros.
  */
 SUPPRESS_NOT_USED_WARN
-static int trace_tlog_name_(const char* given, const char *base_file, const char *FILEp, char *buf, size_t buflen)
+static int trace_tlog_name_(const char* given, const char *trace_name, const char *base_file, const char *FILEp, char *buf, size_t buflen)
 {
 	int ret;
 	const char *spec;
@@ -1246,9 +1246,9 @@ static int trace_tlog_name_(const char* given, const char *base_file, const char
 			// in included (header) file (NOT main/base file)
 			// IF no ' ' then I could EITHER 1) pass DFLT_HNAME spec
 			//                            OR 2) pass DFLT_NAME w/ base_file=FILEp (the only way to get "base..file" is by having ' ' in TRACE_NAME or getenv("TRACE_NAME")
-			if (TRACE_NAME && *TRACE_NAME) {
+			if (trace_name && *trace_name) {
 				// need to check for ' '
-				spec=TRACE_NAME;
+				spec=trace_name;
 			} else {
 #ifndef __KERNEL__
 				spec= getenv("TRACE_NAME"); /* THIS IS/COULD BE costly :( -- THIS WILL HAPPENS (once) FOR EVERY TLOG/TRACEN in a header/included file!!! */
@@ -3454,7 +3454,7 @@ typedef struct
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
 			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
-					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
@@ -3463,7 +3463,7 @@ typedef struct
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
-				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \

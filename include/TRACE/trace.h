@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1632 $$Date: 2024-02-13 09:05:52 -0600 (Tue, 13 Feb 2024) $"
+#define TRACE_REV "$Revision: 1634 $$Date: 2024-02-13 20:48:10 -0600 (Tue, 13 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1632 $_$Date: 2024-02-13 09:05:52 -0600 (Tue, 13 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1634 $_$Date: 2024-02-13 20:48:10 -0600 (Tue, 13 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1169,13 +1169,15 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				*obuf++ = spec[spec_off];
 				if (--bufsz == 0) goto out;
 				break;
-#		pragma GCC diagnostic push
 #	if __GNUC__ >= 8
+#		pragma GCC diagnostic push
 #		pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #	endif
 			case '\0': --spec_off; /* Fall Through */
 			default:
+#	if __GNUC__ >= 8
 #		pragma GCC diagnostic pop
+#	endif
 				for (uu=0;uu<=spec_off;++uu) {
 					*obuf++ = spec[uu];
 					if (--bufsz == 0) goto out;

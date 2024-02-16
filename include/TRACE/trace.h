@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1640 $$Date: 2024-02-16 16:18:11 -0600 (Fri, 16 Feb 2024) $"
+#define TRACE_REV "$Revision: 1643 $$Date: 2024-02-16 16:58:29 -0600 (Fri, 16 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1640 $_$Date: 2024-02-16 16:18:11 -0600 (Fri, 16 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1643 $_$Date: 2024-02-16 16:58:29 -0600 (Fri, 16 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1454,6 +1454,10 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 		++argchars;
 	}
 	if (!(flags&4)) {			/* SKIP PARENS */
+#	  if __GNUC__ >= 8
+#		pragma GCC diagnostic push
+#		pragma GCC diagnostic ignored "-Wstringop-truncation"
+#	  endif
 		if(argchars>3) {
 			slen = strlen("(...)");
 			slen = TRACE_MIN(slen, sz-1);
@@ -1463,6 +1467,9 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 			slen = TRACE_MIN(slen, sz-1);
 			strncpy( out, "()", slen ); out+=slen; sz-=slen;
 		}
+#	  if __GNUC__ >= 8
+#		pragma GCC diagnostic pop
+#	  endif
 	}
 
 	if (flags&2) {				/* ADD TEMPLATE TYPES */

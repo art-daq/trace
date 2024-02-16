@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1634 $$Date: 2024-02-13 20:48:10 -0600 (Tue, 13 Feb 2024) $"
+#define TRACE_REV "$Revision: 1637 $$Date: 2024-02-16 03:32:39 -0600 (Fri, 16 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1634 $_$Date: 2024-02-13 20:48:10 -0600 (Tue, 13 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1637 $_$Date: 2024-02-16 03:32:39 -0600 (Fri, 16 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1094,9 +1094,10 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 	char stop, special='%';
 	char *obuf=buf;
 	int  spec_off=1;/*, no_ext=0;;*/
-	const char *ccp, *bn, *extp;
-	size_t cpylen=0;
+	const char *ccp, *bn, *extp, *file_or_hdrf;
+	size_t cpylen=0, needle_in_spec_len;
 	int uu, additional_path=0;
+	char needle[50], reject[3];
 	if (strchr(spec,' ')) stop=' ';
 	else                  stop='\0';
 	--bufsz;					/* so I don't have to keep doing 'bufsz-1' */
@@ -1134,6 +1135,43 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				if (extp) cpylen=TRACE_MIN((size_t)(extp-ccp),bufsz);
 				else      cpylen=TRACE_MIN(strlen(ccp),bufsz);
 				strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+				break;
+			case '~':  /* Search (base) file  -- always include extension*/
+			case '^':  /* Search hdrf -- always include extension */
+				if (spec[spec_off]=='~') file_or_hdrf = file;
+				else                     file_or_hdrf = hdrf;
+				reject[0]=spec[spec_off]; reject[1]=stop; reject[2]='\0';
+				needle_in_spec_len = strcspn(&spec[spec_off+1],reject);
+
+
+				cpylen = TRACE_MIN(sizeof(needle)-1,needle_in_spec_len);
+				strncpy( needle, &spec[spec_off+1], cpylen); needle[cpylen] = '\0';
+				if ((ccp=strstr(file_or_hdrf,needle))) {
+					/* find next '/' (if there is one) -- just set ccp to last character of needle, then find the  */
+					ccp += cpylen;
+					if (needle[cpylen-1] != '/') {
+						/* find next '/', if it exists; if not, just copy after needle??? If needle
+						   is filename ???? I wonder if this should result in goto forceF??? */
+						for (uu=0; ccp[uu] != '/' && ccp[uu] != '\0'; ++uu) ;
+						if (ccp[uu] == '/') ccp += uu+1;
+						else {
+							/* Bad news: '/' not found - this means the needle is in the base/hdr filename */
+							spec_off+=(int)needle_in_spec_len;
+							if (spec[spec_off+1] == reject[0]) ++spec_off; /* add one more for trailing search delimiter */
+							goto forceF;
+						}
+					}
+					cpylen = TRACE_MIN(strlen(ccp),bufsz);
+					strncpy(obuf,ccp,cpylen); obuf+=cpylen;bufsz-=cpylen;
+
+					spec_off+=(int)needle_in_spec_len;
+					if (spec[spec_off+1] == reject[0]) ++spec_off; /* add one more for trailing search delimiter */
+				} else {
+					/* needle not found */
+					spec_off+=(int)needle_in_spec_len;
+					if (spec[spec_off+1] == reject[0]) ++spec_off; /* add one more for trailing search delimiter */
+					goto forceF;
+				}
 				break;
 			case 'H':
 			forceH:
@@ -1333,7 +1371,7 @@ static inline int trace_limit_do_print(trace_tv_t *tvp, limit_info_t *info, char
 } /* trace_limit_do_print */
 
 /*
-  Inspired by ERS/src/Context.cxx (formatting mine):
+  Originally, inspired by ERS/src/Context.cxx (formatting mine):
 ...
     void print_function( std::ostream & out, const char * function, int verbosity )
     {
@@ -1357,30 +1395,78 @@ Below replaces a non-empty arg list with "(...)" and strips return type
 i.e. "int func_0(T) [with T = int]" becomes "func_0(...)"
 Ret val is a strlen val - does not include null ('\0') which is always
 written (similar to snprintf). So, ret val will always be at least 1 less
-than input "sz". strip_ns 
+than input "sz". flags 
  */
-static size_t trace_func_to_short_func(const char *in, char *out, size_t sz, int strip_ns)
+static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int flags)
 {
-	const char *cptr;
-	int len;
-	size_t ret;
-	if ((cptr= strchr(in, '('))) {
-		if (*(cptr + 1) == ')') {
-			while (*--cptr != ' ' && (*cptr!=':' || strip_ns==0) && cptr != in)
-				;
-			if (*cptr == ' ' || (*cptr==':' && strip_ns==1)) ++cptr; /* if at space between return type and func; some (template) funcs do not) */
-			ret = (size_t)snprintf(out, sz, "%s", cptr);
+	// first, find the function name
+	// There seems to be 3 possibilities:
+	// 1. No '(' at all -- The input is from __func__ which just has the function name
+	// 2. The first '(' is not preceeded immediately by ' '. This means it is preceed by the function name
+	// 3. The first '(' is preceeded by ' ' so it's the 2nd '(' that is preceeded by the function name.
+	char *ret=out, funcname_delim[3];
+	const char *cp;
+	size_t slen, ncpylen;
+	int    overall_paren_state=0, argchars=0;
+	funcname_delim[0]=' ';funcname_delim[1]='\0';funcname_delim[2]='\0';
+	if (flags&1) funcname_delim[1]=':'; // SKIP NAMESPACE (if it exists)
+	if (!(cp=strchr(in,'('))) {
+		// copy as much of in to out as I can
+		slen = strlen(in);
+		if (slen < sz) strcpy(out, in);
+		else { strncpy(out, in, sz-1);  out[sz-1]='\0'; }
+		return ret;
+	} else if (*(cp-1) != ' ') {
+		const char *endp = cp; // one past the end of function name
+		++overall_paren_state;
+		
+		while (!strchr(funcname_delim,*--cp) && cp != in) ;
+		if (cp != in) ++cp; // strange if this is not true.
+		slen=endp-cp;
+		ncpylen = TRACE_MIN(slen, sz-1);
+		strncpy(out, cp, ncpylen); out+=ncpylen; sz-=ncpylen; cp+=slen;
+	} else if ((cp = strchr(cp+1, '('))) {		// is there a 2nd '(' ???
+		const char *endp = cp; // one past the end of function name
+		overall_paren_state += 2; // THIS IS AN ASSUMPTION
+		
+		while (!strchr(funcname_delim,*--cp) && cp != in) ;
+		if (cp != in) ++cp; // strange if this is not true.
+		slen=endp-cp;
+		ncpylen = TRACE_MIN(slen, sz-1);
+		strncpy(out, cp, ncpylen); out+=ncpylen; sz-=ncpylen; cp+=slen;
+	}
+	
+	for (; overall_paren_state && (*cp!='[') && (*cp!='\0'); ++cp) {
+		if      (*cp == '(') ++overall_paren_state;
+		else if (*cp == ')') --overall_paren_state;
+		++argchars;
+	}
+	if (!(flags&4)) {			// SKIP PARENS
+		if(argchars>3) {
+			slen = strlen("(...)");
+			slen = TRACE_MIN(slen, sz-1);
+			strncpy( out, "(...)", slen ); out+=slen; sz-=slen;
 		} else {
-			const char *endptr= cptr;
-			while (*--cptr != ' ' && (*cptr!=':' || strip_ns==0) && cptr != in)
-				;
-			if (*cptr == ' ' || (*cptr==':' && strip_ns==1)) ++cptr; /* if at space between return type and func; some (template) funcs do not) */
-			len= (int)(endptr - cptr);
-			ret = (size_t)snprintf(out, sz, "%.*s(...)", len, cptr);
+			slen = strlen("()");
+			slen = TRACE_MIN(slen, sz-1);
+			strncpy( out, "()", slen ); out+=slen; sz-=slen;
 		}
-	} else
-		ret = (size_t)snprintf(out, sz, "%s", in);
-	return TRACE_MIN(ret,sz-1);
+	}
+
+	if (flags&2) {				// ADD TEMPLATE TYPES
+		while (*cp != '[') ++cp;
+		slen=1;
+		ncpylen = TRACE_MIN(slen, sz-1);
+		strncpy(out, cp, ncpylen); out+=ncpylen; sz-=ncpylen; cp+=slen;
+		if (strncmp("with ", cp, 5) == 0) cp+=5;
+		for (; *cp; ++cp) {
+			if (*cp == ' ') continue;
+			if (sz) { *out++ = *cp;  --sz; }
+			else break;
+		}
+	}
+	if (sz) *out='\0'; else *--out='\0';
+	return ret;
 } /* trace_func_to_short_func */
 
 typedef char (trace_width_ca_t)[9];

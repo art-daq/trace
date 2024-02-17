@@ -29,7 +29,7 @@ int main( int argc, char *argv[] ) {
 	uint64_t  mark;
 	uint32_t  delta;
 	unsigned  loops=DFLT_TEST_COMPARE_ITERS;
-	unsigned  test_mask=0x7f; /* all tests */
+	unsigned  test_mask=0xff; /* all tests */
 	unsigned  modes_msk=0xf; /* all mode combinations */
 	int       fd;
 	int       opt, args;                     /* for how I use getopt */
@@ -145,6 +145,14 @@ int main( int argc, char *argv[] ) {
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "any msg";
 			delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
+		}
+
+		if (0x80 & test_mask) {
+			STRT_PRN(" 0x80 - 2 args%s%s traceTID=-1","","");
+			TRACE_CNTL("reset"); mark = gettimeofday_us();
+			for (unsigned uu=0; uu<loops; ++uu) {
+				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu; traceTID=-1;
+			} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 		}
 	} // for (jj<4)
 	return (0);

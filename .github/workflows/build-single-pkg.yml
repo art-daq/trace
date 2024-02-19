@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        build-type: [ 'd', 'p' ]
+        build-type: [ 'p' ]
+        qualifiers: [ 's112-e20', 's126-e28' ]
 
     steps:
     - uses: cvmfs-contrib/github-action-cvmfs@v3
@@ -53,28 +54,34 @@ jobs:
         #!/bin/bash
         
         cd /scratch/art-daq
-        source /cvmfs/fermilab.opensciencegrid.org/products/artdaq/setup || true
+        source /cvmfs/fermilab.opensciencegrid.org/products/artdaq/setup
         
         export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
-        export buildname="build_\${REPO}_${{ matrix.build-type }}"
+        export quals=`echo ${{ matrix.qualifiers }}|sed 's/-/:/g'`
+        export buildname="build_\${REPO}_${{ matrix.build-type }}_${{ matrix.qualifiers }}"
 
         mkdir \$buildname
         cd \$buildname
 
         echo "Logging to /scratch/\$buildname.log"
-        echo "Calling source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} || true"
-        source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} || true
+        echo "Calling source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} \$quals || true"
+        source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} \$quals || exit 1
 
         echo "Active UPS products:"
         ups active || true
         
         echo "Calling buildtool 2>&1 | tee /scratch/\$buildname.log"
         CETPKG_J=4 buildtool 2>&1 | tee /scratch/\$buildname.log
+        exit $?
         EOT
         chmod +x build_pkg.sh
 
         docker run --rm -v /cvmfs:/cvmfs:shared -v $GITHUB_WORKSPACE/scratch:/scratch eflumerf/sl7-minimal:latest /scratch/build_pkg.sh
-
+    
+    - name: Check build log for success
+      run: |
+        grep "INFO: stage build SUCCESS" ${{ github.workspace }}/scratch/build_*_${{ matrix.build-type }}_${{ matrix.qualifiers }}.log
+    
     - name: upload build log file
       uses: actions/upload-artifact@v3
       with:

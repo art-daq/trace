@@ -3,6 +3,15 @@ name: build-develop
 # Controls when the action will run. Workflow runs when manually triggered using the UI
 # or API.
 on:
+  push:
+    branches-ignore: 
+      - develop
+      - stable
+    paths-ignore:
+      - 'docs/**'
+      - '.github/**'
+  pull_request:
+    branches: [ develop ]
   schedule:
     - cron: "0 7 * * *"
 
@@ -13,53 +22,68 @@ jobs:
   build_against_dev_release:
     name: build_against_dev
     # The type of runner that the job will run on
-    runs-on: self-hosted
-    container:
-      image: "eflumerf/artdaq-suite:latest"
-    defaults:
-      run:
-        shell: bash
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    # Runs a single command using the runners shell
-    
-    - name: setup dev area
+    - uses: cvmfs-contrib/github-action-cvmfs@v3
+
+    - name: change dir permission
       run: |
-          cd /opt/otsdaq
-          source /opt/otsdaq/products/setup || true
-          source /opt/otsdaq/setup_ots.sh || true
-          
-    - name: checkout package for CI
+        sudo chmod -R go+rwx /var/lib/cvmfs
+
+    - name: Cache cvmfs cache
+      id: cvmfs_cache
+      uses: actions/cache@v3
+      with:
+        path: /var/lib/cvmfs/shared
+        key: cachecvmfs
+
+    - name: restore dir permission
+      run: |
+        sudo chown -R cvmfs.cvmfs /var/lib/cvmfs
+        sudo chmod -R go-rwx /var/lib/cvmfs
+    
+    - name: Checkout pkg
       uses: actions/checkout@v3
       with:
-        path: ${{ github.repository }}
-    
-    - name: setup build env, build the repo against the development release
-      #- name: setup build env, build and lint the repo against the development release
+        repository: ${{ github.repository }}
+        path: scratch/${{ github.repository }}
+
+    - name: run build in docker container with cvmfs bind mount
       run: |
-          export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
-          cd /opt/otsdaq
-          source setup_ots.sh || true
-          cp -pr $GITHUB_WORKSPACE/art-daq/$REPO srcs
-          echo "Starting build"
-          mrb b 2>&1 | tee $GITHUB_WORKSPACE/build.log
+      
+        cd $GITHUB_WORKSPACE/scratch
+        cat << EOT > build_pkg.sh
+        #!/bin/bash
+        
+        cd /opt/otsdaq
+        source /opt/otsdaq/products/setup
+        source /opt/otsdaq/setup_ots.sh || exit 1
+        mrb updateSource
+        
+        export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
+        cp -pr /scratch/art-daq/$REPO srcs
 
+        echo "Starting build"
+        mrb b 2>&1 | tee /scratch/art-daq/build.log
+        
+        exit $?
+        EOT
+        chmod +x build_pkg.sh
 
+        docker run --rm -v /cvmfs:/cvmfs:shared -v $GITHUB_WORKSPACE/scratch:/scratch eflumerf/artdaq-suite:latest /scratch/build_pkg.sh
+    
+    - name: Check build log for success
+      run: |
+        grep "INFO: stage build SUCCESS" ${{ github.workspace }}/scratch/art-daq/build.log
+    
     - name: upload build log file
       uses: actions/upload-artifact@v3
       with:
         name: build_log
-        path: ${{ github.workspace }}/build.log
+        path: ${{ github.workspace }}/scratch/art-daq/build.log
 
-          #- name: upload linter output file
-          #uses: actions/upload-artifact@v3
-          #with:
-          #name: linting_log
-          #path: ${{ github.workspace }}/dev-${{ matrix.os_name }}/log/linting*
-
-          #- name: upload unittest output file
-          #uses: actions/upload-artifact@v2
-          #with:
-          #name: unit_tests_log
-          #path: ${{ github.workspace }}/dev-${{ matrix.os_name }}/log/unit_tests*
+    - name: change dir permission again
+      run: |
+        sudo chmod -R go+rwx /var/lib/cvmfs

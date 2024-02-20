@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1646 $$Date: 2024-02-16 23:43:36 -0600 (Fri, 16 Feb 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1649 $$Date: 2024-02-20 07:33:05 -0600 (Tue, 20 Feb 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1050,6 +1050,10 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 					trace_ptrs_store( files_to_show++, trace_ptrs_list_start, file_during_fun, off_adjust );
 				}
 			}
+		}
+		if (files_to_show == 0) {
+			fprintf( stderr, "Error: no files to show\n" );
+			return;
 		}
 	}
 

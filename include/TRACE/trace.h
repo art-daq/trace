@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1652 $$Date: 2024-02-21 16:44:53 -0600 (Wed, 21 Feb 2024) $"
+#define TRACE_REV "$Revision: 1655 $$Date: 2024-02-25 13:37:17 -0600 (Sun, 25 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -104,11 +104,11 @@
 			lclTime.tv_sec = 0;                                                                                                       \
 			if (traceControl_rwp->mode.bits.M && (traceLvls_p[traceTID].M & TLVLMSK(lvl_))) {  \
 				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
-				trace(&lclTime, traceTID, lvl_, __LINE__, __func__/*NULL*/, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
+				trace(&lclTime, traceTID, lvl_, __TRACE_LINE__, __func__/*NULL*/, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
 			}                                                                                                                         \
 			if (traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_))) {  \
 				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
-					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __TRACE_LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
 				}                                                                                                                     \
 			}                                                                                                                         \
 		}                                                                                                                             \
@@ -126,11 +126,11 @@
 			lclTime.tv_sec = 0;											\
 			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) { \
 				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
-				trace(&lclTime, tid_, lvl_, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__);	\
+				trace(&lclTime, tid_, lvl_, __TRACE_LINE__, __func__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__);	\
 			}                                                                                                                     \
 			if (traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_))) { \
 				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
-					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __TRACE_LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
 				}                                                                                                                 \
 			}                                                                                                                     \
 		}                                                                                                                         \
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1652 $_$Date: 2024-02-21 16:44:53 -0600 (Wed, 21 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1655 $_$Date: 2024-02-25 13:37:17 -0600 (Sun, 25 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -410,6 +410,7 @@ typedef struct timeval trace_tv_t;
 #else
 #	define __TRACE_FILE__ __FILE__
 #endif
+#define __TRACE_LINE__ __LINE__
 
 #if (defined(__clang_major__) && (__clang_major__ >= 4)) || (defined __GNUC__ && defined __GNUC_MINOR__ && (10000 * __GNUC__ + 1000 * __GNUC_MINOR__) >= 49000)
 #	define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
@@ -543,8 +544,8 @@ static const char *TRACE_PRINT__= "%T %*e %*L %F: %M"; /* Msg Limit Insert will 
 			bool do_s = traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_)) && trace_limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
 			if (do_m || do_s) {											\
 				_ss = TRACE_STD_STRING_FORMAT( __VA_ARGS__ );						\
-				if (do_m) trace(&lclTime, traceTID, lvl_, __LINE__, __PRETTY_FUNCTION__, 0 TRACE_XTRA_PASSED, _ss.c_str()); \
-				if (do_s) TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _ins, __FILE__, __LINE__, __PRETTY_FUNCTION__, 0, _ss.c_str() ); \
+				if (do_m) trace(&lclTime, traceTID, lvl_, __TRACE_LINE__, __PRETTY_FUNCTION__, 0 TRACE_XTRA_PASSED, _ss.c_str()); \
+				if (do_s) TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _ins, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, 0, _ss.c_str() ); \
 			}														\
 		}                                                                                                                             \
 	} while (0)
@@ -565,8 +566,8 @@ static const char *TRACE_PRINT__= "%T %*e %*L %F: %M"; /* Msg Limit Insert will 
 			bool do_s = traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_)) && trace_limit_do_print(&lclTime, &_info, _ins, sizeof(_ins)); \
 			if (do_m || do_s) {											\
 				_ss = TRACE_STD_STRING_FORMAT( __VA_ARGS__ );						\
-				if (do_m) trace(&lclTime, tid_, lvl_, __LINE__, __PRETTY_FUNCTION__, 0 TRACE_XTRA_PASSED, _ss.c_str()); \
-				if (do_s) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _ins, __FILE__, __LINE__, __PRETTY_FUNCTION__, 0, _ss.c_str() ); \
+				if (do_m) trace(&lclTime, tid_, lvl_, __TRACE_LINE__, __PRETTY_FUNCTION__, 0 TRACE_XTRA_PASSED, _ss.c_str()); \
+				if (do_s) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _ins, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, 0, _ss.c_str() ); \
 			}														\
 		}                                                                                                                             \
 	} while (0)
@@ -596,8 +597,8 @@ static const char *TRACE_PRINT__= "%T %*e %*L %F: %M"; /* Msg Limit Insert will 
 				std::ostringstream ostr__; /*instance creation is heavy weight*/ \
 				ostr__ << TRACE_ARGS_1ST(__VA_ARGS__, xx);				\
 				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
-				if (do_m) trace(&lclTime, tid_, lvl_, __LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
-				if (do_s) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _ins, __FILE__, __LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
+				if (do_m) trace(&lclTime, tid_, lvl_, __TRACE_LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, ostr__.str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
+				if (do_s) TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _ins, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, TRACE_NARGS(__VA_ARGS__), ostr__.str().c_str() TRACE_ARGS_ARGS(__VA_ARGS__)); \
 			}															\
 		}															\
 	} while (0)
@@ -2595,8 +2596,8 @@ static int64_t traceCntl(const char *_name, const char *_file, int nargs, const 
 	else if (strcmp(cmd, "name") == 0) /* if TRACE_CNTL "name" and "file" are both used, "file" must be first (i.e. "name" first will _set_ file which won't be changed by "file") */
 	{                                  /* THIS really only makes sense for non-thread local-name-for-module or for non-static implementation w/TLS for name-per-thread */
 		char *tnam;                    /* this can still be overridden by env.var. IF traceInit(TRACE_NAME,0) is called; suggest testing w. TRACE_ARGSMAX=10*/
-		if (nargs < 1 || nargs > 1) {
-			TRACE_EPRN("traceCntl \"name\" command must one argument: <name>\n");
+		if (nargs != 1) {
+			TRACE_EPRN("traceCntl \"name\" command must have one argument: <name>\n");
 			return (-1);
 		}
 		tnam= va_arg(ap, char *);
@@ -3565,7 +3566,7 @@ typedef struct
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
-					*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)))
+					*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)))
 #	else
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
@@ -3574,7 +3575,7 @@ typedef struct
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
 				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
-			TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
+			TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
 #	endif
 
 #	define TRACE_ENDL ""

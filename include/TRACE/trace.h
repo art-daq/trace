@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1655 $$Date: 2024-02-25 13:37:17 -0600 (Sun, 25 Feb 2024) $"
+#define TRACE_REV "$Revision: 1662 $$Date: 2024-02-25 16:47:07 -0600 (Sun, 25 Feb 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1655 $_$Date: 2024-02-25 13:37:17 -0600 (Sun, 25 Feb 2024) $
+#define TRACE_REVx $_$Revision: 1662 $_$Date: 2024-02-25 16:47:07 -0600 (Sun, 25 Feb 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1665,8 +1665,13 @@ static void vtrace_user(trace_tv_t *tvp, int TrcId, uint8_t lvl, const char *ins
 		case 'e': /* TrcName:linenum */
 			snprintf(tbuf, sizeof(tbuf), "%s:%d", TRACE_TID2NAME(TrcId), line);
 			name_width = traceControl_rwp->longest_name;
-			if (name_width > traceControl_p->nam_arr_sz) name_width = traceControl_p->nam_arr_sz;
-			retval= snprintf(&(obuf[printed]), TRACE_PRINTSIZE(printed), "%*s", name_width + 1 + TRACE_LINENUM_WIDTH, tbuf); /* +1 for ':' */
+			if (name_width > traceControl_p->nam_arr_sz) name_width = traceControl_p->nam_arr_sz; /* safe - corruption has been seen */
+			name_width += (1+TRACE_LINENUM_WIDTH); /* +1 for ':' */
+			if (strchr(flags_ca,'*')) { /* See 'n' below */
+				retval= snprintf(&(obuf[printed]), TRACE_PRINTSIZE(printed), "%*.*s", name_width, name_width, tbuf); /* +1 for ':' */
+			} else {
+				retval= snprintf(&(obuf[printed]), TRACE_PRINTSIZE(printed), "%.*s",   name_width, tbuf); /* +1 for ':' */
+			}
 			break;
 		case 'F': {                                                   /* function */
 			char snfmt[0x10];
@@ -1781,7 +1786,7 @@ static void vtrace_user(trace_tv_t *tvp, int TrcId, uint8_t lvl, const char *ins
 			break;
 		case 'n': /* trace name - padded */
 			name_width = traceControl_rwp->longest_name;
-			if (name_width > traceControl_p->nam_arr_sz) name_width = traceControl_p->nam_arr_sz;
+			if (name_width > traceControl_p->nam_arr_sz) name_width = traceControl_p->nam_arr_sz; /* safe - corruption has been seen */
 			if (strchr(flags_ca,'*')) {
 				/*  . . . . . . . . . . . . . . . . . . . . . . . . . . . . . always pads (and truncate if too large) */
 				retval= snprintf(&(obuf[printed]), TRACE_PRINTSIZE(printed), "%*.*s", name_width, name_width, TRACE_TID2NAME(TrcId));

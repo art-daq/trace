@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1655 $$Date: 2024-02-25 13:37:17 -0600 (Sun, 25 Feb 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1658 $$Date: 2024-02-25 15:56:05 -0600 (Sun, 25 Feb 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -2202,7 +2202,7 @@ extern  int        optind;         /* for getopt */
 			lvl = (uint8_t)str2enum(lvlptr);
 		if (opt_timing_stats)
 			t0_us = gettimeofday_us();
-		if (opt_line) line=opt_line;
+		line=opt_line;
 #ifdef  __TRACE_LINE__
 # undef __TRACE_LINE__
 #endif

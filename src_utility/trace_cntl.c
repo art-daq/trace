@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1652 $$Date: 2024-02-21 16:44:53 -0600 (Wed, 21 Feb 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1658 $$Date: 2024-02-25 15:56:05 -0600 (Sun, 25 Feb 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -39,7 +39,7 @@ struct {
 	const char* cmd;
 	const char* hlp;
 } subcmdhlp[] = {
-	{"show [-HqF|-L<LC_NUMERIC_val>|-c<count>|-s<startSlotIdx>","[opts] [file[:off_usec]]...   # Note: -s invalid with multiple files"},
+	{"show [-HqF|-c<count>|-s<startSlotIdx>","[opts] [file[:off_usec]]...   # Notes: -s invalid with multiple files; LC_NUMERIC=en_US.UTF-8 for %%'[df]"},
 	{"info",""},
 	{"tids",""},
 	{"cntl",""},
@@ -91,12 +91,11 @@ opts:\n\
  -a           for tids, show all\n\
 show opts:\n\
  -H           no header\n\
- -L<LC_NUMERIC val>  i.e. -Len_US\n\
  -q           silence format errors\n\
  -F           show forward, poll for new entries. \"count\" (each files) avoids older entries\n\
  -c<count>    \n\
  -s<startSlotIndex> \n\
- other options encoded in TRACE_SHOW env.var.\n\
+ other options encoded in TRACE_SHOW env.var.; export LC_NUMERIC=en_US or en_US.UTF-8 of %%'[df]\n\
 tests:  (use %s show after test)\n\
  -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings\n\
  -l<loops>\n\
@@ -117,7 +116,8 @@ tests:  (use %s show after test)\n\
   for tt in `seq 0 6`;do export TRACE_NUMENTS=500000\\\n\
    printf \"$tt: \";rm -f /tmp/trace_buffer_$USER;toffS info -ntrace_cntl;tcntl test-threads $tt -tl3000000;\\\n\
   done\n\
- TRACE [-t,-l<loops>,--] <lvl> <fmt> [ulong or double]...   (double if contains any of \".INnPp\")\n\
+ TRACE [-t,-l<loops>,-L<linenum>,--] <lvl> <fmt> [ulong or double]...   Note: double if contains any of \".INnPp\"; -\n\
+                                                 export LC_NUMERIC=en_US.UTF-8 for %%'[df] for TRACE(slow) and show(mem))\n\
 "
 
 // Started by copying macros from trace.h and adjusting (adding va_list ap = TRACE_VA_LIST_INIT(arrblk) in particular)
@@ -132,12 +132,12 @@ tests:  (use %s show after test)\n\
 			if (traceControl_rwp->mode.bits.M && (traceLvls_p[traceTID].M & TLVLMSK(lvl_))){ \
 				/* Note: "...NARGS...+2" don't know if any args are long doubles, so support 2 on 64 and 4 on 32 bit archs */ \
 				va_list ap = TRACE_VA_LIST_INIT(arrblk);				\
-				vtrace(&lclTime, traceTID, lvl_, __LINE__, __func__, nargs, msg, ap); \
+				vtrace(&lclTime, traceTID, lvl_, __TRACE_LINE__, __func__, nargs, msg, ap); \
 			}                                                                                                                         \
 			if (traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_))){ \
 				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime){				\
 					va_list ap = TRACE_VA_LIST_INIT(arrblk);			\
-					vtrace_user(&lclTime, traceTID, lvl_, _insert, __FILE__, __LINE__, __func__, nargs, msg, ap); \
+					vtrace_user(&lclTime, traceTID, lvl_, _insert, __FILE__, __TRACE_LINE__, __func__, nargs, msg, ap); \
 				}                                                                                                                     \
 			}                                                                                                                         \
 		}                                                                                                                             \
@@ -151,17 +151,17 @@ tests:  (use %s show after test)\n\
 			struct timeval lclTime;                                                                                               \
 			uint8_t lvl_ = (uint8_t)(lvl);								\
 			TRACE_SBUFDECL;													\
-			if (tid_ == -1) tid_ = (int)trace_name2TID(&(nam)[0]);			\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn));			\
 			lclTime.tv_sec = 0;                                                                                                   \
 			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))){ \
 				/* Note: "...NARGS...+2" don't know if any args are long doubles, so support 2 on 64 and 4 on 32 bit archs */ \
 				va_list ap = TRACE_VA_LIST_INIT(arrblk);				\
-				vtrace(&lclTime, tid_, lvl_, __LINE__, __func__, nargs, msg, ap); \
+				vtrace(&lclTime, tid_, lvl_, __TRACE_LINE__, __func__, nargs, msg, ap); \
 			}                                                                                                                     \
 			if (traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_))){ \
 				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime){				\
 					va_list ap = TRACE_VA_LIST_INIT(arrblk);			\
-					vtrace_user(&lclTime, tid_, lvl_, _insert, __FILE__, __LINE__, __func__, nargs, msg, ap); \
+					vtrace_user(&lclTime, tid_, lvl_, _insert, __FILE__, __TRACE_LINE__, __func__, nargs, msg, ap); \
 				}                                                                                                                 \
 			}                                                                                                                     \
 		}                                                                                                                         \
@@ -1671,7 +1671,9 @@ extern  int        optind;         /* for getopt */
 	int         opt_quiet=0;
 	int         opt_all=0;
 	int         opt_count=-2, opt_start=-1; // -2 to indicate "not specified" (less likely to be specfied than -1)
+	int         opt_line=0;
 	const char *opt_Name=NULL;	/* -N<wild> */
+	char       *cp;
 	uint64_t t0_us=0;
 	uint32_t tdelta_us;
 
@@ -1687,7 +1689,7 @@ extern  int        optind;         /* for getopt */
         case 'F': show_opts|=forward_;                             break;
 		case 'f': setenv("TRACE_FILE",optarg,1);                   break;
 		case 'H': do_heading=0;                                    break;
-		case 'L': setlocale(LC_NUMERIC,optarg);                    break;
+		case 'L': opt_line=(int)strtoul(optarg,NULL,0);            break;
 		case 'l': opt_loops=(int)strtoul(optarg,NULL,0);           break;
 		case 'N': opt_Name=optarg;                                 break;
 		case 'n': setenv("TRACE_NAME",optarg,1);                   break;/*note: TRACE_CNTL "file" or "name" doesn't allow setting the other (order becomes dependent)*/
@@ -1721,8 +1723,8 @@ extern  int        optind;         /* for getopt */
 		//traceInit(opt_Name,0);
 	}
 
-	if(getenv("LC_NUMERIC"))                        // IFF LC_NUMERIC is set in the environment (i.e to "en_US.UTF-8")...
-		setlocale(LC_NUMERIC,getenv("LC_NUMERIC")); // this is needed for (e.g.) %'d to produce output with thousands grouped
+	if((cp=getenv("LC_NUMERIC")))                        // IFF LC_NUMERIC is set in the environment (i.e to "en_US" or "en_US.UTF-8")...
+		setlocale(LC_NUMERIC,cp); // this is needed for (e.g.) %'d to produce output with thousands grouped
 
 	if		(strcmp(cmd,"test1") == 0)
 	{	int loops=1, trace_cnt;
@@ -1884,7 +1886,7 @@ extern  int        optind;         /* for getopt */
 				   real use for this feature/functionality.
 				*/
 				sprintf(test_name,"%s_%d","TRACE",ii);
-				TRACE_CNTL("name", test_name); /* this is a realatively slow operation */
+				TRACE_CNTL("name", test_name); /* this is a realatively slow operation - changes the value of traceTID */
 			}
 			TRACE( TLVL_INFO, "ii=%u", ii );
 		}
@@ -2168,6 +2170,7 @@ extern  int        optind;         /* for getopt */
 		unsigned long *end_ptr=&args[ARGS_SZ];
 		unsigned long *nxt_ptr;
 		uint8_t nargs=0, lvl;
+		int		line;
 		int    cc, required=(cmd[5]=='N')?3:2;
 		char *eptr, *lvlptr=(cmd[5]=='N')?argv[optind+1]:argv[optind];
 		if (opt_loops == -1) opt_loops=1;
@@ -2199,16 +2202,23 @@ extern  int        optind;         /* for getopt */
 			lvl = (uint8_t)str2enum(lvlptr);
 		if (opt_timing_stats)
 			t0_us = gettimeofday_us();
+		line=opt_line;
+#ifdef  __TRACE_LINE__
+# undef __TRACE_LINE__
+#endif
+#define __TRACE_LINE__ line
 		if (cmd[5]=='N')
 			for (ii=0; ii<opt_loops; ++ii) {
 				if (tdelta_us && ii) usleep(tdelta_us);
-				VTRACEN(argv[optind], lvl, nargs, argv[optind+2], args);
+				if (!line){line=__LINE__;} VTRACEN(argv[optind], lvl, nargs, argv[optind+2], args);
 			}
 		else
 			for (ii=0; ii<opt_loops; ++ii) {
 				if (tdelta_us && ii) usleep(tdelta_us);
-				VTRACE(lvl, nargs, argv[optind+1], args);
+				if (!line){line=__LINE__;} VTRACE(lvl, nargs, argv[optind+1], args);
 			}
+#undef  __TRACE_LINE__
+#define __TRACE_LINE__ __LINE__
 		if (opt_timing_stats){
 			tdelta_us=(uint32_t)(gettimeofday_us()-t0_us);
 			fprintf(stderr,"%lld usec, %.3f usec/TRACE, %.3f Mtraces/s\n",

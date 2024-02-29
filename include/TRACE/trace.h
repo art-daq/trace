@@ -3804,10 +3804,10 @@ public:
 
 	inline TraceStreamer &fill(char f) {
 		if(f != std::ios::fill()) {
-		    std::ios::fill(y);
+		    std::ios::fill(f);
 		}
 
-		if (y != ' ') fillChar= '0';
+		if (f != ' ') fillChar= '0';
 		else
 			fillChar= ' ';
 

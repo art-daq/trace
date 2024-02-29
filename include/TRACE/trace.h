@@ -3660,7 +3660,7 @@ public:
 			inUse_= true;
 #	endif
 			widthStr[0]= precisionStr[0]= msg[0]= '\0';
-			fillChar = '';
+			fillChar = ' ';
 			msg_sz= 0;
 			argCount= 0;
 			param_va_ptr= args;
@@ -3758,7 +3758,7 @@ public:
 		if (flags & left) fmtbuf[oo++]= '-';
 		if (flags & showpos) fmtbuf[oo++]= '+';
 		if (flags & (showpoint | showbase)) fmtbuf[oo++]= '#';  // INCLUSIVE OR
-		if(fillChar != '') { fmtbuf[oo++] = '0' };
+		if(fillChar != ' ') { fmtbuf[oo++] = '0' };
 
 #	define TSTREAMER_APPEND(ss)         \
 		do {                             \
@@ -3809,7 +3809,7 @@ public:
 
 		if (y != ' ') fillChar= '0';
 		else
-			fillChar= '';
+			fillChar= ' ';
 
 		return *this;
 	}

@@ -3618,6 +3618,7 @@ struct TraceStreamer : std::ios {
 	char widthStr[16];
 	char precisionStr[16];
 	char fmtbuf[32];  // buffer for fmt (e.g. "%022.12llx")
+	char fillChar;
 	trace_tv_t *lclTime_p;
 	const char *ins_;
 	const char *file_;
@@ -3653,6 +3654,7 @@ public:
 			inUse_= true;
 #	endif
 			widthStr[0]= precisionStr[0]= msg[0]= '\0';
+			fillChar = '';
 			msg_sz= 0;
 			argCount= 0;
 			param_va_ptr= args;
@@ -3750,6 +3752,7 @@ public:
 		if (flags & left) fmtbuf[oo++]= '-';
 		if (flags & showpos) fmtbuf[oo++]= '+';
 		if (flags & (showpoint | showbase)) fmtbuf[oo++]= '#';  // INCLUSIVE OR
+		if(fillChar != '') { fmtbuf[oo++] = '0' };
 
 #	define TSTREAMER_APPEND(ss)         \
 		do {                             \
@@ -3793,6 +3796,18 @@ public:
 		return fmtbuf;
 	}
 
+	inline TraceStreamer &fill(char f) {
+		if(f != std::ios::fill()) {
+		    std::ios::fill(y);
+		}
+
+		if (y != ' ') fillChar= '0';
+		else
+			fillChar= '';
+
+		return *this;
+	}
+
 	inline TraceStreamer &width(int y)
 	{
 		if (y != std::ios_base::width()) {
@@ -3816,7 +3831,13 @@ public:
 		return *this;
 	}
 #	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4) \
-	|| (__clang_major__ >= 10 && __clang_major__ <= 11)
+	|| \
+		(__clang_major__ >= 10 && __clang_major__ <= 11)
+	inline TraceStreamer &operator<<(std::_Setfill r)
+	{
+		fill(r._M_c);
+		return *this;
+	}
 	inline TraceStreamer &operator<<(std::_Setprecision r)
 	{
 		precision(r._M_n);
@@ -3830,7 +3851,15 @@ public:
 #	else
 #	ifndef _LIBCPP_ABI_NAMESPACE
 #		define _LIBCPP_ABI_NAMESPACE __1
-#	endif
+#		endif
+	//setfill
+	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t4 r)
+	{
+		std::ostringstream ss;
+		ss << r;
+		fill(ss.fill());
+		return *this;
+	}
 	//setprecision
 	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t5 r)
 	{

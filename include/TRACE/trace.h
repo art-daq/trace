@@ -3758,7 +3758,7 @@ public:
 		if (flags & left) fmtbuf[oo++]= '-';
 		if (flags & showpos) fmtbuf[oo++]= '+';
 		if (flags & (showpoint | showbase)) fmtbuf[oo++]= '#';  // INCLUSIVE OR
-		if(fillChar != ' ') { fmtbuf[oo++] = '0' };
+		if(fillChar != ' ') { fmtbuf[oo++] = '0'; };
 
 #	define TSTREAMER_APPEND(ss)         \
 		do {                             \

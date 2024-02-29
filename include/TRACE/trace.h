@@ -3758,7 +3758,7 @@ public:
 		if (flags & left) fmtbuf[oo++]= '-';
 		if (flags & showpos) fmtbuf[oo++]= '+';
 		if (flags & (showpoint | showbase)) fmtbuf[oo++]= '#';  // INCLUSIVE OR
-		if(fillChar != ' ') { fmtbuf[oo++] = '0' };
+		if(fillChar != ' ') { fmtbuf[oo++] = '0'; };
 
 #	define TSTREAMER_APPEND(ss)         \
 		do {                             \
@@ -3804,10 +3804,10 @@ public:
 
 	inline TraceStreamer &fill(char f) {
 		if(f != std::ios::fill()) {
-		    std::ios::fill(y);
+		    std::ios::fill(f);
 		}
 
-		if (y != ' ') fillChar= '0';
+		if (f != ' ') fillChar= '0';
 		else
 			fillChar= ' ';
 
@@ -3839,9 +3839,11 @@ public:
 #	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4) \
 	|| \
 		(__clang_major__ >= 10 && __clang_major__ <= 11)
-	inline TraceStreamer &operator<<(std::_Setfill r)
+
+	template<typename Char_t>
+	inline TraceStreamer &operator<<(std::_Setfill<Char_t> r)
 	{
-		fill(r._M_c);
+		fill(static_cast<char>(r._M_c));
 		return *this;
 	}
 	inline TraceStreamer &operator<<(std::_Setprecision r)
@@ -3859,7 +3861,8 @@ public:
 #		define _LIBCPP_ABI_NAMESPACE __1
 #		endif
 	//setfill
-	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t4 r)
+	template<typename Char_t>
+	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t4<Char_t> r)
 	{
 		std::ostringstream ss;
 		ss << r;

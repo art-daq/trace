@@ -3839,9 +3839,11 @@ public:
 #	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4) \
 	|| \
 		(__clang_major__ >= 10 && __clang_major__ <= 11)
-	inline TraceStreamer &operator<<(std::_Setfill r)
+
+	template<typename Char_t>
+	inline TraceStreamer &operator<<(std::_Setfill<Char_t> r)
 	{
-		fill(r._M_c);
+		fill(static_cast<char>(r._M_c));
 		return *this;
 	}
 	inline TraceStreamer &operator<<(std::_Setprecision r)
@@ -3859,7 +3861,8 @@ public:
 #		define _LIBCPP_ABI_NAMESPACE __1
 #		endif
 	//setfill
-	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t4 r)
+	template<typename Char_t>
+	inline TraceStreamer &operator<<(std::_LIBCPP_ABI_NAMESPACE::__iom_t4<Char_t> r)
 	{
 		std::ostringstream ss;
 		ss << r;

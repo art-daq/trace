@@ -1,7 +1,7 @@
 #!/bin/bash
-
-
 # Source me from a bash script
+# Set file execution to allow source to find this file via PATH; check for source vs. execute next:
+[[ "${BASH_SOURCE[0]}" != "${0}" ]] || { echo "This script ${BASH_SOURCE[0]} should be sourced."; exit; }
 
 if [ -z "$Black" ];then
 

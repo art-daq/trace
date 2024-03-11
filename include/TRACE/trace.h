@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1665 $$Date: 2024-03-01 09:58:22 -0600 (Fri, 01 Mar 2024) $"
+#define TRACE_REV "$Revision: 1668 $$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1665 $_$Date: 2024-03-01 09:58:22 -0600 (Fri, 01 Mar 2024) $
+#define TRACE_REVx $_$Revision: 1668 $_$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -455,7 +455,7 @@ typedef struct timeval trace_tv_t;
 	/*                     warning: the frame size of 2080 bytes is larger than 2048 bytes [-Wframe-larger-than=] */
 
 #define TRACE_DFLT_NUM_ENTRIES 500000
-#define TRACE_DFLT_TIME_FMT    "%m-%d %H:%M:%S.%%06d" /* match default in trace_delta.pl */
+#define TRACE_DFLT_TIME_FMT    "%m-%d %H:%M:%S.%%06d" /* match default in trace_delta */
 #ifndef TRACE_DFLT_NAME
 #	define TRACE_DFLT_NAME        "%f %H"
 #endif

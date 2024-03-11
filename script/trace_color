@@ -7,39 +7,48 @@
 # rev="$Revision: 1.34 $$Date: 2019/04/22 15:23:54 $";
 
 
-if true;then
-tcolor() { : $*=tids
-  : build sed filter;: defaults: 1=red 2=green 3=orange 4=blue 5=magenta 6=cyan 7=while 226=yellow ... 
-  test -n "${color_nums-}" || color_nums='1 2 3 4 5 6 7 226 93 87 189 195 177';: can put color_nums in env
-  num_color_nums=`echo $color_nums | wc -w`
-  test $# -eq 0 && { tid_list=`TRACE_SHOW="%x%P" trace_cntl show|awk '{print$1}'|head -300|sort -u | head -n$num_color_nums`; echo found `echo $tid_list | wc -w` unique PIDs in 1st 300 tshow lines >&2; set -- $tid_list; };: at most,could be less
-  test $# -eq 0 && { echo need at least 1 tid; return; }
-  tid=$1; esc=`printf "\033"`;: no shift to preserver num args to associate with arg with cnum
-  filt="s/\( $tid .*$\)/${esc}[38;5;`echo $color_nums|cut -d' ' -f1`m\1${esc}[0m/"
-  for num in `seq 2 $#`;do
-    tid=$2; shift
-    cnum=`echo $color_nums|cut -d' ' -f$num`
-    filt="$filt;s/\( $tid .*$\)/${esc}[38;5;${cnum}m\1${esc}[0m/"
-  done
-  sed -e "$filt"
-}
-else
+: defaults: 1=red 2=green 3=orange 4=blue 5=magenta 6=cyan 7=while 226=yellow ...
+: color_nums can be set in the ENVIRONMENT
+test -n "${color_nums-}" || color_nums='1 2 3 4 5 6 7 226 93 87 189 195 177';: Can put color_nums in ENV
+num_color_nums=`echo $color_nums | wc -w`
+esc=`printf "\033"`
 
 tcolor() { : $*=tids
-  : build sed filter
-  color_nums='31 32 33 34 35 36 37'
-  num_color_nums=`echo $color_nums | wc -w`
-  test $# -eq 0 && set -- `trace_cntl show|awk '/^ *[0-9]/{print$4}'|head -200|sort -u | head -n$num_color_nums`;: at most,could be less
-  test $# -eq 0 && { echo need at least 1 tid; return; }
-  tid=$1; shift; esc=`printf "\033"`
-  filt="s/\( $tid .*\)/${esc}[31m\1${esc}[0m/";: every nl resets color
-  for num in `seq $#`;do
-    tid=$1; shift
-    cnum=`echo $color_nums|cut -d' ' -f$num`
-    filt="$filt;s/\( $tid .*\)/${esc}[${cnum}m\1${esc}[0m/";: every nl resets color
-  done
-  sed -e "$filt"
-}
-fi
+   # build sed filter --- NOTE: if building for tshow Thread ID -- the parameter list created with be " <tid> "  (w/ space(' ') before and after
+   test $# -eq 0 && { tid_list=`TRACE_SHOW="%x%P" trace_cntl show|awk '{printf"\" %s \"\n",$1;}'|head -500|uniq | head -n$num_color_nums`
+                      echo found `echo "$tid_list" | wc -l` unique PIDs within 1st 500 tshow lines >&2; eval set -- $tid_list; };: at most,could be less
+   test $# -eq 0 && { echo need at least 1 tid; return; }
+   tid=$1; : no shift to preserver num args to associate arg with cnum
 
-tcolor "$@"
+   for num in `seq 1 $#`;do
+      tid=$1; shift
+      cnum=`echo $color_nums|cut -d' ' -f$num`
+      # Below, the sed substitute command is either s~this~that~ OR s@this@that@
+      if expr "$SED" : '.*[Er]' >/dev/null;then
+	 expr "$tid" : '.*@' >/dev/null && filt="${filt:+${filt};}s~($tid.*$)~${esc}[38;5;${cnum}m\1${esc}[0m~"   || filt="${filt:+${filt};}s@($tid.*$)@${esc}[38;5;${cnum}m\1${esc}[0m@"
+      else
+	 expr "$tid" : '.*@' >/dev/null && filt="${filt:+${filt};}s~\($tid.*$\)~${esc}[38;5;${cnum}m\1${esc}[0m~" || filt="${filt:+${filt};}s@\($tid.*$\)@${esc}[38;5;${cnum}m\1${esc}[0m@"
+      fi
+   done
+
+   expr "$SED" : 'sed ' >/dev/null && { eval "$SED -e '$filt'";true;} || sed $SED -e "$filt"
+}
+
+case $1 in
+-h|--help)
+    echo "Usage: tcolor [-h|--help] [pattern_for_color1]...
+If no patterns are given, the default is to apply colors to the first 13 unique Thread IDs.
+NOTE: Current, if tcolor is used before tdelta, a pattern which matches before the delta can mess up the delta.
+      If PAGER is used, remeber to use the appropriate option to interpret color generating escape sequences (e.g., include -R in LESS env. var.)
+      default ANSI color numbers can be overridden via export color_nums='<space_separated_number_list>'
+      Patterns may not contain both '~' and '@' characters; if so, one or the other should be replaced with the '.' character OR replace '~' with '\~' or [~].
+      Be careful with specifying patterns that match overlapping parts on a line -- counter intuitive output may occur.
+The colors are:"
+    for num in `seq $num_color_nums`;do
+      cnum=`echo $color_nums|cut -d' ' -f$num`
+      printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
+    done
+    exit;;
+esac
+
+test -n "$PAGER" && { tcolor "$@" | $PAGER;true;} || tcolor "$@"

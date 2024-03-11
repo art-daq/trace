@@ -3,7 +3,7 @@ TRACE package:
 TRACE_DIR=<prod_root>/TRACE/v3_0
 TRACE/v3_1/README
           /include/trace.h
-          /script/trace_delta.pl
+          /script/trace_delta
                  /trace_mk.sh     - to make utility, module, and/or example SPECIFYING OUTDIR
 	         /trace.sh.functions
           /doc/package_files.txt  -  mentions: these lines, that the (control) "utility" can do tests

@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1595 $$Date: 2023-03-23 15:47:57 -0500 (Thu, 23 Mar 2023) $'
+ # rev='$Revision: 1668 $$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -167,7 +167,7 @@ test -z "${TRACE_FILE-}" && TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
 
 # trace versions less than v3_13_12 need to have
 #      ln -s . $TRACE_INC/TRACE
-#      ln -s trace_delta.pl $TRACE_BIN/trace_delta
+#      ln -s trace_delta $TRACE_BIN/trace_delta
 # manually added.
 trace_revnum=`awk '/Revision:/{print$4;exit}' $TRACE_INC/TRACE/trace.h`
 if   [ $trace_revnum -le  719 ];then

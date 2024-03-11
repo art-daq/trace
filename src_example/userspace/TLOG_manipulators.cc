@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: TLOG_manipulators.cc,v $
- // rev="$Revision: 1304 $$Date: 2020-04-13 01:26:17 -0500 (Mon, 13 Apr 2020) $";
+ // rev="$Revision: 1668 $$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $";
 /*
 rm -fr Linux*; \
 make OUT=$PWD\
@@ -65,10 +65,34 @@ main(  int	argc    __attribute__((__unused__))
 				<< tht <<" " << fot <<" " << fit <<" " << sit <<" " << sEt <<" "
 #  endif
 				<< (void*)0x12345 <<" " << eit <<" " << 99;
-	TLOG(3) << (void*)0x12345678 <<" " << eit <<" sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t)
-			<<" " << (long double)3.0                      <<" " << 3
-			<<" " << reinterpret_cast<const void*>(0x1234) <<" " << reinterpret_cast<const void*>(0x5678)
-			<<" " << reinterpret_cast<long*>(0x1234) <<" " << reinterpret_cast<long*>(0x5678)
+	TLOG() << (void*)0x12345678 <<" " << eit <<" sizeof(trace_ptr_t)=" << sizeof(trace_ptr_t)
+		   <<" " << (long double)3.0                      <<" " << 3
+		   <<" " << reinterpret_cast<const void*>(0x1234) <<" " << reinterpret_cast<const void*>(0x5678)
+		   <<" " << reinterpret_cast<long*>(0x1234) <<" " << reinterpret_cast<long*>(0x5678)
 		;
+	std::cout << std::endl;
+
+	std::cout << std::setw(4)  << std::showbase << std::setfill('0') << std::hex << 0xf << "\n";
+	std::cout << std::showbase << std::setw(4)  << std::setfill('0') << std::hex << 0xf << "\n" << std::noshowbase;
+	std::cout << "0x"          << std::setw(4)  << std::setfill('0') << std::hex << 0xf << "\n";
+	TLOG()    << std::showbase << std::setw(4)  << std::setfill('0') << std::hex << 0xf; // manipulator auto reset
+	TLOG()    << std::setw(4)  << std::showbase << std::setfill('0') << std::hex << 0xf; // manipulator auto reset
+	TLOG()    << "0x"          << std::setw(4)  << std::setfill('0') << std::hex << 0xf; // manipulator auto reset
+	std::cout << std::endl;
+
+	std::cout << std::setw(2)  << std::showbase << std::setfill('0') << std::hex << 0xf << "\n";
+	std::cout << std::showbase << std::setw(2)  << std::setfill('0') << std::hex << 0xf << "\n" << std::noshowbase;
+	std::cout << "0x"          << std::setw(2)  << std::setfill('0') << std::hex << 0xf << "\n" << std::setfill(' ');
+	TLOG()    << std::showbase << std::setw(2)  << std::setfill('0') << std::hex << 0xf; // manipulator auto reset
+	TLOG()    << std::setw(2)  << std::showbase << std::setfill('0') << std::hex << 0xf; // manipulator auto reset
+	TLOG()    << "0x"          << std::setw(2)  << std::setfill('0') << std::hex << 0xf; // manipulator auto reset
+	std::cout << std::endl;
+
+	std::cout << std::setw(2)  << std::showbase <<                      std::hex << 0xf << "\n";
+	std::cout << std::showbase << std::setw(2)  <<                      std::hex << 0xf << "\n" << std::noshowbase;
+	std::cout << "0x"          << std::setw(2)  <<                      std::hex << 0xf << "\n";
+	TLOG()    << std::showbase << std::setw(2)  <<                      std::hex << 0xf; // manipulator auto reset
+	TLOG()    << std::setw(2)  << std::showbase <<                      std::hex << 0xf; // manipulator auto reset
+	TLOG()    << "0x"          << std::setw(2)  <<                      std::hex << 0xf; // manipulator auto reset
 	return (0);
 }   // main

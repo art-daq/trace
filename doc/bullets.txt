@@ -19,7 +19,7 @@ Other Goals
       - correlate console log (error) output with high-speed details.
   * user "logger" function
 
-Companion utility - trace_delta.pl
+Companion utility - trace_delta
    delta time
    use with grep -- standard filtering "unix philosophy"
    "post filter" to help get basic stats on sub-operations.

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1563 $
-#   $Date: 2022-09-14 16:56:09 -0500 (Wed, 14 Sep 2022) $
+#   $Revision: 1668 $
+#   $Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -23,7 +23,7 @@ tmodeM()  { trace_cntl modeM "$@"; }
 tmodeS()  { trace_cntl modeS "$@"; }
 tfreeze() { trace_cntl modeM 0; }
 treset()  { trace_cntl reset; }
-tdelta()  { test -n "${PAGER-}" && trace_delta "$@" | $PAGER || trace_delta "$@"; }  # ex. tshow | grep xxx | tdelta
+tdelta()  { test -n "${PAGER-}" && { trace_delta "$@" | $PAGER;true;} || trace_delta "$@"; }  # ex. tshow | grep xxx | tdelta
 
 # bitN_to_mask use to be a function and now it is a script
 

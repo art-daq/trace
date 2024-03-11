@@ -176,7 +176,7 @@ test -n "${opt_t-}" && cmd=t$opt_t || cmd=`basename $0`
 case "$cmd" in
 tcntl)                help; exec trace_cntl "$@";;
 tshow)                help; test -t 1 -a -n "${PAGER-}" -a -z "${opt_F-}" \
-                        && trace_cntl show ${opt_F-} "$@" | $PAGER || exec trace_cntl show ${opt_F-} "$@";;
+                        && { trace_cntl show ${opt_F-} "$@" | $PAGER;true;} || exec trace_cntl show ${opt_F-} "$@";;
 tinfo)                help; exec trace_cntl info "$@";;
 ttids|tlvls)          help; exec trace_cntl tids "$@";;
 tlvl[MST]|tlvl[MST]g) help; rest=`expr "$cmd" : '....\(.*\)'`; exec trace_cntl lvlmsk$rest "$@";;
@@ -188,7 +188,7 @@ tfreeze)              help; exec trace_cntl modeM 0 "$@";;
 treset)               help; exec trace_cntl reset "$@";;
 tenv)                 help; tenv "$@";;
 tdelta)               help; test -t 1 -a -n "${PAGER-}" -a -z "${opt_F-}" \
-                        && { trace_delta.pl "$@" | $PAGER;true; } || exec trace_delta.pl "$@";;
+                        && { trace_delta "$@" | $PAGER;true; } || exec trace_delta "$@";;
 tlvlsSave)            help; tlvlsSave "$@";;
 tlvlsRestore)         help; tlvlsRestore "$@";;
 tcmd.sh)              do_help=1; help;;

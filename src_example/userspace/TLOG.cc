@@ -6,7 +6,7 @@
  // rev="$Revision: 1.34 $$Date: 2019/04/22 15:23:54 $";
 /*
     # try:
-    treset; TLOG; PAGER= tshow | tdelta -ct 1
+    treset; TLOG; tshow | PAGER= tdelta -ct 1
  */
 #include "TRACE/trace.h"
 

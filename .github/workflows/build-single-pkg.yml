@@ -16,13 +16,9 @@ jobs:
   build_single_pkg:
     name: build single pkg
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        build-type: [ 'p' ]
-        qualifiers: [ 's112-e20', 's126-e28' ]
 
     steps:
-    - uses: cvmfs-contrib/github-action-cvmfs@v3
+    - uses: cvmfs-contrib/github-action-cvmfs@main
 
     - name: change dir permission
       run: |
@@ -30,7 +26,7 @@ jobs:
 
     - name: Cache cvmfs cache
       id: cvmfs_cache
-      uses: actions/cache@v3
+      uses: actions/cache@main
       with:
         path: /var/lib/cvmfs/shared
         key: cachecvmfs
@@ -41,7 +37,7 @@ jobs:
         sudo chmod -R go-rwx /var/lib/cvmfs
 
     - name: Checkout pkg
-      uses: actions/checkout@v3
+      uses: actions/checkout@main
       with:
         repository: ${{ github.repository }}
         path: scratch/${{ github.repository }}
@@ -57,15 +53,14 @@ jobs:
         source /cvmfs/fermilab.opensciencegrid.org/products/artdaq/setup
         
         export REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
-        export quals=`echo ${{ matrix.qualifiers }}|sed 's/-/:/g'`
-        export buildname="build_\${REPO}_${{ matrix.build-type }}_${{ matrix.qualifiers }}"
+        export buildname="build_\${REPO}"
 
         mkdir \$buildname
         cd \$buildname
 
         echo "Logging to /scratch/\$buildname.log"
-        echo "Calling source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} \$quals || true"
-        source ../\$REPO/ups/setup_for_development -${{ matrix.build-type }} \$quals || exit 1
+        echo "Calling source ../\$REPO/ups/setup_for_development || true"
+        source ../\$REPO/ups/setup_for_development || exit 1
 
         echo "Active UPS products:"
         ups active || true
@@ -83,7 +78,7 @@ jobs:
         grep "INFO: stage build SUCCESS" ${{ github.workspace }}/scratch/build_*_${{ matrix.build-type }}_${{ matrix.qualifiers }}.log
     
     - name: upload build log file
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@main
       with:
         name: build_log_${{ matrix.build-type }}_${{ matrix.qualifiers }}
         path: ${{ github.workspace }}/scratch/build_*_${{ matrix.build-type }}_${{ matrix.qualifiers }}.log

@@ -94,6 +94,8 @@ debug()    { OPTIND=1; getopts l: opt && { lvl=TLVL_DEBUG_$OPTARG;shift $(($OPTI
 log()      { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}";         do_log TLVL_LOG     "$*"; }
 info()     { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}$IBlue";   do_log TLVL_INFO    "$*"; }
 notice()   { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}$IGreen";  do_log TLVL_NOTICE  "$*"; }
+success()  { test $# -eq 0 && set -- Success
+             preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}$IGreen";  do_log TLVL_NOTICE  "$*"; }
 warning()  { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}$IYellow"; do_log TLVL_WARNING "$*" >&2; }
 error()    { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}$IRed";    do_log TLVL_ERROR   "$*" >&2; }
 critical() { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}" preMsg="|${IBlack}	${RstClr}$IRed";    do_log TLVL_CRIT    "$*" >&2; }
@@ -103,11 +105,12 @@ fatal()    { preTime="${RstClr}${Green}" postTime="${IBlue}${THIS_HOST}${RstClr}
 
 do_log() {
     tlvl=$1;shift
+    test -n "${BASH_SOURCE[2]}" && name=`basename "${BASH_SOURCE[2]}"` || name=`basename $0`
     if hash trace_cntl >/dev/null 2>&1;then
 	TRACE_TIME_FMT=%d%h%y.%H:%M:%S.%%03d TRACE_PRINT="${preTime}%T $postTime %n:$Cyan${BASH_LINENO[1]}$RstClr $preMsg" \
-	    trace_cntl -n`basename "${BASH_SOURCE[2]}"` -L${BASH_LINENO[1]} TRACE $tlvl "$(echo -e "$*")${RstClr}"
+	    trace_cntl -n$name -L${BASH_LINENO[1]} TRACE $tlvl "$(echo -e "$*")${RstClr}"
     else
-	echo -e "${preTime}`date +%d%h%y.%T.%N` $postTime `basename "${BASH_SOURCE[2]}"`:$Cyan${BASH_LINENO[0]}$RstClr ${preMsg}${*}${RstClr}"
+	echo -e "${preTime}`date +%d%h%y.%T.%N` $postTime $name:$Cyan${BASH_LINENO[0]}$RstClr ${preMsg}${*}${RstClr}"
     fi
 }
 

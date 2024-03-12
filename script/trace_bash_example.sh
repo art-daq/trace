@@ -7,6 +7,8 @@ critical  "hello from line $LINENO"
 error     "hello from line $LINENO"
 warning   "hello from line $LINENO"
 notice    "hello from line $LINENO"
+success
+success   "Success!"
 info      "hello from line $LINENO - test DEBUG+1 to stdout via: env -i PATH=\$PATH TRACE_LVLS=-1 `basename $0`"
 log       "hello from line $LINENO"
 debug     "hello from line $LINENO"

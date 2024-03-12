@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1668 $$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $"
+#define TRACE_REV "$Revision: 1670 $$Date: 2024-03-11 22:01:38 -0500 (Mon, 11 Mar 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -176,7 +176,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1668 $_$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $
+#define TRACE_REVx $_$Revision: 1670 $_$Date: 2024-03-11 22:01:38 -0500 (Mon, 11 Mar 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -3281,8 +3281,8 @@ static int traceInit(const char *_name, int allow_ro)
 					trace_lvlcolors[lvlidx][onoff][TRACE_MIN(ll, sizeof(trace_lvlcolors[0][0]) - 1)]= '\0';
 					cp+= ll;
 				}
-				if (*cp == ',') ++cp;
-				ll= strcspn(cp, ",");
+				if (*cp == ',') ++cp; /* Blank --> leave it alone (allow to set high level without having to re-enter all lower levels; this */
+				ll= strcspn(cp, ","); /* means that if colors are used, the defaults can never be cleared! The best one can do is "color reset." */
 
 				if ((onoff= !onoff) == 0) ++lvlidx;
 			}

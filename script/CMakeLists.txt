@@ -9,7 +9,7 @@ if (${cetmodules_FOUND})
 		trace_functions.sh
 		trace_color
 		trace-cmd-merge
-		trace_bash.sh
+		trace_bash
 		trace_bash_example.sh
   )
 

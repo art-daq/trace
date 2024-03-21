@@ -29,7 +29,7 @@ int main( int argc, char *argv[] ) {
 	uint64_t  mark;
 	uint32_t  delta;
 	unsigned  loops=DFLT_TEST_COMPARE_ITERS;
-	unsigned  test_mask=0xff; /* all tests */
+	unsigned  test_mask=0x1ff; /* all tests */
 	unsigned  modes_msk=0xf; /* all mode combinations */
 	int       fd;
 	int       opt, args;                     /* for how I use getopt */
@@ -54,9 +54,9 @@ int main( int argc, char *argv[] ) {
 	TRACE_CNTL("mode",3);
 	traceControl_rwp->mode.bits.M = 1;		   // NOTE: TRACE_CNTL("modeM",1) hardwired to NOT enable when not mapped!
 
-#	define STRT_PRN( s1, sA, sB ) sprintf(buffer,s1,sA,sB);fprintf(stderr,"%-46s",buffer);fflush(stderr)
+#	define STRT_PRN( fmt2args, a1, a2 ) sprintf(buffer,fmt2args,a1,a2);fprintf(stderr,"%-46s",buffer);fflush(stderr)
 	// ELF 6/6/18: GCC v6_3_0 does not like %', removing the '...
-#	define END_FMT  "%10u us, %5.3f us/TLOG, %7.3f Mtlogs/s\n",delta,(double)delta/loops,(double)loops/delta
+#	define END_FMT  "%10u us, %6.4f us/TLOG, %8.3f Mtlogs/s\n",delta,(double)delta/loops,(double)loops/delta
 #   define CONTINUE fprintf(stderr,"Continuing.\n");continue
 	if (args >= 1) test_mask=(unsigned)strtoul(argv[optind],NULL,0);
 	if (args >= 2) modes_msk=(unsigned)strtoul(argv[optind+1],NULL,0);
@@ -69,7 +69,7 @@ int main( int argc, char *argv[] ) {
 		}		break;
 		case 2: { TRACE_CNTL("lvlsetM",1LL<<TLVL_INFO); TRACE_CNTL("lvlclrS",1LL<<TLVL_INFO);
 				loops = (unsigned)opt_loops*2;
-				fprintf(stderr,"0x2 M1S0 - First testing with S lvl disabled (mem only). loops=%u\n", loops ); break;
+				fprintf(stderr,"0x2 M1S0 - Testing with S lvl disabled (mem only). loops=%u\n", loops ); break;
 		}		break;
 		case 4: { TRACE_CNTL("lvlsetM",1LL<<TLVL_INFO); TRACE_CNTL("lvlsetS",1LL<<TLVL_INFO);
 				loops = (unsigned)opt_loops;
@@ -151,7 +151,23 @@ int main( int argc, char *argv[] ) {
 			STRT_PRN(" 0x80 - 2 args%s%s traceTID=-1","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu) {
-				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu; traceTID=-1;
+				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;
+				traceTID=-1;
+			} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
+		}
+
+		if (0x100 & test_mask) {
+#		   undef TLOG
+#		   include <iostream>
+#		   define TLOG(...) if(0)std::cout
+#		   ifndef __OPTIMIZE__
+			STRT_PRN(" 0x100 - 2 args%s%s "," - NoTLOG - ","NOT Optimized.");
+#		   else
+			STRT_PRN(" 0x100 - 2 args%s%s "," - NoTLOG - ","OPTIMIZED out.");
+#		   endif // __OPTIMIZE__
+			TRACE_CNTL("reset"); mark = gettimeofday_us();
+			for (unsigned uu=0; uu<loops; ++uu) {
+				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;
 			} delta=(uint32_t)(gettimeofday_us()-mark); fprintf(stderr,END_FMT);
 		}
 	} // for (jj<4)

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1670 $$Date: 2024-03-11 22:01:38 -0500 (Mon, 11 Mar 2024) $"
+#define TRACE_REV "$Revision: 1672 $$Date: 2024-03-21 18:20:52 -0500 (Thu, 21 Mar 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -19,11 +19,10 @@
                             TLOG_INFO()    logging at TLVL_INFO   (level value 6)
                             TLOG_WARNING() logging at TLVL_WARNING(level value 4)
                             TLOG_ERROR()   logging at TLVL_ERROR  (level value 3)
+                            TLOG_FATAL()   logging at TLVL_FATAL  (level value 0)
                             TLOG_DEBUG()   logging at TLVL_DEBUG  (level value 8 or debug level 0)
     For OTHER debug levels: TLOG_DEBUG(lvl) where lvl can be 1 through 55
-    For remaining levels:   TLOG(lvl) where lvl would TLVL_FATAL(0), TLVL_EMERG(also 0),
-                                        TLVL_ALERT(1), TLVL_CRIT(2), and TLVL_NOTICE(5).
-    Note: The first 7 values (0-6) can mirror Linux syslog values.
+    Note: The first 7 values (0-6) can mirror Linux syslog(2) values.
  */
 
 #ifdef __cplusplus
@@ -34,9 +33,14 @@
 //  FormatControl is an int:  0 - format if slow enabled
 //                           >0 - streamer format even if just fast/mem (useful if "%" is in msg w/ delay format)
 //                           <0 - sprintf format
+#	define TLOG_FATAL(...)   TRACE_STREAMER(TLVL_FATAL,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_FATAL))
+#	define TLOG_ALERT(...)   TRACE_STREAMER(TLVL_ALERT,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ALERT))
+#	define TLOG_CRIT(...)    TRACE_STREAMER(TLVL_CRIT,   TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_CRIT))
 #	define TLOG_ERROR(...)   TRACE_STREAMER(TLVL_ERROR,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_ERROR))
 #	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
+#	define TLOG_NOTICE(...)  TRACE_STREAMER(TLVL_NOTICE, TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_NOTICE))
 #	define TLOG_INFO(...)    TRACE_STREAMER(TLVL_INFO,   TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_INFO))
+# ifndef NoTLOG
 #	define TLOG_TRACE(...)   TRACE_STREAMER(TLVL_TRACE,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_TRACE))
 
 //  This group takes 0, 1, 2, or 3 optional args: Level, and/or Name, and/or FormatControl
@@ -49,6 +53,7 @@
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 //#	define TLOG_ENTEX(...)   See below
+# endif // NoTLOG
 
 #  if __cplusplus >= 201703L
 
@@ -74,7 +79,8 @@
 #   ifndef TLOG_ENTEX_DBGLVL
 #		define TLOG_ENTEX_DBGLVL 42
 #	endif
-#   define TLOG_ENTEX(...) \
+# ifndef NoTLOG
+#   define TLOG_ENTEX(...)												\
 	TSTREAMER_T_ TRACE_VARIABLE(_trc_)((tlvle_t)0, TRACE_GET_STATIC()); \
 	TRACE_VARIABLE(_trc_).TLOG_DEBUG3(__VA_ARGS__); \
 	TRACE_VARIABLE(_trc_).lvl = (tlvle_t)((int)TRACE_VARIABLE(_trc_).lvl-TLVL_DEBUG); \
@@ -83,10 +89,21 @@
 		TRACE_VARIABLE(_trc_).lvl = (tlvle_t)TLOG_ENTEX_DBGLVL; \
 	TRACE_EXIT { TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl+1,TRACE_VARIABLE(_trc_).tn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Exit"; }; \
 	TLOG_DEBUG(TRACE_VARIABLE(_trc_).lvl,TRACE_VARIABLE(_trc_).tn,(bool)TRACE_VARIABLE(_trc_).flgs.fmtnow) << "Enter "
-
+# else
+#   define TLOG_ENTEX(...) if(0)std::cout   // if optimize, should be no-op
+# endif // NoTLOG
 #  endif // __cplusplus >= 201703L
 
-#endif
+# ifdef NoTLOG
+#   include <iostream>
+#   define TLOG_TRACE(...) if(0)std::cout   // if optimize, should be no-op
+#	define TLOG_DEBUG(...) if(0)std::cout   // if optimize, should be no-op
+#	define TLOG_DBG(...)   if(0)std::cout   // if optimize, should be no-op
+#	define TLOG(...)       if(0)std::cout   // if optimize, should be no-op
+#	define TLOG_ARB(...)   if(0)std::cout   // if optimize, should be no-op
+# endif // NoTLOG
+
+#endif // __cplusplus
 
 // The C/C++ printf style macros...............................................
 /*
@@ -176,7 +193,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1670 $_$Date: 2024-03-11 22:01:38 -0500 (Mon, 11 Mar 2024) $
+#define TRACE_REVx $_$Revision: 1672 $_$Date: 2024-03-21 18:20:52 -0500 (Thu, 21 Mar 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

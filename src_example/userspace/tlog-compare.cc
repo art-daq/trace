@@ -54,7 +54,7 @@ int main( int argc, char *argv[] ) {
 	TRACE_CNTL("mode",3);
 	traceControl_rwp->mode.bits.M = 1;		   // NOTE: TRACE_CNTL("modeM",1) hardwired to NOT enable when not mapped!
 
-#	define STRT_PRN( fmt2args, a1, a2 ) sprintf(buffer,fmt2args,a1,a2);fprintf(stderr,"%-46s",buffer);fflush(stderr)
+#	define STRT_PRN( fmt2args, a1, a2 ) sprintf(buffer,fmt2args,a1,a2);fprintf(stderr,"%-47s",buffer);fflush(stderr)
 	// ELF 6/6/18: GCC v6_3_0 does not like %', removing the '...
 #	define END_FMT  "%10u us, %6.4f us/TLOG, %8.3f Mtlogs/s\n",delta,(double)delta/loops,(double)loops/delta
 #   define CONTINUE fprintf(stderr,"Continuing.\n");continue
@@ -83,7 +83,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (1 & test_mask) {
-			STRT_PRN(" 0x01 -%s const short msg %s","",(tstmod&0xc)?"(NO snprintf)":"");
+			STRT_PRN(" 0x001 -%s const short msg %s","",(tstmod&0xc)?"(NO snprintf)":"");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "any msg";
@@ -91,7 +91,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (2 & test_mask) {
-			STRT_PRN(" 0x02 - 1 arg%s%s","","");
+			STRT_PRN(" 0x002 - 1 arg%s%s","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "this is one small param: " << 12345678;
@@ -99,7 +99,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (4 & test_mask) {
-			STRT_PRN(" 0x04 - 2 args%s%s","","");
+			STRT_PRN(" 0x004 - 2 args%s%s","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;
@@ -107,7 +107,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (8 & test_mask) {
-			STRT_PRN(" 0x08 - 8 args (7 ints, 1 float)%s%s","","");
+			STRT_PRN(" 0x008 - 8 args (7 ints, 1 float)%s%s","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "this is 8 params: " << 12345678 << " " << uu
@@ -117,7 +117,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (0x10 & test_mask) {
-			STRT_PRN(" 0x10 - 8 args (1 ints, 7 float)%s%s","","");
+			STRT_PRN(" 0x010 - 8 args (1 ints, 7 float)%s%s","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "this is 8 params: " << 12345678 << " " << (float)uu
@@ -127,7 +127,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (0x20 & test_mask) {
-			STRT_PRN(" 0x20 - snprintf of same 8 args%s%s","","");
+			STRT_PRN(" 0x020 - snprintf of same 8 args%s%s","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu) {
 				snprintf( buffer, sizeof(buffer)
@@ -140,7 +140,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (0x40 & test_mask) {
-			STRT_PRN(" 0x40 -%s const short msg %s",(1&test_mask)?" (repeat)":"",(tstmod&0xc)?"(NO snprintf)":"");
+			STRT_PRN(" 0x040 -%s const short msg %s",(1&test_mask)?" (repeat)":"",(tstmod&0xc)?"(NO snprintf)":"");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu)
 				TLOG(TLVL_INFO) << "any msg";
@@ -148,7 +148,7 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if (0x80 & test_mask) {
-			STRT_PRN(" 0x80 - 2 args%s%s traceTID=-1","","");
+			STRT_PRN(" 0x080 - 2 args%s%s traceTID=-1","","");
 			TRACE_CNTL("reset"); mark = gettimeofday_us();
 			for (unsigned uu=0; uu<loops; ++uu) {
 				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;

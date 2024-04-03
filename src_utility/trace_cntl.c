@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1675 $$Date: 2024-04-03 14:12:26 -0500 (Wed, 03 Apr 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1676 $$Date: 2024-04-03 14:19:48 -0500 (Wed, 03 Apr 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1359,7 +1359,7 @@ void traceShow( const char *ospec, int count, int slotStart, int show_opts, int 
 					if (width_state >= 2) {
 						strcat(&tbuf[1], ".");
 						strcat(&tbuf[2], width_ca[1]);
-					} else {
+					} else if (tbuf[1] != '.') {
 						strcat(&tbuf[1], ".");
 						strcat(&tbuf[2], width_ca[0]);
 					}

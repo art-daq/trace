@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1676 $$Date: 2024-04-03 14:19:48 -0500 (Wed, 03 Apr 2024) $"
+#define TRACE_CNTL_REV "$Revision: 1678 $$Date: 2024-04-05 16:32:09 -0500 (Fri, 05 Apr 2024) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1588,7 +1588,7 @@ void traceInfo(int quiet)
 		       "buffer_offset     = 0x%lx\n"
 		       "memlen            = 0x%x          %s\n"
 		       "default TRACE_TIME_FMT=\"%s\"\n"
-		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent e:nam:ln# n:nam f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:fileIdx X:examineArgData\n"
+		       "default TRACE_SHOW=\"%s\" others: a:nargs b:fileName B:paramBytes D:inDent e:nam:ln# n:nam f:convertedMsgfmt_only I:trcId l:lvlNum O/o:color R:retry S:severity s:slot t:tsc u:line x:filtNl X:examineArgData\n"
 		       "default TRACE_PRINT=\"%s\" others: C:core e:nam:ln# n:nam [n]f:file F:func I:trcId i:threadID l:lvlNum m:msg-insert N:unpadded_trcName O/o:color P:pid S:severity t:insert u:line\n"
 		       "Some SHOW/PRINT specifiers take optional modifiers. E.g. PRINT: %%#n.mf#/src#\n"
 		       , TRACE_REV

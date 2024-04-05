@@ -3,7 +3,7 @@
 # Apr 18, 2023. "TERMS AND CONDITIONS" governing this file are in the README
 # or COPYING file. If you do not have such a file, one can be obtained by
 # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
-# rev="$Revision: 1603 $$Date: 2023-04-23 20:06:30 -0500 (Sun, 23 Apr 2023) $";
+# rev="$Revision: 1677 $$Date: 2024-04-05 13:13:12 -0500 (Fri, 05 Apr 2024) $";
 
 USAGE="\
    usage: `basename $0` [opts] <cmd> [args]...
@@ -28,28 +28,32 @@ done
 shift $(($OPTIND-1))
 test $# -eq 0 && { echo "Wrong number of args: $#. Need 1."; printf "$USAGE"; exit 1; }
 
-
 vecho() { test $1 -ge $verbose && { shift; echo "$@" 1>&2; }; }
 
-
-
 taskset= taskset_mask=
-test -n "$opt_mask" && opt_M=-M taskset=taskset taskset_mask=0x$opt_mask
+test -n "$opt_mask" && opt_M=-M taskset=taskset taskset_mask=0x`echo $opt_mask|sed s/^0x//`
+
 sudo -E trace-cmd record --no-filter -q $opt_M $opt_mask -b 10000 -C x86-tsc -e all  $taskset $taskset_mask "$@"
 
+# Note: could possibly get close to epoch time using "record...-C global" and
+#       "report...--ts-offset `echo $offset \* 1000000000 | bc`"
+#       where offset=`set -- $(date +%s.%N) $(cat /proc/uptime);echo $1-$2|bc`
+
 vecho 1 Now for trace-cmd report...
-trace-cmd report -q 2>/dev/null \
+trace-cmd report -q -i trace.dat 2>/dev/null \
 | awk 'BEGIN{
   printf("                 tsc     pid cpu            name msg\n");
   printf("-------------------- ------- --- --------------- -------------------------------\n");
  }
  /^cpus=[1-9]/{next}
+ /^CPU [0-9]* is empty/{next}
  {
-   nam=gensub(/^ *(.*)-[0-9]* *\[[0-9]*] *[0-9]*: .*/,"\\1",1);
-   pid=gensub(/^.*-([0-9]*) *\[[0-9]*] *[0-9]*: .*/,"\\1",1);
-   cpu=gensub(/^.*-[0-9]* *\[([0-9]*)] *[0-9]*: .*/,"\\1",1);
-   tsc=gensub(/^.*-[0-9]* *\[[0-9]*] *([0-9]*): .*/,"\\1",1);
-   rest=gensub(/^.*-[0-9]* *\[[0-9]*] *[0-9]*: (.*)/,"\\1",1);
+   nam=gensub(/^ *(.*)-[0-9]* *\[[0-9]*] *[0-9.]*: .*/,"\\1",1);
+   pid=gensub(/^.*-([0-9]*) *\[[0-9]*] *[0-9.]*: .*/,"\\1",1);
+   cpu=gensub(/^.*-[0-9]* *\[([0-9]*)] *[0-9.]*: .*/,"\\1",1);
+   tsc=gensub(/^.*-[0-9]* *\[[0-9]*] *([0-9.]*): .*/,"\\1",1);
+   rest=gensub(/^.*-[0-9]* *\[[0-9]*] *[0-9.]*: (.*)/,"\\1",1);
+   sub(/^0\./,"",tsc); # remove initial "0." if it is there
    printf("%20d %7d %3d %15s %s\n",tsc,pid,cpu,nam,rest)
  }' >|trace-cmd.txt
 

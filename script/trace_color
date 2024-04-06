@@ -15,7 +15,7 @@ esc=`printf "\033"`
 
 tcolor() { : $*=tids
    # build sed filter --- NOTE: if building for tshow Thread ID -- the parameter list created with be " <tid> "  (w/ space(' ') before and after
-   test $# -eq 0 && { tid_list=`TRACE_SHOW="%x%P" trace_cntl show|awk '{printf"\" %s .*\"\n",$1;}'|head -500|uniq | head -n$num_color_nums`
+   test $# -eq 0 && { tid_list=`TRACE_SHOW="%x%P" trace_cntl show|awk '!seen[$1]++{printf"\" %s .*\"\n",$1;}'| head -n$num_color_nums`
                       echo found `echo "$tid_list" | wc -l` unique PIDs within 1st 500 tshow lines >&2; eval set -- $tid_list; };: at most,could be less
    test $# -eq 0 && { echo need at least 1 tid; return; }
    tid=$1; : no shift to preserver num args to associate arg with cnum

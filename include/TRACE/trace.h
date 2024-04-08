@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1672 $$Date: 2024-03-21 18:20:52 -0500 (Thu, 21 Mar 2024) $"
+#define TRACE_REV "$Revision: 1681 $$Date: 2024-04-08 10:17:22 -0500 (Mon, 08 Apr 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -193,7 +193,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1672 $_$Date: 2024-03-21 18:20:52 -0500 (Thu, 21 Mar 2024) $
+#define TRACE_REVx $_$Revision: 1681 $_$Date: 2024-04-08 10:17:22 -0500 (Mon, 08 Apr 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1446,7 +1446,7 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 		
 		while (!strchr(funcname_delim,*--cp) && cp != in) ;
 		if (cp != in) ++cp; /* true for "sub1()::<lambda()>" */
-		slen=endp-cp;
+		slen=(size_t)(endp-cp);
 		ncpylen = TRACE_MIN(slen, sz-1);
 		strncpy(out, cp, ncpylen); out+=ncpylen; sz-=ncpylen; cp+=slen;
 	} else if ((cp = strchr(cp+1, '('))) {		/* is there a 2nd '(' ??? */
@@ -1455,7 +1455,7 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 		
 		while (!strchr(funcname_delim,*--cp) && cp != in) ;
 		if (cp != in) ++cp; // strange if this is not true.
-		slen=endp-cp;
+		slen=(size_t)(endp-cp);
 		ncpylen = TRACE_MIN(slen, sz-1);
 		strncpy(out, cp, ncpylen); out+=ncpylen; sz-=ncpylen; cp+=slen;
 	}

@@ -7,7 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1681 $$Date: 2024-04-08 10:17:22 -0500 (Mon, 08 Apr 2024) $"
+#define TRACE_REV "$Revision: 1682 $$Date: 2024-04-09 16:05:33 -0500 (Tue, 09 Apr 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -193,7 +193,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1681 $_$Date: 2024-04-08 10:17:22 -0500 (Mon, 08 Apr 2024) $
+#define TRACE_REVx $_$Revision: 1682 $_$Date: 2024-04-09 16:05:33 -0500 (Tue, 09 Apr 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1149,7 +1149,7 @@ static const char *trace_name_path( const char* spec, const char*file, const cha
 				break;
 			case 'f':			/* without extension */
 			case 'h':			/* without extension */
-				if (spec[spec_off]=='F') file_or_hdrf = file;
+				if (spec[spec_off]=='f') file_or_hdrf = file;
 				else                     file_or_hdrf = hdrf;
 				if (flag) goto forceExt;
 				ccp=trace_path_components(file_or_hdrf,additional_path);

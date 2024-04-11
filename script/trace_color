@@ -13,9 +13,25 @@ test -n "${color_nums-}" || color_nums='1 2 3 4 5 6 7 226 93 87 189 195 177';: C
 num_color_nums=`echo $color_nums | wc -w`
 esc=`printf "\033"`
 
+USAGE="\
+usage: tcolor [opt] [color_re]...
+options:
+-t, --threads  -- if no args given, use first $num_color_nums unique thread IDs
+                  otherwise use first $num_color_nums unique process IDs
+"
+
+show="%x%P %f"
+while expr "$1" : -;do
+      case $1 in
+      '?'|-h|--help) echo "$USAGE"; exit;;
+      -t|--threads)  show="%x%i %f"; shift;;
+      esac
+done
+
+
 tcolor() { : $*=tids
    # build sed filter --- NOTE: if building for tshow Thread ID -- the parameter list created with be " <tid> "  (w/ space(' ') before and after
-   test $# -eq 0 && { tid_list=`TRACE_SHOW="%x%P" trace_cntl show|awk '!seen[$1]++{printf"\" %s .*\"\n",$1;}'| head -n$num_color_nums`
+   test $# -eq 0 && { tid_list=`TRACE_SHOW="$show" trace_cntl show|awk '!seen[$1]++{printf"\" %s .*\"\n",$1;}'| head -n$num_color_nums`
                       echo found `echo "$tid_list" | wc -l` unique PIDs within 1st 500 tshow lines >&2; eval set -- $tid_list; };: at most,could be less
    test $# -eq 0 && { echo need at least 1 tid; return; }
    tid=$1; : no shift to preserver num args to associate arg with cnum

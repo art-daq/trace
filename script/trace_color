@@ -30,8 +30,9 @@ NOTE: Currently, if tcolor is used before tdelta, a pattern which matches before
 The colors are:"
 
 show="%x%P %f"
-while expr "$1" : -;do
+while expr "$1" : - >/dev/null;do
       case $1 in
+      -x) set -x;;
       '?'|-h|--help)
           echo "$USAGE"
           for num in `seq $num_color_nums`;do
@@ -39,8 +40,9 @@ while expr "$1" : -;do
               printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
           done
           exit;;
-      -t|--threads)  show="%x%i %f"; shift;;
+      -t|--threads)  show="%x%i %f";;
       esac
+      shift
 done
 
 

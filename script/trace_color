@@ -14,16 +14,31 @@ num_color_nums=`echo $color_nums | wc -w`
 esc=`printf "\033"`
 
 USAGE="\
-usage: tcolor [opt] [color_re]...
+usage: tcolor [opt] [pattern_for_color1]...
 options:
+-h, --help     -- help
 -t, --threads  -- if no args given, use first $num_color_nums unique thread IDs
                   otherwise use first $num_color_nums unique process IDs
-"
+If no patterns are given, the default is to apply colors to the first 13 unique Process IDs.
+NOTE: Currently, if tcolor is used before tdelta, a pattern which matches before the delta can mess up the delta.
+      If PAGER is used, remeber to use the appropriate option to interpret color generating escape
+      sequences (e.g., include -R in LESS env. var.) default ANSI color numbers can be overridden via
+          export color_nums='<space_separated_number_list>'
+      Patterns may not contain both '~' and '@' characters; if so, one or the other should be replaced
+      with the '.' character OR replace '~' with '\~' or [~].
+      Be careful with specifying patterns that match overlapping parts on a line -- counter intuitive output may occur.
+The colors are:"
 
 show="%x%P %f"
 while expr "$1" : -;do
       case $1 in
-      '?'|-h|--help) echo "$USAGE"; exit;;
+      '?'|-h|--help)
+          echo "$USAGE"
+          for num in `seq $num_color_nums`;do
+              cnum=`echo $color_nums|cut -d' ' -f$num`
+              printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
+          done
+          exit;;
       -t|--threads)  show="%x%i %f"; shift;;
       esac
 done
@@ -49,22 +64,5 @@ tcolor() { : $*=tids
 
    expr "$SED" : 'sed ' >/dev/null && { eval "$SED -e '$filt'";true;} || sed $SED -e "$filt"
 }
-
-case $1 in
--h|--help)
-    echo "Usage: tcolor [-h|--help] [pattern_for_color1]...
-If no patterns are given, the default is to apply colors to the first 13 unique Thread IDs.
-NOTE: Current, if tcolor is used before tdelta, a pattern which matches before the delta can mess up the delta.
-      If PAGER is used, remeber to use the appropriate option to interpret color generating escape sequences (e.g., include -R in LESS env. var.)
-      default ANSI color numbers can be overridden via export color_nums='<space_separated_number_list>'
-      Patterns may not contain both '~' and '@' characters; if so, one or the other should be replaced with the '.' character OR replace '~' with '\~' or [~].
-      Be careful with specifying patterns that match overlapping parts on a line -- counter intuitive output may occur.
-The colors are:"
-    for num in `seq $num_color_nums`;do
-      cnum=`echo $color_nums|cut -d' ' -f$num`
-      printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
-    done
-    exit;;
-esac
 
 test -n "$PAGER" && { tcolor "$@" | $PAGER;true;} || tcolor "$@"

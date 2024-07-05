@@ -8,6 +8,7 @@ endif()
 message("KVERS is ${KVERS}")
 
 if (EXISTS /lib/modules/${KVERS}/build)
+   if (${WANT_KMOD})
     add_custom_command(
 		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/Makefile ${CMAKE_CURRENT_BINARY_DIR}
@@ -23,6 +24,7 @@ if (EXISTS /lib/modules/${KVERS}/build)
     add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
 
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION module)
+   endif()
 else()
     if(${WANT_KMOD})
         message(FATAL_ERROR "KMOD build requested, but kernel-devel package is not installed!")

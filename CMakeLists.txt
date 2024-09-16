@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1686 $$Date: 2024-04-18 08:45:42 -0500 (Thu, 18 Apr 2024) $
+# $Revision: 1690 $$Date: 2024-09-16 11:21:59 -0500 (Mon, 16 Sep 2024) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -152,11 +152,14 @@ INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
 # scripts, including the trace_delta script used for tdelta
 add_subdirectory(script)
 
-if (${cetmodules_FOUND})
+# doc - Some documentation...There should be a cet_ function for this...
+FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-  # doc - Some documentation...There should be a cet_ function for this...
-  FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
-  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
+FILE(COPY doc/ DESTINATION man1 FILES_MATCHING PATTERN "*.1")
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man1 DESTINATION ${CMAKE_INSTALL_MANDIR})
+
+if (${cetmodules_FOUND})
 
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
     "Built TRACE utilities using ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}\n")

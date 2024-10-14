@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1690 $$Date: 2024-09-16 11:21:59 -0500 (Mon, 16 Sep 2024) $
+# $Revision: 1692 $$Date: 2024-10-14 15:35:06 -0500 (Mon, 14 Oct 2024) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 

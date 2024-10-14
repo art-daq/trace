@@ -16,7 +16,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
 endif()
 
 find_package(cetmodules 3.01.00)
-project(TRACE VERSION 3.17.13)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
+project(TRACE VERSION 3.17.14)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)

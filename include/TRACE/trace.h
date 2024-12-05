@@ -8,7 +8,7 @@
 #define TRACE_H
 
 # if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#define TRACE_REV "$Revision: 1693 $$Date: 2024-12-05 11:20:12 -0600 (Thu, 05 Dec 2024) $"
+#define TRACE_REV "$Revision: 1694 $$Date: 2024-12-05 11:50:58 -0600 (Thu, 05 Dec 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -224,7 +224,7 @@
 	})
 # define TTESTH(lvl)    TTESTN("",lvl)
 #else
-# define TTEST(...)        [=](){\
+# define TTEST(...)        [&](){\
     TSTREAMER_T_ _trc_((tlvle_t)(0), TRACE_GET_STATIC());\
     if (   TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
         && (_trc_.TLOG3(__VA_ARGS__),((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
@@ -274,7 +274,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1693 $_$Date: 2024-12-05 11:20:12 -0600 (Thu, 05 Dec 2024) $
+#define TRACE_REVx $_$Revision: 1694 $_$Date: 2024-12-05 11:50:58 -0600 (Thu, 05 Dec 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

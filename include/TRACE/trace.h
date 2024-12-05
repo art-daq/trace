@@ -7,7 +7,8 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-#define TRACE_REV "$Revision: 1682 $$Date: 2024-04-09 16:05:33 -0500 (Tue, 09 Apr 2024) $"
+# if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
+#define TRACE_REV "$Revision: 1693 $$Date: 2024-12-05 11:20:12 -0600 (Thu, 05 Dec 2024) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -53,6 +54,7 @@
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 //#	define TLOG_ENTEX(...)   See below
+
 # endif // NoTLOG
 
 #  if __cplusplus >= 201703L
@@ -155,6 +157,85 @@
 
 #define TRACEH(lvl, ...) TRACEN("", lvl, __VA_ARGS__) /* for use in header file -- to get automatic TRACE_NAME (%f, etc) */
 
+/*  TTEST - used for the case where debugging requires significant "prep" code to print the
+    debugging information. For example:
+	if (TTEST(lvl)) {
+		// prep code
+        // possible looping -- severerl TLOGs/TRACEs
+	}
+	NOTE: for C++ similar functionality can be obtain with TLOG*(...) macros and lambda's:
+	TLOG() << [&](){
+		some_relatively_complex_processing_which_may_include_looping...
+			nested TLOGs
+		return some_const_str_or_char*
+	}()
+ */
+#ifndef __cplusplus
+
+/* Address warning: ISO C forbids braced-groups within expressions [-Wpedantic]
+   See https://stackoverflow.com/questions/65875234/macro-not-iso-c-compliant
+*/
+#if defined(TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN)
+/* just use what is defined*/
+#elif 1
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN __extension__
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_END
+#elif defined(__GNUC__) && __GNUC__ >= 8
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN _Pragma("GCC diagnostic push") \
+                               _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_END   _Pragma("GCC diagnostic pop")
+#elif defined(__clang__)
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN _Pragma("clang diagnostic push") \
+                               _Pragma("clang diagnostic ignored \"-Wpedantic\"")
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_END   _Pragma("clang diagnostic pop")
+#else
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN
+# define TRACE_SUPPRESS_BRACEGROUP_WARN_END
+#endif
+# define TTEST(lvl) \
+	TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN({\
+	TRACE_SUPPRESS_BRACEGROUP_WARN_END \
+		struct { char tn[TRACE_TN_BUFSZ]; } _trc_;\
+	    int retval=0;\
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) {\
+			uint8_t lvl_ = (uint8_t)(lvl);\
+			if (  (traceControl_rwp->mode.bits.M && (traceLvls_p[traceTID].M & TLVLMSK(lvl_)))\
+	            ||(traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_)))) {\
+				retval=1;\
+			}\
+		}\
+	    retval;\
+	})
+# define TTESTN(nam,lvl) \
+	TRACE_SUPPRESS_BRACEGROUP_WARN_BEGIN({\
+	TRACE_SUPPRESS_BRACEGROUP_WARN_END \
+		struct { char tn[TRACE_TN_BUFSZ]; } _trc_;\
+	    int retval=0;\
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) {\
+			static TRACE_THREAD_LOCAL int tid_ = -1;				\
+			uint8_t lvl_ = (uint8_t)(lvl);\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn)); \
+			if (  (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_)))\
+	            ||(traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_)))) {\
+				retval=1;\
+			}\
+		}\
+	    retval;\
+	})
+# define TTESTH(lvl)    TTESTN("",lvl)
+#else
+# define TTEST(...)        [=](){\
+    TSTREAMER_T_ _trc_((tlvle_t)(0), TRACE_GET_STATIC());\
+    if (   TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
+        && (_trc_.TLOG3(__VA_ARGS__),((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
+        && trace_do_streamer(&_trc_)) {\
+            return (1);\
+        } else return (0);\
+	}()
+#endif /* __cplusplus */
+
+/*-------*/
+
 #ifndef TRACE_LVL_ENUM_0_9
 /* Note: these should match values in the bitN_to_mask script */
 #	define TRACE_LVL_ENUM_0_9 TLVL_FATAL= 0, TLVL_EMERG= TLVL_FATAL, TLVL_ALERT, TLVL_CRIT, TLVL_ERROR, TLVL_WARNING, \
@@ -193,7 +274,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1682 $_$Date: 2024-04-09 16:05:33 -0500 (Tue, 09 Apr 2024) $
+#define TRACE_REVx $_$Revision: 1693 $_$Date: 2024-12-05 11:20:12 -0600 (Thu, 05 Dec 2024) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -3238,20 +3319,20 @@ static int traceInit(const char *_name, int allow_ro)
 			activate= 1;
 		}
 
-		if (!((_file= getenv("TRACE_FILE")) && (*_file != '\0') && (activate= 1))) {
+		if (!((_file= getenv("TRACE_FILE")) && (*_file != '\0') && ((activate=1)==1))) {
 			_file= traceFile;
 		}
-		if ((cp= getenv("TRACE_ARGSMAX")) && (*cp) && (activate= 1)) {
+		if ((cp= getenv("TRACE_ARGSMAX")) && (*cp) && ((activate=1)==1)) {
 			argsmax_= (uint32_t)strtoul(cp, NULL, 0);
 		} else {
 			argsmax_= TRACE_DFLT_MAX_PARAMS;
 		}
 		/* use _MSGMAX='' so exe won't override and _MSGMAX won't activate; use _MSGMAX=0 to activate with default MAX_MSG */
-		((cp= getenv("TRACE_MSGMAX")) && (*cp) && (activate= 1) && (msgmax_= (uint32_t)strtoul(cp, NULL, 0))) || (msgmax_= TRACE_DFLT_MAX_MSG_SZ);
-		((cp= getenv("TRACE_NUMENTS")) && (numents_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (numents_= TRACE_DFLT_NUM_ENTRIES);
-		((cp= getenv("TRACE_NAMTBLENTS")) && (namtblents_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (namtblents_= TRACE_DFLT_NAMTBL_ENTS);
-		((cp= getenv("TRACE_NAMEMAX")) && (nammax_= (uint32_t)strtoul(cp, NULL, 0)) && (activate= 1)) || (nammax_= TRACE_DFLT_NAM_CHR_MAX + 1);
-		((cp= getenv("TRACE_LVLM")) && (lvlM_lcl= strtoull(cp, &lvlM_endptr, 0)) && (activate= 1)); /* activate if non-zero */
+		((cp= getenv("TRACE_MSGMAX")) && (*cp) && ((activate=1)==1) && (msgmax_= (uint32_t)strtoul(cp, NULL, 0))) || ((msgmax_=TRACE_DFLT_MAX_MSG_SZ)>0);
+		((cp= getenv("TRACE_NUMENTS")) && (numents_= (uint32_t)strtoul(cp, NULL, 0)) && ((activate=1)==1)) || ((numents_=TRACE_DFLT_NUM_ENTRIES)>0);
+		((cp= getenv("TRACE_NAMTBLENTS")) && (namtblents_= (uint32_t)strtoul(cp, NULL, 0)) && ((activate=1)==1)) || ((namtblents_=TRACE_DFLT_NAMTBL_ENTS)>0);
+		((cp= getenv("TRACE_NAMEMAX")) && (nammax_= (uint32_t)strtoul(cp, NULL, 0)) && ((activate=1)==1)) || ((nammax_=TRACE_DFLT_NAM_CHR_MAX+1)>0);
+		if((cp= getenv("TRACE_LVLM")) && (lvlM_lcl= strtoull(cp, &lvlM_endptr, 0))) activate=1; /* activate if non-zero */
 
 		/* TRACE_LVLSTRS, TRACE_LVLS and TRACE_PRINT_FD can be used when active or inactive.
 		   See also processing in bitN_to_mask script. */
@@ -3575,11 +3656,32 @@ typedef struct
 //       allows saving the address in .nn and using .nn later. Because this
 //       is not the case for TLOG_ENTEX, so the string needs to be copied. This
 //       means, for TRACE_STREAMER, the string is copied superfluously.
+
 #	ifndef TRACE_USE_STATIC_STREAMER
 #		define TRACE_USE_STATIC_STREAMER 1
 #	endif
-#   define _PRAGMA(xx) /*_Pragma(xx)*/
 #	if TRACE_USE_STATIC_STREAMER == 1
+
+#    if defined(TRACE_SUPPRESS_UNUSED_WARN_END)
+/* Just use what is defined - e.g. SUPPRESS_UNUSED_WARNING_END <<"" */
+#     ifndef TRACE_SUPPRESS_UNUSED_WARN_BEGIN
+#      define TRACE_SUPPRESS_UNUSED_WARN_BEGIN
+#     endif
+#    elif 1
+#     define TRACE_SUPPRESS_UNUSED_WARN_BEGIN
+#     define TRACE_SUPPRESS_UNUSED_WARN_END    /*<<""  With _Pragma("...pop") I get: error: ‘#pragma’ is not allowed here */
+#    elif defined(__GNUC__)
+#     define TRACE_SUPPRESS_UNUSED_WARN_BEGIN _Pragma("GCC diagnostic push") \
+                               _Pragma("GCC diagnostic ignored \"-Wunused-value\"")
+#     define TRACE_SUPPRESS_UNUSED_WARN_END   _Pragma("GCC diagnostic pop")
+#    elif defined(__clang__)
+#     define TRACE_SUPPRESS_UNUSED_WARN_BEGIN _Pragma("clang diagnostic push") \
+                               _Pragma("clang diagnostic ignored \"-Wunused-value\"")
+#     define TRACE_SUPPRESS_UNUSED_WARN_END   _Pragma("clang diagnostic pop")
+#    else
+#     define TRACE_SUPPRESS_UNUSED_WARN_BEGIN
+#     define TRACE_SUPPRESS_UNUSED_WARN_END
+#    endif
 //                   args are: lvl, lvl/name/fmtnow_method, s_force
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)	\
 			for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC()); \
@@ -3587,16 +3689,16 @@ typedef struct
 					 && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
 				 _trc_.once=0, ((TraceStreamer *)_trc_.stmr__)->str())	\
-				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
-					*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)))
+			TRACE_SUPPRESS_UNUSED_WARN_BEGIN \
+			*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION))) \
+			TRACE_SUPPRESS_UNUSED_WARN_END
 #	else
 #		define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                                                                                                                                                                                                                                                                                                          \
 	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());		\
 				 _trc_.once && TRACE_INIT_CHECK( trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn)) ) \
 				     && (_trc_.lvnafm_nafm_method, ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn,TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn))) != -1))) \
 					 && trace_do_streamer(&_trc_); \
-				 _trc_.once=0)                                                                                                                                                                                                                                                                                                                                                                                            \
-				_PRAGMA("GCC diagnostic ignored \"-Wunused-value\"") \
+				 _trc_.once=0)                                                                                                                                      \
 			TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
 #	endif
 
@@ -3917,8 +4019,8 @@ public:
 	template<typename T>
 	inline void delay_format(const T *const &r)
 	{
-		T **const vp= (T * *const) param_va_ptr;
-		if (do_f || (vp + 1) > (T * *const) & args[traceControl_p->num_params]) {
+		T **const vp= (T **) param_va_ptr;
+		if (do_f || (vp + 1) > (T **) & args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, "%p", static_cast<const void *>(r));
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
@@ -3926,7 +4028,7 @@ public:
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			msg_append("%p", 2);
 			++argCount;
-			*vp= (T *const)r;
+			*vp= (T *)r;
 			param_va_ptr= vp + 1;
 			T_STREAM_DBG << "streamer check 1T (const T*const &r) msg_sz=" << std::dec << msg_sz << "\n";
 		}
@@ -3941,8 +4043,8 @@ public:
 	template<typename T>
 	inline void delay_format(T *const &r)
 	{
-		T **const vp= (T * *const) param_va_ptr;
-		if (do_f || (vp + 1) > (T * *const) & args[traceControl_p->num_params]) {
+		T **const vp= (T **) param_va_ptr;
+		if (do_f || (vp + 1) > (T **) & args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, "%p", static_cast<void *>(r));
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
@@ -3950,7 +4052,7 @@ public:
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			msg_append("%p", 2);
 			++argCount;
-			*vp= (T *const)r;
+			*vp= (T *)r;
 			param_va_ptr= vp + 1;
 			T_STREAM_DBG << "streamer check 2T (T *const &r) msg_sz=" << std::dec << msg_sz << "\n";
 		}
@@ -4634,5 +4736,31 @@ namespace detail {
 #	endif
 
 #endif /* __cplusplus */
+
+# else  /* !defined(__CUDA_ARCH__) */
+#  ifdef __cplusplus
+#   include <iostream>
+#   define TLOG_FATAL(...)   if(0)std::cout
+#   define TLOG_ALERT(...)   if(0)std::cout
+#	define TLOG_CRIT(...)    if(0)std::cout
+#	define TLOG_ERROR(...)   if(0)std::cout
+#	define TLOG_WARNING(...) if(0)std::cout
+#	define TLOG_NOTICE(...)  if(0)std::cout
+#	define TLOG_INFO(...)    if(0)std::cout
+#	define TLOG_TRACE(...)   if(0)std::cout
+#	define TLOG_DEBUG(...)   if(0)std::cout
+#	define TLOG_DBG(...)     if(0)std::cout
+#	define TLOG(...)         if(0)std::cout
+#	define TLOG_ARB(...)     if(0)std::cout
+#   if _cplusplus >= 201703L
+#	 define TLOG_ENTEX(...)  if(0)std::cout
+#   endif
+#  else /* */
+#   define TRACE(...)
+#   define TRACEN(...)
+#   define TRACEH(...)
+#  endif
+#  define TRACE_CNTL(...)
+# endif /* !defined(__CUDA_ARCH__) */
 
 #endif /* TRACE_H */

@@ -3955,9 +3955,7 @@ public:
 		T_STREAM_DBG << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
 		return *this;
 	}
-#	if !defined(__clang__) || (defined(__clang__) && __clang_major__ == 3 && __clang_minor__ == 4) \
-	|| \
-		(__clang_major__ >= 10 && __clang_major__ <= 11)
+#	if !defined(__clang__) || defined(_GLIBCXX_IOMANIP)
 
 	template<typename Char_t>
 	inline TraceStreamer &operator<<(std::_Setfill<Char_t> r)

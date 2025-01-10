@@ -26,14 +26,8 @@ tshow|tac|trace-addr2line ./one_string_on_function_call -f '_[MS]_|_Alloc|::(len
 #include "TRACE/trace.h"
 #define TRACE_NAME "cyg_profile"
 
-void __cyg_profile_func_enter (void *func,  void *caller) __attribute__((no_instrument_function));
-void __cyg_profile_func_enter (void *func,  void *caller)
-{
-	TRACE(TLVL_DEBUG+43, "e %p %p", func, caller);
-}
+void __cyg_profile_func_enter(void *func, void *caller) __attribute__((no_instrument_function));
+void __cyg_profile_func_enter(void *func, void *caller) { TRACE(TLVL_DEBUG + 43, "e %p %p", func, caller); }
 
-void __cyg_profile_func_exit (void *func, void *caller) __attribute__((no_instrument_function));
-void __cyg_profile_func_exit (void *func, void *caller)
-{
-	TRACE(TLVL_DEBUG+44, "x %p %p", func, caller);
-}
+void __cyg_profile_func_exit(void *func, void *caller) __attribute__((no_instrument_function));
+void __cyg_profile_func_exit(void *func, void *caller) { TRACE(TLVL_DEBUG + 44, "x %p %p", func, caller); }

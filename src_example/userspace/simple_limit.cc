@@ -1,9 +1,9 @@
- // This file (simple_limit.cc) was created by Ron Rechenmacher <ron@fnal.gov> on
- // Mar 31, 2020. "TERMS AND CONDITIONS" governing this file are in the README
- // or COPYING file. If you do not have such a file, one can be obtained by
- // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
- // $RCSfile: .emacs.gnu,v $
- // rev="$Revision: 1385 $$Date: 2020-09-25 13:58:09 -0500 (Fri, 25 Sep 2020) $";
+// This file (simple_limit.cc) was created by Ron Rechenmacher <ron@fnal.gov> on
+// Mar 31, 2020. "TERMS AND CONDITIONS" governing this file are in the README
+// or COPYING file. If you do not have such a file, one can be obtained by
+// contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+// $RCSfile: .emacs.gnu,v $
+// rev="$Revision: 1385 $$Date: 2020-09-25 13:58:09 -0500 (Fri, 25 Sep 2020) $";
 /*
 $ TRACE_LIMIT_MS=4,50,500 simple_limit
 03-31 10:12:30.965233   TRACE nfo The following burst of messages may be limited depending on the value of TRACE_LIMIT_MS
@@ -24,12 +24,10 @@ $ TRACE_LIMIT_MS=4,50,500 simple_limit
 int main()
 {
 	TLOG(TLVL_INFO) << "The following burst of messages may be limited depending on the value of TRACE_LIMIT_MS";
-	for (unsigned uu=0; uu<10; ++uu) {
-		if(uu==9)
-			TRACE(TLVL_INFO,"sleep(1)=%d",sleep(1));
-		TLOG(TLVL_INFO) << "TLOG "<<uu<< " may be limited.";
-		if (uu&1)
-			TRACE(TLVL_INFO,"TRACE %u may be limited.",uu);
+	for (unsigned uu= 0; uu < 10; ++uu) {
+		if (uu == 9) TRACE(TLVL_INFO, "sleep(1)=%d", sleep(1));
+		TLOG(TLVL_INFO) << "TLOG " << uu << " may be limited.";
+		if (uu & 1) TRACE(TLVL_INFO, "TRACE %u may be limited.", uu);
 	}
 	return (0);
-}   // main
+}  // main

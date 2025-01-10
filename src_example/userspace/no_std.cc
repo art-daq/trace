@@ -7,10 +7,10 @@
 
 // comfirm there are no warning when TRACE_LOG_FUNCTION is, well, something we may not expect (e.g. blank)
 
-#include <sys/time.h>			/* timeval */
-void trace_ignore(timeval*, ...) {}
+#include <sys/time.h> /* timeval */
+void trace_ignore(timeval *, ...) {}
 #define TRACE_LOG_FUNCTION trace_ignore /* no stdout or stderr (depending on TRACE_PRINT_FD */
-#include "TRACE/trace.h"				/* TRACE */
+#include "TRACE/trace.h"                /* TRACE */
 
 int
 //main(  int      argc

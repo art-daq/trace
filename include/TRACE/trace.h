@@ -4753,8 +4753,9 @@ static inline bool trace_do_streamer(TSTREAMER_T_ *ts_p)
 #			define TRACENATE_IMPL(s1, s2) s1##s2
 #			define TRACENATE(s1, s2)      TRACENATE_IMPL(s1, s2)
 
-#			ifdef __COUNTER__XX  // cannot use counter as it can only be used once in macro where as __LINE__ is can be used multiple \
-								  // times; it will be the starting line of multiline macro.
+            // cannot use counter as it can only be used once in macro where as __LINE__ is can be used multiple
+			// times; it will be the starting line of multiline macro.
+#			ifdef __COUNTER__XX  
 #				define TRACE_VARIABLE(pre) TRACENATE(pre, __COUNTER__)
 #			else
 #				define TRACE_VARIABLE(pre) TRACENATE(pre, __LINE__)

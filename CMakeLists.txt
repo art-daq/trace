@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1697 $$Date: 2024-12-17 10:13:23 -0600 (Tue, 17 Dec 2024) $
+# $Revision: 1700 $$Date: 2025-01-16 09:00:45 -0600 (Thu, 16 Jan 2025) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -16,7 +16,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
 endif()
 
 find_package(cetmodules 3.01.00)
-project(TRACE VERSION 3.17.15)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
+project(TRACE VERSION 3.17.16)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)

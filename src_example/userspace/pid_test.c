@@ -22,100 +22,100 @@
 END{if(!nogood)print"ALL OK"}'
 
 */
-#define USAGE "\
+#define USAGE \
+	"\
   usage: %s [options]\n\
 example: %s\n\
 options:\n\
-", basename(argv[0]), basename(argv[0])
+",            \
+		basename(argv[0]), basename(argv[0])
 
-#include <stdio.h>              // printf
-#include <stdlib.h>             // exit
-#include <pthread.h>		// pthread_self,pthread_create,join
-#include <unistd.h>		// getopt
+#include <stdio.h>    // printf
+#include <stdlib.h>   // exit
+#include <pthread.h>  // pthread_self,pthread_create,join
+#include <unistd.h>   // getopt
 #include <getopt.h>
-#include <sys/types.h>          // pid_t
-#include <sys/wait.h>           // waitpid
-#include <libgen.h>             // basename
-#include "TRACE/trace.h"		// TRACE
+#include <sys/types.h>    // pid_t
+#include <sys/wait.h>     // waitpid
+#include <libgen.h>       // basename
+#include "TRACE/trace.h"  // TRACE
 
 typedef void (*fp_t)(pid_t mypid);
 
-void do_fork( fp_t fp, pid_t mypid )
+void do_fork(fp_t fp, pid_t mypid)
 {
 	pid_t cpid, w;
 	int wstatus;
 
-	cpid = fork();
+	cpid= fork();
 	if (cpid == -1) {
 		perror("fork");
 		exit(EXIT_FAILURE);
 	}
 
-	if (cpid == 0) {            /* Code executed by child */
-		pid_t cpid=getpid();
-		TRACE( 1, "Child mypid: %ld begin", (long)cpid );
-		if (fp)
-			fp(cpid);
-		TRACE( 1, "Child mypid: %ld exiting", (long)cpid );
-		_exit( 0 );
+	if (cpid == 0) { /* Code executed by child */
+		pid_t cpid= getpid();
+		TRACE(1, "Child mypid: %ld begin", (long)cpid);
+		if (fp) fp(cpid);
+		TRACE(1, "Child mypid: %ld exiting", (long)cpid);
+		_exit(0);
 
-	} else {                    /* Code executed by parent */
+	} else { /* Code executed by parent */
 		do {
-			w = waitpid(cpid, &wstatus, WUNTRACED);
+			w= waitpid(cpid, &wstatus, WUNTRACED);
 			if (w == -1) {
 				perror("waitpid");
 				exit(EXIT_FAILURE);
 			}
 
 			if (WIFEXITED(wstatus)) {
-				TRACE( 1, "mypid: %ld cpid: %ld exited, status=%d", (long)mypid, (long)cpid, WEXITSTATUS(wstatus));
+				TRACE(1, "mypid: %ld cpid: %ld exited, status=%d", (long)mypid, (long)cpid, WEXITSTATUS(wstatus));
 			} else if (WIFSIGNALED(wstatus)) {
-				TRACE( 1, "mypid: %ld cpid: %ld killed by signal %d", (long)mypid, (long)cpid, WTERMSIG(wstatus));
+				TRACE(1, "mypid: %ld cpid: %ld killed by signal %d", (long)mypid, (long)cpid, WTERMSIG(wstatus));
 			} else if (WIFSTOPPED(wstatus)) {
-				TRACE( 1, "mypid: %ld cpid: %ld stopped by signal %d", (long)mypid, (long)cpid, WSTOPSIG(wstatus));
+				TRACE(1, "mypid: %ld cpid: %ld stopped by signal %d", (long)mypid, (long)cpid, WSTOPSIG(wstatus));
 			} else {
-				TRACE( 1, "mypid: %ld cpid: %ld unknown wstatus(0x%x) - continued???", (long)mypid, (long)cpid, wstatus );
+				TRACE(1, "mypid: %ld cpid: %ld unknown wstatus(0x%x) - continued???", (long)mypid, (long)cpid, wstatus);
 			}
 		} while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
-		TRACE( 1, "mypid: %ld cpid: %ld has exited", (long)mypid, (long)cpid );
+		TRACE(1, "mypid: %ld cpid: %ld has exited", (long)mypid, (long)cpid);
 	}
 }
 
-void sub1( pid_t ppid )
-{
-	do_fork( NULL, ppid );
-}
+void sub1(pid_t ppid) { do_fork(NULL, ppid); }
 
-void* thread_func(void *arg)
+void *thread_func(void *arg)
 {
-	pid_t mypid=(pid_t)(long)arg;
-	TRACE( 1, "thread_func: mypid: %ld begin", (long)mypid );
-	do_fork( sub1, mypid );
+	pid_t mypid= (pid_t)(long)arg;
+	TRACE(1, "thread_func: mypid: %ld begin", (long)mypid);
+	do_fork(sub1, mypid);
 	pthread_exit(NULL);
 }
 
-int main(  int	argc
-         , char	*argv[] )
+int main(int argc, char *argv[])
 {
-extern  char        * optarg;        // for getopt
-        int           opt;           // for how I use getopt
-		pid_t         mypid=getpid();
-		pthread_t     thread_id;
-		unsigned long opt_loops=1;
-		unsigned      ii;
+	extern char *optarg;  // for getopt
+	int opt;              // for how I use getopt
+	pid_t mypid= getpid();
+	pthread_t thread_id;
+	unsigned long opt_loops= 1;
+	unsigned ii;
 
-    while ((opt=getopt(argc,argv,"?hl:")) != -1)
-    {   switch (opt)
-        { // '?' is also what you get w/ "invalid option -- -"
-        case '?': case 'h': printf(USAGE);exit(0);    break;
-		case 'l': opt_loops=strtoul(optarg,NULL,0);       break;
-        }
-    }
-	TRACE( 1,"main - mypid: %ld", (long)mypid );
-	for (ii=0; ii<opt_loops; ++ii) {
-		pthread_create(&thread_id,NULL,thread_func,(void*)(long)mypid );
-		do_fork( sub1, mypid );
+	while ((opt= getopt(argc, argv, "?hl:")) != -1) {
+		switch (opt) {  // '?' is also what you get w/ "invalid option -- -"
+		case '?':
+		case 'h':
+			printf(USAGE);
+			exit(0);
+			break;
+		case 'l': opt_loops= strtoul(optarg, NULL, 0); break;
+		}
+	}
+	TRACE(1, "main - mypid: %ld", (long)mypid);
+	for (ii= 0; ii < opt_loops; ++ii) {
+		pthread_create(&thread_id, NULL, thread_func, (void *)(long)mypid);
+		do_fork(sub1, mypid);
 		pthread_join(thread_id, NULL);
 	}
 	return (0);
-}   /* main */
+} /* main */

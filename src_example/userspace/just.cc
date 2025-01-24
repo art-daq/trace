@@ -7,27 +7,23 @@
 */
 
 #include <string>
-#include "TRACE/trace.h"		/* TRACE */
+#include "TRACE/trace.h" /* TRACE */
 
-void example_sub_( void );
+void example_sub_(void);
 
-static void sub0()
-{
-    TRACE( TLVL_LOG, "hello - hopefully no compile warnings %d %.1f %d",1,1.5,2 );
-}
+static void sub0() { TRACE(TLVL_LOG, "hello - hopefully no compile warnings %d %.1f %d", 1, 1.5, 2); }
 
 static void sub1()
 {
-    //TRACE( TLVL_INFO, std::string("hi %d")+" there", 2 );
-    TRACE( TLVL_LOG, "hi %d - string param: "+std::string("there"), 2 );
+	//TRACE( TLVL_INFO, std::string("hi %d")+" there", 2 );
+	TRACE(TLVL_LOG, "hi %d - string param: " + std::string("there"), 2);
 }
 
 int main(/*int argc, char *argv[]*/)
 {
-
 	sub0();
 	sub1();
 	TLOG(TLVL_INFO) << "hi from TLOG";
-    example_sub_();
-    return (0);
-}   /* main */
+	example_sub_();
+	return (0);
+} /* main */

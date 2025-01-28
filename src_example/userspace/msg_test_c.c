@@ -3,7 +3,7 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1522 $$Date: 2021-09-01 13:09:25 -0500 (Wed, 01 Sep 2021) $";
+	rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 	*/
 /*
     This tests the maximum slow path message buffer. It uses the veriable

@@ -3,7 +3,7 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: .emacs.gnu,v $
-	rev="$Revision: 1398 $$Date: 2020-10-01 22:44:25 -0500 (Thu, 01 Oct 2020) $";
+	rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 	*/
 /*
 # This cycles through all the debug levels for the fast/mem path. It creates

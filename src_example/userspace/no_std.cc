@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: no_std.cc,v $
-// rev="$Revision: 1225 $$Date: 2019-10-08 09:58:24 -0500 (Tue, 08 Oct 2019) $";
+// rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
 // comfirm there are no warning when TRACE_LOG_FUNCTION is, well, something we may not expect (e.g. blank)
 

@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just.cc,v $
-// rev="$Revision: 1456 $$Date: 2020-12-14 01:34:02 -0600 (Mon, 14 Dec 2020) $";
+// rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 */
 /*
 /home/ron/work/tracePrj/trace

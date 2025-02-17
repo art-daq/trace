@@ -32,7 +32,7 @@ examples: `basename $0` ./big_ex.d
           `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d -DNO_TRACE -d200 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d --no-define --no-declare -d25 -std=
-          `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t2048 -x5' # os tid can recycle with - 
+          `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t2048 -x5' # os tid can recycle with -
                                                     #- higher -t val, approx 2600 uniq tids have been seen.
           `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t512 -x1' --depth=200 --check-numents=6000000 # -
                                                     #- with --depth=200 a -t much above 512 can lead to -

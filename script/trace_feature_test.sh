@@ -153,6 +153,4 @@ trigger feature
     arm (set arm/active/post)
   armPost==0 ==> nothing
   armPost==-1 postComplete
-  armPost>0  
-
-     
+  armPost>0

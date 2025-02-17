@@ -805,7 +805,7 @@ static inline uint64_t rdtsc(void)
 #	 define TRACE_XTRA_PASSED , 0, .0, .0, .0, .0, .0, .0, .0, .0
 #	 define TRACE_XTRA_UNUSED , long l1 __attribute__((__unused__)), double d0 __attribute__((__unused__)), double d1 __attribute__((__unused__)), double d2 __attribute__((__unused__)), double d3 __attribute__((__unused__)), double d4 __attribute__((__unused__)), double d5 __attribute__((__unused__)), double d6 __attribute__((__unused__)), double d7 __attribute__((__unused__))
 #	 define TRACE_PRINTF_FMT_ARG_NUM 16 // clang-format off
-#       endif 
+#       endif
 #	define TRACE_VA_LIST_INIT(addr) { addr }  // clang-format on
 #		define TRACE_ENT_TV_FILLER
 #		define TRACE_TSC32(low)
@@ -823,8 +823,8 @@ static inline uint64_t rdtsc(void)
 #			define TRACE_PRINTF_FMT_ARG_NUM 8  // clang-format off
 #		define TRACE_ENT_TV_FILLER uint32_t x[2];
 #	else
-#		define TRACE_XTRA_PASSED 
-#		define TRACE_XTRA_UNUSED 
+#		define TRACE_XTRA_PASSED
+#		define TRACE_XTRA_UNUSED
 #		define TRACE_PRINTF_FMT_ARG_NUM 7  // clang-format off
 #		define TRACE_ENT_TV_FILLER
 #	endif
@@ -2377,7 +2377,7 @@ tod: 132348  133161
 	/* emulate stack push - right to left (so that arg1 end up at a lower
 	   address, arg2 ends up at the next higher address, etc. */
 	if (nargs) /* in one view of the world: # of 64 bit args - WHICH is _not_ - */
-	{          /* - the number of actual args! 
+	{          /* - the number of actual args!
 				  long double on i686 is 96, on x64 is 128 bits */
 		nargs= (uint8_t)(nargs + 2);
 		/* ++nargs; * GCC 4.8.5 gives conversion warning with nargs+=2.
@@ -2482,7 +2482,7 @@ static uint32_t trace_name2TID(const char *nn)
 #	endif
 	/** Since names are mostly associated with the filename which can be a
 		path, the right side (end) has the most (significant) info. So, if
-		name length are greater than max, chop off from the left (beginning). 
+		name length are greater than max, chop off from the left (beginning).
 	 */
 	if (zz > (traceControl_p->nam_arr_sz - 1)) name+= zz - (traceControl_p->nam_arr_sz - 1);
 
@@ -2651,7 +2651,7 @@ static inline void trace_msk_op(uint64_t *v1, int op, uint64_t v2)
 	}
 }
 
-/* 
+/*
 passing _name: because this method will have to make sure trace is initialize
 and to avoid compiling in a (default) name into (hard-coding) the function in
 this header file, _name is passed. _name will then take on the value used when
@@ -3265,7 +3265,7 @@ static int trace_mmap_file(const char *_file, int *memlen /* in/out -- in for wh
 			*tC_rwp= &(traceControl[0].rw);
 			return (0);
 		}
-		/* In this "created" case, tC_rwp will point to traceControl_rwp which needs to be set 
+		/* In this "created" case, tC_rwp will point to traceControl_rwp which needs to be set
 		   for trace_created_init to call traceInitNames which calls trace_name2TID */
 		*tC_rwp= rw_rwp; /* as per above comment, we have to assume we will succeed with the remap */
 		trace_created_init(controlFirstPage_p, rw_rwp, msgmax, argsmax, numents, namtblents, namemax, *memlen, 1);

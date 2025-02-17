@@ -75,7 +75,6 @@ if [ "${opt_update_REL_NOTES-}" ];then
     tfile=/tmp/trace_cvs_rel_notes.$$
     exec >$tfile  # io redirection is permanent
 fi
-    
 
 echo
 echo "CHANGE(S) FOR VERSION $NEXT_VERSION"
@@ -93,7 +92,7 @@ RET="
 IFS_default=$IFS
 IFS=$RET
 for i in $cvs_rev_change_list;do
-    revRange=`expr "$i" : '[ ]*\([^ ]*\)'` 
+    revRange=`expr "$i" : '[ ]*\([^ ]*\)'`
         file=`expr "$i" : '[ ]*[^ ]*[ ]*\([^ ]*\)'`
     cvs -q log -r$revRange $file
 done | perl -e '

@@ -93,5 +93,3 @@ once installation is complete, make commands available by either opening new ter
 
 When compiling, use -I option to avoid errors in accessing trace.h and tracemf.h (i.e.: gcc -o basictrace -I/usr/include/TRACE/ /usr/share/doc/trace-v3/basic_c.c). Try example given and run ./basictrace. This note is also in the trace man pages.
 "
-
-

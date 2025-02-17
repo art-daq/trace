@@ -8,7 +8,7 @@
 rm -f /tmp/trace_buffer_`whoami`
 
 /home/ron/work/tracePrj/trace
-ron@mu2edaq01 :^) treset; ptr_address_string 
+ron@mu2edaq01 :^) treset; ptr_address_string
 02-28 16:42:54.035092 ptr_address_string nfo TRACE_NAME is ptr_address_string
 02-28 16:42:54.035184 ptr_address_string nfo the real message is hello
 02-28 16:42:54.035190 ptr_address_string nfo the copy message is hello

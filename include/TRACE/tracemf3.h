@@ -18,7 +18,7 @@
 /* TRACE_MF_LOGGER is a macro because LOG_* output the file and line number.
    Example (__FILE__=some/path/V1495Driver_generator.cc): TRACE( 3, "V1495Driver::resume_" );
    becomes:
-Fri Apr 18 11:55:38 -0500 2014: %MSG-i V1495Driver_generator:  BoardReader-dsfr6-5440 MF-online 
+Fri Apr 18 11:55:38 -0500 2014: %MSG-i V1495Driver_generator:  BoardReader-dsfr6-5440 MF-online
 Fri Apr 18 11:55:38 -0500 2014: V1495Driver::resume_
 Fri Apr 18 11:55:38 -0500 2014: %MSG
 */

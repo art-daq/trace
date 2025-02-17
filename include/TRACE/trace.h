@@ -7,8 +7,8 @@
 #ifndef TRACE_H
 #define TRACE_H
 
-# if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-# define TRACE_REV "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $"
+#if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
+#	define TRACE_REV "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $"
 
 // The C++ streamer style macros...............................................
 /*

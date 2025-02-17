@@ -3,38 +3,33 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: other_module.c,v $
-    rev="$Revision: 1056 $$Date: 2019-02-25 15:57:13 -0600 (Mon, 25 Feb 2019) $";
+    rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
     */
 
 // NOTE: this is trace_.c and not trace.c because nfs server has case
 //       insensitive file system.
 
-#include <linux/module.h>	// module_param, THIS_MODULE
-#include <linux/init.h>		// module_init,_exit
-#include <linux/kernel.h>	// KERN_INFO, printk
+#include <linux/module.h>  // module_param, THIS_MODULE
+#include <linux/init.h>    // module_init,_exit
+#include <linux/kernel.h>  // KERN_INFO, printk
 #include <linux/jiffies.h>
-#include <linux/delay.h>	/* msleep */
+#include <linux/delay.h> /* msleep */
 
-#define TRACE_NAME "jones"  /* should, as of 2016.01.26, work */
+#define TRACE_NAME "jones" /* should, as of 2016.01.26, work */
 #include "TRACE/trace.h"
 
- 
 static int __init init_other_module(void)
 {
-    int  ret=0;          /* SUCCESS */
+	int ret= 0; /* SUCCESS */
 
-    printk(  KERN_INFO "init_other_module called\n" );
+	printk(KERN_INFO "init_other_module called\n");
 
-    TRACE( 0, "init_other_module trace" );
+	TRACE(0, "init_other_module trace");
 
-    return (ret);
-}   // init_other_module
+	return (ret);
+}  // init_other_module
 
-static void __exit exit_other_module(void)
-{
-
-    TRACE( 0, "exit_other_module() called" );
-}   // exit_other_module
+static void __exit exit_other_module(void) { TRACE(0, "exit_other_module() called"); }  // exit_other_module
 
 module_init(init_other_module);
 module_exit(exit_other_module);

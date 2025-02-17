@@ -3,7 +3,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: Makefile,v $
- # rev="$Revision: 1585 $$Date: 2023-01-27 16:27:33 -0600 (Fri, 27 Jan 2023) $";
+ # rev="$Revision: 1612 $$Date: 2024-01-19 10:42:54 -0600 (Fri, 19 Jan 2024) $";
 
 # TOP LEVEL Makefile
 
@@ -159,7 +159,7 @@ script: OUT_check
 ${OUT}/ups/TRACE.table: ${CURDIR}/ups/TRACE.table.in
 	test -d "${OUT}/ups" || mkdir "${OUT}/ups"
 	@${FLAVOR_SUBDIR};\
-	ups_prod_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION */v/;s/).*//;s/\./_/g;p}' CMakeLists.txt`;\
+	ups_prod_ver=`sed -n '/TRACE *VERSION/{s/.*VERSION */v/;s/).*//;s/\./_/g;p;}' CMakeLists.txt`;\
 	sed -e "s/@UPS_PRODUCT_NAME@/TRACE/;\
 	s/@UPS_PROUDCT_VERSION@/$$ups_prod_ver/;\
 	s/@UPS_QUALIFIER_STRING@//;\

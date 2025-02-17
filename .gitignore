@@ -12,3 +12,5 @@ Linux64bit*
 module
 .vscode
 build
+.spack*
+build-linux-*

@@ -9,6 +9,7 @@
 ${OUT}% : %
 	cp $< $@
 
-all: ${OUT}bitN_to_mask ${OUT}trace_delta ${OUT}trace_addr2line ${OUT}trace_envvars ${OUT}trace_maxents ${OUT}trace_color ${OUT}trace-cmd-merge
+all: ${OUT}bitN_to_mask ${OUT}trace_delta ${OUT}trace_addr2line ${OUT}trace_envvars ${OUT}trace_maxents ${OUT}trace_color ${OUT}trace-cmd-merge\
+     ${OUT}trace_bash ${OUT}trace_bash_example.sh
 	echo done with target all
 

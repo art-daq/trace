@@ -3,7 +3,7 @@
 	or COPYING file. If you do not have such a file, one can be obtained by
 	contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 	$RCSfile: trace.c,v $
-	rev="$Revision: 1540 $$Date: 2022-09-01 08:01:28 -0500 (Thu, 01 Sep 2022) $";
+	rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
    gcc -I$TRACE_INC -c trace.c
 OR
@@ -26,14 +26,8 @@ tshow|tac|trace-addr2line ./one_string_on_function_call -f '_[MS]_|_Alloc|::(len
 #include "TRACE/trace.h"
 #define TRACE_NAME "cyg_profile"
 
-void __cyg_profile_func_enter (void *func,  void *caller) __attribute__((no_instrument_function));
-void __cyg_profile_func_enter (void *func,  void *caller)
-{
-	TRACE(TLVL_DEBUG+43, "e %p %p", func, caller);
-}
+void __cyg_profile_func_enter(void *func, void *caller) __attribute__((no_instrument_function));
+void __cyg_profile_func_enter(void *func, void *caller) { TRACE(TLVL_DEBUG + 43, "e %p %p", func, caller); }
 
-void __cyg_profile_func_exit (void *func, void *caller) __attribute__((no_instrument_function));
-void __cyg_profile_func_exit (void *func, void *caller)
-{
-	TRACE(TLVL_DEBUG+44, "x %p %p", func, caller);
-}
+void __cyg_profile_func_exit(void *func, void *caller) __attribute__((no_instrument_function));
+void __cyg_profile_func_exit(void *func, void *caller) { TRACE(TLVL_DEBUG + 44, "x %p %p", func, caller); }

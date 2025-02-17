@@ -126,7 +126,7 @@ tonM [opt] <lvls>  -- turns levels on (and also the mode) for the S destination
 tonS [opt] <lvls>  -- turns levels on (and also the mode) for the M destination
 toffS [opt]<lvls>  -- turns both the stdout and memory desinations off
 toffM [opt]<lvls>  -- turns both the stdout and memory desinations off
-tdelta [opts]      -- trace_delta.pl "$@" | less
+tdelta [opts]      -- trace_delta "$@" | less
 tcntl [opt]        -- general -- give cmd to trace_cntl i.e: tcntl TRACE 0 "hi"
 
 

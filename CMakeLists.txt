@@ -5,7 +5,7 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1605 $$Date: 2023-10-15 15:28:45 -0500 (Sun, 15 Oct 2023) $
+# $Revision: 1703 $$Date: 2025-01-28 12:50:58 -0600 (Tue, 28 Jan 2025) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -16,7 +16,7 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
 endif()
 
 find_package(cetmodules 3.01.00)
-project(TRACE VERSION 3.17.10)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
+project(TRACE VERSION 3.17.17)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)
@@ -30,6 +30,8 @@ endif (${cetmodules_FOUND})
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11) # Optional only.
+
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 if ((CMAKE_CXX_COMPILER_ID STREQUAL Clang AND
      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 4.0.0) OR
@@ -147,14 +149,17 @@ add_subdirectory(python)
 FILE(COPY python DESTINATION . PATTERN ".svn" EXCLUDE)
 INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
 
-# scripts, including the trace_delta.pl script used for tdelta
+# scripts, including the trace_delta script used for tdelta
 add_subdirectory(script)
 
-if (${cetmodules_FOUND})
+# doc - Some documentation...There should be a cet_ function for this...
+FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-  # doc - Some documentation...There should be a cet_ function for this...
-  FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
-  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
+FILE(COPY doc/ DESTINATION man1 FILES_MATCHING PATTERN "*.1")
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man1 DESTINATION ${CMAKE_INSTALL_MANDIR})
+
+if (${cetmodules_FOUND})
 
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
     "Built TRACE utilities using ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}\n")

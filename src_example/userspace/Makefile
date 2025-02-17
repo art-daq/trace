@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1380 $
-#  $Date: 2020-09-23 19:56:26 -0500 (Wed, 23 Sep 2020) $
+#  $Revision: 1672 $
+#  $Date: 2024-03-21 18:20:52 -0500 (Thu, 21 Mar 2024) $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile
@@ -74,8 +74,8 @@ ${OUT}%.d: %.cc
 # ref. "Functions for String Substitution and Analysis"
 #      http://www.delorie.com/gnu/docs/make/make_81.html
 mainre       = '(^| |	)main\ *\('
-cexesrc     := $(shell egrep -l $(mainre) *.c 2>/dev/null)
-c++exesrc   := $(shell egrep -l $(mainre) *.cc 2>/dev/null)
+cexesrc     := $(shell grep -El $(mainre) *.c 2>/dev/null)
+c++exesrc   := $(shell grep -El $(mainre) *.cc 2>/dev/null)
 executables := $(patsubst %.c,%,  $(cexesrc)) $(patsubst %.cc,%,  $(c++exesrc))
 exeobjs     := $(patsubst %.c,%.o,$(cexesrc)) $(patsubst %.cc,%.o,$(c++exesrc))
 objects     := $(patsubst %.c,%.o,$(filter-out $(cexesrc),$(wildcard *.c))) \

@@ -4,7 +4,7 @@
 # or COPYING file. If you do not have such a file, one can be obtained by
 # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 # $RCSfile: bitN_to_mask,v $
-# rev="$Revision: 1504 $$Date: 2021-02-14 23:14:08 -0600 (Sun, 14 Feb 2021) $";
+# rev="$Revision: 1618 $$Date: 2024-02-09 23:36:46 -0600 (Fri, 09 Feb 2024) $";
 
 # debug with, e.g.: sh -x bitN_to_mask jones,d04-d04+9
 #        test with: TLVL_JONES=3 bitN_to_mask jones,d04-d04+9,jack
@@ -86,7 +86,7 @@ bitN_to_mask()
         #echo start=$start inc=$inc end=$end
         for ii in `seq $start $inc $end`; do rr="${rr:+$rr }$ii"; done
     done
-    test -n "$opts" && printf -- "$opts "
+    test -n "$opts" && echo -n "$opts "
     #echo $rr|awk '{for(i=1;i<NF+1;++i)m=or(m,lshift(1,$i));printf"0x%x\n",m;}'
     echo $rr|perl -e '$_=<STDIN>;@l = split;foreach$w(@l){$rr|=1<<$w}printf"0x%x\n",$rr'
 }

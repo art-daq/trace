@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just.cc,v $
-// rev="$Revision: 1456 $$Date: 2020-12-14 01:34:02 -0600 (Mon, 14 Dec 2020) $";
+// rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 */
 /*
 /home/ron/work/tracePrj/trace
@@ -24,23 +24,22 @@ ron@mu2edaq01 :^) just_recursive
 --2020-02-06_12:17:58--
 */
 #include <string>
-#include "TRACE/trace.h"		/* TRACE */
+#include "TRACE/trace.h" /* TRACE */
 
-std::string example_sub_(const char *msg, int lvl) {
-    if (lvl--)
-		TLOG(TLVL_INFO) << "Completing greeting" << example_sub_("from sub", lvl) << " lvl=" << lvl << " " << msg;
+std::string example_sub_(const char *msg, int lvl)
+{
+	if (lvl--) TLOG(TLVL_INFO) << "Completing greeting" << example_sub_("from sub", lvl) << " lvl=" << lvl << " " << msg;
 	else
 		TLOG(TLVL_INFO) << "Completing greeting " << msg;
 	return " there";
 }
 
-int main( int argc, char *argv[] )
+int main(int argc, char *argv[])
 {
-	int depth=1;
-	if (argc==2)
-		depth=(int)strtoul(argv[1],0,0);
-	TLOG(TLVL_INFO) << "hi" << example_sub_("zero",0);
-	TLOG(TLVL_INFO) << "hi" << example_sub_("one",depth) << example_sub_("two",depth+1);
-    example_sub_("main", 0);
-    return (0);
-}   /* main */
+	int depth= 1;
+	if (argc == 2) depth= (int)strtoul(argv[1], 0, 0);
+	TLOG(TLVL_INFO) << "hi" << example_sub_("zero", 0);
+	TLOG(TLVL_INFO) << "hi" << example_sub_("one", depth) << example_sub_("two", depth + 1);
+	example_sub_("main", 0);
+	return (0);
+} /* main */

@@ -260,13 +260,13 @@ You called: ${invocation}
 
 Usage: ${myprog} <command> <option>+
  Commands:
-  verrel <uname>                               
+  verrel <uname>
     - Get "base" version-release.
-  variant <uname>                               
+  variant <uname>
     - Get variant from uname.
-  rpmtemplate <mainpgkname> <uname> <variants> 
+  rpmtemplate <mainpgkname> <uname> <variants>
     - Return a template for use in a source RPM
-  version  
+  version
     - Output version number and exit.
 EOF
 }

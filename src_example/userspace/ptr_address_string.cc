@@ -3,12 +3,12 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: .emacs.gnu,v $
-// rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+// rev="$Revision: 1705 $$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $";
 #if 0
 rm -f /tmp/trace_buffer_`whoami`
 
 /home/ron/work/tracePrj/trace
-ron@mu2edaq01 :^) treset; ptr_address_string 
+ron@mu2edaq01 :^) treset; ptr_address_string
 02-28 16:42:54.035092 ptr_address_string nfo TRACE_NAME is ptr_address_string
 02-28 16:42:54.035184 ptr_address_string nfo the real message is hello
 02-28 16:42:54.035190 ptr_address_string nfo the copy message is hello

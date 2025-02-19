@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #
-rev="$Revision: 1050 $$Date: 2019-02-19 16:23:54 -0600 (Tue, 19 Feb 2019) $"
+rev="$Revision: 1705 $$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $"
 USAGE="\
   usage: `basename $0` [opts] [revtag]
 example: `basename $0`   # rpms from latest revtag
@@ -93,5 +93,3 @@ once installation is complete, make commands available by either opening new ter
 
 When compiling, use -I option to avoid errors in accessing trace.h and tracemf.h (i.e.: gcc -o basictrace -I/usr/include/TRACE/ /usr/share/doc/trace-v3/basic_c.c). Try example given and run ./basictrace. This note is also in the trace man pages.
 "
-
-

@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1668 $$Date: 2024-03-11 05:34:14 -0500 (Mon, 11 Mar 2024) $'
+ # rev='$Revision: 1705 $$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -16,7 +16,7 @@ do_trace_active=1
 #check_opts='-l5000 -t7 -x3'
 opt_tlogs_per=150   # default for subs besides last
 opt_name=jones
-def_threads=`expr $(nproc) \* 91 / 100`   # 
+def_threads=`expr $(nproc) \* 91 / 100`   #
 def_loops=50
 def_process_forks=1
 def_stack=0x4000
@@ -32,7 +32,7 @@ examples: `basename $0` ./big_ex.d
           `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d -DNO_TRACE -d200 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
           `basename $0` ./big_ex.d --no-define --no-declare -d25 -std=
-          `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t2048 -x5' # os tid can recycle with - 
+          `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t2048 -x5' # os tid can recycle with -
                                                     #- higher -t val, approx 2600 uniq tids have been seen.
           `basename $0` ./big_ex.d -DTRACE_STATIC --check-opts='-l50 -t512 -x1' --depth=200 --check-numents=6000000 # -
                                                     #- with --depth=200 a -t much above 512 can lead to -

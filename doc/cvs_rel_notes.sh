@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: cvs_rel_notes.sh,v $
-#   $Revision: 416 $
-#   $Date: 2015-10-13 11:48:10 -0500 (Tue, 13 Oct 2015) $
+#   $Revision: 1705 $
+#   $Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $
 
 set -u
 USAGE="usage: `basename $0` [--update_REL_NOTES] <nextVersion>
@@ -75,7 +75,6 @@ if [ "${opt_update_REL_NOTES-}" ];then
     tfile=/tmp/trace_cvs_rel_notes.$$
     exec >$tfile  # io redirection is permanent
 fi
-    
 
 echo
 echo "CHANGE(S) FOR VERSION $NEXT_VERSION"
@@ -93,7 +92,7 @@ RET="
 IFS_default=$IFS
 IFS=$RET
 for i in $cvs_rev_change_list;do
-    revRange=`expr "$i" : '[ ]*\([^ ]*\)'` 
+    revRange=`expr "$i" : '[ ]*\([^ ]*\)'`
         file=`expr "$i" : '[ ]*[^ ]*[ ]*\([^ ]*\)'`
     cvs -q log -r$revRange $file
 done | perl -e '

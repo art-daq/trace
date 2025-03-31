@@ -470,7 +470,8 @@ static inline uint32_t xchg_u32(__volatile__ uint32_t *m, uint32_t val)
 static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 {
 	uint32_t old;
-	while (xchg_u32(&ptr->lck, 1) != 0); /* lock */
+	while (xchg_u32(&ptr->lck, 1) != 0)
+		; /* lock */
 	old= ptr->val;
 	if (old == exp) ptr->val= new_;
 	ptr->lck= 0; /* unlock */
@@ -862,7 +863,10 @@ static inline uint64_t rdtsc(void)
 
 #	elif defined(__arm__)
 
-#		define TRACE_VA_LIST_INIT(addr) {addr}  // clang-format on
+#		define TRACE_VA_LIST_INIT(addr) \
+			{                            \
+				addr                     \
+			}  // clang-format on
 #		if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
 /* need to assure arguments pushed on stack start on an 8 byte aligned address */
 #			define TRACE_XTRA_PASSED        , 0
@@ -1159,7 +1163,7 @@ static uint32_t TRACE_IDXCNT_ADD(uint32_t idxCnt, int32_t add)
 	return retval;
 }
 #	endif
-#	define TRACE_IDXCNT_DELTA(cur, prv) (((cur) >= (prv)) ? (cur) - (prv) : (cur) - (prv) - traceControl_p->largest_zero_offset)
+#	define TRACE_IDXCNT_DELTA(cur, prv) (((cur) >= (prv)) ? (cur) - (prv) : (cur) - (prv)-traceControl_p->largest_zero_offset)
 
 typedef void (*trace_log_function_type)(trace_tv_t *, int, uint8_t, const char *, const char *, int, const char *, uint16_t,
 										const char *, ...);
@@ -1336,7 +1340,8 @@ static const char *trace_name_path(const char *spec, const char *file, const cha
 					if (needle[cpylen - 1] != '/') {
 						/* find next '/', if it exists; if not, just copy after needle??? If needle
 						   is filename ???? I wonder if this should result in goto forceF??? */
-						for (uu= 0; ccp[uu] != '/' && ccp[uu] != '\0'; ++uu);
+						for (uu= 0; ccp[uu] != '/' && ccp[uu] != '\0'; ++uu)
+							;
 						if (ccp[uu] == '/') ccp+= uu + 1;
 						else {
 							/* Bad news: '/' not found - this means the needle is in the base/hdr filename */
@@ -1406,7 +1411,7 @@ out:
 #	define TRACE_SNPRINTED(rr, ss)  \
 		((((size_t)(rr) + 1) < (ss)) \
 			 ? (size_t)(rr)          \
-			 : ((ss) ? (ss) - 1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
+			 : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
 
 /*  There are two recognized patterns:
     1) %%
@@ -1609,7 +1614,8 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 	} else if (*((cp= in + segment_len) - 1) != ' ') { /* important/tricky -- cp should point to '(' or '<' */
 		const char *endp= cp;                          /* one past the end of function name */
 
-		while (!strchr(funcname_delim, *--cp) && cp != in);
+		while (!strchr(funcname_delim, *--cp) && cp != in)
+			;
 		if (cp != in) ++cp; /* true for "sub1()::<lambda()>" */
 		slen= (size_t)(endp - cp);
 		ncpylen= TRACE_MIN(slen, sz - 1);
@@ -1621,7 +1627,8 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 		const char *endp= cp;               /* one past the end of function name */
 		++overall_paren_state;              /* the paren we skipped from the first strchr (cp+1) */
 
-		while (!strchr(funcname_delim, *--cp) && cp != in);
+		while (!strchr(funcname_delim, *--cp) && cp != in)
+			;
 		if (cp != in) ++cp;  // strange if this is not true.
 		slen= (size_t)(endp - cp);
 		ncpylen= TRACE_MIN(slen, sz - 1);
@@ -1634,7 +1641,7 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 	if (*cp == '(') ++cp, ++overall_paren_state; /* start the counting */
 	else if (*cp == '<') {
 		if ((cp= strchr(cp + 1, '>')) && (cp= strchr(cp + 1, '('))) ++cp, ++overall_paren_state; /* start the counting */
-	} /* else skip parens */
+	}                                                                                            /* else skip parens */
 	for (; overall_paren_state && (*cp != '[') && (*cp != '\0'); ++cp) {
 		if (*cp == '(') ++overall_paren_state;
 		else if (*cp == ')')
@@ -3652,7 +3659,7 @@ static void traceInitNames(struct traceControl_s *tC_p, struct traceControl_rw *
 		traceLvls_p[ii].M= TRACE_DFLT_LVLM; /* As Name/TIDs can't go away, these are */
 		traceLvls_p[ii].S= TRACE_DFLT_LVLS; /* then defaults except for trace_lvlS/trace_lvlM */
 		traceLvls_p[ii].T= 0;               /* in trace_name2TID. */
-	} /* (0 for err, 1=warn, 2=info, 3=debug) */
+	}                                       /* (0 for err, 1=warn, 2=info, 3=debug) */
 	// if hashing the name, special considerations need to me made -- see trace_name2TID(nn)
 	//strcpy(TRACE_TID2NAME((int32_t)tC_p->num_namLvlTblEnts - 2), "TRACE");    //NOLINT
 	TrcId= (int32_t)tC_p->num_namLvlTblEnts - 1;

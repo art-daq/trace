@@ -304,8 +304,8 @@ int main(int argc, char *argv[])
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
 				TLOG_BLK(TLVL_INFO)
-					TLog_ << "this is 8 params: " << 12345678 << " " << uu << " " << uu * 2 << " " << uu + 6 << " " << 12345679
-						  << " " << uu << " " << uu - 7 << " " << (float)uu * 1.5;
+				TLog_ << "this is 8 params: " << 12345678 << " " << uu << " " << uu * 2 << " " << uu + 6 << " " << 12345679 << " "
+					  << uu << " " << uu - 7 << " " << (float)uu * 1.5;
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);
 			fprintf(stderr, "%c %2u/%u\r", prop[test & 0x3], test + 1, total_tests);

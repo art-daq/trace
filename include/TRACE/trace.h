@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#	define TRACE_REV "$Revision: 1705 $$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $"
+#	define TRACE_REV "$Revision: 1709 $$Date: 2025-03-31 11:37:49 -0500 (Mon, 31 Mar 2025) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -157,6 +157,57 @@
 
 #define TRACEH(lvl, ...) TRACEN("", lvl, __VA_ARGS__) /* for use in header file -- to get automatic TRACE_NAME (%f, etc) */
 
+/* The _DBG variables become no-ops with #define NoTRACE */
+#ifndef NoTRACE
+# define TRACE_DBG(lvl, ...)                                                                                                               \
+	do {																\
+		struct { char tn[TRACE_TN_BUFSZ]; } _trc_;						\
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+			trace_tv_t lclTime;                                                                                                   \
+			uint8_t lvl_ = TLVL_DEBUG+(uint8_t)(lvl);								\
+			TRACE_SBUFDECL;                                                                                                                \
+			lclTime.tv_sec = 0;                                                                                                       \
+			if (traceControl_rwp->mode.bits.M && (traceLvls_p[traceTID].M & TLVLMSK(lvl_))) {  \
+				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
+				trace(&lclTime, traceTID, lvl_, __TRACE_LINE__, __func__/*NULL*/, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__); \
+			}                                                                                                                         \
+			if (traceControl_rwp->mode.bits.S && (traceLvls_p[traceTID].S & TLVLMSK(lvl_))) {  \
+				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
+					TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl_, _insert, __FILE__, __TRACE_LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+				}                                                                                                                     \
+			}                                                                                                                         \
+		}                                                                                                                             \
+	} while (0)
+
+# define TRACE_DBGN(nam, lvl, ...)											\
+	do {																\
+		struct { char tn[TRACE_TN_BUFSZ];	} _trc_;					\
+		if TRACE_INIT_CHECK(trace_name(TRACE_NAME,__TRACE_FILE__,_trc_.tn,sizeof(_trc_.tn))) { \
+			static TRACE_THREAD_LOCAL int tid_ = -1;				\
+			trace_tv_t lclTime;											\
+			uint8_t lvl_ = TLVL_DEBUG+(uint8_t)(lvl);								\
+			TRACE_SBUFDECL;													\
+			if (tid_ == -1) tid_ = trace_tlog_name_(&(nam)[0],TRACE_NAME,__TRACE_FILE__,__FILE__,_trc_.tn,sizeof(_trc_.tn)); \
+			lclTime.tv_sec = 0;											\
+			if (traceControl_rwp->mode.bits.M && (traceLvls_p[tid_].M & TLVLMSK(lvl_))) { \
+				/* Note: CANNOT add to "...NARGS..." (i.e. for long doubles issue) b/c nargs==0 in mem entry is signficant */ \
+				trace(&lclTime, tid_, lvl_, __TRACE_LINE__, __func__, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__);	\
+			}                                                                                                                     \
+			if (traceControl_rwp->mode.bits.S && (traceLvls_p[tid_].S & TLVLMSK(lvl_))) { \
+				TRACE_LIMIT_SLOW(lvl_, _insert, &lclTime) {				\
+					TRACE_LOG_FUNCTION(&lclTime, tid_, lvl_, _insert, __FILE__, __TRACE_LINE__, __func__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__); \
+				}                                                                                                                 \
+			}                                                                                                                     \
+		}                                                                                                                         \
+	} while (0)
+
+# define TRACE_DBGH(lvl, ...) TRACE_DBGN("", lvl, __VA_ARGS__) /* for use in header file -- to get automatic TRACE_NAME (%f, etc) */
+#else /* ifndef NoTRACE */
+# define TRACE_DBG(lvl, ...)
+# define TRACE_DBGN(nam, lvl, ...)
+# define TRACE_DBGH(lvl, ...)
+#endif
+
 /*  TTEST - used for the case where debugging requires significant "prep" code to print the
     debugging information. For example:
 	if (TTEST(lvl)) {
@@ -275,7 +326,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1705 $_$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $
+#define TRACE_REVx $_$Revision: 1709 $_$Date: 2025-03-31 11:37:49 -0500 (Mon, 31 Mar 2025) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -419,8 +470,7 @@ static inline uint32_t xchg_u32(__volatile__ uint32_t *m, uint32_t val)
 static inline uint32_t cmpxchg(TRACE_ATOMIC_T *ptr, uint32_t exp, uint32_t new_)
 {
 	uint32_t old;
-	while (xchg_u32(&ptr->lck, 1) != 0)
-		; /* lock */
+	while (xchg_u32(&ptr->lck, 1) != 0); /* lock */
 	old= ptr->val;
 	if (old == exp) ptr->val= new_;
 	ptr->lck= 0; /* unlock */
@@ -812,10 +862,7 @@ static inline uint64_t rdtsc(void)
 
 #	elif defined(__arm__)
 
-#		define TRACE_VA_LIST_INIT(addr) \
-			{                            \
-				addr                     \
-			}  // clang-format on
+#		define TRACE_VA_LIST_INIT(addr) {addr}  // clang-format on
 #		if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ == 4
 /* need to assure arguments pushed on stack start on an 8 byte aligned address */
 #			define TRACE_XTRA_PASSED        , 0
@@ -1112,7 +1159,7 @@ static uint32_t TRACE_IDXCNT_ADD(uint32_t idxCnt, int32_t add)
 	return retval;
 }
 #	endif
-#	define TRACE_IDXCNT_DELTA(cur, prv) (((cur) >= (prv)) ? (cur) - (prv) : (cur) - (prv)-traceControl_p->largest_zero_offset)
+#	define TRACE_IDXCNT_DELTA(cur, prv) (((cur) >= (prv)) ? (cur) - (prv) : (cur) - (prv) - traceControl_p->largest_zero_offset)
 
 typedef void (*trace_log_function_type)(trace_tv_t *, int, uint8_t, const char *, const char *, int, const char *, uint16_t,
 										const char *, ...);
@@ -1289,8 +1336,7 @@ static const char *trace_name_path(const char *spec, const char *file, const cha
 					if (needle[cpylen - 1] != '/') {
 						/* find next '/', if it exists; if not, just copy after needle??? If needle
 						   is filename ???? I wonder if this should result in goto forceF??? */
-						for (uu= 0; ccp[uu] != '/' && ccp[uu] != '\0'; ++uu)
-							;
+						for (uu= 0; ccp[uu] != '/' && ccp[uu] != '\0'; ++uu);
 						if (ccp[uu] == '/') ccp+= uu + 1;
 						else {
 							/* Bad news: '/' not found - this means the needle is in the base/hdr filename */
@@ -1360,7 +1406,7 @@ out:
 #	define TRACE_SNPRINTED(rr, ss)  \
 		((((size_t)(rr) + 1) < (ss)) \
 			 ? (size_t)(rr)          \
-			 : ((ss) ? (ss)-1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
+			 : ((ss) ? (ss) - 1 : 0)) /* TRICKY - rr is strlen and ss is sizeof. When ss is 0 or 1, it's strlen should be 0 */
 
 /*  There are two recognized patterns:
     1) %%
@@ -1563,8 +1609,7 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 	} else if (*((cp= in + segment_len) - 1) != ' ') { /* important/tricky -- cp should point to '(' or '<' */
 		const char *endp= cp;                          /* one past the end of function name */
 
-		while (!strchr(funcname_delim, *--cp) && cp != in)
-			;
+		while (!strchr(funcname_delim, *--cp) && cp != in);
 		if (cp != in) ++cp; /* true for "sub1()::<lambda()>" */
 		slen= (size_t)(endp - cp);
 		ncpylen= TRACE_MIN(slen, sz - 1);
@@ -1576,8 +1621,7 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 		const char *endp= cp;               /* one past the end of function name */
 		++overall_paren_state;              /* the paren we skipped from the first strchr (cp+1) */
 
-		while (!strchr(funcname_delim, *--cp) && cp != in)
-			;
+		while (!strchr(funcname_delim, *--cp) && cp != in);
 		if (cp != in) ++cp;  // strange if this is not true.
 		slen= (size_t)(endp - cp);
 		ncpylen= TRACE_MIN(slen, sz - 1);
@@ -1590,7 +1634,7 @@ static char *trace_func_to_short_func(const char *in, char *out, size_t sz, int 
 	if (*cp == '(') ++cp, ++overall_paren_state; /* start the counting */
 	else if (*cp == '<') {
 		if ((cp= strchr(cp + 1, '>')) && (cp= strchr(cp + 1, '('))) ++cp, ++overall_paren_state; /* start the counting */
-	}                                                                                            /* else skip parens */
+	} /* else skip parens */
 	for (; overall_paren_state && (*cp != '[') && (*cp != '\0'); ++cp) {
 		if (*cp == '(') ++overall_paren_state;
 		else if (*cp == ')')
@@ -3608,7 +3652,7 @@ static void traceInitNames(struct traceControl_s *tC_p, struct traceControl_rw *
 		traceLvls_p[ii].M= TRACE_DFLT_LVLM; /* As Name/TIDs can't go away, these are */
 		traceLvls_p[ii].S= TRACE_DFLT_LVLS; /* then defaults except for trace_lvlS/trace_lvlM */
 		traceLvls_p[ii].T= 0;               /* in trace_name2TID. */
-	}                                       /* (0 for err, 1=warn, 2=info, 3=debug) */
+	} /* (0 for err, 1=warn, 2=info, 3=debug) */
 	// if hashing the name, special considerations need to me made -- see trace_name2TID(nn)
 	//strcpy(TRACE_TID2NAME((int32_t)tC_p->num_namLvlTblEnts - 2), "TRACE");    //NOLINT
 	TrcId= (int32_t)tC_p->num_namLvlTblEnts - 1;
@@ -3705,6 +3749,7 @@ typedef struct {
 #					define TRACE_SUPPRESS_UNUSED_WARN_BEGIN
 #				endif
 #			elif 1
+//              Use this as I can't figure out how to suppress unused warning
 #				define TRACE_SUPPRESS_UNUSED_WARN_BEGIN
 #				define TRACE_SUPPRESS_UNUSED_WARN_END /*<<""  With _Pragma("...pop") I get: error: ‘#pragma’ is not allowed here */
 #			elif defined(__GNUC__)

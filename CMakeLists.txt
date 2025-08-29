@@ -153,11 +153,7 @@ INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
 add_subdirectory(script)
 
 # doc - Some documentation...There should be a cet_ function for this...
-FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
-
-FILE(COPY doc/ DESTINATION man1 FILES_MATCHING PATTERN "*.1")
-INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man1 DESTINATION ${CMAKE_INSTALL_MANDIR})
+add_subdirectory(doc)
 
 if (${cetmodules_FOUND})
 

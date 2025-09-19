@@ -77,6 +77,10 @@ if (${cetmodules_FOUND})
 		cet_add_compiler_flags(-fsanitize=undefined -lubsan -Wno-unused-command-line-argument)
 	endif()
   endif()
+	if(DEFINED ENV{USE_GCOV})
+		add_compile_options(-fprofile-arcs -ftest-coverage --coverage)
+		add_link_options(--coverage)
+	endif()
 
   find_package(messagefacility ${CET_EXPORT} QUIET)
   set(mflib "")
@@ -153,11 +157,7 @@ INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
 add_subdirectory(script)
 
 # doc - Some documentation...There should be a cet_ function for this...
-FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
-
-FILE(COPY doc/ DESTINATION man1 FILES_MATCHING PATTERN "*.1")
-INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man1 DESTINATION ${CMAKE_INSTALL_MANDIR})
+add_subdirectory(doc)
 
 if (${cetmodules_FOUND})
 

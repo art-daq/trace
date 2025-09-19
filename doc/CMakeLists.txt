@@ -1,0 +1,85 @@
+include(FindDoxygen)
+include(FindLATEX)
+
+SET(DOXYFILE_DIR ${CMAKE_CURRENT_LIST_DIR})
+
+macro (create_doxygen_documentation)
+if(DOXYGEN_FOUND)
+    cmake_parse_arguments(CM "" "" "EXCLUDE;DEPENDS;HTML" ${ARGN})
+	set(EXCLUDE_FILES "")
+	if(CM_EXCLUDE)
+		foreach(file ${CM_EXCLUDE})
+            file(REAL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${file} file_abs)
+			set(EXCLUDE_FILES "${EXCLUDE_FILES} ${file_abs}")
+		endforeach()
+	endif()
+	set(DOXYGEN_EXTRA_HTML_FILES "")
+	if(CM_HTML)
+		foreach(file ${CM_HTML})
+            file(REAL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${file} file_abs)
+			set(DOXYGEN_EXTRA_HTML_FILES "${DOXYGEN_EXTRA_HTML_FILES} ${file_abs}")
+		endforeach()
+	endif()
+
+	add_custom_target(${PROJECT_NAME}_doc ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tag)
+
+	set(TAG_FILES "")
+
+	if(CM_DEPENDS)
+		foreach(dependency ${CM_DEPENDS})
+			if(TARGET ${dependency}_doc)
+				get_target_property(tag_source ${dependency}_doc SOURCE_DIR)
+                file(RELATIVE_PATH tag_dir ${CMAKE_CURRENT_SOURCE_DIR}/.. ${tag_source}/../ )
+				set(TAG_FILES "${TAG_FILES} ${CMAKE_BINARY_DIR}/${dependency}/doc/${dependency}.tag=${tag_dir}")
+				add_dependencies(${PROJECT_NAME}_doc ${dependency}_doc)
+			else()
+				string(TOUPPER ${dependency} dependency_uc)
+				set(TAG_FILES "${TAG_FILES} $ENV{${dependency_uc}_SHARE}/doc/${dependency}.tag=$ENV{${dependency_uc}_INC}")
+			endif()
+		endforeach()
+	endif()
+
+    string(TIMESTAMP GENERATE_TIMESTAMP)
+
+	string(REPLACE ";" " " DOXYGEN_INCLUDE_PATH "${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}")
+    file(REAL_PATH ${PROJECT_SOURCE_DIR}/.. DOXYGEN_STRIP_FROM_PATH)
+
+	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+	else()
+		configure_file(${DOXYFILE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+	endif()
+	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/header.html.in)
+		configure_file(${DOXYFILE_DIR}/header.html.in ${CMAKE_CURRENT_BINARY_DIR}/header.html @ONLY)
+	else()
+		configure_file(${DOXYFILE_DIR}/header.html.in ${CMAKE_CURRENT_BINARY_DIR}/header.html @ONLY)
+	endif()
+	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/footer.html.in)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/footer.html.in ${CMAKE_CURRENT_BINARY_DIR}/footer.html @ONLY)
+	else()
+		configure_file(${DOXYFILE_DIR}/footer.html.in ${CMAKE_CURRENT_BINARY_DIR}/footer.html @ONLY)
+	endif()
+	if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/style.css.in)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/style.css.in ${CMAKE_CURRENT_BINARY_DIR}/style.css @ONLY)
+	else()
+		configure_file(${DOXYFILE_DIR}/style.css.in ${CMAKE_CURRENT_BINARY_DIR}/style.css @ONLY)
+	endif()
+	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tag
+	                   COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile > doxygen.log 2>&1 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+	                   COMMENT "Generating ${PROJECT_NAME} API documentation using Doxygen" VERBATIM)
+	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tag DESTINATION ${CMAKE_INSTALL_DATADIR}/doc)
+
+	# install doxygen-generated HTML pages and MAN pages.
+	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/${PROJECT_NAME})
+	install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man DESTINATION ${CMAKE_INSTALL_DATADIR})
+endif(DOXYGEN_FOUND)
+endmacro()
+
+
+create_doxygen_documentation()
+
+FILE(COPY . DESTINATION . PATTERN ".svn" EXCLUDE)
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+FILE(COPY . DESTINATION man1 FILES_MATCHING PATTERN "*.1")
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man1 DESTINATION ${CMAKE_INSTALL_MANDIR})

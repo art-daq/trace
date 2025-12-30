@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#	define TRACE_REV "$Revision: 1710 $$Date: 2025-03-31 11:54:02 -0500 (Mon, 31 Mar 2025) $"
+#	define TRACE_REV "$Revision: 1719 $$Date: 2025-12-30 12:38:15 -0600 (Tue, 30 Dec 2025) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -326,7 +326,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1710 $_$Date: 2025-03-31 11:54:02 -0500 (Mon, 31 Mar 2025) $
+#define TRACE_REVx $_$Revision: 1719 $_$Date: 2025-12-30 12:38:15 -0600 (Tue, 30 Dec 2025) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -423,6 +423,14 @@ static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			define TRACE_ATOMIC_LOAD(ptr)       atomic_load(ptr)
 #			define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
 #			define TRACE_THREAD_LOCAL           thread_local
+#		elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+#			define TRACE_C11_ATOMICS
+#			include <stdatomic.h> /* atomic_compare_exchange_weak */
+#			define TRACE_ATOMIC_T               /*volatile*/ _Atomic(uint32_t)
+#			define TRACE_ATOMIC_INIT            (0)
+#			define TRACE_ATOMIC_LOAD(ptr)       atomic_load(ptr)
+#			define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
+#			define TRACE_THREAD_LOCAL           _Thread_local
 #		elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
 			(defined(__clang__) ||                                          \
 			 (defined __GNUC__ && defined __GNUC_MINOR__ && (10000 * __GNUC__ + 1000 * __GNUC_MINOR__) >= 49000))

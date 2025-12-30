@@ -427,7 +427,7 @@ static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			define TRACE_C11_ATOMICS
 #			include <stdatomic.h> /* atomic_compare_exchange_weak */
 #			define TRACE_ATOMIC_T               /*volatile*/ _Atomic(uint32_t)
-#			define TRACE_ATOMIC_INIT            (0)
+#			define TRACE_ATOMIC_INIT            0
 #			define TRACE_ATOMIC_LOAD(ptr)       atomic_load(ptr)
 #			define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
 #			define TRACE_THREAD_LOCAL           _Thread_local

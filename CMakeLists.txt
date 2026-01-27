@@ -20,6 +20,7 @@ if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)
   include(CetCMakeEnv)
+  include(SetCompilerFlags)
   cet_cmake_env()
 else (${cetmodules_FOUND})
   MESSAGE(STATUS "Could not locate cetmodules.")
@@ -91,7 +92,7 @@ if (${cetmodules_FOUND})
     endif()
   endif()
 
-  cet_make_library(USE_PROJECT_NAME INTERFACE 
+  cet_make_library(USE_PROJECT_NAME INTERFACE
      SOURCE
     include/TRACE/trace.h
   )

@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace_delta,v $
-$version = '$Revision: 1691 $';
-#   $Date: 2024-09-25 17:36:37 -0500 (Wed, 25 Sep 2024) $
+$version = '$Revision: 1723 $';
+#   $Date: 2026-01-06 23:34:23 -0600 (Tue, 06 Jan 2026) $
 
 use Time::Local; # timelocal()
 #use File::Basename;
@@ -237,6 +237,10 @@ sub get_delta_data
     if    ($delta_d =~ /^\s*[\d.]+\s*$/o)
     {   $ret = $delta_d;
 	#print STDERR "get_delta_data start - return input: $ret\n";
+    }
+    elsif ($delta_d =~ /^\s*0x([0-9a-fA-F]+)\s*$/o)
+    {   $ret = hex($1);   # e.g. 0x1234
+    #print STDERR "get_delta_data start - return hex: $ret\n";
     }
     elsif ($delta_d =~ /^\s*([0-9]+).([0-9]+).([0-9]+) ([0-9]+):([0-9]+):([0-9][0-9])([.,]\d+){0,1}$/o)
     {   # convert to float seconds  e.g. 2019-12-23 13:22:57.123456

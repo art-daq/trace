@@ -1,0 +1,107 @@
+.TH TRACE_NAME 1 "2026-02-03" "TRACE" "User Commands"
+.SH NAME
+TRACE_NAME \- how TRACE/TLOG names are formed
+.SH SYNOPSIS
+.B TLOG
+\- streaming trace macro
+.BR TRACEN "(name, lvl, ...)" 
+.SH DESCRIPTION
+This manual page describes how the trace "name" is determined for entries produced by the TRACE/TLOG facility.
+
+The name used to index per-name trace levels may come from several sources (precedence):
+.TP
+.B 1.
+An explicit, non-empty name passed to the calling macro (for example, \fBTRACEN("myname", ...)\fR).
+.TP
+.B 2.
+The \fBTRACE_NAME\fR specification (a macro defined in source before including the headers).
+.TP
+.B 3.
+The \fBTRACE_NAME\fR environment variable (if set and non-empty).
+.TP
+.B 4.
+The compile-time default \fBTRACE_DFLT_NAME\fR (currently "%f %H").
+
+.SH FORMAT SPEC
+The \fBTRACE_NAME\fR specification is a small format language parsed by \fBtrace_name_path()\fR. Common sequences:
+.TP
+.B %%
+literal percent
+.TP
+.B %f / %h
+filename (file/hdrf) without extension
+.TP
+.B %F / %H
+filename (file/hdrf) with extension
+.TP
+.B %[-][0-9]f
+include additional path components (0-9)
+.TP
+.B %p
+program name (if enabled at compile-time)
+
+If the spec contains a space, the two parts are used separately: the first for base/main files, the second for included/header files (this is why the default uses "%f %H").
+
+.SH IMPLEMENTATION NOTES
+.PP
+When a non-empty explicit name is provided, it is passed verbatim to \fBtrace_name2TID()\fR. Otherwise \fBtrace_tlog_name_()\fR builds a name from the spec (macro/env/default) and then calls \fBtrace_name2TID()\fR.
+
+Non-graph or non-printable characters in names are replaced with '_' before insertion; long names are truncated from the left so the trailing portion (usually the most meaningful) is preserved.
+
+.SH EXAMPLES
+.PP
+Default behavior: \fBTRACE_DFLT_NAME\fR is "%f %H" so main files use basename-without-extension and headers use filename-with-extension.
+
+Set via environment:
+.nf
+export TRACE_NAME="%p-%-f"
+.fi
+
+.SH SHORT EXAMPLES
+.PP
+.TP
+.B 1. Define-before-include (recommended):
+.nf
+/* Define module default TRACE_NAME, then include headers */
+#define TRACE_NAME "%p-%2f %~src/%H"
+#include "trace.h"
+
+int main(void) {
+	TLOG_INFO() << "uses programname-2pathcomponents"; /* expands using TRACE_NAME */
+}
+.fi
+.PP
+.TP
+.B 2. Temporary define/undef around a block of uses:
+.nf
+#include "trace.h"
+
+/* Temporarily override TRACE_NAME for the next block of TLOG/TRACEN uses */
+#define TRACE_NAME "%p-%-f %H"
+TLOG_INFO() << "temporary name used here";
+TRACEN("explicit", TLVL_INFO, "explicit used verbatim");
+#undef TRACE_NAME
+
+/* Back to default / env-controlled behavior */
+TLOG_INFO() << "default name used here";
+.fi
+.PP
+.TP
+.B 3. Explicit name passed to TRACEN (verbatim):
+.nf
+#include "trace.h"
+
+TRACEN("my_module,subpart", TLVL_INFO, "message: %d", 42);
+.fi
+
+.SH ORDERING AND RECOMMENDATION
+.PP
+.B Macro expansion:  \fBTLOG\fR/\fBTRACEN\fR macros are expanded at the site of use, so a \fB#define TRACE_NAME\fR placed after \fB#include "trace.h"\fR still affects subsequent macro expansions in the same translation unit.
+.PP
+.B Fallback symbol:  If \fBTRACE_NAME\fR was not defined when the header was included, the header emits a fallback symbol `static const char *TRACE_NAME = NULL;`. Defining a preprocessor macro with the same name later is allowed but can be confusing — to avoid ambiguity and the fallback symbol, prefer defining \fBTRACE_NAME\fR before including \fBtrace.h\fR or control it via the environment.
+
+.SH SEE ALSO
+.BR include/trace.h
+
+.SH AUTHOR
+See project source for authorship and license information.

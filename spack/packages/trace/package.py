@@ -10,37 +10,45 @@ import os, sys
 from spack.util.environment import EnvironmentModifications
 from llnl.util.filesystem import join_path
 
+
 class Trace(CMakePackage):
     """TRACE is a logging package. It features 2 paths - slow and fast.
-The slow path can be configure to be your favorite logger.
-The fast path is a circular memory buffer. There is a separate utility to
-print log messages in the circular buffer. THere are several other features."""
+    The slow path can be configure to be your favorite logger.
+    The fast path is a circular memory buffer. There is a separate utility to
+    print log messages in the circular buffer. THere are several other features."""
 
     homepage = "https://github.com/art-daq/trace"
-    git      = "https://github.com/art-daq/trace.git"
+    git = "https://github.com/art-daq/trace.git"
 
-    version('develop') # A "versioned" version should have a commit hash. E.g. version('3.17.09', commit='d93a64f45e57bec87c0b890b9bbaaf94eb0b2e69')
-    version('trace', git=os.environ['HOME']+"/trace") # from git clone. One can create a link in their home dir.
+    version(
+        "develop"
+    )  # A "versioned" version should have a commit hash. E.g. version('3.17.09', commit='d93a64f45e57bec87c0b890b9bbaaf94eb0b2e69')
+    version(
+        "trace", git=os.environ["HOME"] + "/trace"
+    )  # from git clone. One can create a link in their home dir.
 
     def setup_run_environment(self, env):
-        #env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking
-        env.prepend_path('PYTHONPATH', self.prefix.python)
+        # env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking
+        env.prepend_path("PYTHONPATH", self.prefix.python)
         file_to_source = self.prefix.join("bin/trace_functions.sh")
-        #print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
-        print(f'source {file_to_source}')
+        # print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
+        print(f"source {file_to_source}")
         # try:
         #     env.extend(EnvironmentModifications.from_sourcing_file(
         #         file_to_source, clean=True ))
         # except Exception as e:
         #     msg = 'unexpected error when sourcing file [{0}]'
         #     print(msg.format(str(e)),file=sys.stderr)
-    def setup_dependent_run_environment(self, env):     # for when the "loading" happens when trace is dependent
-                                                        # (i.e via another package)
-        #env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking
-        env.prepend_path('PYTHONPATH', self.prefix.python)
+
+    def setup_dependent_run_environment(
+        self, env
+    ):  # for when the "loading" happens when trace is dependent
+        # (i.e via another package)
+        # env.prepend_path('LD_LIBRARY_PATH', self.prefix.lib64)   # See $SPACK_ROOT/etc/spack/defaults/config.yaml:shared_linking
+        env.prepend_path("PYTHONPATH", self.prefix.python)
         file_to_source = self.prefix.join("bin/trace_functions.sh")
-        #print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
-        print(f'source {file_to_source}')
+        # print(f'hello from setup_run_environment; {file_to_source}',file=sys.stderr)
+        print(f"source {file_to_source}")
         # try:
         #     env.extend(EnvironmentModifications.from_sourcing_file(
         #         file_to_source, clean=True ))

@@ -59,8 +59,10 @@ Authorized read-write SVN access via:
     mkdir build; cd build
     cmake .. -DCMAKE_INSTALL_PREFIX=$PWD
     make install
-    PATH=$PWD/bin:$PATH
+    export PATH=$PWD/bin:$PATH PYTHONPATH=$PWD/python LD_LIBRARY_PATH=$PWD/lib64
     . etc/profile.d/trace_functions.sh
+    tcntl TRACE INFO hello
+    python -c 'import TRACE;TRACE.INFO("hello")'
 ```
 
 ### spack - work-in-progress

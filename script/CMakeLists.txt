@@ -25,8 +25,7 @@ if (${cetmodules_FOUND})
         )
 
   endif()
-else (${cetmodules_FOUND})
-  install(PROGRAMS bitN_to_mask trace_envvars trace_delta trace-cmd-merge trace_color trace-cmd-merge trace_bash trace_bash_example.sh DESTINATION bin)
-  install(PROGRAMS trace_functions.sh DESTINATION etc/profile.d)
-  install(PROGRAMS trace_functions.sh DESTINATION bin)  # OK of DUNE patch (to this file) causes double bin install
 endif (${cetmodules_FOUND})
+install(PROGRAMS bitN_to_mask trace_envvars trace_delta trace-cmd-merge trace_color trace-cmd-merge trace_bash trace_bash_example.sh DESTINATION bin)
+install(PROGRAMS trace_functions.sh DESTINATION etc/profile.d)
+install(PROGRAMS trace_functions.sh DESTINATION bin)  # OK of DUNE patch (to this file) causes double bin install

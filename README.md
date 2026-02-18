@@ -56,10 +56,16 @@ Authorized read-write SVN access via:
 
 ```
     cd trace
+	# next 4 to git :) cetmodules; used in building examples
+	git clone git@github.com:FNALssi/cetmodules -b3.27.03 # use tag closest to cmake version
+	mkdir cetmodules/build;cd $_
+	cmake .. -DCMAKE_INSTALL_PREFIX=$PWD && make install && export CMAKE_PREFIX_PATH=$PWD
+	cd ../..
     mkdir build; cd build
     cmake .. -DCMAKE_INSTALL_PREFIX=$PWD
     make install
-    export PATH=$PWD/bin:$PATH PYTHONPATH=$PWD/python LD_LIBRARY_PATH=$PWD/lib64
+    echo ":$PATH:" | grep :$PWD/bin: || PATH="$PWD/bin:$PATH"
+	export PYTHONPATH=$PWD/python LD_LIBRARY_PATH=`echo $PWD/lib*`
     . etc/profile.d/trace_functions.sh
     tcntl TRACE INFO hello
     python -c 'import TRACE;TRACE.INFO("hello")'

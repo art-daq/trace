@@ -82,14 +82,14 @@ if (${cetmodules_FOUND})
 		add_link_options(--coverage)
 	endif()
 
+  cet_make_library(USE_PROJECT_NAME INTERFACE
+	 SOURCE
+	include/TRACE/trace.h
+  )
+  
   find_package(messagefacility ${CET_EXPORT} QUIET)
   set(mflib "")
-  if(messagefacility_FOUND)
-	  cet_make_library(USE_PROJECT_NAME INTERFACE
-	     SOURCE
-	    include/TRACE/trace.h
-	  )
-	
+  if(messagefacility_FOUND)	
 	  cet_make_library(LIBRARY_NAME MF INTERFACE
 	    SOURCE
 	    include/TRACE/tracemf.h

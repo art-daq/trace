@@ -75,7 +75,7 @@ Authorized read-write SVN access via:
 
 ```
     wget https://raw.githubusercontent.com/art-daq/artdaq_demo/refs/heads/develop/tools/setup_spack_build_system_v0.28.sh
-    echo "c70e6c68ec1f7fddbf4afdcd5b24a3b1d9bbb660 *setup_spack_build_system_v0.28.sh" | sha1sum -c -
+    echo "c70e6c68ec1f7fddbf4afdcd5b24a3b1d9bbb660  setup_spack_build_system_v0.28.sh" | sha1sum -c -
     
     source setup_spack_build_system_v0.28.sh
     # Note that install_spack_build_system sources setup-env.sh

@@ -82,30 +82,29 @@ if (${cetmodules_FOUND})
 		add_link_options(--coverage)
 	endif()
 
+  cet_make_library(USE_PROJECT_NAME INTERFACE
+	 SOURCE
+	include/TRACE/trace.h
+  )
+  
   find_package(messagefacility ${CET_EXPORT} QUIET)
   set(mflib "")
-  if(messagefacility_FOUND)
-    set(mflib messagefacility::MF_MessageLogger)
+  if(messagefacility_FOUND)	
+	  cet_make_library(LIBRARY_NAME MF INTERFACE
+	    SOURCE
+	    include/TRACE/tracemf.h
+	    include/TRACE/tracemf2.h
+	    include/TRACE/tracemf3.h
+	    LIBRARIES INTERFACE
+	    messagefacility::MF_MessageLogger
+	    TRACE::TRACE
+	  )
   else()
     if(${WANT_MF})
         message(FATAL_ERROR "MessageFacility not found and MF build requested! Aborting...")
     endif()
   endif()
 
-  cet_make_library(USE_PROJECT_NAME INTERFACE
-     SOURCE
-    include/TRACE/trace.h
-  )
-
-  cet_make_library(LIBRARY_NAME MF INTERFACE
-    SOURCE
-    include/TRACE/tracemf.h
-    include/TRACE/tracemf2.h
-    include/TRACE/tracemf3.h
-    LIBRARIES INTERFACE
-    messagefacility::MF_MessageLogger
-    TRACE::TRACE
-  )
 else (${cetmodules_FOUND})
 
   if(${WANT_MF})

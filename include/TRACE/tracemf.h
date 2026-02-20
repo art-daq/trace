@@ -3,7 +3,7 @@
  // or COPYING file. If you do not have such a file, one can be obtained by
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+ // rev="$Revision: 1729 $$Date: 2026-02-18 18:52:14 -0600 (Wed, 18 Feb 2026) $";
  */
 /**
   * \file tracemf.h
@@ -28,9 +28,12 @@
 								 const std::string& msg, ...)
 #	undef TRACE_LOG_FUNCTION
 #	define TRACE_LOG_FUNCTION mftrace_user
-#	undef TSTREAMER_SL_FRC
-#	define TSTREAMER_SL_FRC(lvl)               \
-		((lvl < static_cast<int>(TLVL_INFO)) || \
+#	undef TSTREAMER_SL_FRC  // in case trace.h included previous
+#	ifndef TRACEMF_SL_FRC_LVL
+#		TRACEMF_SL_FRC_LVL TLVL_INFO
+#	endif
+#	define TSTREAMER_SL_FRC(lvl)                         \
+		((lvl <= static_cast<int>(TRACEMF_SL_FRC_LVL)) || \
 		 ((lvl <= static_cast<int>(TLVL_DEBUG)) && DEBUG_FORCED)) /* in these cases, only mf config/thresh rules */
 #	include "TRACE/trace.h"                                      /* TRACE */
 

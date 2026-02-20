@@ -56,27 +56,32 @@ Authorized read-write SVN access via:
 
 ```
     cd trace
+	# next 4 to git :) cetmodules; used in building examples
+	git clone git@github.com:FNALssi/cetmodules -b3.27.03 # use tag closest to cmake version
+	mkdir cetmodules/build;cd $_
+	cmake .. -DCMAKE_INSTALL_PREFIX=$PWD && make install && export CMAKE_PREFIX_PATH=$PWD
+	cd ../..
     mkdir build; cd build
     cmake .. -DCMAKE_INSTALL_PREFIX=$PWD
     make install
-    PATH=$PWD/bin:$PATH
+    echo ":$PATH:" | grep :$PWD/bin: || PATH="$PWD/bin:$PATH"
+	export PYTHONPATH=$PWD/python LD_LIBRARY_PATH=`echo $PWD/lib*`
     . etc/profile.d/trace_functions.sh
+    tcntl TRACE INFO hello
+    python -c 'import TRACE;TRACE.INFO("hello")'
 ```
 
 ### spack - work-in-progress
 
 ```
+    wget https://raw.githubusercontent.com/art-daq/artdaq_demo/refs/heads/develop/tools/setup_spack_build_system_v0.28.sh
+    echo "c70e6c68ec1f7fddbf4afdcd5b24a3b1d9bbb660  setup_spack_build_system_v0.28.sh" | sha1sum -c -
+    
+    source setup_spack_build_system_v0.28.sh
+    # Note that install_spack_build_system sources setup-env.sh
+    install_spack_build_system $PWD spack 0 # Installs Spack into the spack/ subdirectory
     spack find --format "{name}@{version}%{compiler}/{hash} {arch}={platform}-{os}-{target}" trace
-    cd trace
-    spack repo add $PWD/spack
-    spack install --reuse trace@develop arch=`uname -m`    # 
-
-    # for "No valid compiler version found..." do:
-    spack compiler find  # and then redo spack install... (above)
-
-    # for other errors you may have to:
-    spack uninstall trace@develop # and/or:
-    spack repo rm trace # and then do spack repo add... (above)
+    spack install --reuse trace@develop ~mf # Don't install MessageFacility dependency
 
     spack load trace@develop
 ```

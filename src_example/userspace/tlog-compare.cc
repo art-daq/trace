@@ -17,8 +17,8 @@ struct test_desc_t {
 				{"(repeat) const short msg", 1},
 				{"2 args traceTID=-1 - first TLOG", 1},
 				{"2 args TRACE macro", 1},
-				{"8 args (7 ints, 1 float) - TLOG_BLK() TLog_", 1},
-				{"8 args (7 ints, 1 float) - TLOG_BLK() {TLog_...}", 1},
+				{"8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", 1},
+				{"8 args (7 ints, 1 float) - TLOG_SCOPED() {TLOG_ADD...}", 1},
 				{"2 args - NoTLOG - OPTIMIZED out", 1}};
 #define USAGE   \
 	"\
@@ -42,35 +42,6 @@ tests_mask:\n", \
 #include <TRACE/trace.h>  // TLOG
 #include <time.h>         // clock_gettime, struct timespec
 
-#define TLog_ *(TraceStreamer *)_trc_.stmr__
-#if TRACE_USE_STATIC_STREAMER == 1
-#	define TLOG_BLK(...)                                                                                                          \
-		for (TSTREAMER_T_ _trc_((tlvle_t)(0), TRACE_GET_STATIC());                                                                 \
-			 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) &&                 \
-			 (_trc_.TLOG3(__VA_ARGS__),                                                                                            \
-			  ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, _trc_.tn,    \
-																	  sizeof(_trc_.tn))) != -1))) &&                               \
-			 trace_do_streamer(&_trc_) &&                                                                                          \
-			 (((void *)&((TraceStreamer *)_trc_.stmr__)                                                                            \
-				   ->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, \
-						  _trc_.ins, &TRACE_LOG_FUNCTION)) != NULL);                                                               \
-			 _trc_.once= 0, ((TraceStreamer *)_trc_.stmr__)->str())
-
-#else
-#	define TLOG_BLK(...)                                                                                                       \
-		for (TSTREAMER_T_ _trc_((tlvle_t)(0), TRACE_GET_STATIC());                                                              \
-			 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) &&              \
-			 (_trc_.TLOG3(__VA_ARGS__),                                                                                         \
-			  ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, _trc_.tn, \
-																	  sizeof(_trc_.tn))) != -1))) &&                            \
-			 trace_do_streamer(&_trc_) &&                                                                                       \
-			 (_trc_.stmr__= (void *)&((new TraceStreamer())                                                                     \
-										  ->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__,       \
-												 __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)));             \
-			 _trc_.once= 0, delete (TraceStreamer *)_trc_.stmr__)
-
-#endif
-#define TLOG2(...) TLOG_BLK(__VA_ARGS__) TLog_
 
 #define DFLT_TEST_COMPARE_ITERS 1000000
 
@@ -299,12 +270,12 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x200 & tests_mask) {
-			//STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_BLK() TLog_", "", "");
+			//STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", "", "");
 			TRACE_CNTL("reset");
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
-				TLOG_BLK(TLVL_INFO)
-				TLog_ << "this is 8 params: " << 12345678 << " " << uu << " " << uu * 2 << " " << uu + 6 << " " << 12345679 << " "
+				TLOG_SCOPED(TLVL_INFO)
+				TLOG_ADD << "this is 8 params: " << 12345678 << " " << uu << " " << uu * 2 << " " << uu + 6 << " " << 12345679 << " "
 					  << uu << " " << uu - 7 << " " << (float)uu * 1.5;
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);
@@ -314,20 +285,20 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x400 & tests_mask) {
-			//STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_BLK() {TLog_...}", "", "");
+			//STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() {TLOG_ADD...}", "", "");
 			TRACE_CNTL("reset");
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
-				TLOG_BLK(TLVL_INFO)
+				TLOG_SCOPED(TLVL_INFO)
 				{
-					TLog_ << "this is 8 params: " << 12345678;
-					TLog_ << " " << uu;
-					TLog_ << " " << uu * 2;
-					TLog_ << " " << uu + 6;
-					TLog_ << " " << 12345679;
-					TLog_ << " " << uu;
-					TLog_ << " " << uu - 7;
-					TLog_ << " " << (float)uu * 1.5;
+					TLOG_ADD << "this is 8 params: " << 12345678;
+					TLOG_ADD << " " << uu;
+					TLOG_ADD << " " << uu * 2;
+					TLOG_ADD << " " << uu + 6;
+					TLOG_ADD << " " << 12345679;
+					TLOG_ADD << " " << uu;
+					TLOG_ADD << " " << uu - 7;
+					TLOG_ADD << " " << (float)uu * 1.5;
 				}
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);
@@ -338,9 +309,12 @@ int main(int argc, char *argv[])
 
 		if (0x800 & tests_mask) {
 #undef TLOG
+#undef TLOG_SCOPED_DEBUG
 #include <iostream>
 #define TLOG(...) \
 	if (0) std::cout
+#define TLOG_SCOPED_DEBUG(...) \
+			for(struct{std::ostream* stmr__;} _trc_={&std::cout}; 0; )
 #ifndef __OPTIMIZE__
 			//STRT_PRN(" 0x800 - 2 args%s%s ", " - NoTLOG - ", "NOT Optimized.");
 #else
@@ -351,6 +325,7 @@ int main(int argc, char *argv[])
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
 				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;
+				TLOG_SCOPED_DEBUG(TLVL_INFO) TLOG_ADD << "this is 2 params: " << 12345678 << " " << uu;
 				total+= uu;  // don't want to completely optimize out whole loop
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);
@@ -495,7 +470,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x200 & tests_mask) {
-			STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_BLK() TLog_", "", "");
+			STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", "", "");
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -505,7 +480,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x400 & tests_mask) {
-			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_BLK() {TLog_...}", "", "");
+			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() {TLOG_ADD...}", "", "");
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)

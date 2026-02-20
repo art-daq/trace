@@ -10,7 +10,7 @@ CMakePresets.json
 ups
 Linux64bit*
 module
-.vscode
+#.vscode
 build
 .spack*
 build-linux-*

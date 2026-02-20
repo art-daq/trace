@@ -97,7 +97,7 @@ def WARN(msg, name=None):
     "WARN( msg, name=None )"
     f = sys._getframe(1)
     co = f.f_code
-    if name == None:
+    if name is None:
         name = co.co_filename
         name = name[name.rfind("/") + 1 :].encode()
     if type(name) != type(b""):
@@ -113,7 +113,7 @@ def INFO(msg, name=None):
     "INFO( msg, name=None )"
     f = sys._getframe(1)
     co = f.f_code
-    if name == None:
+    if name is None:
         name = co.co_filename
         name = name[name.rfind("/") + 1 :].encode()
     if type(name) != type(b""):
@@ -129,7 +129,7 @@ def LOG(msg, name=None):
     "LOG( msg, name=None )"
     f = sys._getframe(1)
     co = f.f_code
-    if name == None:
+    if name is None:
         name = co.co_filename
         name = name[name.rfind("/") + 1 :].encode()
     if type(name) != type(b""):

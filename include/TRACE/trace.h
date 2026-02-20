@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#	define TRACE_REV "$Revision: 1722 $$Date: 2026-01-06 15:10:06 -0600 (Tue, 06 Jan 2026) $"
+#	define TRACE_REV "$Revision: 1730 $$Date: 2026-02-20 16:03:25 -0600 (Fri, 20 Feb 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1722 $_$Date: 2026-01-06 15:10:06 -0600 (Tue, 06 Jan 2026) $
+#define TRACE_REVx $_$Revision: 1730 $_$Date: 2026-02-20 16:03:25 -0600 (Fri, 20 Feb 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

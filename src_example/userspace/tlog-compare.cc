@@ -18,7 +18,7 @@ struct test_desc_t {
 				{"2 args traceTID=-1 - first TLOG", 1},
 				{"2 args TRACE macro", 1},
 				{"8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", 1},
-				{"8 args (7 ints, 1 float) - TLOG_SCOPED() {TLOG_ADD...}", 1},
+				{"8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", 1},
 				{"2 args - NoTLOG - OPTIMIZED out", 1}};
 #define USAGE   \
 	"\
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x400 & tests_mask) {
-			//STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() {TLOG_ADD...}", "", "");
+			//STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", "", "");
 			TRACE_CNTL("reset");
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x400 & tests_mask) {
-			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() {TLOG_ADD...}", "", "");
+			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", "", "");
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)

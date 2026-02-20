@@ -49,7 +49,7 @@ def TRACE(lvl, msg, name=None):
     "TRACE( lvl, msg, name=None )"
     f = sys._getframe(1)
     co = f.f_code
-    if name == None:
+    if name is None:
         name = co.co_filename
         name = name[name.rfind("/") + 1 :].encode()
     if type(name) != type(b""):
@@ -65,7 +65,7 @@ def DEBUG(dbg_lvl, msg, name=None):
     "DEBUG( dbg_lvl, msg, name=None )"
     f = sys._getframe(1)
     co = f.f_code
-    if name == None:
+    if name is None:
         name = co.co_filename
         name = name[name.rfind("/") + 1 :].encode()
     if type(name) != type(b""):
@@ -81,7 +81,7 @@ def ERROR(msg, name=None):
     "ERROR( msg, name=None )"
     f = sys._getframe(1)
     co = f.f_code
-    if name == None:
+    if name is None:
         name = co.co_filename
         name = name[name.rfind("/") + 1 :].encode()
     if type(name) != type(b""):

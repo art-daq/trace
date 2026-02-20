@@ -42,7 +42,6 @@ tests_mask:\n", \
 #include <TRACE/trace.h>  // TLOG
 #include <time.h>         // clock_gettime, struct timespec
 
-
 #define DFLT_TEST_COMPARE_ITERS 1000000
 
 static uint64_t gettimeofday_ns() /* 2**64 = 10**19.26592 giving 10 digits for the seconds (since 1970) */
@@ -275,8 +274,8 @@ int main(int argc, char *argv[])
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
 				TLOG_SCOPED(TLVL_INFO)
-				TLOG_ADD << "this is 8 params: " << 12345678 << " " << uu << " " << uu * 2 << " " << uu + 6 << " " << 12345679 << " "
-					  << uu << " " << uu - 7 << " " << (float)uu * 1.5;
+				TLOG_ADD << "this is 8 params: " << 12345678 << " " << uu << " " << uu * 2 << " " << uu + 6 << " " << 12345679
+						 << " " << uu << " " << uu - 7 << " " << (float)uu * 1.5;
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);
 			fprintf(stderr, "%c %2u/%u\r", prop[test & 0x3], test + 1, total_tests);
@@ -313,8 +312,7 @@ int main(int argc, char *argv[])
 #include <iostream>
 #define TLOG(...) \
 	if (0) std::cout
-#define TLOG_SCOPED_DEBUG(...) \
-			for(struct{std::ostream* stmr__;} _trc_={&std::cout}; 0; )
+#define TLOG_SCOPED_DEBUG(...) for (struct { std::ostream *stmr__; } _trc_= {&std::cout}; 0;)
 #ifndef __OPTIMIZE__
 			//STRT_PRN(" 0x800 - 2 args%s%s ", " - NoTLOG - ", "NOT Optimized.");
 #else

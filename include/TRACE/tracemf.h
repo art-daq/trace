@@ -30,7 +30,7 @@
 #	define TRACE_LOG_FUNCTION mftrace_user
 #	undef TSTREAMER_SL_FRC  // in case trace.h included previous
 #	ifndef TRACEMF_SL_FRC_LVL
-#		TRACEMF_SL_FRC_LVL TLVL_INFO
+#	    define TRACEMF_SL_FRC_LVL TLVL_INFO
 #	endif
 #	define TSTREAMER_SL_FRC(lvl)                         \
 		((lvl <= static_cast<int>(TRACEMF_SL_FRC_LVL)) || \

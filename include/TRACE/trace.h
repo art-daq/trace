@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#	define TRACE_REV "$Revision: 1722 $$Date: 2026-01-06 15:10:06 -0600 (Tue, 06 Jan 2026) $"
+#	define TRACE_REV "$Revision: 1730 $$Date: 2026-02-20 16:03:25 -0600 (Fri, 20 Feb 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -41,6 +41,8 @@
 #	define TLOG_WARNING(...) TRACE_STREAMER(TLVL_WARNING,TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_WARNING))
 #	define TLOG_NOTICE(...)  TRACE_STREAMER(TLVL_NOTICE, TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_NOTICE))
 #	define TLOG_INFO(...)    TRACE_STREAMER(TLVL_INFO,   TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_INFO))
+#	define TLOG_SCOPED(...)  TRACE_STREAMER_SCOPED(0,TLOG3(__VA_ARGS__), TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG_ADD *_trc_.stmr__
 # ifndef NoTLOG
 #	define TLOG_TRACE(...)   TRACE_STREAMER(TLVL_TRACE,  TLOG2(__VA_ARGS__), TSTREAMER_SL_FRC(TLVL_TRACE))
 
@@ -53,6 +55,8 @@
 #	define TLOG_DBG(...)     TRACE_STREAMER(0,   TLOG_DEBUG3(__VA_ARGS__),   TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
+
+#	define TLOG_SCOPED_DEBUG(...) TRACE_STREAMER_SCOPED(0,TLOG_DEBUG3(__VA_ARGS__), TSTREAMER_SL_FRC(_trc_.lvl))
 //#	define TLOG_ENTEX(...)   See below
 
 # endif // NoTLOG
@@ -103,6 +107,7 @@
 #	define TLOG_DBG(...)   if(0)std::cout   // if optimize, should be no-op
 #	define TLOG(...)       if(0)std::cout   // if optimize, should be no-op
 #	define TLOG_ARB(...)   if(0)std::cout   // if optimize, should be no-op
+#	define TLOG_SCOPED_DEBUG(...) for(struct{std::ostream* stmr__;} _trc_={&std::cout}; 0; )   // if optimize, should be no-op
 # endif // NoTLOG
 
 #endif // __cplusplus
@@ -326,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1722 $_$Date: 2026-01-06 15:10:06 -0600 (Tue, 06 Jan 2026) $
+#define TRACE_REVx $_$Revision: 1730 $_$Date: 2026-02-20 16:03:25 -0600 (Fri, 20 Feb 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -3780,31 +3785,66 @@ typedef struct {
 #				define TRACE_SUPPRESS_UNUSED_WARN_END
 #			endif
 //                   args are: lvl, lvl/name/fmtnow_method, s_force
-#			define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                         \
-				for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                                 \
-					 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) &&    \
-					 (_trc_.lvnafm_nafm_method,                                                                               \
-					  ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, \
-																			  _trc_.tn, sizeof(_trc_.tn))) != -1))) &&        \
-					 trace_do_streamer(&_trc_);                                                                               \
-					 _trc_.once= 0, ((TraceStreamer *)_trc_.stmr__)->str())                                                   \
-					TRACE_SUPPRESS_UNUSED_WARN_BEGIN                                                                          \
-				*((TraceStreamer *)(_trc_.stmr__= (void *)&((TraceStreamer *)_trc_.stmr__)                                    \
-													  ->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__,         \
-															 __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins,       \
-															 &TRACE_LOG_FUNCTION))) TRACE_SUPPRESS_UNUSED_WARN_END
+// clang-format off
+#			define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                \
+	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                   \
+		 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+			 && (_trc_.lvnafm_nafm_method,                                                          \
+			     ((*_trc_.tidp != -1)                                                               \
+				  || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, \
+				                                     _trc_.tn, sizeof(_trc_.tn))) != -1)))          \
+			 && trace_do_streamer(&_trc_)                                                           \
+			 ;                                                                                      \
+		 _trc_.once= 0, ((TraceStreamer *)_trc_.stmr__)->str())                                     \
+					TRACE_SUPPRESS_UNUSED_WARN_BEGIN                                                \
+				*(_trc_.stmr__= &_trc_.stmr__->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__,   \
+				                                    __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, \
+				                                    &TRACE_LOG_FUNCTION))                           \
+					TRACE_SUPPRESS_UNUSED_WARN_END
+
+#			define TRACE_STREAMER_SCOPED(_lvl, lvnafm_nafm_method, force_s)                         \
+	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                   \
+		 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+			 && (_trc_.lvnafm_nafm_method,                                                          \
+			     ((*_trc_.tidp != -1)                                                               \
+				  || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, \
+				                                     _trc_.tn, sizeof(_trc_.tn))) != -1)))          \
+			 && trace_do_streamer(&_trc_)                                                           \
+			 && ((_trc_.stmr__= &_trc_.stmr__->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, \
+			                                        __TRACE_LINE__, __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, \
+			                                        &TRACE_LOG_FUNCTION))                           \
+			     != NULL);                                                                          \
+			 _trc_.once= 0, ((TraceStreamer *)_trc_.stmr__)->str())
+
 #		else
-#			define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                                              \
-				for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                                      \
-					 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) &&         \
-					 (_trc_.lvnafm_nafm_method,                                                                                    \
-					  ((*_trc_.tidp != -1) || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__,      \
-																			  _trc_.tn, sizeof(_trc_.tn))) != -1))) &&             \
-					 trace_do_streamer(&_trc_);                                                                                    \
-					 _trc_.once= 0)                                                                                                \
-				TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, \
-									 &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
+#			define TRACE_STREAMER(_lvl, lvnafm_nafm_method, force_s)                                \
+	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                   \
+		 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+			 && (_trc_.lvnafm_nafm_method,                                                          \
+			     ((*_trc_.tidp != -1)                                                               \
+				  || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, \
+				                                     _trc_.tn, sizeof(_trc_.tn))) != -1)))          \
+			 && trace_do_streamer(&_trc_);                                                          \
+		 _trc_.once= 0)                                                                             \
+		TraceStreamer().init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, \
+		                     __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)
+
+#			define TRACE_STREAMER_SCOPED(_lvl, lvnafm_nafm_method, force_s)                         \
+	for (TSTREAMER_T_ _trc_((tlvle_t)(_lvl), TRACE_GET_STATIC());                                   \
+		 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
+			 && (_trc_.lvnafm_nafm_method,                                                          \
+			     ((*_trc_.tidp != -1)                                                               \
+				  || ((*_trc_.tidp= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, \
+				                                     _trc_.tn, sizeof(_trc_.tn))) != -1)))          \
+			 && trace_do_streamer(&_trc_)                                                           \
+			 && ((_trc_.stmr__= &(new TraceStreamer())->init(*_trc_.tidp, (uint8_t)(_trc_.lvl), _trc_.flgs, \
+			                                                 __FILE__, __TRACE_LINE__, __PRETTY_FUNCTION__, \
+			                                                 &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)) \
+			      != NULL);                                                                         \
+		 _trc_.once= 0, delete (TraceStreamer *)_trc_.stmr__)
+
 #		endif
+// clang-format on
 
 #		define TRACE_ENDL ""
 #		define TLOG_ENDL  TRACE_ENDL
@@ -4680,7 +4720,7 @@ struct TSTREAMER_T_ {
 	char tn[TRACE_TN_BUFSZ];  // for converting the __FILE__ to a trace name - just used in TRACE_INIT_CHECK(trace_name(...)) call.
 	char ins[32];
 	trace_tv_t tv;
-	void *stmr__;
+	TraceStreamer *stmr__;
 	inline TSTREAMER_T_(tlvle_t llv, tinfo_t *infop)
 		: once(1)
 		, lvl(llv)

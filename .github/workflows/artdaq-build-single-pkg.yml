@@ -1,5 +1,8 @@
 name: Build Single Pkg Workflow
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:

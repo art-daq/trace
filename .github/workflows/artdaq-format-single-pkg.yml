@@ -1,5 +1,8 @@
 name: Format Single Pkg Workflow
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:

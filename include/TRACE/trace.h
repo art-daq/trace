@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#	define TRACE_REV "$Revision: 1730 $$Date: 2026-02-20 16:03:25 -0600 (Fri, 20 Feb 2026) $"
+#	define TRACE_REV "$Revision: 1734 $$Date: 2026-02-25 07:39:20 -0600 (Wed, 25 Feb 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -56,7 +56,7 @@
 #	define TLOG(...)         TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 #	define TLOG_ARB(...)     TRACE_STREAMER(0,   TLOG3(__VA_ARGS__),         TSTREAMER_SL_FRC(_trc_.lvl))
 
-#	define TLOG_SCOPED_DEBUG(...) TRACE_STREAMER_SCOPED(0,TLOG_DEBUG3(__VA_ARGS__), TSTREAMER_SL_FRC(_trc_.lvl))
+#	define TLOG_DEBUG_SCOPED(...) TRACE_STREAMER_SCOPED(0,TLOG_DEBUG3(__VA_ARGS__), TSTREAMER_SL_FRC(_trc_.lvl))
 //#	define TLOG_ENTEX(...)   See below
 
 # endif // NoTLOG
@@ -107,7 +107,7 @@
 #	define TLOG_DBG(...)   if(0)std::cout   // if optimize, should be no-op
 #	define TLOG(...)       if(0)std::cout   // if optimize, should be no-op
 #	define TLOG_ARB(...)   if(0)std::cout   // if optimize, should be no-op
-#	define TLOG_SCOPED_DEBUG(...) for(struct{std::ostream* stmr__;} _trc_={&std::cout}; 0; )   // if optimize, should be no-op
+#	define TLOG_DEBUG_SCOPED(...) for(struct{std::ostream* stmr__;} _trc_={&std::cout}; 0; )   // if optimize, should be no-op
 # endif // NoTLOG
 
 #endif // __cplusplus
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1730 $_$Date: 2026-02-20 16:03:25 -0600 (Fri, 20 Feb 2026) $
+#define TRACE_REVx $_$Revision: 1734 $_$Date: 2026-02-25 07:39:20 -0600 (Wed, 25 Feb 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

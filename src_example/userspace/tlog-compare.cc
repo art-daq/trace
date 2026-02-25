@@ -308,11 +308,11 @@ int main(int argc, char *argv[])
 
 		if (0x800 & tests_mask) {
 #undef TLOG
-#undef TLOG_SCOPED_DEBUG
+#undef TLOG_DEBUG_SCOPED
 #include <iostream>
 #define TLOG(...) \
 	if (0) std::cout
-#define TLOG_SCOPED_DEBUG(...) for (struct { std::ostream *stmr__; } _trc_= {&std::cout}; 0;)
+#define TLOG_DEBUG_SCOPED(...) for (struct { std::ostream *stmr__; } _trc_= {&std::cout}; 0;)
 #ifndef __OPTIMIZE__
 			//STRT_PRN(" 0x800 - 2 args%s%s ", " - NoTLOG - ", "NOT Optimized.");
 #else
@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
 				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;
-				TLOG_SCOPED_DEBUG(TLVL_INFO) TLOG_ADD << "this is 2 params: " << 12345678 << " " << uu;
+				TLOG_DEBUG_SCOPED(TLVL_INFO) TLOG_ADD << "this is 2 params: " << 12345678 << " " << uu;
 				total+= uu;  // don't want to completely optimize out whole loop
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);

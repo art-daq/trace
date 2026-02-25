@@ -351,27 +351,15 @@ int main(int argc, char *argv[])
 		unsigned tstmod= (1U << jj) & modes_mask;
 		switch ((1U << jj) & modes_mask) {
 		case 1:
-			TRACE_CNTL("lvlclrM", 1LL << TLVL_INFO);  // operate on the TLOG(TLVL_INFO) bit for M
-			TRACE_CNTL("lvlclrS", 1LL << TLVL_INFO);  // operate on the TLOG(TLVL_INFO) bit for S
-			loops= (unsigned)opt_loops * 5;
 			fprintf(stderr, "0x1 M0S0 - Testing with M and S lvl disabled. loops=%u\n", loops);
 			break;
 		case 2:
-			TRACE_CNTL("lvlsetM", 1LL << TLVL_INFO);
-			TRACE_CNTL("lvlclrS", 1LL << TLVL_INFO);
-			loops= (unsigned)opt_loops * 2;
 			fprintf(stderr, "0x2 M1S0 - Testing with S lvl disabled (mem only). loops=%u\n", loops);
 			break;
 		case 4:
-			TRACE_CNTL("lvlsetM", 1LL << TLVL_INFO);
-			TRACE_CNTL("lvlsetS", 1LL << TLVL_INFO);
-			loops= (unsigned)opt_loops;
 			fprintf(stderr, "0x4 M1S1 - Testing with M and S lvl enabled (stdout>/dev/null). loops=%u\n", loops);
 			break;
 		case 8:
-			TRACE_CNTL("lvlclrM", 1LL << TLVL_INFO);
-			TRACE_CNTL("lvlsetS", 1LL << TLVL_INFO);
-			loops= (unsigned)opt_loops;
 			fprintf(stderr, "0x8 M0S1 - Testing with just S lvl enabled. Unusual (freeze). loops=%u\n", loops);
 			break;
 		case 0: continue;  // Should give/have "invalid modes spec" message
@@ -379,6 +367,7 @@ int main(int argc, char *argv[])
 
 		if (1 & tests_mask) {
 			STRT_PRN(" 0x001 -%s const short msg %s", "", (tstmod & 0xc) ? "(NO snprintf)" : "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -389,6 +378,7 @@ int main(int argc, char *argv[])
 
 		if (2 & tests_mask) {
 			STRT_PRN(" 0x002 - 1 arg%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -399,6 +389,7 @@ int main(int argc, char *argv[])
 
 		if (4 & tests_mask) {
 			STRT_PRN(" 0x004 - 2 args%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -409,6 +400,7 @@ int main(int argc, char *argv[])
 
 		if (8 & tests_mask) {
 			STRT_PRN(" 0x008 - 8 args (7 ints, 1 float)%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -419,6 +411,7 @@ int main(int argc, char *argv[])
 
 		if (0x10 & tests_mask) {
 			STRT_PRN(" 0x010 - 8 args (1 ints, 7 float)%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -429,6 +422,7 @@ int main(int argc, char *argv[])
 
 		if (0x20 & tests_mask) {
 			STRT_PRN(" 0x020 - snprintf of same 8 args%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -439,6 +433,7 @@ int main(int argc, char *argv[])
 
 		if (0x40 & tests_mask) {
 			STRT_PRN(" 0x040 -%s const short msg %s", (1 & tests_mask) ? " (repeat)" : "", (tstmod & 0xc) ? "(NO snprintf)" : "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -449,6 +444,7 @@ int main(int argc, char *argv[])
 
 		if (0x80 & tests_mask) {
 			STRT_PRN(" 0x080 - 2 args%s%s traceTID=-1 - first TLOG", "", "");  //first TLOG (\"initialization\")
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -459,6 +455,7 @@ int main(int argc, char *argv[])
 
 		if (0x100 & tests_mask) {
 			STRT_PRN(" 0x100 - 2 args%s%s TRACE macro", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -469,6 +466,7 @@ int main(int argc, char *argv[])
 
 		if (0x200 & tests_mask) {
 			STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -479,6 +477,7 @@ int main(int argc, char *argv[])
 
 		if (0x400 & tests_mask) {
 			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -493,6 +492,7 @@ int main(int argc, char *argv[])
 #else
 			STRT_PRN(" 0x800 - 2 args%s%s ", " - NoTLOG - ", "OPTIMIZED out.");
 #endif  // __OPTIMIZE__
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)

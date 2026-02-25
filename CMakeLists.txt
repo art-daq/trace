@@ -86,10 +86,10 @@ if (${cetmodules_FOUND})
 	 SOURCE
 	include/TRACE/trace.h
   )
-  
+
   find_package(messagefacility ${CET_EXPORT} QUIET)
   set(mflib "")
-  if(messagefacility_FOUND)	
+  if(messagefacility_FOUND)
 	  cet_make_library(LIBRARY_NAME MF INTERFACE
 	    SOURCE
 	    include/TRACE/tracemf.h

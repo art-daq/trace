@@ -350,18 +350,10 @@ int main(int argc, char *argv[])
 	for (int jj= 0; jj < 4; ++jj) {
 		unsigned tstmod= (1U << jj) & modes_mask;
 		switch ((1U << jj) & modes_mask) {
-		case 1:
-			fprintf(stderr, "0x1 M0S0 - Testing with M and S lvl disabled. loops=%u\n", loops);
-			break;
-		case 2:
-			fprintf(stderr, "0x2 M1S0 - Testing with S lvl disabled (mem only). loops=%u\n", loops);
-			break;
-		case 4:
-			fprintf(stderr, "0x4 M1S1 - Testing with M and S lvl enabled (stdout>/dev/null). loops=%u\n", loops);
-			break;
-		case 8:
-			fprintf(stderr, "0x8 M0S1 - Testing with just S lvl enabled. Unusual (freeze). loops=%u\n", loops);
-			break;
+		case 1: fprintf(stderr, "0x1 M0S0 - Testing with M and S lvl disabled. loops=%u\n", loops); break;
+		case 2: fprintf(stderr, "0x2 M1S0 - Testing with S lvl disabled (mem only). loops=%u\n", loops); break;
+		case 4: fprintf(stderr, "0x4 M1S1 - Testing with M and S lvl enabled (stdout>/dev/null). loops=%u\n", loops); break;
+		case 8: fprintf(stderr, "0x8 M0S1 - Testing with just S lvl enabled. Unusual (freeze). loops=%u\n", loops); break;
 		case 0: continue;  // Should give/have "invalid modes spec" message
 		}
 

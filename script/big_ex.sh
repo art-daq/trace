@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1705 $$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $'
+ # rev='$Revision: 1713 $$Date: 2025-04-11 18:34:23 -0500 (Fri, 11 Apr 2025) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -169,7 +169,8 @@ test -z "${TRACE_FILE-}" && TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
 #      ln -s . $TRACE_INC/TRACE
 #      ln -s trace_delta $TRACE_BIN/trace_delta
 # manually added.
-trace_revnum=`awk '/Revision:/{print$4;exit}' $TRACE_INC/TRACE/trace.h`
+#trace_revnum=`awk '/Revision:/{print$5;exit}' $TRACE_INC/TRACE/trace.h`
+trace_revnum=`sed -n '/Revision:/{s/.*Revision: *//;s/ .*//;p;q;}' $TRACE_INC/TRACE/trace.h`
 if   [ $trace_revnum -le  719 ];then
     opt_def_trace_revnum="-DTRACE_REVNUM=$trace_revnum -DTLOG(lvl)=TLOG_ARB(lvl,\"somename\")"
 elif [ $trace_revnum -le 1429 ];then
@@ -576,7 +577,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
 " $num_maps $loops $parallel_threads $expect_static $expect_declare $check_tids
 
         if [ -n "$do_trace_active" -a -f "${TRACE_FILE-}" ];then
-            trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
+            trace_cntl info | grep -E 'used|full|num_entries' | sed 's/^/  /'
             uniq_addrs=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
             vprintf 1 'Calculating sub10_trc_ids...\n'
             sub10_trc_id=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`

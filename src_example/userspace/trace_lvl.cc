@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: .emacs.gnu,v $
-// rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+// rev="$Revision: 1713 $$Date: 2025-04-11 18:34:23 -0500 (Fri, 11 Apr 2025) $";
 
 // test TRACE(lvl++,...) and TLOG(
 
@@ -39,10 +39,10 @@ main(/*  int	argc
 	for (TSTREAMER_T_ _tlog_((tlvle_t)(_lvl), TRACE_GET_STATIC());
 		 _tlog_.once-- && TRACE_INIT_CHECK(TRACE_NAME) &&
 		 (_tlog_.TLOG2(nam_or_fmt, fmt_or_nam),
-		  ((*_tlog_.tidp != -1) || ((*_tlog_.tidp= (_tlog_.nn[0] ? trace_name2TID(_tlog_.nn) : traceTID)) != -1))) &&
+		  ((_tlog_.static_infop->tid != -1) || ((_tlog_.static_infop->tid= (_tlog_.nn[0] ? trace_name2TID(_tlog_.nn) : traceTID)) != -1))) &&
 		 trace_do_streamer(&_tlog_);
 		 steamer.str())
-		steamer.init(*_tlog_.tidp, _tlog_.lvl, _tlog_.flgs, __FILE__, __LINE__, __FUNCTION__, &_tlog_.tv, _tlog_.ins,
+		steamer.init(_tlog_.static_infop->tid, _tlog_.static_infop->lvl, _tlog_.flgs, __FILE__, __LINE__, __FUNCTION__, &_tlog_.tv, _tlog_.ins,
 					 &TRACE_LOG_FUNCTION)
 			<< "hello";
 

@@ -14,57 +14,124 @@ num_color_nums=`echo $color_nums | wc -w`
 esc=`printf "\033"`
 
 USAGE="\
-usage: tcolor [opt] [pattern_for_color1]...
+   usage: tcolor [opt] [pattern_for_color1]...
+examples: tshow | grep -E ' D(15|2[05]|35) ' | tcolor
+          tshow | grep -E ' D(15|2[05]|35) ' | tcolor -t
+          tshow | grep -E ' D(15|2[05]|35) ' | tcolor ' D'{15,20,25,35}' .*'
+          seq 1 20 | tcolor 1{0,1,2,3,4}
 options:
 -h, --help     -- help
--t, --threads  -- if no args given, use first $num_color_nums unique thread IDs
+-t[column]     -- if no args given, use first $num_color_nums unique thread IDs
                   otherwise use first $num_color_nums unique process IDs
-If no patterns are given, the default is to apply colors to the first 13 unique Process IDs.
-NOTE: Currently, if tcolor is used before tdelta, a pattern which matches before the delta can mess up the delta.
-      If PAGER is used, remeber to use the appropriate option to interpret color generating escape
-      sequences (e.g., include -R in LESS env. var.) default ANSI color numbers can be overridden via
+                  (default: 3) Likely needed when TRACE_SHOW adjust PID/TID col.
+-l<lines>      -- search N lines for unique PIDs or TIDs (default: 200)
+-v, --verbose     Verbose (diagnostics and help).
+If no patterns are given, the default is to apply colors to the first 13 unique
+Process IDs.
+NOTE: Currently, if tcolor is used before tdelta, a pattern which matches before
+      the delta can mess up the delta.
+      If PAGER is used, remeber to use the appropriate option to interpret color
+      generating escape sequences (e.g., include -R in LESS env. var.) default
+      ANSI color numbers can be overridden via
           export color_nums='<space_separated_number_list>'
-      Patterns may not contain both '~' and '@' characters; if so, one or the other should be replaced
-      with the '.' character OR replace '~' with '\~' or [~].
-      Be careful with specifying patterns that match overlapping parts on a line -- counter intuitive output may occur.
-The colors are:"
+      Patterns may not contain both '~' and '@' characters; if so, one or the
+      other should be replaced with the '.' character OR replace '~' with '\~'
+      or [~].
+      Be careful with specifying patterns that match overlapping parts on a line
+      -- counter intuitive output may occur."
 
-show="%x%P %f"
-while expr "$1" : - >/dev/null;do
-      case $1 in
-      -x) set -x;;
-      '?'|-h|--help)
-          echo "$USAGE"
-          for num in `seq $num_color_nums`;do
-              cnum=`echo $color_nums|cut -d' ' -f$num`
-              printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
-          done
-          exit;;
-      -t|--threads)  show="%x%i %f";;
-      esac
-      shift
+# Initialize flags
+HELP=false
+VERBOSE=0
+RATE=1
+LINES=200
+TCOL=3
+
+print_help() {
+    echo "$USAGE"
+    if [ $VERBOSE -ge 1 ];then
+        echo The colors are:
+        for num in `seq $num_color_nums`;do
+            cnum=`echo $color_nums|cut -d' ' -f$num`
+            printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
+        done
+    fi
+    exit
+}
+
+NAME=${0##*/}
+
+OPTS=$(getopt --name "$NAME" -o hl:t::vx --longoptions help,verbose -- "$@") || print_help
+
+# Reset positional parameters to the parsed options
+eval set -- "$OPTS"
+
+vecho() { V=$1;shift; test $V -le $VERBOSE && echo "$@" >&2; }
+
+# Process the options
+while (($#)); do
+  case "$1" in
+  -h | --help)   HELP=true;;
+  -l)            LINES="$2"; shift;;
+  -t)            test -n "$2" && TCOL="$2" || TCOL=4; shift;;   # always shift b/c w/ no optarg $2 is ''
+  -v | --verbose) VERBOSE=$(($VERBOSE+1));;
+  -x)            set -x;;
+  --)            shift;break;;
+  *)             echo "Invalid option: $1" >&2; exit 1;;
+  esac
+  shift
 done
 
+# Process remaining arguments (non-options)
+if [ "$HELP" = true ]; then
+  print_help
+  exit 0
+fi
 
-tcolor() { : $*=tids
-   # build sed filter --- NOTE: if building for tshow Thread ID -- the parameter list created with be " <tid> "  (w/ space(' ') before and after
-   test $# -eq 0 && { tid_list=`TRACE_SHOW="$show" trace_cntl show|awk '!seen[$1]++{printf"\" %s .*\"\n",$1;}'| head -n$num_color_nums`
-                      echo found `echo "$tid_list" | wc -l` unique PIDs within 1st 500 tshow lines >&2; eval set -- $tid_list; };: at most,could be less
-   test $# -eq 0 && { echo need at least 1 tid; return; }
-   tid=$1; : no shift to preserver num args to associate arg with cnum
+tcolor() {
+    : $*=tids
+    # grab first $LINES lines -- really do not NEED to do this if RE args are given :(
+    xx=
+    
+    # build sed filter --- NOTE: if building for tshow Thread ID -- the parameter list created with be " <tid> "  (w/ space(' ') before and after
+    test $# -eq 0 && {
+        for i in $(seq 1 $LINES); do
+            IFS= read -t 2 -r line || break
+            xx="${xx}${line}"$'\n'
+        done
+        #test "x$xx" = x && { echo no stdin; exit; }
+        test -n "$xx" || { echo no stdin; exit; }
 
-   for num in `seq 1 $#`;do
-      tid=$1; shift
-      cnum=`echo $color_nums|cut -d' ' -f$num`
-      # Below, the sed substitute command is either s~this~that~ OR s@this@that@
-      if expr "$SED" : '.*[Er]' >/dev/null;then
-	 expr "$tid" : '.*@' >/dev/null && filt="${filt:+${filt};}s~($tid)~${esc}[38;5;${cnum}m\1${esc}[0m~"   || filt="${filt:+${filt};}s@($tid)@${esc}[38;5;${cnum}m\1${esc}[0m@"
-      else
-	 expr "$tid" : '.*@' >/dev/null && filt="${filt:+${filt};}s~\($tid\)~${esc}[38;5;${cnum}m\1${esc}[0m~" || filt="${filt:+${filt};}s@\($tid\)@${esc}[38;5;${cnum}m\1${esc}[0m@"
-      fi
-   done
+        test $TCOL -eq 1 && REPREFIX=^ || REPREFIX=' '
+        tid_list=`echo "$xx"\
+         |awk '/^ *[0-9]/&&!seen[$'$TCOL']++{printf"\"'"$REPREFIX"'%s .*\"\n",$'$TCOL';}'\
+         | head -n$num_color_nums`
+        vecho 1 found `echo "$tid_list" | wc -l` unique PIDs within 1st $LINES lines
+        vecho 2 tid_list = $tid_list
+        eval set -- $tid_list
+    }
+    test $# -eq 0 && { echo need at least 1 tid; return; } || vecho 3 -n "tid_list = "
 
-   expr "$SED" : 'sed ' >/dev/null && { eval "$SED -e '$filt'";true;} || sed $SED -e "$filt"
+    for num in `seq $#`;do
+        vecho 3 -n "'$1' "
+        tid=$1; shift
+        cnum=`echo $color_nums|cut -d' ' -f$num`
+        # Below, the sed substitute command is either s~this~that~ OR s@this@that@
+        if expr "$SED" : '.*[Er]' >/dev/null;then
+	    expr "$tid" : '.*@' >/dev/null \
+                && filt="${filt:+${filt};}s~($tid)~${esc}[38;5;${cnum}m\1${esc}[0m~" \
+                || filt="${filt:+${filt};}s@($tid)@${esc}[38;5;${cnum}m\1${esc}[0m@"
+        else
+	    expr "$tid" : '.*@' >/dev/null \
+                && filt="${filt:+${filt};}s~\($tid\)~${esc}[38;5;${cnum}m\1${esc}[0m~" \
+                || filt="${filt:+${filt};}s@\($tid\)@${esc}[38;5;${cnum}m\1${esc}[0m@"
+        fi
+    done
+    test $# -ge 1 && vecho 3
+
+    expr "$SED" : 'sed ' >/dev/null \
+        && { eval "{ echo -n \"\$xx\"; cat; } | $SED -e '$filt'";true;} \
+        || { { echo -n "$xx"; cat; } | sed $SED -e "$filt"; }
 }
 
 test -n "$PAGER" && { tcolor "$@" | $PAGER;true;} || tcolor "$@"

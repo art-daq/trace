@@ -4,10 +4,11 @@
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // $RCSfile: trace.h,v $
  */
-#if !defined(TRACE_H) && !defined(__CUDA_ARCH__)
-#	define TRACE_H
+#ifndef TRACE_H
+#define TRACE_H
 
-#	define TRACE_REV "$Revision: 1713 $$Date: 2025-04-11 18:34:23 -0500 (Fri, 11 Apr 2025) $"
+#if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
+#	define TRACE_REV "$Revision: 1734 $$Date: 2026-02-25 07:39:20 -0600 (Wed, 25 Feb 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +332,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#	define TRACE_REVx $_$Revision: 1713 $_$Date: 2025-04-11 18:34:23 -0500 (Fri, 11 Apr 2025) $
+#define TRACE_REVx $_$Revision: 1734 $_$Date: 2026-02-25 07:39:20 -0600 (Wed, 25 Feb 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #	define $_$Revision  0?0
 #	define $_$Date      ,
@@ -428,6 +429,14 @@ static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			define TRACE_ATOMIC_LOAD(ptr)       atomic_load(ptr)
 #			define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
 #			define TRACE_THREAD_LOCAL           thread_local
+#		elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+#			define TRACE_C11_ATOMICS
+#			include <stdatomic.h> /* atomic_compare_exchange_weak */
+#			define TRACE_ATOMIC_T               /*volatile*/ _Atomic(uint32_t)
+#			define TRACE_ATOMIC_INIT            0
+#			define TRACE_ATOMIC_LOAD(ptr)       atomic_load(ptr)
+#			define TRACE_ATOMIC_STORE(ptr, val) atomic_store(ptr, val)
+#			define TRACE_THREAD_LOCAL           _Thread_local
 #		elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
 			(defined(__clang__) ||                                          \
 			 (defined __GNUC__ && defined __GNUC_MINOR__ && (10000 * __GNUC__ + 1000 * __GNUC_MINOR__) >= 49000))
@@ -4913,4 +4922,6 @@ TraceGuard<Fun> operator+(TraceGuardOnExit, Fun &&fn)
 #		define TRACEH(...)
 #	endif
 #	define TRACE_CNTL(...)
-#endif /* !define(TRACE_H) && !defined(__CUDA_ARCH__) */
+#endif /* !define(TRACE_H) */
+
+#endif /* TRACE_H */

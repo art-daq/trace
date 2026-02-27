@@ -1,8 +1,11 @@
 name: Test Single Pkg Workflow
 
+permissions:
+  contents: read
+
 on:
   push:
-    branches: 
+    branches:
       - develop
     paths-ignore:
       - 'docs/**'

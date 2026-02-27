@@ -1,8 +1,11 @@
 name: Auto approve
 
+permissions:
+  pull-requests: write
+
 on:
   workflow_dispatch:
-    inputs: 
+    inputs:
       pullRequestNumber:
         description: Pull request number to auto-approve
         required: false

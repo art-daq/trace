@@ -5,6 +5,21 @@
 // $RCSfile: .emacs.gnu,v $
 // rev="$Revision: 1.34 $$Date: 2019/04/22 15:23:54 $";
 
+struct test_desc_t {
+	char const *desc;
+	unsigned loop_decimate;
+} test_desc[]= {{"const short msg", 1},
+				{"1 arg", 1},
+				{"2 args", 1},
+				{"8 args (7 ints, 1 float)", 1},
+				{"8 args (1 ints, 7 float)", 1},
+				{"snprintf of same 8 args (stringstream)", 1},
+				{"(repeat) const short msg", 1},
+				{"2 args traceTID=-1 - first TLOG", 1},
+				{"2 args TRACE macro", 1},
+				{"8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", 1},
+				{"8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", 1},
+				{"2 args - NoTLOG - OPTIMIZED out", 1}};
 #define USAGE   \
 	"\
   usage: %s [opts] [tests_mask [modes_mask]]\n\
@@ -26,62 +41,6 @@ tests_mask:\n", \
 #define TRACE_USE_STATIC_STREAMER 0
 #include <TRACE/trace.h>  // TLOG
 #include <time.h>         // clock_gettime, struct timespec
-
-struct test_desc_t {
-	char const *desc;
-	unsigned loop_decimate;
-	double   exp_norm_factor_per_mode[4];
-	double   exp_norm_facter_overall;
-} test_desc[]= {{"const short msg",                                 1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"1 arg",                                           1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"2 args",                                          1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"8 args (7 ints, 1 float)",                        1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"8 args (1 ints, 7 float)",                        1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"snprintf of same 8 args (stringstream)",          1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"(repeat) const short msg",                        1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"2 args traceTID=-1 - first TLOG",                 1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"2 args TRACE macro",                              1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"8 args (7 ints, 1 float)- TLOG_BLK() TLog_",      1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"8 args (7 ints, 1 float)- TLOG_BLK() {TLog_...}", 1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"8 args (7 ints, 1 float)- TLOGxx(std::string)",   1, {1.0,1.0,1.0,1.0}, 1.0},
-				{"2 args - NoTLOG - OPTIMIZED out",                 1, {1.0,1.0,1.0,1.0}, 1.0}};
-	struct results_t {
-		uint32_t delta;
-		unsigned loops;
-		/*int      testIdx;
-		  int      modeIdx;*/
-	};
-
-// clang-format off
-#if TRACE_USE_STATIC_STREAMER == 1
-#	define TLOGxx(...)													\
-	for (TSTREAMER_T_ _trc_((tlvle_t)(0), TRACE_GET_STATIC());			\
-		 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
-			 && ((_trc_.static_infop->tid != -1)						\
-			     || ((_trc_.TLOG3(__VA_ARGS__)						\
-				      ,(_trc_.static_infop->tid= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, _trc_.tn \
-					                                              , sizeof(_trc_.tn)))) != -1)) \
-			 &&	trace_do_streamer(&_trc_)								\
-			 &&	((_trc_.stmr__= &_trc_.stmr__->init(_trc_.static_infop->tid, (uint8_t)(_trc_.static_infop->lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, \
-			                                        __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION)) != NULL); \
-		 _trc_.once= 0, ((TraceStreamer *)_trc_.stmr__)->str()) TLOG_ADD
-
-#else
-#	define TLOGxx(...)													\
-	for (TSTREAMER_T_ _trc_((tlvle_t)(0), TRACE_GET_STATIC());			\
-		 _trc_.once && TRACE_INIT_CHECK(trace_name(TRACE_NAME, __TRACE_FILE__, _trc_.tn, sizeof(_trc_.tn))) \
-			 && ((_trc_.static_infop->tid != -1)							\
-				 || ((_trc_.TLOG3(__VA_ARGS__) \
-					  ,(_trc_.static_infop->tid= trace_tlog_name_(_trc_.nn, TRACE_NAME, __TRACE_FILE__, __FILE__, _trc_.tn \
-					                                              , sizeof(_trc_.tn)))) != -1)) \
-			 &&	trace_do_streamer(&_trc_) \
-			 &&	((_trc_.stmr__= &((new TraceStreamer())->init(_trc_.static_infop->tid, (uint8_t)(_trc_.static_infop->lvl), _trc_.flgs, __FILE__, __TRACE_LINE__, \
-			                                                  __PRETTY_FUNCTION__, &_trc_.tv, _trc_.ins, &TRACE_LOG_FUNCTION))) \
-			     != NULL);												\
-		 _trc_.once= 0, delete (TraceStreamer *)_trc_.stmr__) TLOG_ADD
-
-#endif
-// clang-format on
 
 #define DFLT_TEST_COMPARE_ITERS 1000000
 
@@ -330,7 +289,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x200 & tests_mask) {
-			//STRT_PRN(" 0x0200- %s%s8 args (7 ints, 1 float) TLOG_SCOPED() TLOG_ADD", "", "");
+			//STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", "", "");
 			TRACE_CNTL("reset");
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
@@ -345,7 +304,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x400 & tests_mask) {
-			//STRT_PRN(" 0x0400- %s%s8 args (7 ints, 1 float) TLOG_SCOPED(){TLOG_ADD...}", "", "");
+			//STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", "", "");
 			TRACE_CNTL("reset");
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
@@ -389,9 +348,11 @@ int main(int argc, char *argv[])
 
 		if (0x1000 & tests_mask) {
 #undef TLOG
+#undef TLOG_DEBUG_SCOPED
 #include <iostream>
 #define TLOG(...) \
 	if (0) std::cout
+#define TLOG_DEBUG_SCOPED(...) for (struct { std::ostream *stmr__; } _trc_= {&std::cout}; 0;)
 #ifndef __OPTIMIZE__
 			//STRT_PRN(" 0x1000- 2 args%s%s ", " - NoTLOG - ", "NOT Optimized.");
 #else
@@ -402,6 +363,7 @@ int main(int argc, char *argv[])
 			mark= gettimeofday_ns();
 			for (unsigned uu= 0; uu < loops; ++uu) {
 				TLOG(TLVL_INFO) << "this is 2 params: " << 12345678 << " " << uu;
+				TLOG_DEBUG_SCOPED(TLVL_INFO) TLOG_ADD << "this is 2 params: " << 12345678 << " " << uu;
 				total+= uu;  // don't want to completely optimize out whole loop
 			}
 			delta= (uint32_t)(gettimeofday_ns() - mark);
@@ -431,29 +393,17 @@ int main(int argc, char *argv[])
 	for (unsigned jj= 0; jj < 4; ++jj) {
 		unsigned tstmodnum= ((1U << jj) & modes_mask)? jj+1: 0;
 		unsigned tstmod= (1U << jj) & modes_mask;
-		switch (tstmodnum) {
-		case 1:
-			loops= (unsigned)opt_loops * 5;
-			fprintf(stderr, "0x1 M0S0 - Testing with M and S lvl disabled. loops=%u\n", loops);
-			break;
-		case 2:
-			loops= (unsigned)opt_loops * 2;
-			fprintf(stderr, "0x2 M1S0 - Testing with S lvl disabled (mem only). loops=%u\n", loops);
-			break;
-		case 3:
-			loops= (unsigned)opt_loops;
-			fprintf(stderr, "0x4 M1S1 - Testing with M and S lvl enabled (stdout>/dev/null). loops=%u\n", loops);
-			break;
-		case 4:
-			loops= (unsigned)opt_loops;
-			fprintf(stderr, "0x8 M0S1 - Testing with just S lvl enabled. Unusual (freeze). loops=%u\n", loops);
-			break;
+		switch ((1U << jj) & modes_mask) {
+		case 1: fprintf(stderr, "0x1 M0S0 - Testing with M and S lvl disabled. loops=%u\n", loops); break;
+		case 2: fprintf(stderr, "0x2 M1S0 - Testing with S lvl disabled (mem only). loops=%u\n", loops); break;
+		case 4: fprintf(stderr, "0x4 M1S1 - Testing with M and S lvl enabled (stdout>/dev/null). loops=%u\n", loops); break;
+		case 8: fprintf(stderr, "0x8 M0S1 - Testing with just S lvl enabled. Unusual (freeze). loops=%u\n", loops); break;
 		case 0: continue;  // Should give/have "invalid modes spec" message
 		}
 
-		unsigned tstBitNum;
-		if ((tstBitNum=(1 & tests_mask))!=0) {
-			STRT_PRN(" 0x0001 -%s const short msg %s", "", (tstmod & 0xc) ? "(NO snprintf)" : "");
+		if (1 & tests_mask) {
+			STRT_PRN(" 0x001 -%s const short msg %s", "", (tstmod & 0xc) ? "(NO snprintf)" : "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -462,8 +412,9 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "\n");
 		}
 
-		if ((tstBitNum=(2 & tests_mask))!=0) {
-			STRT_PRN(" 0x0002- 1 arg%s%s", "", "");
+		if (2 & tests_mask) {
+			STRT_PRN(" 0x002 - 1 arg%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -472,8 +423,9 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "\n");
 		}
 
-		if ((tstBitNum=(4 & tests_mask))!=0) {
-			STRT_PRN(" 0x0004- 2 args%s%s", "", "");
+		if (4 & tests_mask) {
+			STRT_PRN(" 0x004 - 2 args%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -483,7 +435,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (8 & tests_mask) {
-			STRT_PRN(" 0x0008- 8 args (7 ints, 1 float)%s%s", "", "");
+			STRT_PRN(" 0x008 - 8 args (7 ints, 1 float)%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -493,7 +446,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x10 & tests_mask) {
-			STRT_PRN(" 0x0010- 8 args (1 ints, 7 float)%s%s", "", "");
+			STRT_PRN(" 0x010 - 8 args (1 ints, 7 float)%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -503,7 +457,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x20 & tests_mask) {
-			STRT_PRN(" 0x0020- snprintf of same 8 args%s%s", "", "");
+			STRT_PRN(" 0x020 - snprintf of same 8 args%s%s", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -513,7 +468,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x40 & tests_mask) {
-			STRT_PRN(" 0x0040 -%s const short msg %s", (1 & tests_mask) ? " (repeat)" : "", (tstmod & 0xc) ? "(NO snprintf)" : "");
+			STRT_PRN(" 0x040 -%s const short msg %s", (1 & tests_mask) ? " (repeat)" : "", (tstmod & 0xc) ? "(NO snprintf)" : "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -523,7 +479,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x80 & tests_mask) {
-			STRT_PRN(" 0x0080- 2 args%s%s traceTID=-1 - first TLOG", "", "");  //first TLOG (\"initialization\")
+			STRT_PRN(" 0x080 - 2 args%s%s traceTID=-1 - first TLOG", "", "");  //first TLOG (\"initialization\")
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -533,7 +490,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x100 & tests_mask) {
-			STRT_PRN(" 0x0100- 2 args%s%s TRACE macro", "", "");
+			STRT_PRN(" 0x100 - 2 args%s%s TRACE macro", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -543,7 +501,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x200 & tests_mask) {
-			STRT_PRN(" 0x0200- %s%s8 args (7 ints, 1 float) TLOG_SCOPED() TLOG_ADD", "", "");
+			STRT_PRN(" 0x200 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED() TLOG_ADD", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -553,7 +512,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (0x400 & tests_mask) {
-			STRT_PRN(" 0x0400- %s%s8 args (7 ints, 1 float) TLOG_SCOPED(){TLOG_ADD...}", "", "");
+			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", "", "");
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
@@ -578,6 +538,7 @@ int main(int argc, char *argv[])
 #else
 			STRT_PRN(" 0x1000- 2 args%s%s ", " - NoTLOG - ", "OPTIMIZED out.");
 #endif  // __OPTIMIZE__
+			loops= results_a[test].loops;
 			delta= results_a[test++].delta;
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)

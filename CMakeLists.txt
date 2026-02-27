@@ -5,7 +5,6 @@
 #  source .../path/to/trace/ups/setup_for_development <-d|-p>
 #  buildtool
 #
-# $Revision: 1706 $$Date: 2025-03-03 16:06:48 -0600 (Mon, 03 Mar 2025) $
 # ======================================================================
 cmake_minimum_required (VERSION 3.11)
 
@@ -16,11 +15,12 @@ if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
 endif()
 
 find_package(cetmodules 3.01.00)
-project(TRACE VERSION 3.18.00)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
+project(TRACE VERSION 3.21.00)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)
   include(CetCMakeEnv)
+  include(SetCompilerFlags)
   cet_cmake_env()
 else (${cetmodules_FOUND})
   MESSAGE(STATUS "Could not locate cetmodules.")
@@ -77,31 +77,34 @@ if (${cetmodules_FOUND})
 		cet_add_compiler_flags(-fsanitize=undefined -lubsan -Wno-unused-command-line-argument)
 	endif()
   endif()
+	if(DEFINED ENV{USE_GCOV})
+		add_compile_options(-fprofile-arcs -ftest-coverage --coverage)
+		add_link_options(--coverage)
+	endif()
+
+  cet_make_library(USE_PROJECT_NAME INTERFACE
+	 SOURCE
+	include/TRACE/trace.h
+  )
 
   find_package(messagefacility ${CET_EXPORT} QUIET)
   set(mflib "")
   if(messagefacility_FOUND)
-    set(mflib messagefacility::MF_MessageLogger)
+	  cet_make_library(LIBRARY_NAME MF INTERFACE
+	    SOURCE
+	    include/TRACE/tracemf.h
+	    include/TRACE/tracemf2.h
+	    include/TRACE/tracemf3.h
+	    LIBRARIES INTERFACE
+	    messagefacility::MF_MessageLogger
+	    TRACE::TRACE
+	  )
   else()
     if(${WANT_MF})
         message(FATAL_ERROR "MessageFacility not found and MF build requested! Aborting...")
     endif()
   endif()
 
-  cet_make_library(USE_PROJECT_NAME INTERFACE 
-     SOURCE
-    include/TRACE/trace.h
-  )
-
-  cet_make_library(LIBRARY_NAME MF INTERFACE
-    SOURCE
-    include/TRACE/tracemf.h
-    include/TRACE/tracemf2.h
-    include/TRACE/tracemf3.h
-    LIBRARIES INTERFACE
-    messagefacility::MF_MessageLogger
-    TRACE::TRACE
-  )
 else (${cetmodules_FOUND})
 
   if(${WANT_MF})
@@ -153,11 +156,7 @@ INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
 add_subdirectory(script)
 
 # doc - Some documentation...There should be a cet_ function for this...
-FILE(COPY doc DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doc/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
-
-FILE(COPY doc/ DESTINATION man1 FILES_MATCHING PATTERN "*.1")
-INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/man1 DESTINATION ${CMAKE_INSTALL_MANDIR})
+add_subdirectory(doc)
 
 if (${cetmodules_FOUND})
 

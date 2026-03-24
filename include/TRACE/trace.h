@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) /* Allow inclusion into CUDA file (including .cu files) */
-#	define TRACE_REV "$Revision: 1734 $$Date: 2026-02-25 07:39:20 -0600 (Wed, 25 Feb 2026) $"
+#	define TRACE_REV "$Revision: 1739 $$Date: 2026-03-17 13:52:01 -0500 (Tue, 17 Mar 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -218,7 +218,7 @@
     debugging information. For example:
 	if (TTEST(lvl)) {
 		// prep code
-        // possible looping -- severerl TLOGs/TRACEs
+        // possible looping -- several TLOGs/TRACEs
 	}
 	NOTE: for C++ similar functionality can be obtain with TLOG*(...) macros and lambda's:
 	TLOG() << [&](){
@@ -332,7 +332,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1734 $_$Date: 2026-02-25 07:39:20 -0600 (Wed, 25 Feb 2026) $
+#define TRACE_REVx $_$Revision: 1739 $_$Date: 2026-03-17 13:52:01 -0500 (Tue, 17 Mar 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #	define $_$Revision  0?0
 #	define $_$Date      ,
@@ -2655,7 +2655,7 @@ static void trace_namLvlSet(void)
 			   || ((sts= sscanf(line, "%s %llx %llx %llx", name, &M, &S, &T)) && sts >= 3)        //NOLINT
 			   || ((sts= sscanf(line, "%[^,],%llx,%llx,%llx", name, &M, &S, &T)) && sts >= 3)     //NOLINT
 			   || ((sts= sscanf(line, "%s %llx", name, &S)) && sts == 2)                          //NOLINT
-			   || ((sts= sscanf(line, "%s[^,],%llx", name, &S)) && sts == 2))                     //NOLINT
+			   || ((sts= sscanf(line, "%[^,],%llx", name, &S)) && sts == 2))                      //NOLINT
 		// The last case is for when TRACE will remain "inactive" (not tracing to mem and not using lvls from trace file) -- just concerned about slow path
 		{
 			int32_t tid= (int32_t)trace_name2TID(name);

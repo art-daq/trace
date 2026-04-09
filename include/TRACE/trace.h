@@ -737,6 +737,8 @@ static const char *TRACE_PRINT__= "%T %*e %*L %F: %M"; /* Msg Limit Insert will 
 		}                                                                                                                             \
 	} while (0)
 
+#		define TRACEFH(lvl, ...) TRACEFN("", lvl, __VA_ARGS__) /* for use in header file -- to get automatic TRACE_NAME (%f, etc) */
+
 #	endif /* TRACE_STD_STRING_FORMAT */
 
 /* Note: This supports using a mix of stream syntax and format args, i.e: "string is " << some_str << " and float is %f", some_float
@@ -4937,6 +4939,12 @@ TraceGuard<Fun> operator+(TraceGuardOnExit, Fun &&fn)
 #	define TRACEN(...)
 #	define TRACEH(...)
 #	define TRACE_CNTL(...)
+#	define TRACE_DBG(...)
+#	define TRACE_DBGN(...)
+#	define TRACE_DBGH(...)
+#	define TRACEF(...)
+#	define TRACEFN(...)
+#	define TRACEFH(...)
 #endif /* !defined(__CUDA_ARCH__) */
 
 #endif /* TRACE_H */

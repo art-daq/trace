@@ -2457,7 +2457,7 @@ tod: 132348  133161
 		if (nargs > traceControl_p->num_params) nargs= (uint8_t)traceControl_p->num_params;
 		for (argIdx= 0; argIdx < nargs; ++argIdx) {
 			params_p[argIdx]=
-				va_arg(ap, uint64_t); /* this will usually copy 2x and 32bit archs, but they might be all %f or %g args */
+				va_arg(ap, uint64_t); // NOLINT /* this will usually copy 2x and 32bit archs, but they might be all %f or %g args */
 		}
 	}
 
@@ -4726,6 +4726,7 @@ struct TSTREAMER_T_ {
 		, lvl(llv)
 		, tidp(&infop->tid)
 		, lim_infop(&infop->info)
+		, nn(NULL)
 #		if TRACE_USE_STATIC_STREAMER == 1
 		, stmr__(&__tstreamer)
 #		endif

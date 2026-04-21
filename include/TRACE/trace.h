@@ -3959,7 +3959,9 @@ public:
 	}  // init
 
 #		ifdef __clang__
-#			define _M_flags flags()
+#			define _TRACE_M_flags flags()
+#       else
+#            define _TRACE_M_flags _M_flags
 #		endif
 
 	inline void str()
@@ -4271,13 +4273,13 @@ public:
 		long *vp= (long *)param_va_ptr;  // int goes to long
 		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, false, NULL, _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, false, NULL, _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer delay_format line " << __LINE__ << ", snprintf 5 rr=" << rr << " ss=" << ss << " msg=\""
 						 << msg << "\"\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, false, NULL, _M_flags, &f_l), f_l);
+			msg_append(format(false, false, NULL, _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4295,12 +4297,12 @@ public:
 		long *vp= (long *)param_va_ptr;  // Note: shorts get pushed onto stack as sizeof(long)
 		if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, false, "h", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, false, "h", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 6 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, false, "h", _M_flags, &f_l), f_l);
+			msg_append(format(false, false, "h", _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4318,12 +4320,12 @@ public:
 		long int *vp= (long int *)param_va_ptr;
 		if (do_f || (vp + 1) > (long int *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, false, "l", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, false, "l", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 7 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, false, "l", _M_flags, &f_l), f_l);
+			msg_append(format(false, false, "l", _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4341,12 +4343,12 @@ public:
 		unsigned long *vp= (unsigned long *)param_va_ptr;  // NOTE: shorts get pushed onto stack as sizeof(long)
 		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "h", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "h", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 8 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, true, "h", _M_flags, &f_l), f_l);
+			msg_append(format(false, true, "h", _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4364,12 +4366,12 @@ public:
 		unsigned long *vp= (unsigned long *)param_va_ptr;  // int goes to long
 		if (do_f || (vp + 1) > (unsigned long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, true, NULL, _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, true, NULL, _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 9 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, true, NULL, _M_flags, &f_l), f_l);
+			msg_append(format(false, true, NULL, _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4387,12 +4389,12 @@ public:
 		long unsigned int *vp= (long unsigned int *)param_va_ptr;
 		if (do_f || (vp + 1) > (long unsigned int *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "l", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "l", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 10 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, true, "l", _M_flags, &f_l), f_l);
+			msg_append(format(false, true, "l", _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4414,12 +4416,12 @@ public:
 #		endif
 		if (do_f || (vp + 1) > (long long unsigned int *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "ll", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 11 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, true, "ll", _M_flags, &f_l), f_l);
+			msg_append(format(false, true, "ll", _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4441,12 +4443,12 @@ public:
 #		endif
 		if (do_f || (vp + 1) > (long long int *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "ll", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(false, true, "ll", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 11 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(false, true, "ll", _M_flags, &f_l), f_l);
+			msg_append(format(false, true, "ll", _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4468,12 +4470,12 @@ public:
 #		endif
 		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(true, false, NULL, _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 12 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(true, false, NULL, _M_flags, &f_l), f_l);
+			msg_append(format(true, false, NULL, _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4496,12 +4498,12 @@ public:
 			vp= (long double *)nvp;
 		if (do_f || (vp + 1) > (long double *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(true, false, "L", _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(true, false, "L", _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 13 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(true, false, "L", _M_flags, &f_l), f_l);
+			msg_append(format(true, false, "L", _TRACE_M_flags, &f_l), f_l);
 			argCount+= (sizeof(long double) + sizeof(long) / 2) / sizeof(long);
 			if (sizeof(long double) == 16 && (nvp & 0xf)) ++argCount;  // speudo extra arg satisfies alignment requirement
 			*vp++= r;
@@ -4524,12 +4526,12 @@ public:
 #		endif
 		if (do_f || (vp + 1) > (double *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
-			int rr= snprintf(&msg[msg_sz], ss, format(true, false, NULL, _M_flags), r);
+			int rr= snprintf(&msg[msg_sz], ss, format(true, false, NULL, _TRACE_M_flags), r);
 			msg_sz+= TRACE_SNPRINTED(rr, ss);
 			T_STREAM_DBG << "streamer snprintf 14 rr=" << rr << " ss=" << ss << "\n";
 		} else if (argCount < TRACE_STREAMER_ARGSMAX) {
 			size_t f_l= 0;
-			msg_append(format(true, false, NULL, _M_flags, &f_l), f_l);
+			msg_append(format(true, false, NULL, _TRACE_M_flags, &f_l), f_l);
 			++argCount;
 			*vp++= r;
 			param_va_ptr= vp;
@@ -4545,7 +4547,7 @@ public:
 	inline void delay_format(const bool &r)
 	{
 		long *vp= (long *)param_va_ptr;  // note: bool is pushed as long
-		if (_M_flags & boolalpha) msg_append(r ? "true" : "false", r ? 4 : 5);
+		if (_TRACE_M_flags & boolalpha) msg_append(r ? "true" : "false", r ? 4 : 5);
 		else if (do_f || (vp + 1) > (long *)&args[traceControl_p->num_params]) {
 			size_t ss= sizeof(msg) - 1 - msg_sz;
 			int rr= snprintf(&msg[msg_sz], ss, "%d", r);

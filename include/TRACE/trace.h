@@ -3960,8 +3960,8 @@ public:
 
 #		ifdef __clang__
 #			define _TRACE_M_flags flags()
-#       else
-#            define _TRACE_M_flags _M_flags
+#		else
+#			define _TRACE_M_flags _M_flags
 #		endif
 
 	inline void str()

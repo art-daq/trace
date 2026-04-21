@@ -2458,8 +2458,8 @@ tod: 132348  133161
 					*/
 		if (nargs > traceControl_p->num_params) nargs= (uint8_t)traceControl_p->num_params;
 		for (argIdx= 0; argIdx < nargs; ++argIdx) {
-			params_p[argIdx]=
-				va_arg(ap, uint64_t); // NOLINT /* this will usually copy 2x and 32bit archs, but they might be all %f or %g args */
+			/* this will usually copy 2x and 32bit archs, but they might be all %f or %g args */
+			params_p[argIdx]= va_arg(ap, uint64_t);  // NOLINT
 		}
 	}
 

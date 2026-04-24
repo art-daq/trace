@@ -9,9 +9,11 @@
 cmake_minimum_required (VERSION 3.11)
 
 if(LINUX AND (CMAKE_C_COMPILER OR CMAKE_CXX_COMPILER))
-  message("WARNING: CMAKE_C_COMPILER and CMAKE_CXX_COMPILER must not be set: clearing!")
-  unset(CMAKE_C_COMPILER)
-  unset(CMAKE_CXX_COMPILER)
+  if(DEFINED $ENV{SPACK_ROOT}) # Spack builds can set these to ensure a Spack compiler is used!
+    message("WARNING: CMAKE_C_COMPILER and CMAKE_CXX_COMPILER must not be set: clearing!")
+    unset(CMAKE_C_COMPILER)
+    unset(CMAKE_CXX_COMPILER)
+  endif()
 endif()
 
 find_package(cetmodules 3.01.00)

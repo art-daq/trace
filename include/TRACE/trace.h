@@ -4934,7 +4934,7 @@ TraceGuard<Fun> operator+(TraceGuardOnExit, Fun &&fn)
 #		define TLOG_ARB(...) \
 			if (0) std::cout
 #		define TLOG_ENTEX(...) \
-			if (0) std::cout<<""
+			if (0) std::cout << ""
 #	endif /* __cplusplus */
 #	define TRACE(...)
 #	define TRACEN(...)

@@ -1,6 +1,6 @@
 /*
  * make XTRA_CXXFLAGS=-std=c++20 tracef
- * OR 
+ * OR
  * g++ -g -Wall -pedantic -O2 -std=c++20 -I../../include -o tracef{,.cc}
  */
 #include <format>

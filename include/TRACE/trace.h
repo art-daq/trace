@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
-#	define TRACE_REV "$Revision: 1749 $$Date: 2026-06-11 15:35:55 -0500 (Thu, 11 Jun 2026) $"
+#	define TRACE_REV "$Revision: 1750 $$Date: 2026-06-11 16:34:24 -0500 (Thu, 11 Jun 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1749 $_$Date: 2026-06-11 15:35:55 -0500 (Thu, 11 Jun 2026) $
+#define TRACE_REVx $_$Revision: 1750 $_$Date: 2026-06-11 16:34:24 -0500 (Thu, 11 Jun 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -4927,7 +4927,7 @@ TraceGuard<Fun> operator+(TraceGuardOnExit, Fun &&fn)
 			if (0) std::cout
 #		define TLOG_DEBUG(...) \
 			if (0) std::cout
-#		define TLOG_DEBUG_SCOPED \
+#		define TLOG_DEBUG_SCOPED(...) \
 			if (0)
 #		define TLOG_DBG(...) \
 			if (0) std::cout

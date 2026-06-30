@@ -1,13 +1,10 @@
-/*  This file (trace.c) was created by Ron Rechenmacher <ron@fnal.gov> on
+/*  This file (other_module.c) was created by Ron Rechenmacher <ron@fnal.gov> on
     Jan 26, 2014. "TERMS AND CONDITIONS" governing this file are in the README
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: other_module.c,v $
-    rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+    rev="$Revision: 1752 $$Date: 2026-06-30 12:31:38 -0500 (Tue, 30 Jun 2026) $";
     */
-
-// NOTE: this is trace_.c and not trace.c because nfs server has case
-//       insensitive file system.
 
 #include <linux/module.h>  // module_param, THIS_MODULE
 #include <linux/init.h>    // module_init,_exit

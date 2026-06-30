@@ -5,8 +5,8 @@
  */
 
 #if __cplusplus >= 202002L
-# include <format>
-# define TRACE_STD_STRING_FORMAT std::format
+#	include <format>
+#	define TRACE_STD_STRING_FORMAT std::format
 #endif
 #include <TRACE/trace.h>
 

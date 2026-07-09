@@ -43,6 +43,7 @@ struct {
 	 "[opts] [file[:off_usec]]...   # Notes: -s invalid with multiple files; LC_NUMERIC=en_US.UTF-8 for %%'[df]"},
 	{"info", ""},
 	{"tids", ""},
+	{"memreport", "per-TID counts of messages currently in memory by TRACE level"},
 	{"cntl", ""},
 	{"mode[M|S]", ""},
 	{"getcpu <1|0>", "enable/disable system call to get cpu on ARM architecture (fast path)"},
@@ -71,6 +72,7 @@ commands:\n\
  show [opts] [file[:off_usec]]...   # Note: files... feature: -s invalid; mixed 32/64 environs not supported.\n\
  info\n\
  tids                    # show raw level bit masks for \n\
+ memreport               # show per-TID TRACE level counts of messages currently in memory\n\
  cntl <int>              # __func__ prepended to memory msg - 1=always, 0=TRACE_PRINT %%F, -1=never\n\
  mode <mode>\n\
  modeM <mode>\n\
@@ -1685,6 +1687,70 @@ void traceInfo(int quiet)
 			   (traceControl_p->memlen != (uint32_t)memlen) ? "not for mmap" : "", TRACE_DFLT_TIME_FMT, DFLT_SHOW, TRACE_PRINT__);
 } /* traceInfo */
 
+void traceMemReport(int do_heading)
+{
+	uint32_t wrCopy= TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
+	uint32_t num_entries= traceControl_p->num_entries;
+	uint32_t num_tids= traceControl_p->num_namLvlTblEnts;
+	uint32_t used= traceControl_rwp->full ? num_entries : wrCopy;
+	uint32_t startIdx= traceControl_rwp->full ? TRACE_IDXCNT_ADD(wrCopy, -(int32_t)num_entries) : 0;
+	uint32_t longest_name= traceControl_rwp->longest_name;
+	uint32_t *lvl_counts;
+	uint8_t *has_report;
+	int tid_digits;
+	uint32_t ii;
+
+	if (used > num_entries) used= num_entries;
+	if (longest_name > (traceControl_p->nam_arr_sz - 1)) longest_name= traceControl_p->nam_arr_sz - 1;
+	if (longest_name < (uint32_t)strlen("NAME")) longest_name= (uint32_t)strlen("NAME");
+	tid_digits= countDigits((int)num_tids - 1);
+
+	lvl_counts= (uint32_t *)calloc((size_t)num_tids * 64U, sizeof(uint32_t));
+	has_report= (uint8_t *)calloc((size_t)num_tids, sizeof(uint8_t));
+	if (!lvl_counts || !has_report) {
+		fprintf(stderr, "memreport: allocation failure\n");
+		free(lvl_counts);
+		free(has_report);
+		return;
+	}
+
+	for (ii= 0; ii < used; ++ii) {
+		struct traceEntryHdr_s *ent_p= idxCnt2entPtr(TRACE_IDXCNT_ADD(startIdx, (int32_t)ii));
+		int32_t tid= ent_p->TrcId;
+		uint8_t lvl;
+		if (tid < 0 || (uint32_t)tid >= num_tids) continue;
+		lvl= (uint8_t)(ent_p->lvl & TLVLBITSMSK);
+		++lvl_counts[(size_t)tid * 64U + lvl];
+		has_report[tid]= 1;
+	}
+
+	if (do_heading) {
+		printf("%*s %*s %*s %s\n", minw(3, tid_digits), "TID", longest_name, "NAME", 18, "maskM", "report");
+		printf("%.*s %.*s %.*s %.*s\n", minw(3, tid_digits), TRACE_LONG_DASHES, longest_name, TRACE_LONG_DASHES, 18,
+			   TRACE_LONG_DASHES, 4, TRACE_LONG_DASHES);
+	}
+
+	for (ii= 0; ii < num_tids; ++ii) {
+		int first= 1;
+		uint8_t lvl;
+		if (!has_report[ii]) continue;
+
+		printf("%*u %*.*s 0x%016llx ", minw(3, tid_digits), ii, longest_name, longest_name, TRACE_TID2NAME((int32_t)ii),
+			   (unsigned long long)traceLvls_p[ii].M);
+		for (lvl= 0; lvl < 64; ++lvl) {
+			uint32_t cnt= lvl_counts[(size_t)ii * 64U + lvl];
+			if (!cnt) continue;
+			printf("%s%u:%u", first ? "" : ", ", lvl, cnt);
+			first= 0;
+		}
+		printf("\n");
+	}
+	printf("entries analyzed: %u\n", used);
+
+	free(lvl_counts);
+	free(has_report);
+}
+
 void do_help(const char *cmd)
 {
 	unsigned uu= 0;
@@ -2229,6 +2295,9 @@ int main(int argc, char *argv[])
 					   (unsigned long long)traceLvls_p[uu].T);
 			}
 		}
+	} else if (strcmp(cmd, "memreport") == 0) {
+		traceInit("_TRACE_", 1);
+		traceMemReport(do_heading);
 	} else if (strcmp(cmd, "unlock") == 0) {
 		traceInit(NULL, 0);
 		trace_unlock(&traceControl_rwp->namelock);

@@ -1718,7 +1718,7 @@ void traceMemReport(int do_heading)
 		uint32_t rdIdx= TRACE_IDXCNT_ADD(wrCopy, -1);
 		struct timeval prev_tv;
 		int have_prev= 0;
-		const int32_t forward_jump_tol_us= 10;
+		const int32_t forward_jump_tol_us= 200;
 
 		for (ii= 0; ii < used; ++ii) {
 			struct traceEntryHdr_s *ent_p= idxCnt2entPtr(rdIdx);

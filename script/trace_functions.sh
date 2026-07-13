@@ -22,6 +22,7 @@ tmode()   { trace_cntl mode  "$@"; }
 tmodeM()  { trace_cntl modeM "$@"; }
 tmodeS()  { trace_cntl modeS "$@"; }
 tfreeze() { trace_cntl modeM 0; }
+tmemreport() { trace_cntl memreport; }
 treset()  { trace_cntl reset; }
 tdelta()  { test -n "${PAGER-}" && { trace_delta "$@" | $PAGER;true;} || trace_delta "$@"; }  # ex. tshow | grep xxx | tdelta
 

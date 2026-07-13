@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $"
+#define TRACE_CNTL_REV "$Revision: 1754 $$Date: 2026-07-13 14:23:11 -0500 (Mon, 13 Jul 2026) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -1693,10 +1693,10 @@ void traceMemReport(int do_heading)
 	uint32_t num_entries= traceControl_p->num_entries;
 	uint32_t num_tids= traceControl_p->num_namLvlTblEnts;
 	uint32_t used= traceControl_rwp->full ? num_entries : wrCopy;
-	uint32_t startIdx= traceControl_rwp->full ? TRACE_IDXCNT_ADD(wrCopy, -(int32_t)num_entries) : 0;
 	uint32_t longest_name= traceControl_rwp->longest_name;
 	uint32_t *lvl_counts;
 	uint8_t *has_report;
+	uint32_t analyzed= 0;
 	int tid_digits;
 	uint32_t ii;
 
@@ -1714,14 +1714,34 @@ void traceMemReport(int do_heading)
 		return;
 	}
 
-	for (ii= 0; ii < used; ++ii) {
-		struct traceEntryHdr_s *ent_p= idxCnt2entPtr(TRACE_IDXCNT_ADD(startIdx, (int32_t)ii));
-		int32_t tid= ent_p->TrcId;
-		uint8_t lvl;
-		if (tid < 0 || (uint32_t)tid >= num_tids) continue;
-		lvl= (uint8_t)(ent_p->lvl & TLVLBITSMSK);
-		++lvl_counts[(size_t)tid * 64U + lvl];
-		has_report[tid]= 1;
+	if (used) {
+		uint32_t rdIdx= TRACE_IDXCNT_ADD(wrCopy, -1);
+		struct timeval prev_tv;
+		int have_prev= 0;
+		const int32_t forward_jump_tol_us= 10;
+
+		for (ii= 0; ii < used; ++ii) {
+			struct traceEntryHdr_s *ent_p= idxCnt2entPtr(rdIdx);
+			struct timeval cur_tv;
+			int32_t tid;
+			uint8_t lvl;
+
+			tv_from_ent(&cur_tv, ent_p);
+			/* While walking backward in time, stop only on forward jumps above jitter tolerance. */
+			if (have_prev && tvcmp(&prev_tv, 0, &cur_tv, -forward_jump_tol_us) == -1) break;
+
+			tid= ent_p->TrcId;
+			if (tid >= 0 && (uint32_t)tid < num_tids) {
+				lvl= (uint8_t)(ent_p->lvl & TLVLBITSMSK);
+				++lvl_counts[(size_t)tid * 64U + lvl];
+				has_report[tid]= 1;
+			}
+
+			prev_tv= cur_tv;
+			have_prev= 1;
+			++analyzed;
+			rdIdx= TRACE_IDXCNT_ADD(rdIdx, -1);
+		}
 	}
 
 	if (do_heading) {
@@ -1745,7 +1765,7 @@ void traceMemReport(int do_heading)
 		}
 		printf("\n");
 	}
-	printf("entries analyzed: %u\n", used);
+	printf("entries analyzed: %u\n", analyzed);
 
 	free(lvl_counts);
 	free(has_report);

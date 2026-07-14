@@ -4,8 +4,8 @@
 #   or COPYING file. If you do not have such a file, one can be obtained by
 #   contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #   $RCSfile: trace.sh.functions,v $
-#   $Revision: 1755 $
-#   $Date: 2026-07-13 14:29:32 -0500 (Mon, 13 Jul 2026) $
+#   $Revision: 1760 $
+#   $Date: 2026-07-14 14:53:55 -0500 (Tue, 14 Jul 2026) $
 
 tcntl()   { trace_cntl "$@"; }
 tshow()   { test -n "${PAGER-}" && trace_cntl show "$@" | $PAGER || trace_cntl show "$@"; }
@@ -22,7 +22,7 @@ tmode()   { trace_cntl mode  "$@"; }
 tmodeM()  { trace_cntl modeM "$@"; }
 tmodeS()  { trace_cntl modeS "$@"; }
 tfreeze() { trace_cntl modeM 0; }
-tmemreport() { trace_cntl memreport; }
+tmemreport() { trace_cntl memreport "$@"; }
 treset()  { trace_cntl reset; }
 tdelta()  { test -n "${PAGER-}" && { trace_delta "$@" | $PAGER;true;} || trace_delta "$@"; }  # ex. tshow | grep xxx | tdelta
 

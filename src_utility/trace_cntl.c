@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $"
+#define TRACE_CNTL_REV "$Revision: 1756 $$Date: 2026-07-13 15:10:45 -0500 (Mon, 13 Jul 2026) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -43,6 +43,7 @@ struct {
 	 "[opts] [file[:off_usec]]...   # Notes: -s invalid with multiple files; LC_NUMERIC=en_US.UTF-8 for %%'[df]"},
 	{"info", ""},
 	{"tids", ""},
+	{"memreport", "per-TID counts of messages currently in memory by TRACE level"},
 	{"cntl", ""},
 	{"mode[M|S]", ""},
 	{"getcpu <1|0>", "enable/disable system call to get cpu on ARM architecture (fast path)"},
@@ -71,6 +72,7 @@ commands:\n\
  show [opts] [file[:off_usec]]...   # Note: files... feature: -s invalid; mixed 32/64 environs not supported.\n\
  info\n\
  tids                    # show raw level bit masks for \n\
+ memreport               # show per-TID TRACE level counts of messages currently in memory\n\
  cntl <int>              # __func__ prepended to memory msg - 1=always, 0=TRACE_PRINT %%F, -1=never\n\
  mode <mode>\n\
  modeM <mode>\n\
@@ -2327,6 +2329,9 @@ int main(int argc, char *argv[])
 					   (unsigned long long)traceLvls_p[uu].T);
 			}
 		}
+	} else if (strcmp(cmd, "memreport") == 0) {
+		traceInit("_TRACE_", 1);
+		traceMemReport(do_heading);
 	} else if (strcmp(cmd, "unlock") == 0) {
 		traceInit(NULL, 0);
 		trace_unlock(&traceControl_rwp->namelock);

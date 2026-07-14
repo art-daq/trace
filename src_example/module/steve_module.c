@@ -3,7 +3,7 @@
     or COPYING file. If you do not have such a file, one can be obtained by
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: steve_module.c,v $
-    rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+    rev="$Revision: 1752 $$Date: 2026-06-30 12:31:38 -0500 (Tue, 30 Jun 2026) $";
     */
 
 #include <linux/module.h>
@@ -15,7 +15,9 @@
 static int prt_num= 0;
 /* based on code in kernel/trace/trace_sched_switch.c */
 static void my_trace_sched_switch_hook(
-#	if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
+#	if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	void *ignore, bool preempt
+#	elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
 	void *__rq
 #	else
 	struct rq *__rq
@@ -33,8 +35,7 @@ static void regfunc(struct tracepoint *tp, void *priv)
 {
 	int *ret= priv;
 	if (strcmp(tp->name, "sched_switch") == 0) {
-		printk("tracepoint: %s key.enabled=%d regfunc=%p %p %p\n", tp->name, tp->key.enabled.counter, tp->regfunc, tp->unregfunc,
-			   tp->funcs);
+		printk("tracepoint: %s funcs=%p\n", tp->name, tp->funcs);
 		if (tp->funcs) { printk("  funcs[0].func=%p data=%p\n", tp->funcs[0].func, tp->funcs[0].data); }
 		*ret= tracepoint_probe_register(tp, my_trace_sched_switch_hook, NULL);
 	} else if (strcmp(tp->name, "softirq_entry") == 0) {
@@ -54,8 +55,7 @@ static void regfunc(struct tracepoint *tp, void *priv)
 static void unregfunc(struct tracepoint *tp, void *ignore)
 {
 	if (strcmp(tp->name, "sched_switch") == 0) {
-		printk("tracepoint: %s key.enabled=%d regfunc=%p %p %p\n", tp->name, tp->key.enabled.counter, tp->regfunc, tp->unregfunc,
-			   tp->funcs);
+		printk("tracepoint: %s funcs=%p\n", tp->name, tp->funcs);
 		if (tp->funcs) { printk("  funcs[0].func=%p data=%p\n", tp->funcs[0].func, tp->funcs[0].data); }
 		tracepoint_probe_unregister(tp, my_trace_sched_switch_hook, NULL);
 	} else if (strcmp(tp->name, "softirq_entry") == 0) {

@@ -1697,6 +1697,8 @@ void traceMemReport(int do_heading)
 	uint32_t *lvl_counts;
 	uint8_t *has_report;
 	uint32_t analyzed= 0;
+	struct timeval first_tv= {0};
+	struct timeval last_tv= {0};
 	int tid_digits;
 	uint32_t ii;
 
@@ -1737,6 +1739,9 @@ void traceMemReport(int do_heading)
 				has_report[tid]= 1;
 			}
 
+			if (analyzed == 0) first_tv= cur_tv;
+			last_tv= cur_tv;
+
 			prev_tv= cur_tv;
 			have_prev= 1;
 			++analyzed;
@@ -1765,7 +1770,16 @@ void traceMemReport(int do_heading)
 		}
 		printf("\n");
 	}
-	printf("entries analyzed: %u\n", analyzed);
+	if (analyzed) {
+		long span_sec= (long)(first_tv.tv_sec - last_tv.tv_sec);
+		int span_usec= (int)(first_tv.tv_usec - last_tv.tv_usec);
+		if (span_usec < 0) {
+			span_usec+= 1000000;
+			--span_sec;
+		}
+		printf("entries analyzed: %u  spanning %ld.%06d seconds\n", analyzed, span_sec, span_usec);
+	} else
+		printf("entries analyzed: %u  spanning %ld.%06d seconds\n", analyzed, 0L, 0);
 
 	free(lvl_counts);
 	free(has_report);

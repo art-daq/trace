@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1759 $$Date: 2026-07-14 13:13:07 -0500 (Tue, 14 Jul 2026) $"
+#define TRACE_CNTL_REV "$Revision: 1760 $$Date: 2026-07-14 14:53:55 -0500 (Tue, 14 Jul 2026) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -43,7 +43,7 @@ struct {
 	 "[opts] [file[:off_usec]]...   # Notes: -s invalid with multiple files; LC_NUMERIC=en_US.UTF-8 for %%'[df]"},
 	{"info", ""},
 	{"tids", ""},
-	{"memreport", "per-TID counts of messages currently in memory by TRACE level"},
+	{"memreport [--sys]", "per-TID counts of messages currently in memory by TRACE level"},
 	{"cntl", ""},
 	{"mode[M|S]", ""},
 	{"getcpu <1|0>", "enable/disable system call to get cpu on ARM architecture (fast path)"},
@@ -72,7 +72,7 @@ commands:\n\
  show [opts] [file[:off_usec]]...   # Note: files... feature: -s invalid; mixed 32/64 environs not supported.\n\
  info\n\
  tids                    # show raw level bit masks for \n\
- memreport               # show per-TID TRACE level counts of messages currently in memory\n\
+ memreport [--sys]       # show per-TID TRACE level counts of messages currently in memory\n\
  cntl <int>              # __func__ prepended to memory msg - 1=always, 0=TRACE_PRINT %%F, -1=never\n\
  mode <mode>\n\
  modeM <mode>\n\
@@ -1687,7 +1687,7 @@ void traceInfo(int quiet)
 			   (traceControl_p->memlen != (uint32_t)memlen) ? "not for mmap" : "", TRACE_DFLT_TIME_FMT, DFLT_SHOW, TRACE_PRINT__);
 } /* traceInfo */
 
-void traceMemReport(int do_heading)
+void traceMemReport(int do_heading, int use_sys_levels)
 {
 	uint32_t wrCopy= TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
 	uint32_t num_entries= traceControl_p->num_entries;
@@ -1765,7 +1765,10 @@ void traceMemReport(int do_heading)
 		for (lvl= 0; lvl < 64; ++lvl) {
 			uint32_t cnt= lvl_counts[(size_t)ii * 64U + lvl];
 			if (!cnt) continue;
-			printf("%s%u:%u", first ? "" : ", ", lvl, cnt);
+			if (!use_sys_levels && lvl >= 8)
+				printf("%sD%02u:%u", first ? "" : " ", (unsigned)(lvl - 8), cnt);
+			else
+				printf("%s%u:%u", first ? "" : " ", lvl, cnt);
 			first= 0;
 		}
 		printf("\n");
@@ -1808,9 +1811,11 @@ int main(int argc, char *argv[])
 {
 	int ret= 0;
 	const char *cmd;
+	static const struct option long_options[]= {{"sys", no_argument, 0, 1000}, {0, 0, 0, 0}};
 	extern char *optarg; /* for getopt */
 	extern int optind;   /* for getopt */
 	int opt;             /* for how I use getopt */
+	int opt_memreport_sys= 0;
 	int do_heading= 1;
 	int show_opts= 0;
 	int ii= 0;
@@ -1829,8 +1834,9 @@ int main(int argc, char *argv[])
 	uint32_t tdelta_us;
 
 	opterr= 0; /* turn of getopt (automatic) error output */
-	while ((opt= getopt(argc, argv, "?hab:c:d:Ff:HL:l:N:n:qs:tVx:")) != -1) {
+	while ((opt= getopt_long(argc, argv, "?hab:c:d:Ff:HL:l:N:n:qs:tVx:", long_options, NULL)) != -1) {
 		switch (opt) {
+		case 1000: opt_memreport_sys= 1; break;
 		/*   '?' is also what you get w/ "invalid option -- -"   */
 		case '?':
 		case 'h':
@@ -2330,8 +2336,18 @@ int main(int argc, char *argv[])
 			}
 		}
 	} else if (strcmp(cmd, "memreport") == 0) {
+		int use_sys_levels= opt_memreport_sys;
+		/* Re-scan trailing args for memreport-specific options and reject unexpected leftovers. */
+		for (ii= optind; ii < argc; ++ii) {
+			if (strcmp(argv[ii], "--sys") == 0) use_sys_levels= 1;
+			else {
+				fprintf(stderr, "memreport: unknown option: %s\n", argv[ii]);
+				ret= 1;
+				goto done;
+			}
+		}
 		traceInit("_TRACE_", 1);
-		traceMemReport(do_heading);
+		traceMemReport(do_heading, use_sys_levels);
 	} else if (strcmp(cmd, "unlock") == 0) {
 		traceInit(NULL, 0);
 		trace_unlock(&traceControl_rwp->namelock);
@@ -2499,5 +2515,6 @@ int main(int argc, char *argv[])
 		else
 			ret= 0;
 	}
+done:
 	return (ret);
 } /* main */

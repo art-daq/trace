@@ -50,6 +50,8 @@ find_package(Threads REQUIRED ${CET_EXPORT})
 
 include(GNUInstallDirs)     # Note comments below
 
+option(WANT_KMOD "Build TRACE kernel module" OFF)
+
 if (${cetmodules_FOUND})
   #cet_report_compiler_flags()
 

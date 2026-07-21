@@ -23,7 +23,10 @@ if (EXISTS /lib/modules/${KVERS}/build)
 
     add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../module/ DESTINATION module)
+        set(TRACE_KMOD_INSTALL_DIR "extra/TRACE" CACHE STRING "Subdir under /lib/modules/<kver>/ for TRACE.ko")
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
+          DESTINATION "/lib/modules/${KVERS}/${TRACE_KMOD_INSTALL_DIR}")
+        install(CODE "execute_process(COMMAND /sbin/depmod -a ${KVERS})")
    endif()
 else()
     if(${WANT_KMOD})

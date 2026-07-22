@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
-#	define TRACE_REV "$Revision: 1751 $$Date: 2026-06-12 09:36:37 -0500 (Fri, 12 Jun 2026) $"
+#	define TRACE_REV "$Revision: 1759 $$Date: 2026-07-14 13:13:07 -0500 (Tue, 14 Jul 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1751 $_$Date: 2026-06-12 09:36:37 -0500 (Fri, 12 Jun 2026) $
+#define TRACE_REVx $_$Revision: 1759 $_$Date: 2026-07-14 13:13:07 -0500 (Tue, 14 Jul 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -637,7 +637,7 @@ static const char *TRACE_NAME= NULL; /* basically a flag which will indicate whe
 			TRACE_PRINT)  // must be defined before static code is compiled; can be undef after. NOTE: not used in any macro(s)
 static const char *TRACE_PRINT__= TRACE_PRINT; /* Msg Limit Insert will have separator */
 #		else /* NOTE: kernel header kernel/trace/trace.h uses enum trace_type { ... TRACE_PRINT, ... } */
-static const char *TRACE_PRINT__= "%T %*e %*L %F: %M"; /* Msg Limit Insert will have separator */
+static const char *TRACE_PRINT__= "%T %*e %O%*L%o %F: %M"; /* Msg Limit Insert will have separator */
 #		endif
 #	endif
 

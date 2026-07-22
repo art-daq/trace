@@ -29,7 +29,7 @@ NOTE: Currently, if tcolor is used before tdelta, a pattern which matches before
       Be careful with specifying patterns that match overlapping parts on a line -- counter intuitive output may occur.
 The colors are:"
 
-show="%x%P %f"
+show="%x%P %f" tidpid=PID
 while expr "$1" : - >/dev/null;do
       case $1 in
       -x) set -x;;
@@ -40,7 +40,7 @@ while expr "$1" : - >/dev/null;do
               printf "${esc}[38;5;${cnum}mcolor # $num${esc}[0m\n"
           done
           exit;;
-      -t|--threads)  show="%x%i %f";;
+      -t|--threads)  show="%x%i %f" tidpid=TID;;
       esac
       shift
 done
@@ -49,7 +49,7 @@ done
 tcolor() { : $*=tids
    # build sed filter --- NOTE: if building for tshow Thread ID -- the parameter list created with be " <tid> "  (w/ space(' ') before and after
    test $# -eq 0 && { tid_list=`TRACE_SHOW="$show" trace_cntl show|awk '!seen[$1]++{printf"\" %s .*\"\n",$1;}'| head -n$num_color_nums`
-                      echo found `echo "$tid_list" | wc -l` unique PIDs within 1st 500 tshow lines >&2; eval set -- $tid_list; };: at most,could be less
+                      echo found `echo "$tid_list" | wc -l` unique ${tidpid}s within 1st 500 tshow lines >&2; eval set -- $tid_list; };: at most,could be less
    test $# -eq 0 && { echo need at least 1 tid; return; }
    tid=$1; : no shift to preserver num args to associate arg with cnum
 

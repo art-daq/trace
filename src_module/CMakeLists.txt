@@ -9,6 +9,15 @@ message("KVERS is ${KVERS}")
 
 if (EXISTS /lib/modules/${KVERS}/build)
    if (${WANT_KMOD})
+    set(TRACE_KMOD_INSTALL_DIR "extra/TRACE" CACHE STRING "Subdir under /lib/modules/<kver>/ for TRACE.ko")
+    if (CMAKE_INSTALL_PREFIX STREQUAL "/" OR CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+      set(TRACE_KMOD_INSTALL_DEST "/lib/modules/${KVERS}/${TRACE_KMOD_INSTALL_DIR}")
+      set(TRACE_KMOD_INSTALL_EFFECTIVE "/lib/modules/${KVERS}/${TRACE_KMOD_INSTALL_DIR}")
+    else()
+      set(TRACE_KMOD_INSTALL_DEST "lib/modules/${KVERS}/${TRACE_KMOD_INSTALL_DIR}")
+      set(TRACE_KMOD_INSTALL_EFFECTIVE "${CMAKE_INSTALL_PREFIX}/lib/modules/${KVERS}/${TRACE_KMOD_INSTALL_DIR}")
+    endif()
+    message(STATUS "TRACE module install dir: ${TRACE_KMOD_INSTALL_EFFECTIVE}")
     add_custom_command(
 		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/Makefile ${CMAKE_CURRENT_BINARY_DIR}
@@ -23,10 +32,10 @@ if (EXISTS /lib/modules/${KVERS}/build)
 
     add_custom_target(src_module ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko)
 
-        set(TRACE_KMOD_INSTALL_DIR "extra/TRACE" CACHE STRING "Subdir under /lib/modules/<kver>/ for TRACE.ko")
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
-  DESTINATION "lib/modules/${KVERS}/${TRACE_KMOD_INSTALL_DIR}")
-        install(CODE "execute_process(COMMAND /sbin/depmod -a ${KVERS})")
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
+	        DESTINATION "${TRACE_KMOD_INSTALL_DEST}")
+    install(CODE "if(\"\$ENV{DESTDIR}\" STREQUAL \"\")\n
+    execute_process(COMMAND depmod -a \"${KVERS}\")\nendif()")
    endif()
 else()
     if(${WANT_KMOD})

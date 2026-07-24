@@ -75,7 +75,7 @@ Authorized read-write SVN access via:
   Most install destinations follow GNUInstallDirs and land under `/usr` either way (for example, headers in `/usr/include/TRACE`, binaries in `/usr/bin`, docs in `/usr/share`, and source/support trees in `/usr/share/TRACE` by default).
 
   Two destinations are intentionally special:
-  - `trace_functions.sh` is installed to `/etc/profile.d` for system integration.
+  - `trace_functions.sh` is installed to `/etc/profile.d` for system integration (for `-DCMAKE_INSTALL_PREFIX=/usr`, also set `-DCMAKE_INSTALL_SYSCONFDIR=/etc` if you need `/etc/profile.d`).
   - If `-DWANT_KMOD=ON`, `TRACE.ko` installs to `/lib/modules/...` for system prefixes (`/` and `/usr`). For non-system prefixes, it installs under `<prefix>/lib/modules/...`.
 
   To skip source/support tree installation entirely, configure with `-DTRACE_INSTALL_SOURCE_TREE=OFF`.

@@ -198,7 +198,7 @@ if (TRACE_INSTALL_SOURCE_TREE
   set(_trace_python_compat_target "${TRACE_SOURCE_INSTALL_DIR}/python")
   install(CODE
 "
-set(_trace_py_compat \"\\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/python\")
+set(_trace_py_compat \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/python\")
 set(_trace_py_target \"${_trace_python_compat_target}\")
 if (EXISTS \"\${_trace_py_compat}\" AND NOT IS_SYMLINK \"\${_trace_py_compat}\")
   message(STATUS \"TRACE: leaving existing non-symlink python compat path in place: \${_trace_py_compat}\")
@@ -206,7 +206,7 @@ else()
   if (IS_SYMLINK \"\${_trace_py_compat}\")
     file(REMOVE \"\${_trace_py_compat}\")
   endif()
-  file(MAKE_DIRECTORY \"\\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}\")
+  file(MAKE_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}\")
   execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"\${_trace_py_target}\" \"\${_trace_py_compat}\" RESULT_VARIABLE _trace_py_link_rc)
   if (NOT _trace_py_link_rc EQUAL 0)
     message(WARNING \"TRACE: failed to create python compat symlink: \${_trace_py_compat} (rc=\${_trace_py_link_rc})\")

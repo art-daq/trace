@@ -190,6 +190,25 @@ if (TRACE_INSTALL_SOURCE_TREE)
   install(DIRECTORY python DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
 endif()
 
+# Backward compatibility: for non-system prefixes, expose <prefix>/python in
+# addition to the canonical source-tree location.
+if (TRACE_INSTALL_SOURCE_TREE
+    AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/"
+    AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+  set(_trace_python_compat_target "${TRACE_SOURCE_INSTALL_DIR}/python")
+  install(CODE
+"
+set(_trace_py_compat \"$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/python\")
+set(_trace_py_target \"${_trace_python_compat_target}\")
+if (EXISTS \"\${_trace_py_compat}\" AND NOT IS_SYMLINK \"\${_trace_py_compat}\")
+  message(STATUS \"TRACE: leaving existing non-symlink python compat path in place: \${_trace_py_compat}\")
+else()
+  file(MAKE_DIRECTORY \"$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}\")
+  execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"\${_trace_py_target}\" \"\${_trace_py_compat}\")
+endif()
+")
+endif()
+
 # scripts, including the trace_delta script used for tdelta
 add_subdirectory(script)
 

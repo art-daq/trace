@@ -8,7 +8,6 @@
 from spack import *
 import os, sys
 from spack.util.environment import EnvironmentModifications
-from llnl.util.filesystem import join_path
 
 
 class Trace(CMakePackage):

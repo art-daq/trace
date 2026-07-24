@@ -34,7 +34,7 @@ if (EXISTS /lib/modules/${KVERS}/build)
 
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/../module/${KVERS}/TRACE.ko
 	        DESTINATION "${TRACE_KMOD_INSTALL_DEST}")
-    install(CODE "if(\"\$ENV{DESTDIR}\" STREQUAL \"\")\n
+    install(CODE "if(\"\$ENV{DESTDIR}\" STREQUAL \"\" AND (\"${CMAKE_INSTALL_PREFIX}\" STREQUAL \"/\" OR \"${CMAKE_INSTALL_PREFIX}\" STREQUAL \"/usr\"))\n
     execute_process(COMMAND depmod -a \"${KVERS}\")\nendif()")
    endif()
 else()

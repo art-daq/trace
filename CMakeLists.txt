@@ -50,6 +50,38 @@ find_package(Threads REQUIRED ${CET_EXPORT})
 
 include(GNUInstallDirs)     # Note comments below
 
+# If a build tree previously used CMAKE_INSTALL_PREFIX=/, GNUInstallDirs cache
+# entries can persist as usr/... and later become /usr/usr/... when the prefix
+# is switched to /usr. Normalize those cached defaults for system installs.
+if (CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+  foreach(_trace_dir_var
+      BINDIR SBINDIR LIBEXECDIR SYSCONFDIR SHAREDSTATEDIR LOCALSTATEDIR
+      RUNSTATEDIR LIBDIR INCLUDEDIR OLDINCLUDEDIR DATAROOTDIR DATADIR
+      INFODIR LOCALEDIR MANDIR DOCDIR)
+    if (DEFINED CMAKE_INSTALL_${_trace_dir_var}
+        AND CMAKE_INSTALL_${_trace_dir_var} MATCHES "^usr/")
+      string(REGEX REPLACE "^usr/" "" _trace_dir_norm
+             "${CMAKE_INSTALL_${_trace_dir_var}}")
+      set(CMAKE_INSTALL_${_trace_dir_var} "${_trace_dir_norm}" CACHE PATH
+          "Install directory (${_trace_dir_var})" FORCE)
+    endif()
+  endforeach()
+endif()
+
+option(WANT_KMOD "Build TRACE kernel module" OFF)
+option(TRACE_INSTALL_SOURCE_TREE "Install TRACE source/support trees alongside binaries" ON)
+set(TRACE_SOURCE_INSTALL_DIR "${CMAKE_INSTALL_DATAROOTDIR}/TRACE" CACHE STRING "Destination for TRACE source/support trees when TRACE_INSTALL_SOURCE_TREE is ON")
+if (IS_ABSOLUTE "${TRACE_SOURCE_INSTALL_DIR}")
+  set(TRACE_SOURCE_INSTALL_FULL_DIR "${TRACE_SOURCE_INSTALL_DIR}")
+elseif (CMAKE_INSTALL_PREFIX STREQUAL "/")
+  set(TRACE_SOURCE_INSTALL_FULL_DIR "/${TRACE_SOURCE_INSTALL_DIR}")
+else()
+  set(TRACE_SOURCE_INSTALL_FULL_DIR "${CMAKE_INSTALL_PREFIX}/${TRACE_SOURCE_INSTALL_DIR}")
+endif()
+message(STATUS "TRACE install dirs (relative): prefix=${CMAKE_INSTALL_PREFIX}, bindir=${CMAKE_INSTALL_BINDIR}, includedir=${CMAKE_INSTALL_INCLUDEDIR}, datarootdir=${CMAKE_INSTALL_DATAROOTDIR}, sysconfdir=${CMAKE_INSTALL_SYSCONFDIR}")
+message(STATUS "TRACE install dirs (effective): bindir=${CMAKE_INSTALL_FULL_BINDIR}, includedir=${CMAKE_INSTALL_FULL_INCLUDEDIR}, datarootdir=${CMAKE_INSTALL_FULL_DATAROOTDIR}, sysconfdir=${CMAKE_INSTALL_FULL_SYSCONFDIR}")
+message(STATUS "TRACE source tree: install=${TRACE_INSTALL_SOURCE_TREE}, dir=${TRACE_SOURCE_INSTALL_DIR}, effective=${TRACE_SOURCE_INSTALL_FULL_DIR}")
+
 if (${cetmodules_FOUND})
   #cet_report_compiler_flags()
 
@@ -118,33 +150,70 @@ target_include_directories(
 # We're going to install the source folders directly to make sure to have the correct Makefiles
 # for building kernel modules after deployment.
 FILE(COPY Makefile DESTINATION .)
-INSTALL(FILES Makefile DESTINATION .)
+if (TRACE_INSTALL_SOURCE_TREE)
+  install(FILES Makefile DESTINATION ${TRACE_SOURCE_INSTALL_DIR})
+endif()
 
 # The trace utility
 add_subdirectory(src_utility)
 FILE(COPY src_utility DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY src_utility DESTINATION . PATTERN ".svn" EXCLUDE)
+if (TRACE_INSTALL_SOURCE_TREE)
+  install(DIRECTORY src_utility DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()
 
 if (${cetmodules_FOUND})
   # Example Programs
   add_subdirectory(src_example)
   FILE(COPY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
-  INSTALL(DIRECTORY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
+  if (TRACE_INSTALL_SOURCE_TREE)
+    install(DIRECTORY src_example DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+  endif()
 endif (${cetmodules_FOUND})
 
 # Kernel Module
 add_subdirectory(src_module)
 FILE(COPY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY src_module DESTINATION . PATTERN ".svn" EXCLUDE)
+if (TRACE_INSTALL_SOURCE_TREE)
+  install(DIRECTORY src_module DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()
 
 # The include directory (aka the core of TRACE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY include DESTINATION . PATTERN ".svn" EXCLUDE)
+if (TRACE_INSTALL_SOURCE_TREE)
+  install(DIRECTORY include DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()
 
 # The python directory (aka the core of TRACE)
 add_subdirectory(python)
 FILE(COPY python DESTINATION . PATTERN ".svn" EXCLUDE)
-INSTALL(DIRECTORY python DESTINATION . PATTERN ".svn" EXCLUDE)
+if (TRACE_INSTALL_SOURCE_TREE)
+  install(DIRECTORY python DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()
+
+# Backward compatibility: for non-system prefixes, expose <prefix>/python in
+# addition to the canonical source-tree location.
+if (TRACE_INSTALL_SOURCE_TREE
+    AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/"
+    AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+  set(_trace_python_compat_target "${TRACE_SOURCE_INSTALL_DIR}/python")
+  install(CODE
+"
+set(_trace_py_compat \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/python\")
+set(_trace_py_target \"${_trace_python_compat_target}\")
+if (EXISTS \"\${_trace_py_compat}\" AND NOT IS_SYMLINK \"\${_trace_py_compat}\")
+  message(STATUS \"TRACE: leaving existing non-symlink python compat path in place: \${_trace_py_compat}\")
+else()
+  if (IS_SYMLINK \"\${_trace_py_compat}\")
+    file(REMOVE \"\${_trace_py_compat}\")
+  endif()
+  file(MAKE_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}\")
+  execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"\${_trace_py_target}\" \"\${_trace_py_compat}\" RESULT_VARIABLE _trace_py_link_rc)
+  if (NOT _trace_py_link_rc EQUAL 0)
+    message(WARNING \"TRACE: failed to create python compat symlink: \${_trace_py_compat} (rc=\${_trace_py_link_rc})\")
+  endif()
+endif()
+")
+endif()
 
 # scripts, including the trace_delta script used for tdelta
 add_subdirectory(script)
@@ -157,7 +226,7 @@ if (${cetmodules_FOUND})
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
     "Built TRACE utilities using ${CMAKE_C_COMPILER} and ${CMAKE_CXX_COMPILER}\n")
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/etc/compiler_info
-    DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
+    DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR})
 
   cet_cmake_config(CONFIG_FRAGMENTS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/TRACEConfig.cmake.in)
 

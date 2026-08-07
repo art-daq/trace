@@ -71,6 +71,15 @@ Authorized read-write SVN access via:
     python -c 'import TRACE;TRACE.INFO("hello")'
 ```
 
+  For a system install, use either `-DCMAKE_INSTALL_PREFIX=/usr` or `-DCMAKE_INSTALL_PREFIX=/`.
+  Most install destinations follow GNUInstallDirs and land under `/usr` either way (for example, headers in `/usr/include/TRACE`, binaries in `/usr/bin`, docs in `/usr/share`, and source/support trees in `/usr/share/TRACE` by default).
+
+  Two destinations are intentionally special:
+  - `trace_functions.sh` is installed to `/etc/profile.d` for system integration (for `-DCMAKE_INSTALL_PREFIX=/usr`, also set `-DCMAKE_INSTALL_SYSCONFDIR=/etc` if you need `/etc/profile.d`).
+  - If `-DWANT_KMOD=ON`, `TRACE.ko` installs to `/lib/modules/...` for system prefixes (`/` and `/usr`). For non-system prefixes, it installs under `<prefix>/lib/modules/...`.
+
+  To skip source/support tree installation entirely, configure with `-DTRACE_INSTALL_SOURCE_TREE=OFF`.
+
 ### spack - work-in-progress
 
 ```

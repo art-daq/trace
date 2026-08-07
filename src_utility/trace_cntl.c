@@ -1040,7 +1040,7 @@ void traceShow(const char *ospec, int count, int slotStart, int show_opts, int a
 	const char *file= "";
 	int memlen_out_unused __attribute__((__unused__));
 	trace_ptrs_t *t_ptrs, *trace_ptrs_list_start, *t_ptrs_use;
-	struct timeval tv_use, tv2;
+	struct timeval tv_use= {0}, tv2;
 	int32_t off_use;
 	uint32_t name_width= 0;
 	uint32_t num_entries_total;

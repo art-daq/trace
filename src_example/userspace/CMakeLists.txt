@@ -1,33 +1,57 @@
 
 if ("cxx_lambdas" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  cet_make_exec(NAME example_main SOURCE
+    add_executable(ptr_address_string ptr_address_string.cc)
+    target_link_libraries(ptr_address_string PRIVATE TRACE::TRACE)
+else()
+    message(WARNING "Some C++ userspace examples not built due to lack of compiler support for CXX lambdas.")
+endif()
+
+add_executable(example_main
 		example_main.cc
 		example_sub1.cc
 		example_sub2.cc
 		example_sub3.cc
 		example_sub4.cc
-		LIBRARIES
-    PRIVATE
-    TRACE::TRACE
-    Threads::Threads
-    )
+		)
+target_link_libraries(example_main PRIVATE TRACE::TRACE Threads::Threads)
 
-  cet_make_exec(NAME no_std SOURCE no_std.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME just SOURCE just.cc example_sub_.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME just_user SOURCE just_user.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME just_recursive SOURCE just_recursive.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME TLOG_manipulators SOURCE TLOG_manipulators.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME TLOG_ENTEX SOURCE TLOG_ENTEX.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME ex_traceln SOURCE ex_traceln.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME ptr_address_string SOURCE ptr_address_string.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME trace_lvl SOURCE trace_lvl.cc LIBRARIES PRIVATE TRACE::TRACE)
-  cet_make_exec(NAME tlog-compare SOURCE tlog-compare.cc LIBRARIES PRIVATE TRACE::TRACE)
-  #cet_make_exec(NAME setting_lclTime SOURCE setting_lclTime.cc LIBRARIES PRIVATE TRACE::TRACE) # this one is problematic for some compilers
-  cet_make_exec(NAME TLOG SOURCE TLOG.cc LIBRARIES PRIVATE TRACE::TRACE)
-else()
-  message(WARNING "C++ userspace examples not built due to lack of compiler support for CXX lambdas.")
-endif()
-cet_make_exec(NAME basic_c SOURCE basic_c.c LIBRARIES PRIVATE TRACE::TRACE)
-cet_make_exec(NAME no_trace SOURCE no_trace.cc)
+add_executable(no_std no_std.cc)
+target_link_libraries(no_std PRIVATE TRACE::TRACE)
+
+add_executable(just just.cc example_sub_.cc)
+target_link_libraries(just PRIVATE TRACE::TRACE)
+
+add_executable(just_user just_user.cc)
+target_link_libraries(just_user PRIVATE TRACE::TRACE)
+
+add_executable(just_recursive just_recursive.cc)
+target_link_libraries(just_recursive PRIVATE TRACE::TRACE)
+
+add_executable(TLOG_manipulators TLOG_manipulators.cc)
+target_link_libraries(TLOG_manipulators PRIVATE TRACE::TRACE)
+
+add_executable(TLOG_ENTEX TLOG_ENTEX.cc)
+target_link_libraries(TLOG_ENTEX PRIVATE TRACE::TRACE)
+
+add_executable(ex_traceln ex_traceln.cc)
+target_link_libraries(ex_traceln PRIVATE TRACE::TRACE)
+
+add_executable(trace_lvl trace_lvl.cc)
+target_link_libraries(trace_lvl PRIVATE TRACE::TRACE)
+
+add_executable(tlog-compare tlog-compare.cc)
+target_link_libraries(tlog-compare PRIVATE TRACE::TRACE)
+install(TARGETS tlog-compare)
+
+#add_executable(setting_lclTime setting_lclTime.cc) # this one is problematic for some compilers
+#target_link_libraries(setting_lclTime PRIVATE TRACE::TRACE)
+
+add_executable(TLOG TLOG.cc)
+target_link_libraries(TLOG PRIVATE TRACE::TRACE)
+
+add_executable(basic_c basic_c.c)
+target_link_libraries(basic_c PRIVATE TRACE::TRACE)
+
+add_executable(no_trace no_trace.cc)
 
 #install_source() # handled elsewhere

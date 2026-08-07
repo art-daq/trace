@@ -161,14 +161,12 @@ if (TRACE_INSTALL_SOURCE_TREE)
   install(DIRECTORY src_utility DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
 endif()
 
-if (${cetmodules_FOUND})
-  # Example Programs
-  add_subdirectory(src_example)
-  FILE(COPY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
-  if (TRACE_INSTALL_SOURCE_TREE)
-    install(DIRECTORY src_example DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
-  endif()
-endif (${cetmodules_FOUND})
+# Example Programs
+add_subdirectory(src_example)
+FILE(COPY src_example DESTINATION . PATTERN ".svn" EXCLUDE)
+if (TRACE_INSTALL_SOURCE_TREE)
+  install(DIRECTORY src_example DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
+endif()
 
 # Kernel Module
 add_subdirectory(src_module)

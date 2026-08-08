@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1764 $$Date: 2026-08-07 16:37:23 -0500 (Fri, 07 Aug 2026) $'
+ # rev='$Revision: 1765 $$Date: 2026-08-07 19:13:19 -0500 (Fri, 07 Aug 2026) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -526,7 +526,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     else
         export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS
         TRACE_ARGSMAX=4
-        TRACE_MSGMAX=64
+        TRACE_MSGMAX=70
         TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
         TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
         vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS"

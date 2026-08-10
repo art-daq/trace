@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1705 $$Date: 2025-02-17 16:10:48 -0600 (Mon, 17 Feb 2025) $'
+ # rev='$Revision: 1765 $$Date: 2026-08-07 19:13:19 -0500 (Fri, 07 Aug 2026) $'
 set -u
 opt_depth=30
 opt_std=c++11
@@ -38,6 +38,7 @@ examples: `basename $0` ./big_ex.d
                                                     #- with --depth=200 a -t much above 512 can lead to -
                                                     #- \"Resource temporarily unavailable\" from pthread_create
           TRACE_LIMIT_MS=4,1,4000 `basename $0` ./big_ex.d
+NOTE: the environment variable TRACE_INC must be set to the directory containing the TRACE/trace.h file.
 If directory does not exist, it will be created.
 Files in the dir will be overwritten (unless... see --rerun below).
 NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
@@ -61,6 +62,7 @@ NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
 -O<x>            compile optimization level. default: no -O
 --rerun          Only recompile main program (don't remake and compile all other files)
 --inactive       no memory/fast path, just stdout/slow
+--extra-ents=<num>  extra entries to add to TRACE_NUMENTS (default=0)
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>
@@ -169,7 +171,7 @@ test -z "${TRACE_FILE-}" && TRACE_FILE=/tmp/trace_buffer_`whoami`  # make sure
 #      ln -s . $TRACE_INC/TRACE
 #      ln -s trace_delta $TRACE_BIN/trace_delta
 # manually added.
-trace_revnum=`awk '/Revision:/{print$4;exit}' $TRACE_INC/TRACE/trace.h`
+trace_revnum=`awk '/Revision:/{print$5;exit}' $TRACE_INC/TRACE/trace.h`
 if   [ $trace_revnum -le  719 ];then
     opt_def_trace_revnum="-DTRACE_REVNUM=$trace_revnum -DTLOG(lvl)=TLOG_ARB(lvl,\"somename\")"
 elif [ $trace_revnum -le 1429 ];then
@@ -524,7 +526,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     else
         export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS
         TRACE_ARGSMAX=4
-        TRACE_MSGMAX=64
+        TRACE_MSGMAX=70
         TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
         TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
         vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS"
@@ -576,7 +578,7 @@ Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLA
 " $num_maps $loops $parallel_threads $expect_static $expect_declare $check_tids
 
         if [ -n "$do_trace_active" -a -f "${TRACE_FILE-}" ];then
-            trace_cntl info | egrep 'used|full|num_entries' | sed 's/^/  /'
+            trace_cntl info | grep -E 'used|full|num_entries' | sed 's/^/  /'
             uniq_addrs=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | sed -n -e '/_p=/{s/.*_p=//;s/ .*//;p;}' | sort -u | wc -l`
             vprintf 1 'Calculating sub10_trc_ids...\n'
             sub10_trc_id=`TRACE_SHOW='%H%x%i %I %C %L %R' trace_cntl show | awk '/sub10 tid=/{print$2;}' | sort -u`

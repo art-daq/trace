@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1762 $$Date: 2026-08-07 13:26:04 -0500 (Fri, 07 Aug 2026) $"
+#define TRACE_CNTL_REV "$Revision: 1766 $$Date: 2026-08-11 22:40:53 -0500 (Tue, 11 Aug 2026) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -636,7 +636,7 @@ void printEnt(const char *ospec, int opts, struct traceEntryHdr_s *myEnt_p, char
 				lcl_param_ptr+= sizeof(long);
 			} else if (params_sizes[uu].push == 12)  // i.e. i686 long double - arm and ppc do not have 12 byte (long) double
 			{
-#if defined(__arm__) || defined(__powerpc__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__powerpc__) || defined(__aarch64__) || (__GNUC__ < 4)
 				*(long double *)lcl_param_ptr= 0.0;  // __arm__: error: unable to emulate 'XC';
 #else
 				typedef _Complex float __attribute__((mode(XC))) _float80;

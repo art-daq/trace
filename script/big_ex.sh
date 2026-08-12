@@ -4,8 +4,9 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1765 $$Date: 2026-08-07 19:13:19 -0500 (Fri, 07 Aug 2026) $'
+ # rev='$Revision: 1766 $$Date: 2026-08-11 22:40:53 -0500 (Tue, 11 Aug 2026) $'
 set -u
+opt_gxx=g++
 opt_depth=30
 opt_std=c++11
 do_define=1
@@ -16,7 +17,9 @@ do_trace_active=1
 #check_opts='-l5000 -t7 -x3'
 opt_tlogs_per=150   # default for subs besides last
 opt_name=jones
+which nproc >/dev/null 2>&1 || nproc() { grep -c ^processor /proc/cpuinfo; } # for playing around on really old distro
 def_threads=`expr $(nproc) \* 91 / 100`   #
+test $def_threads -eq 0 && def_threads=1
 def_loops=50
 def_process_forks=1
 def_stack=0x4000
@@ -38,7 +41,8 @@ examples: `basename $0` ./big_ex.d
                                                     #- with --depth=200 a -t much above 512 can lead to -
                                                     #- \"Resource temporarily unavailable\" from pthread_create
           TRACE_LIMIT_MS=4,1,4000 `basename $0` ./big_ex.d
-NOTE: the environment variable TRACE_INC must be set to the directory containing the TRACE/trace.h file.
+NOTE: the environment variable TRACE_INC must be set to the directory containing the TRACE/trace.h file,
+        and trace_cntl must be in the PATH.
 If directory does not exist, it will be created.
 Files in the dir will be overwritten (unless... see --rerun below).
 NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
@@ -57,12 +61,13 @@ NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
 --tlogs-per=[num] number of TLOG(...)'s in the subN(...) functions. default $opt_tlogs_per
 --check-opts=<opts> default=\"-t$def_threads -l$def_loops\"  See below. Note: thread and loops options added
 --check-numents=<ents>  default=calculated: ( depth * tlogs_per + 2 ) * threads * loops
+--extra-ents=<num>  extra entries to add to TRACE_NUMENTS (default=0)
 --delta-min=<num> threshhold for FAIL when analyzing traces. default=$def_min_delta
 --stack=[num]    stack used in all but last subroutine - default $def_stack
 -O<x>            compile optimization level. default: no -O
 --rerun          Only recompile main program (don't remake and compile all other files)
 --inactive       no memory/fast path, just stdout/slow
---extra-ents=<num>  extra entries to add to TRACE_NUMENTS (default=0)
+--gxx=           default $opt_gxx
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>
@@ -100,6 +105,7 @@ while [ -n "${1-}" ];do
         -asan)      compile_opts="$compile_opts -fsanitize=address";   shift;;
         -tsan)      compile_opts="$compile_opts -fsanitize=thread";    shift;;
         -ubsan)      compile_opts="$compile_opts -fsanitize=undefined";shift;;
+        -gxx)       eval $reqarg; opt_gxx=$1;                          shift;;
         -std)       eval $reqarg; opt_std=$1;                          shift;;
         std)                      opt_std=$1;                          shift;;
         t*)         eval $reqarg; opt_threads="$1";                    shift;;
@@ -116,8 +122,8 @@ while [ -n "${1-}" ];do
         -rerun)     opt_rerun=1;;
         -mapcheck)  test -n "$leq"&&do_mapcheck=$1&&shift||do_mapcheck=1;;
         -check-numents)eval $reqarg; check_numents=$1;                 shift;;
+        -extra-ents)   eval $reqarg; opt_extra_ents=$1;                shift;;
         -delta-min)    eval $reqarg; opt_min_delta=$1;                 shift;;
-        -extra-ents)eval $reqarg; opt_extra_ents=$1;                   shift;;
         -inactive)  do_trace_active=;;   # recall, run test with no memory/fast tracing, just slow/std*
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
@@ -187,7 +193,7 @@ int thread_idx; unsigned char *tosp;
 useconds_t dly_loop_us;
 }'
 
-echo opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=$check_opts
+vprintf 0 "opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=$check_opts\n"
 flags=$-
 nn=1
 while [ -z "${opt_rerun-}" -a $nn -lt $opt_depth ];do
@@ -351,7 +357,7 @@ void* thread_func(void *arg)
     struct args aa=*args_p;  // per thread copy -  initialize from main
     if (aa.tid != 1) aa.tid=ex_gettid();
     aa.tosp=&tos;
-#   if TRACE_REVNUM <= 762
+#   if TRACE_REVNUM <= 762 || defined(__GNUC__) && (__GNUC__ < 5)
     TLOG(2)                                        << "hello from thread idx " << aa.thread_idx <<" "<<3.14 << TLOG_ENDL;
 #   else
     TLOG(2,"thread"+std::to_string((long long)(aa.thread_idx))) << "hello from thread idx " << aa.thread_idx <<" "<<3.14;
@@ -475,7 +481,7 @@ extern  char        * optarg;        // for getopt
 	system( cmd );
     }
     printf("test-threads - after join loop\n");
-    TRACE( 1, "after thread(s) (pthread_join) traceControl_p=%p", traceControl_p );
+    TRACE( 1, "after thread(s) (pthread_join) tC_p=%p", traceControl_p );
     free( args_p );
     free( threads );
     if (opt_delay_end_s)
@@ -495,7 +501,7 @@ for ss in sub*.cc; do
    ofile=`basename $ss .cc`
    test -n "${do_shared-}" && out_opts="-fPIC -shared -o $ofile.so" || out_opts="-c -o $ofile.o"
    test -n "$do_once" && set -x
-   g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum $out_opts $ss &
+   $opt_gxx ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum $out_opts $ss &
    test -n "$do_once" && { set +x; do_once=; }
    expr $nn % $opt_j >/dev/null || wait
    nn=`expr $nn + 1`
@@ -508,13 +514,15 @@ fi # -z "${opt_rerun-}"
 vprintf 0 'Compile main\n'
 test $opt_v -gt 0 && set -x
 test -n "${do_shared-}" \
- && { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}; } \
- || { g++ ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum -o big_ex_main big_ex_main.cc *.o  -lpthread; sts=$?; }
+ && { $opt_gxx ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum -o big_ex_main big_ex_main.cc *.so -lpthread; sts=$?; export LD_LIBRARY_PATH=.${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}; } \
+ || { $opt_gxx ${opt_std:+-std=$opt_std} $compile_opts -g -Wall -I$TRACE_INC $opt_def_trace_revnum -o big_ex_main big_ex_main.cc *.o  -lpthread; sts=$?; }
 test $opt_v -gt 0 && set +x
-test $sts -eq 0 && echo big_ex_main built OK || { echo big_ex_main build FAILED; exit 1; }
+test $sts -eq 0 && vprintf 0 "big_ex_main built OK\n" || { vprintf 0 "big_ex_main build FAILED\n"; exit 1; }
 
 test -n "${check_numents-}" \
- || check_numents=`expr \( \( $opt_depth - 1 \) \* $opt_tlogs_per + 35 \) \* \( $opt_threads + $opt_forks \) \* $opt_loops`
+ || check_numents=$(( ($opt_threads+$opt_forks)*($opt_loops*($opt_depth*($opt_tlogs_per+1)-$opt_tlogs_per+4)+1)+3 ))
+# || check_numents=`expr \( \( $opt_depth - 1 \) \* $opt_tlogs_per + 35 \) \* \( $opt_threads + $opt_forks \) \* $opt_loops`
+vprintf 0 "check_numents=$check_numents - calculated, as per AI, from depth=$opt_depth tlogs_per=$opt_tlogs_per threads=$opt_threads forks=$opt_forks loops=$opt_loops\n"
 
 if [ "${do_mapcheck-0}" -gt 0 ];then
     export TRACE_PRINT
@@ -526,10 +534,10 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
     else
         export TRACE_NUMENTS TRACE_ARGSMAX TRACE_MSGMAX TRACE_NAMTBLENTS
         TRACE_ARGSMAX=4
-        TRACE_MSGMAX=70
+        TRACE_MSGMAX=64
         TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
         TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
-        vprintf 1 'recreating trace buffer file with TRACE_ARGSMAX=4 TRACE_MSGMAX=64 TRACE_NUMENTS=%s TRACE_NAMTBLENTS=%s\n' "$TRACE_NUMENTS" "$TRACE_NAMTBLENTS"
+        vprintf 1 "recreating trace buffer file with TRACE_ARGSMAX=$TRACE_ARGSMAX TRACE_MSGMAX=$TRACE_MSGMAX TRACE_NUMENTS=$TRACE_NUMENTS TRACE_NAMTBLENTS=$TRACE_NAMTBLENTS\n"
         # deal with potential trace module....
         test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset \
                 || { TRACE_FILE=`trace_cntl file $TRACE_FILE`; rm -f $TRACE_FILE; trace_cntl lvlset 0x2000000000000000 0 0; }    # master reset :) turn on atfork trace
@@ -541,7 +549,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
             do_trace_active=    # no TRACE_FILE analysis -- just std* log file analysis
         fi
     fi
-    echo check_opts=$check_opts
+    vprintf 0 "check_opts=$check_opts\n"
     uname=`uname`
     expect_static=`expr \( $opt_depth + 1 \) \* 2`
     #expect_declare=`expr 2 + $opt_depth / 10 \* 2` # take into accout the "do_TRACE_NAME" above

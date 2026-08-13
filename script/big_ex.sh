@@ -67,6 +67,7 @@ NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
 -O<x>            compile optimization level. default: no -O
 --rerun          Only recompile main program (don't remake and compile all other files)
 --inactive       no memory/fast path, just stdout/slow
+--gdb            run big_ex_main under gdb (stdout/err still to big_ex_main.out)
 --gxx=           default $opt_gxx
 
 Options passed to the program to be checked:
@@ -125,6 +126,7 @@ while [ -n "${1-}" ];do
         -extra-ents)   eval $reqarg; opt_extra_ents=$1;                shift;;
         -delta-min)    eval $reqarg; opt_min_delta=$1;                 shift;;
         -inactive)  do_trace_active=;;   # recall, run test with no memory/fast tracing, just slow/std*
+        -gdb)       opt_gdb=1;;
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -492,10 +494,9 @@ EOF
 
 # ^ ^ ^ ^ ^ ^ ^ ^ ^ Done making module source files ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
 
-opt_j=25
 do_once=1
 vprintf 0 'Compile subs\n'
-nn=1
+opt_j=25 nn=1 # simulate make -j via direct backgrounding...
 flags=$-
 for ss in sub*.cc; do
    ofile=`basename $ss .cc`
@@ -536,7 +537,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         TRACE_ARGSMAX=4
         TRACE_MSGMAX=64
         TRACE_NUMENTS=`expr $check_numents + ${opt_extra_ents-0}`
-        TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth / 10`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
+        TRACE_NAMTBLENTS=`expr $opt_threads + 4 + $opt_depth`   # extras: trace_cntl, jones, TRACE, _TRACE_ "sub10s"
         vprintf 1 "recreating trace buffer file with TRACE_ARGSMAX=$TRACE_ARGSMAX TRACE_MSGMAX=$TRACE_MSGMAX TRACE_NUMENTS=$TRACE_NUMENTS TRACE_NAMTBLENTS=$TRACE_NAMTBLENTS\n"
         # deal with potential trace module....
         test "$TRACE_FILE" = /proc/trace/buffer && trace_cntl reset \
@@ -560,8 +561,14 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         test -f big_ex_main.out && mv -f big_ex_main.out big_ex_main.out~
         vprintf 1 "executing: ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts >big_ex_main.out 2>&1\n"
         trace_cntl reset; trace_cntl mode 3
-        time ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts >big_ex_main.out 2>&1
-        sts=$?; trace_cntl mode 0
+        if [ -n "${opt_gdb-}" ];then
+            gdb -ex "run >big_ex_main.out 2>&1" -ex quit --args ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts
+            sts=$?
+        else
+            time ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts >big_ex_main.out 2>&1
+            sts=$?
+        fi
+        trace_cntl mode 0
         test $sts -ne 0 && { echo ./big_ex_main FAILED - exit status: $sts; exit 1; }
 
         parallel_threads=`cat big_ex_main.out | sed -n -e '/num_threads/{s/.*num_threads= *//;s/ .*//;p;}'`

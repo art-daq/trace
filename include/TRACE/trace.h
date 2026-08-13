@@ -395,6 +395,7 @@ static inline int trace_getcpu(void) { return 0; }
 #   			if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 6))
 static inline int trace_getcpu(void) { return sched_getcpu(); }
 #				else
+#					warning "Old glibc - no sched_getcpu() ((newer) Linux might have syscall?)"
 static inline int trace_getcpu(void) { return 0; } /* really old glibc :( */
 #				endif
 #			endif
@@ -456,6 +457,7 @@ static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			define TRACE_ATOMIC_LOAD(ptr)       *(ptr)
 #			define TRACE_ATOMIC_STORE(ptr, val) *(ptr)= val
 #			define TRACE_THREAD_LOCAL
+#           warning "THIS COMPILER DOES NOT (FULLY) SUPPORT THREAD LOCAL STORAGE"
 static inline uint32_t cmpxchg(uint32_t *ptr, uint32_t old, uint32_t new_)
 {
 	uint32_t __ret;

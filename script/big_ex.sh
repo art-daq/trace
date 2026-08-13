@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1766 $$Date: 2026-08-11 22:40:53 -0500 (Tue, 11 Aug 2026) $'
+ # rev='$Revision: 1767 $$Date: 2026-08-13 13:54:10 -0500 (Thu, 13 Aug 2026) $'
 set -u
 opt_gxx=g++
 opt_depth=30
@@ -15,8 +15,9 @@ do_mapcheck=2
 do_shared=1
 do_trace_active=1
 #check_opts='-l5000 -t7 -x3'
-opt_tlogs_per=150   # default for subs besides last
+opt_tlogs_per=100   # default for subs besides last
 opt_name=jones
+opt_kernel=  # if set, surround big_ex_main run with TRACE_FILE=/proc/trace/buffer trace_cntl modeM {1,0}
 which nproc >/dev/null 2>&1 || nproc() { grep -c ^processor /proc/cpuinfo; } # for playing around on really old distro
 def_threads=`expr $(nproc) \* 91 / 100`   #
 test $def_threads -eq 0 && def_threads=1
@@ -30,6 +31,7 @@ USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
           `basename $0` ./big_ex.d -O3
+          `basename $0` ./big_ex.d --no-define --no-declare # The \"default\" for #include \"trace.h\";use compiler default c++ std
           `basename $0` ./big_ex.d --std=  # use compiler default c++ std
           `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x1' --check-numents=16000000
           `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
@@ -48,27 +50,29 @@ Files in the dir will be overwritten (unless... see --rerun below).
 NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
 -v               more verbose
 --depth=         defalut is $opt_depth, but a better test might be 500. MIN 10
--DTRACE_DECLARE  add -DTRACE_DECLARE to compile line
+--tlogs-per=[num] number of TLOG(...)'s in the subN(...) functions. default $opt_tlogs_per
+-DTRACE_DECLARE  add -DTRACE_DECLARE to compile line. #define TRACE_DEFINE in main (the default) should override.
 -DTRACE_STATIC   add -DTRACE_STATIC to compile line
+--no-define      remove #define TRACE_DEFINE from main
+--no-declare     remove #define TRACE_DECLARE from subs (could also do -DTRACE_STATIC)
 --std=<c++std>,-std=<c++std)   both single and double - work default=$opt_std
+--gxx=           default $opt_gxx
 --asan           Use AddressSanitizer (mutually exclusive with tsan)
 --tsan           Use ThreadSanitizer (mutually exclusive with asan)
 --ubsan          Use UndefinedBehaviorSanitizer
---no-define      remvoe #define TRACE_DEFINE from main
---no-declare     remove #define TRACE_DECLARE from subs (could also do -DTRACE_STATIC)
 --no-shared      do not make subs into .so files
 --mapcheck[=num] default=$do_mapcheck, the number of check LOOPS
---tlogs-per=[num] number of TLOG(...)'s in the subN(...) functions. default $opt_tlogs_per
 --check-opts=<opts> default=\"-t$def_threads -l$def_loops\"  See below. Note: thread and loops options added
---check-numents=<ents>  default=calculated: ( depth * tlogs_per + 2 ) * threads * loops
+--check-numents=<ents>  default=calculated: (threads+forks)*(loops*(depth*(tlogs_per+1)-tlogs_per+4)+3)
 --extra-ents=<num>  extra entries to add to TRACE_NUMENTS (default=0)
 --delta-min=<num> threshhold for FAIL when analyzing traces. default=$def_min_delta
---stack=[num]    stack used in all but last subroutine - default $def_stack
+--stack=[num]    extra stack (simulated via unsiged buffer[$def_stack]) used in all but last subroutine - default $def_stack
 -O<x>            compile optimization level. default: no -O
 --rerun          Only recompile main program (don't remake and compile all other files)
 --inactive       no memory/fast path, just stdout/slow
 --gdb            run big_ex_main under gdb (stdout/err still to big_ex_main.out)
---gxx=           default $opt_gxx
+--kernel         run big_ex_main with TRACE_FILE=/proc/trace/buffer trace_cntl modeM 1 before and
+                 modeM 0 after if /proc/trace/buffer exists. Kernel levels and show are left to user.
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>
@@ -127,6 +131,7 @@ while [ -n "${1-}" ];do
         -delta-min)    eval $reqarg; opt_min_delta=$1;                 shift;;
         -inactive)  do_trace_active=;;   # recall, run test with no memory/fast tracing, just slow/std*
         -gdb)       opt_gdb=1;;
+        -kernel)    opt_kernel=1;;
         *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -195,7 +200,7 @@ int thread_idx; unsigned char *tosp;
 useconds_t dly_loop_us;
 }'
 
-vprintf 0 "opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=$check_opts\n"
+vprintf 0 "opt_depth=$opt_depth opt_tlogs_per=$opt_tlogs_per check_opts=\"$check_opts\"\n"
 flags=$-
 nn=1
 while [ -z "${opt_rerun-}" -a $nn -lt $opt_depth ];do
@@ -565,8 +570,15 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
             gdb -ex "run >big_ex_main.out 2>&1" -ex quit --args ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts
             sts=$?
         else
+            turn_kernel_off=
+            if [ -n "$opt_kernel" -a "$TRACE_FILE" \!= /proc/trace/buffer -a -f /proc/trace/buffer ];then
+                turn_kernel_off=1
+                TRACE_FILE=/proc/trace/buffer trace_cntl reset
+                TRACE_FILE=/proc/trace/buffer trace_cntl modeM 1
+            fi
             time ./big_ex_main ${opt_name:+-n$opt_name} -x1 $check_opts >big_ex_main.out 2>&1
             sts=$?
+            test -n "$turn_kernel_off" && TRACE_FILE=/proc/trace/buffer trace_cntl modeM 0
         fi
         trace_cntl mode 0
         test $sts -ne 0 && { echo ./big_ex_main FAILED - exit status: $sts; exit 1; }
@@ -589,7 +601,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
         # the number of uniq tids that the program will experience is unknown.
 
         vprintf 0 "\
-Analyzing trace_buffer... (n_maps=%d loops=%d pthreads=%d expect:STATIC=%d DECLARE=%d ?tids=%d)\n\
+Analyzing trace_buffer... (n_maps=%d tlogs_per=$opt_tlogs_per loops=%d pthreads=%d expect:STATIC=%d DECLARE=%d ?tids=%d)\n\
 " $num_maps $loops $parallel_threads $expect_static $expect_declare $check_tids
 
         if [ -n "$do_trace_active" -a -f "${TRACE_FILE-}" ];then

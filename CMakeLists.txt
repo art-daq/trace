@@ -177,9 +177,7 @@ endif()
 
 # The include directory (aka the core of TRACE)
 FILE(COPY include DESTINATION . PATTERN ".svn" EXCLUDE)
-if (TRACE_INSTALL_SOURCE_TREE)
-  install(DIRECTORY include DESTINATION ${TRACE_SOURCE_INSTALL_DIR} PATTERN ".svn" EXCLUDE)
-endif()
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} PATTERN ".svn" EXCLUDE)
 
 # The python directory (aka the core of TRACE)
 add_subdirectory(python)

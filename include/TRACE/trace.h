@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
-#	define TRACE_REV "$Revision: 1767 $$Date: 2026-08-13 13:54:10 -0500 (Thu, 13 Aug 2026) $"
+#	define TRACE_REV "$Revision: 1769 $$Date: 2026-08-13 14:36:21 -0500 (Thu, 13 Aug 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1767 $_$Date: 2026-08-13 13:54:10 -0500 (Thu, 13 Aug 2026) $
+#define TRACE_REVx $_$Revision: 1769 $_$Date: 2026-08-13 14:36:21 -0500 (Thu, 13 Aug 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -392,7 +392,7 @@ static inline int trace_getcpu(void) { return 0; }
 #			else /* assume __linux__ */
 #				define TRACE_GETTID __NR_gettid
 #				include <sched.h> /* sched_getcpu - does vsyscall getcpu */
-#   			if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 6))
+#				if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 6))
 static inline int trace_getcpu(void) { return sched_getcpu(); }
 #				else
 #					warning "Old glibc - no sched_getcpu() ((newer) Linux might have syscall?)"
@@ -457,7 +457,7 @@ static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			define TRACE_ATOMIC_LOAD(ptr)       *(ptr)
 #			define TRACE_ATOMIC_STORE(ptr, val) *(ptr)= val
 #			define TRACE_THREAD_LOCAL
-#           warning "THIS COMPILER DOES NOT (FULLY) SUPPORT THREAD LOCAL STORAGE"
+#			warning "THIS COMPILER DOES NOT (FULLY) SUPPORT THREAD LOCAL STORAGE"
 static inline uint32_t cmpxchg(uint32_t *ptr, uint32_t old, uint32_t new_)
 {
 	uint32_t __ret;

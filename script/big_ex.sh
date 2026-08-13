@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1767 $$Date: 2026-08-13 13:54:10 -0500 (Thu, 13 Aug 2026) $'
+ # rev='$Revision: 1768 $$Date: 2026-08-13 14:15:36 -0500 (Thu, 13 Aug 2026) $'
 set -u
 opt_gxx=g++
 opt_depth=30
@@ -31,7 +31,7 @@ USAGE="\
    usage: `basename $0` <dir>
 examples: `basename $0` ./big_ex.d
           `basename $0` ./big_ex.d -O3
-          `basename $0` ./big_ex.d --no-define --no-declare # The \"default\" for #include \"trace.h\";use compiler default c++ std
+          `basename $0` ./big_ex.d --no-define --no-declare # The \"default\" for #include \"trace.h\"
           `basename $0` ./big_ex.d --std=  # use compiler default c++ std
           `basename $0` ./big_ex.d -DTRACE_STATIC -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x1' --check-numents=16000000
           `basename $0` ./big_ex.d -d200 --mapcheck=2 --check-opts='-l1000 -t75 -x3' --check-numents=16000000
@@ -73,6 +73,7 @@ NOTE: if \$TRACE_FILE exists, it will be removed and recreated.
 --gdb            run big_ex_main under gdb (stdout/err still to big_ex_main.out)
 --kernel         run big_ex_main with TRACE_FILE=/proc/trace/buffer trace_cntl modeM 1 before and
                  modeM 0 after if /proc/trace/buffer exists. Kernel levels and show are left to user.
+                 Suggest: TRACE_FILE=/proc/trace/buffer tonM -ntrace_ DEBUG+19-DEBUG+23
 
 Options passed to the program to be checked:
 -n<TRACE_NAME>

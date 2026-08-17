@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
-#	define TRACE_REV "$Revision: 1759 $$Date: 2026-07-14 13:13:07 -0500 (Tue, 14 Jul 2026) $"
+#	define TRACE_REV "$Revision: 1769 $$Date: 2026-08-13 14:36:21 -0500 (Thu, 13 Aug 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1759 $_$Date: 2026-07-14 13:13:07 -0500 (Tue, 14 Jul 2026) $
+#define TRACE_REVx $_$Revision: 1769 $_$Date: 2026-08-13 14:36:21 -0500 (Thu, 13 Aug 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -392,7 +392,12 @@ static inline int trace_getcpu(void) { return 0; }
 #			else /* assume __linux__ */
 #				define TRACE_GETTID __NR_gettid
 #				include <sched.h> /* sched_getcpu - does vsyscall getcpu */
+#				if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 6))
 static inline int trace_getcpu(void) { return sched_getcpu(); }
+#				else
+#					warning "Old glibc - no sched_getcpu() ((newer) Linux might have syscall?)"
+static inline int trace_getcpu(void) { return 0; } /* really old glibc :( */
+#				endif
 #			endif
 static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)) || (defined(__cplusplus) && (__cplusplus >= 201103L))
@@ -452,6 +457,7 @@ static inline pid_t trace_gettid(void) { return (pid_t)syscall(TRACE_GETTID); }
 #			define TRACE_ATOMIC_LOAD(ptr)       *(ptr)
 #			define TRACE_ATOMIC_STORE(ptr, val) *(ptr)= val
 #			define TRACE_THREAD_LOCAL
+#			warning "THIS COMPILER DOES NOT (FULLY) SUPPORT THREAD LOCAL STORAGE"
 static inline uint32_t cmpxchg(uint32_t *ptr, uint32_t old, uint32_t new_)
 {
 	uint32_t __ret;
@@ -846,8 +852,10 @@ static inline uint64_t rdtsc(void)
 #	define TRACE_ENT_TV_FILLER
 #	ifdef __KERNEL__
 #	 define TRACE_TSC32(low) low = rdtsc()
-#	else
-//static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rdtsc\n\t": "=a" (eax), "=d" (edx)); return (uint64_t)eax | (uint64_t)edx << 32; } /*NOLINT*/
+#	elif defined(__GNUC__) && (__GNUC__ < 5) /* really old compiler */
+static inline uint64_t rdtsc(void) { uint32_t eax, edx; __asm__ __volatile__("rdtsc\n\t": "=a" (eax), "=d" (edx)); return (uint64_t)eax | (uint64_t)edx << 32; } /*NOLINT*/
+#	 define TRACE_TSC32(low) low = rdtsc()
+#   else
 #    include <x86intrin.h>
 #	 define TRACE_TSC32(low) low = _rdtsc()
 #	endif

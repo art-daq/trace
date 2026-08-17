@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1762 $$Date: 2026-08-07 13:26:04 -0500 (Fri, 07 Aug 2026) $"
+#define TRACE_CNTL_REV "$Revision: 1767 $$Date: 2026-08-13 13:54:10 -0500 (Thu, 13 Aug 2026) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -43,7 +43,7 @@ struct {
 	 "[opts] [file[:off_usec]]...   # Notes: -s invalid with multiple files; LC_NUMERIC=en_US.UTF-8 for %%'[df]"},
 	{"info", ""},
 	{"tids", ""},
-	{"memreport [--sys]", "per-TID counts of messages currently in memory by TRACE level"},
+	{"memreport [--sys] [--max-reverse-us <us>]", "per-TID counts of messages currently in memory by TRACE level (default max-reverse-us=10000)"},
 	{"cntl", ""},
 	{"mode[M|S]", ""},
 	{"getcpu <1|0>", "enable/disable system call to get cpu on ARM architecture (fast path)"},
@@ -72,7 +72,9 @@ commands:\n\
  show [opts] [file[:off_usec]]...   # Note: files... feature: -s invalid; mixed 32/64 environs not supported.\n\
  info\n\
  tids                    # show raw level bit masks for \n\
- memreport [--sys]       # show per-TID TRACE level counts of messages currently in memory\n\
+ memreport [--sys] [--max-reverse-us <us>]  # show per-TID TRACE level counts of messages currently in memory (dflt 10000)\n\
+                         # max-reverse-us should be set to a allow reporting on a buffer that is actively\n\
+                         # being written to. One of the factors to consider is the size of the buffer.\n\
  cntl <int>              # __func__ prepended to memory msg - 1=always, 0=TRACE_PRINT %%F, -1=never\n\
  mode <mode>\n\
  modeM <mode>\n\
@@ -636,7 +638,7 @@ void printEnt(const char *ospec, int opts, struct traceEntryHdr_s *myEnt_p, char
 				lcl_param_ptr+= sizeof(long);
 			} else if (params_sizes[uu].push == 12)  // i.e. i686 long double - arm and ppc do not have 12 byte (long) double
 			{
-#if defined(__arm__) || defined(__powerpc__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__powerpc__) || defined(__aarch64__) || (__GNUC__ < 4)
 				*(long double *)lcl_param_ptr= 0.0;  // __arm__: error: unable to emulate 'XC';
 #else
 				typedef _Complex float __attribute__((mode(XC))) _float80;
@@ -1687,7 +1689,7 @@ void traceInfo(int quiet)
 			   (traceControl_p->memlen != (uint32_t)memlen) ? "not for mmap" : "", TRACE_DFLT_TIME_FMT, DFLT_SHOW, TRACE_PRINT__);
 } /* traceInfo */
 
-void traceMemReport(int do_heading, int use_sys_levels)
+void traceMemReport(int do_heading, int use_sys_levels, int32_t max_reverse_us)
 {
 	uint32_t wrCopy= TRACE_ATOMIC_LOAD(&traceControl_rwp->wrIdxCnt);
 	uint32_t num_entries= traceControl_p->num_entries;
@@ -1720,7 +1722,7 @@ void traceMemReport(int do_heading, int use_sys_levels)
 		uint32_t rdIdx= TRACE_IDXCNT_ADD(wrCopy, -1);
 		struct timeval prev_tv;
 		int have_prev= 0;
-		const int32_t forward_jump_tol_us= 200;
+		const int32_t forward_jump_tol_us= max_reverse_us;
 
 		for (ii= 0; ii < used; ++ii) {
 			struct traceEntryHdr_s *ent_p= idxCnt2entPtr(rdIdx);
@@ -1811,11 +1813,15 @@ int main(int argc, char *argv[])
 {
 	int ret= 0;
 	const char *cmd;
-	static const struct option long_options[]= {{"sys", no_argument, 0, 1000}, {0, 0, 0, 0}};
+	static const struct option long_options[]= {
+		{"sys", no_argument, 0, 1000},
+		{"max-reverse-us", required_argument, 0, 1001},
+		{0, 0, 0, 0}};
 	extern char *optarg; /* for getopt */
 	extern int optind;   /* for getopt */
 	int opt;             /* for how I use getopt */
 	int opt_memreport_sys= 0;
+	int32_t opt_memreport_max_reverse_us= 10000;
 	int do_heading= 1;
 	int show_opts= 0;
 	int ii= 0;
@@ -1837,6 +1843,16 @@ int main(int argc, char *argv[])
 	while ((opt= getopt_long(argc, argv, "?hab:c:d:Ff:HL:l:N:n:qs:tVx:", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 1000: opt_memreport_sys= 1; break;
+		case 1001: {
+			char *endp= NULL;
+			unsigned long tmp= strtoul(optarg, &endp, 0);
+			if (optarg[0] == '\0' || endp == optarg || *endp != '\0' || tmp > INT32_MAX) {
+				fprintf(stderr, "invalid --max-reverse-us value: %s\n", optarg);
+				exit(1);
+			}
+			opt_memreport_max_reverse_us= (int32_t)tmp;
+			break;
+		}
 		/*   '?' is also what you get w/ "invalid option -- -"   */
 		case '?':
 		case 'h':
@@ -2337,9 +2353,36 @@ int main(int argc, char *argv[])
 		}
 	} else if (strcmp(cmd, "memreport") == 0) {
 		int use_sys_levels= opt_memreport_sys;
+		int32_t max_reverse_us= opt_memreport_max_reverse_us;
 		/* Re-scan trailing args for memreport-specific options and reject unexpected leftovers. */
 		for (ii= optind; ii < argc; ++ii) {
 			if (strcmp(argv[ii], "--sys") == 0) use_sys_levels= 1;
+			else if (strncmp(argv[ii], "--max-reverse-us=", 17) == 0) {
+				char *endp= NULL;
+				unsigned long tmp= strtoul(argv[ii] + 17, &endp, 0);
+				if (argv[ii][17] == '\0' || endp == (argv[ii] + 17) || *endp != '\0' || tmp > INT32_MAX) {
+					fprintf(stderr, "memreport: invalid --max-reverse-us value: %s\n", argv[ii] + 17);
+					ret= 1;
+					goto done;
+				}
+				max_reverse_us= (int32_t)tmp;
+			} else if (strcmp(argv[ii], "--max-reverse-us") == 0) {
+				char *endp= NULL;
+				unsigned long tmp;
+				if ((ii + 1) >= argc) {
+					fprintf(stderr, "memreport: missing argument for --max-reverse-us\n");
+					ret= 1;
+					goto done;
+				}
+				tmp= strtoul(argv[ii + 1], &endp, 0);
+				if (argv[ii + 1][0] == '\0' || endp == argv[ii + 1] || *endp != '\0' || tmp > INT32_MAX) {
+					fprintf(stderr, "memreport: invalid --max-reverse-us value: %s\n", argv[ii + 1]);
+					ret= 1;
+					goto done;
+				}
+				max_reverse_us= (int32_t)tmp;
+				++ii;
+			}
 			else {
 				fprintf(stderr, "memreport: unknown option: %s\n", argv[ii]);
 				ret= 1;
@@ -2347,7 +2390,7 @@ int main(int argc, char *argv[])
 			}
 		}
 		traceInit("_TRACE_", 1);
-		traceMemReport(do_heading, use_sys_levels);
+		traceMemReport(do_heading, use_sys_levels, max_reverse_us);
 	} else if (strcmp(cmd, "unlock") == 0) {
 		traceInit(NULL, 0);
 		trace_unlock(&traceControl_rwp->namelock);

@@ -95,6 +95,13 @@ ${OUT}example_main: ${OUT}example_main.o ${OUT}example_sub1.o ${OUT}example_sub2
 ${OUT}just:         ${OUT}just.o         ${OUT}example_sub_.o
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< ${OUT}example_sub_.o
 
+${OUT}trace_coroutine: ${OUT}trace_coroutine.o ${OUT}libtrace_coroutine_aux.so
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -o $@ $< ${OUT}libtrace_coroutine_aux.so
+
+${OUT}libtrace_coroutine_aux.so: trace_coroutine_aux.cxx
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -fPIC -shared -o $@ $<
+
+
 ifneq ($(executables),)
 -include ${out_deps}
 endif

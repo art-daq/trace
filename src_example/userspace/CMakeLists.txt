@@ -54,4 +54,16 @@ target_link_libraries(basic_c PRIVATE TRACE::TRACE)
 
 add_executable(no_trace no_trace.cc)
 
+if ("cxx_std_20" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    add_library(trace_coroutine_aux SHARED trace_coroutine_aux.cxx)
+    target_compile_features(trace_coroutine_aux PRIVATE cxx_std_20)
+    target_link_libraries(trace_coroutine_aux PRIVATE TRACE::TRACE)
+
+    add_executable(trace_coroutine trace_coroutine.cc)
+    target_compile_features(trace_coroutine PRIVATE cxx_std_20)
+    target_link_libraries(trace_coroutine PRIVATE TRACE::TRACE trace_coroutine_aux)
+else()
+    message(WARNING "trace_coroutine example not built due to lack of compiler support for C++20 coroutines.")
+endif()
+
 #install_source() # handled elsewhere

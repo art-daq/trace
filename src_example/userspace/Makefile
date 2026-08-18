@@ -3,8 +3,8 @@
 #  or COPYING file. If you do not have such a file, one can be obtained by
 #  contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 #  $RCSfile: Makefile,v $
-#  $Revision: 1672 $
-#  $Date: 2024-03-21 18:20:52 -0500 (Thu, 21 Mar 2024) $
+#  $Revision: 1770 $
+#  $Date: 2026-08-18 13:15:39 -0500 (Tue, 18 Aug 2026) $
 
 # ref. work/cswing/source/Makefile
 #      work/d0unix/Makefile

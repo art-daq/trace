@@ -9,7 +9,7 @@
 cmake_minimum_required (VERSION 3.11)
 
 find_package(cetmodules 3.01.00)
-project(TRACE VERSION 3.25.00)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
+project(TRACE VERSION 3.26.00)    # See https://github.com/art-daq/trace/wiki/Making-a-TRACE-release-package
 if (${cetmodules_FOUND})
   MESSAGE(STATUS "Found cetmodules.")
   set(CET_EXPORT EXPORT)

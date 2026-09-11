@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
-#	define TRACE_REV "$Revision: 1769 $$Date: 2026-08-13 14:36:21 -0500 (Thu, 13 Aug 2026) $"
+#	define TRACE_REV "$Revision: 1774 $$Date: 2026-09-11 11:19:19 -0500 (Fri, 11 Sep 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1769 $_$Date: 2026-08-13 14:36:21 -0500 (Thu, 13 Aug 2026) $
+#define TRACE_REVx $_$Revision: 1774 $_$Date: 2026-09-11 11:19:19 -0500 (Fri, 11 Sep 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1067,8 +1067,11 @@ struct trace_vtrace_cntl_s {
 #		define TRACE_DECL(var_type, var_name, arrDim, initializer) static var_type var_name arrDim initializer
 #	endif
 
-/*#define TRACE_THREAD_LOCALX TRACE_THREAD_LOCAL    * use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
-#	define TRACE_THREAD_LOCALX
+#	ifdef TRACE_FILE_PER_THREAD
+#		define TRACE_THREAD_LOCALX TRACE_THREAD_LOCAL    /* use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
+#	else
+#		define TRACE_THREAD_LOCALX
+#	endif
 
 TRACE_DECL(struct traceControl_s,
 		   traceControl, [3], ); /* for when TRACE is disabled. NOTE: traceLvls_p should always point to traceControl_p+1 */
@@ -1121,6 +1124,11 @@ TRACE_DECL(uint32_t, traceInitLck_hung_max, , = 0);
 TRACE_DECL(const char *, traceTimeFmt, , = NULL); /* hardcoded default below that can only be overridden via env.var */
 static char traceFile_static[PATH_MAX]= {0};
 static struct traceControl_s *traceControl_p_static= NULL;
+static struct traceControl_rw *traceControl_rwp_static= NULL;
+static struct traceLvls_s *traceLvls_p_static= NULL;
+static char *traceNams_p_static= NULL;
+static struct traceEntryHdr_s *traceEntries_p_static= NULL;
+
 #	endif
 /*--------------------------------------------------------------------------*/
 
@@ -3551,6 +3559,10 @@ static int traceInit(const char *_name, int allow_ro)
 			memlen= (int)traceMemLen(TRACE_cntlPagesSiz(), namtblents_, nammax_, msgmax_, argsmax_, numents_);
 			if ((traceControl_p_static != NULL) && (strcmp(traceFile_static, _file) == 0)) {
 				traceControl_p= traceControl_p_static;
+				traceControl_rwp= traceControl_rwp_static;
+				traceLvls_p= traceLvls_p_static;
+				traceNams_p= traceNams_p_static;
+				traceEntries_p= traceEntries_p_static;
 			} else {
 				trace_mmap_file(_file, &memlen, &traceControl_p, &traceControl_rwp, msgmax_, argsmax_, numents_, namtblents_,
 								nammax_, allow_ro);
@@ -3573,6 +3585,10 @@ static int traceInit(const char *_name, int allow_ro)
 			if (traceControl_p_static == NULL) {
 				strcpy(traceFile_static, _file);  //NOLINT
 				traceControl_p_static= traceControl_p;
+				traceControl_rwp_static= traceControl_rwp;
+				traceLvls_p_static= traceLvls_p;
+				traceNams_p_static= traceNams_p;
+				traceEntries_p_static= traceEntries_p;
 			}
 		}
 	}  // (traceControl_p == NULL) -- once per process

@@ -4,7 +4,7 @@
  # or COPYING file. If you do not have such a file, one can be obtained by
  # contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  # $RCSfile: big_ex.sh,v $
- # rev='$Revision: 1768 $$Date: 2026-08-13 14:15:36 -0500 (Thu, 13 Aug 2026) $'
+ # rev='$Revision: 1773 $$Date: 2026-09-09 13:40:06 -0500 (Wed, 09 Sep 2026) $'
 set -u
 opt_gxx=g++
 opt_depth=30
@@ -572,7 +572,7 @@ if [ "${do_mapcheck-0}" -gt 0 ];then
             sts=$?
         else
             turn_kernel_off=
-            if [ -n "$opt_kernel" -a "$TRACE_FILE" \!= /proc/trace/buffer -a -f /proc/trace/buffer ];then
+            if [ -n "$opt_kernel" -a "${TRACE_FILE-}" \!= /proc/trace/buffer -a -f /proc/trace/buffer ];then
                 turn_kernel_off=1
                 TRACE_FILE=/proc/trace/buffer trace_cntl reset
                 TRACE_FILE=/proc/trace/buffer trace_cntl modeM 1

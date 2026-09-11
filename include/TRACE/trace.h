@@ -8,7 +8,7 @@
 #define TRACE_H
 
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
-#	define TRACE_REV "$Revision: 1774 $$Date: 2026-09-11 11:19:19 -0500 (Fri, 11 Sep 2026) $"
+#	define TRACE_REV "$Revision: 1775 $$Date: 2026-09-11 11:34:32 -0500 (Fri, 11 Sep 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -331,7 +331,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1774 $_$Date: 2026-09-11 11:19:19 -0500 (Fri, 11 Sep 2026) $
+#define TRACE_REVx $_$Revision: 1775 $_$Date: 2026-09-11 11:34:32 -0500 (Fri, 11 Sep 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,
@@ -1068,7 +1068,8 @@ struct trace_vtrace_cntl_s {
 #	endif
 
 #	ifdef TRACE_FILE_PER_THREAD
-#		define TRACE_THREAD_LOCALX TRACE_THREAD_LOCAL    /* use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
+#		define TRACE_THREAD_LOCALX \
+			TRACE_THREAD_LOCAL /* use this for separate FILE per thread -- very rare; perhaps NUMA issue??? */
 #	else
 #		define TRACE_THREAD_LOCALX
 #	endif

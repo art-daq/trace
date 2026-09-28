@@ -4,7 +4,7 @@
     contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
     $RCSfile: trace_cntl.c,v $
     */
-#define TRACE_CNTL_REV "$Revision: 1767 $$Date: 2026-08-13 13:54:10 -0500 (Thu, 13 Aug 2026) $"
+#define TRACE_CNTL_REV "$Revision: 1778 $$Date: 2026-09-27 23:42:09 -0500 (Sun, 27 Sep 2026) $"
 /*
 NOTE: This is a .c file instead of c++ mainly because C is friendlier when it
       comes to extended initializer lists.
@@ -105,7 +105,7 @@ show opts:\n\
  -s<startSlotIndex> \n\
  other options encoded in TRACE_SHOW env.var.; export LC_NUMERIC=en_US or en_US.UTF-8 of %%'[df]\n\
 tests:  (use %s show after test)\n\
- -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings\n\
+ -x<thread_options_mask>    b0=TRACE_CNTL\"file\", b1=TRACE_CNTL\"name\", b2=count mappings b3=more TRACEs\n\
  -l<loops>\n\
  -t         print timing stats to stderr\n\
 \n\
@@ -258,19 +258,21 @@ void *thread_func(void *arg)
 			  "tidx=%u loop=%d of %d tid=%d I need to test longer messages. They need to be about 256 characters - longer than the "
 			  "circular memory message buffer size. This will check for message mangling",
 			  tidx, lp, loops, tid);
-		TRACE(TLVL_INFO,
+		if (trace_thread_option & 8) { /* do more TRACEs */
+			TRACE(TLVL_INFO,
 			  "tidx=%u loop=%d of %d tid=%d this is the second long message - second0 second1 second2 second3 second4 second5 "
 			  "second6 second7 second8 second9",
 			  tidx, lp, loops, tid);
-		TRACE(TLVL_DEBUG,
+			TRACE(TLVL_DEBUG,
 			  "tidx=%u loop=%d of %d tid=%d this is the third long message - third0 third1 third2 third3 third4 third5 third6 "
 			  "third7 third8 third9",
 			  tidx, lp, loops, tid);
-		TRACE(TLVL_DBG + 1,
+			TRACE(TLVL_DBG + 1,
 			  "tidx=%u loop=%d of %d tid=%d this is the fourth long message - fourth0 fourth1 fourth2 fourth3 fourth4 fourth5 "
 			  "fourth6 fourth7 fourth8 fourth9",
 			  tidx, lp, loops, tid);
-		TRACEN(tmp, TLVL_DBG + 2, "tidx=%u loop=%d of %d tid=%d - extra, if enabled", tidx, lp, loops, tid);
+			TRACEN(tmp, TLVL_DBG + 2, "tidx=%u loop=%d of %d tid=%d - extra, if enabled", tidx, lp, loops, tid);
+		}
 		if (dly_ms && (lp % burst) == 0) usleep(dly_ms * 1000);
 	}
 	if (argsp->tidx) pthread_exit(NULL);
@@ -2247,6 +2249,26 @@ int main(int argc, char *argv[])
 				delta= (uint32_t)(gettimeofday_us() - mark);
 				fprintf(stderr, END_FMT);
 			}
+#ifdef DO_THREADS /* requires linking with -lpthreads */
+			if (0x100 & test_mask) {
+				pthread_t thread;
+				args_t argsp[1];
+				argsp[0].loops= 1;
+				argsp[0].dly_ms= 0;
+				argsp[0].burst= 0;
+				loops /= 100; /* OK to do if last test */
+				STRT_PRN(" 0x100 - %swith loops=%u thread", "", loops);
+				if (tstmod & 6) { TRACE_CNTL("reset"); }
+				mark= gettimeofday_us();
+				for (uu= 0; uu < loops; ++uu) {
+					argsp[0].tidx= uu;
+					pthread_create(&thread, NULL, thread_func, (void *)&argsp[0]);
+					pthread_join(thread, NULL);
+				}
+				delta= (uint32_t)(gettimeofday_us() - mark);
+				fprintf(stderr, END_FMT);
+			}
+#endif
 		}
 	}
 #ifdef DO_THREADS /* requires linking with -lpthreads */

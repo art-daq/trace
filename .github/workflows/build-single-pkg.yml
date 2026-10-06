@@ -20,4 +20,6 @@ jobs:
 
   build_single_pkg:
     name: build single pkg
-    uses: art-daq/.github/.github/workflows/artdaq-build-single-pkg.yml@stable
+    uses: art-daq/.github/.github/workflows/build-single-pkg.yml@stable
+    with:
+      otsdaq-mode: false

@@ -1,4 +1,4 @@
-name: Tidy Single Pkg Workflow
+name: Format Single Pkg Workflow
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ on:
 jobs:
 
   build_single_pkg:
-    name: tidy single pkg
-    uses: art-daq/.github/.github/workflows/artdaq-tidy-single-pkg.yml@stable
+    name: format single pkg
+    uses: art-daq/.github/.github/workflows/format-single-pkg.yml@stable
     with:
       against-ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || 0 }}

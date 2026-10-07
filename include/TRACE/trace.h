@@ -7,6 +7,7 @@
 #ifndef TRACE_H
 #define TRACE_H
 
+// NOLINTBEGIN // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: Suppress clang-tidy warnings for this header file
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__) /* Allow inclusion into CUDA file (including .cu files) and ROOT parse */
 #	define TRACE_REV "$Revision: 1781 $$Date: 2026-09-28 10:31:03 -0500 (Mon, 28 Sep 2026) $"
 
@@ -4980,4 +4981,5 @@ TraceGuard<Fun> operator+(TraceGuardOnExit, Fun &&fn)
 #	define TTESTH(lvl)      0
 #endif /* !defined(__CUDA_ARCH__) */
 
+// NOLINTEND // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: End suppression of clang-tidy warnings for this header file
 #endif /* TRACE_H */

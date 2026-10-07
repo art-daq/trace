@@ -13,6 +13,7 @@
 #ifndef TRACEMF_H
 #define TRACEMF_H
 
+// NOLINTBEGIN // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: Suppress clang-tidy warnings for this header file
 #ifdef __cplusplus
 
 // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
@@ -157,6 +158,6 @@ inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)
 	if (x.do_s || x.do_m) x.msg_append(r.what());
 	return x;
 }
-
+// NOLINTEND // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: End suppression of clang-tidy warnings for this header file
 #endif /* __cplusplus */
 #endif /* TRACEMF_H */

@@ -5,7 +5,7 @@
 // $RCSfile: .emacs.gnu,v $
 // rev="$Revision: 1.39 $$Date: 2026/08/27 18:49:57 $";
 
-#include <stdio.h>  // printf
+#include <cstdio>  // printf
 #include <TRACE/trace.h>
 
 int main(void)

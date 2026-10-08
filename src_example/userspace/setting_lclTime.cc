@@ -10,8 +10,8 @@
 
 #include <TRACE/trace.h>  // TRACE, TLOG
 
-#include <cstdio>        // printf
-#include <sys/time.h>     // gettimeofday, struct timeval
+#include <cstdio>      // printf
+#include <sys/time.h>  // gettimeofday, struct timeval
 
 int main(/*int argc, char *argv[]*/)
 {
@@ -24,7 +24,7 @@ int main(/*int argc, char *argv[]*/)
 
 #if 1
 	// need extra shenanigans (tvp) to avoid: warning: operation on '_trc_.main(int, char**)::_T_::tv' may be undefined [-Wsequence-point]
-	struct timeval *tvp = nullptr;
+	struct timeval *tvp= nullptr;
 	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp= &_trc_.tv)= programStart, programStart.tv_usec);
 #else
 	TLOG(1) << "TLOG  programStart usecs=" << (_trc_.tv= programStart, programStart.tv_usec);

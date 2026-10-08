@@ -29,11 +29,11 @@ ron@mu2edaq01 :^) treset; ptr_address_string
 
 #include "TRACE/trace.h"  // TRACE
 
-#include <stdio.h>        // printf
-#include <stdlib.h>       // malloc
-#include <string.h>       // rindex
-#include <memory>         // std::unique_ptr
-#include <vector>         // std::vector
+#include <stdio.h>   // printf
+#include <stdlib.h>  // malloc
+#include <string.h>  // rindex
+#include <memory>    // std::unique_ptr
+#include <vector>    // std::vector
 
 #if __cplusplus >= 201103L
 #	define TRACE_NAME                                    \

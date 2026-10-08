@@ -9,7 +9,7 @@
   Or an example of prepending something else to the message.
   Now can be used to compare auto prepend (run once with and then again without auto-prepend)
  */
- // NOLINTGBEGIN
+// NOLINTGBEGIN
 #define USAGE \
 	"\
 Usage: %s [-l<loops>] [-m<mask>] [-r<repeat>]\n\
@@ -85,9 +85,9 @@ int main(int argc, char *argv[])
 			printf(USAGE);
 			exit(0);
 			break;
-		case 'l': opt_loops= (int)strtoul(optarg, NULL, 0); break; // NOLINT C compat
-		case 'm': opt_mask= (int)strtoul(optarg, NULL, 0); break; // NOLINT C compat
-		case 'r': opt_repeat= (int)strtoul(optarg, NULL, 0); break;// NOLINT C compat
+		case 'l': opt_loops= (int)strtoul(optarg, NULL, 0); break;   // NOLINT C compat
+		case 'm': opt_mask= (int)strtoul(optarg, NULL, 0); break;    // NOLINT C compat
+		case 'r': opt_repeat= (int)strtoul(optarg, NULL, 0); break;  // NOLINT C compat
 		}
 	}
 	TLOG(TLVL_INFO) << "first TLOG does traceInit";

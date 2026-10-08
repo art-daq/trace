@@ -604,9 +604,10 @@ typedef struct timeval trace_tv_t;
 
 // Maximum UDP Datagram Data Length
 #	ifndef TRACE_STREAMER_MSGMAX  // allow test program to try different values
-#		define TRACE_STREAMER_MSGMAX                                    \
-			0x2000  // 0x3400 seems to work for artdaq, 0x3800 does not. \
-					// 65507 is way too much for when TraceStreamer is static thread_local
+
+// 0x3400 seems to work for artdaq, 0x3800 does not.
+// 65507 is way too much for when TraceStreamer is static thread_local
+#		define TRACE_STREAMER_MSGMAX 0x2000
 #	endif
 #	ifndef TRACE_USER_MSGMAX  // allow test program to try different values
 #		define TRACE_USER_MSGMAX 0x1800
@@ -614,29 +615,31 @@ typedef struct timeval trace_tv_t;
 // 88,7=192 bytes/ent   96,6=192   128,10=256  192,10=320
 #	define TRACE_DFLT_MAX_MSG_SZ 192
 #	define TRACE_DFLT_MAX_PARAMS 10
-#	define TRACE_DFLT_NAMTBL_ENTS                                                 \
-		1022  // this is for creating new trace_buffer file -- it currently <= the \
-			  // "trace DISABLED" number that fits into traceControl[1-2] (see below)
-#	define TRACE_DFLT_NAM_CHR_MAX                                                         \
-		63  // Really the hardcoded max name len. Name buffers should be +1 (for null      \
-			// terminator). See: env -i ${TRACE_BIN}/trace_cntl info | grep namLvlTbl_ents \
-			// with "trace DISBALED". Search for trace_created_init(...) call in "DISABLE" case.
-// Names can have this many characters (and always be null terminated - so names can be printed from nam tbl)
 
-#	define TRACE_TN_BUFSZ                                                                \
-		128  // hardcoded size of buffer used for creating "trace name." I've arbitrarily \
-			 // imposed that this should/must be a multiple of 8. If 2048 is used (uber   \
-			 // ridiculous number as I think 128 is ridiculous), a module build warning occurs:
+// this is for creating new trace_buffer file -- it currently <= the
+// "trace DISABLED" number that fits into traceControl[1-2] (see below)
+#	define TRACE_DFLT_NAMTBL_ENTS 1022
+
+// Really the hardcoded max name len. Name buffers should be +1 (for null
+// terminator). See: env -i ${TRACE_BIN}/trace_cntl info | grep namLvlTbl_ents
+// with "trace DISBALED". Search for trace_created_init(...) call in "DISABLE" case.
+// Names can have this many characters (and always be null terminated - so names can be printed from nam tbl)
+#	define TRACE_DFLT_NAM_CHR_MAX 63
+
+// hardcoded size of buffer used for creating "trace name." I've arbitrarily
+// imposed that this should/must be a multiple of 8. If 2048 is used (uber
+// ridiculous number as I think 128 is ridiculous), a module build warning occurs:
 //                     warning: the frame size of 2080 bytes is larger than 2048 bytes [-Wframe-larger-than=]
+#	define TRACE_TN_BUFSZ 128
 
 #	define TRACE_DFLT_NUM_ENTRIES 500000
 #	define TRACE_DFLT_TIME_FMT    "%m-%d %H:%M:%S.%%06d"  // match default in trace_delta
 #	ifndef TRACE_DFLT_NAME
 #		define TRACE_DFLT_NAME "%f %H"
 #	endif
-#	define TRACE_DFLT_LVLS                                                                                         \
-		((1ULL << (TLVL_DEBUG + 0)) - 1)                      // non-debug for slow path -- NOT ERS COMPAT (ERS has \
-															  // DEBUG_0 enabled by default, but I think "debug is debug")
+
+// non-debug for slow path -- NOT ERS COMPAT (ERS has DEBUG_0 enabled by default, but I think "debug is debug")
+#	define TRACE_DFLT_LVLS ((1ULL << (TLVL_DEBUG + 0)) - 1)
 #	define TRACE_DFLT_LVLM ((1ULL << (TLVL_DEBUG + 1)) - 1)  // first lvl of debug and below on for fast/mem path
 
 #	if !defined(TRACE_NAME)

@@ -99,12 +99,12 @@ static void vmftrace_user(struct timeval*, int TID, uint8_t lvl, const char* ins
 	}
 	// could/should check for \n at end of msg, but this implementation is not that important
 	if (nargs) {
-		vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap); // NOLINT
+		vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);  // NOLINT
 	} else {
 		/* don't do any parsing for format specifiers in the msg -- tshow will
 		 also know to do this on the memory side of things because nargs is
 		 stored in memory trace buffer. */
-		strncpy(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - 1 - printed : 0, msg); // NOLINT
+		strncpy(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - 1 - printed : 0, msg);  // NOLINT
 		obuf[sizeof(obuf) - 1]= '\0';
 	}
 
@@ -142,8 +142,8 @@ struct TraceStreamer : std::ios {
 	union arg {
 		int i;
 		double d;
-		long unsigned int u; // NOLINT
-		long int l; // NOLINT
+		long unsigned int u;  // NOLINT
+		long int l;           // NOLINT
 		void* p;
 	};
 
@@ -165,7 +165,7 @@ public:
 	{
 		msg.reserve(TRACE_STREAMER_MSGMAX);
 #	if TRACE_STREAMER_DEBUG
-		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl; // NOLINT
+		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl;  // NOLINT
 #	endif
 	}
 
@@ -188,7 +188,7 @@ public:
 	inline void str()
 	{
 #	if TRACE_STREAMER_DEBUG
-		std::cout << "Message is " << msg << std::endl; // NOLINT
+		std::cout << "Message is " << msg << std::endl;  // NOLINT
 #	endif
 		//call_trace(args, argCount);
 		struct timeval lclTime;
@@ -301,7 +301,7 @@ public:
 		return *this;
 	}
 
-	inline TraceStreamer& operator<<(const long int& r) // NOLINT
+	inline TraceStreamer& operator<<(const long int& r)  // NOLINT
 	{
 		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) {
 			format(false, false, "l", _M_flags);
@@ -321,7 +321,7 @@ public:
 		return *this;
 	}
 
-	inline TraceStreamer& operator<<(const long unsigned int& r) // NOLINT
+	inline TraceStreamer& operator<<(const long unsigned int& r)  // NOLINT
 	{
 		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) {
 			format(false, true, "l", _M_flags);
@@ -362,7 +362,9 @@ public:
 	inline TraceStreamer& operator<<(const TraceStreamer& r)
 	{
 		if (enabled) {
-			for (size_t ii= argCount; ii < (argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX); ++ii) {
+			for (size_t ii= argCount;
+				 ii < (argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX);
+				 ++ii) {  // NOLINT
 				args[ii]= r.args[ii - argCount];
 			}
 			argCount= argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX;
@@ -424,7 +426,7 @@ inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception y)
 	if (x.enabled) { x.msg+= y.what(); }
 	return x;
 }
-inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<unsigned long> const& a) // NOLINT
+inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<unsigned long> const& a)  // NOLINT
 {
 	if (x.enabled) {
 		x.format(false, true, "l", x.flags());
@@ -433,7 +435,7 @@ inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<unsigned long> co
 	}
 	return x;
 }
-inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<short int> const& a) // NOLINT
+inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<short int> const& a)  // NOLINT
 {
 	if (x.enabled) {
 		x.format(false, false, "h", x.flags());

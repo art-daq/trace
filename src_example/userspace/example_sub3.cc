@@ -6,14 +6,14 @@
 // rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
 #include "TRACE/trace.h"
-#include <libgen.h>  // basename
-#define TRACE_NAME basename((char *)__FILE__) // NOLINT
+#include <libgen.h>                            // basename
+#define TRACE_NAME basename((char *)__FILE__)  // NOLINT
 
 void example_sub4(void);
 
 void example_sub3(void)
 {
-	int mode= (int)TRACE_CNTL("mode"); // NOLINT
+	int mode= (int)TRACE_CNTL("mode");  // NOLINT
 	TRACE(2, "hello from example_sub3 mode=%d before calling sub4", mode);
 	example_sub4();
 	TLOG(2, TRACE_NAME) << "hello from example_sub3 after  calling sub4";

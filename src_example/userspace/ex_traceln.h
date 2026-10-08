@@ -10,8 +10,8 @@
 
 #include "TRACE/traceln.h"
 
-#include <stdio.h>  // printf
-#define HDRNAME &std::string(__FILE__).substr(std::string(__FILE__).rfind('/') + 1)[0] // NOLINT
+#include <stdio.h>                                                                      // printf
+#define HDRNAME &std::string(__FILE__).substr(std::string(__FILE__).rfind('/') + 1)[0]  // NOLINT
 
 class ExTraceLn {
 public:

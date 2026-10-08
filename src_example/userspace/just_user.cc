@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 	} else if (strcmp(opt_test, "C") == 0) {
 		while (opt_loops--) { TRACE(0, "this is an int: %d", 55); }
 #if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L
-    } else if (strcmp(opt_test, "S") == 0) {
+	} else if (strcmp(opt_test, "S") == 0) {
 		while (opt_loops--) {
 			TRACE(0,
 				  "this is an int: " +

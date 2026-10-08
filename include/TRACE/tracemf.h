@@ -1,17 +1,17 @@
-/* This file (tracemf.h) was created by Ron Rechenmacher <ron@fnal.gov> on
- // Apr 18, 2014. "TERMS AND CONDITIONS" governing this file are in the README
- // or COPYING file. If you do not have such a file, one can be obtained by
- // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
- // $RCSfile: tracemf.hh,v $
- // rev="$Revision: 1733 $$Date: 2026-02-23 11:48:20 -0600 (Mon, 23 Feb 2026) $";
- */
+// This file (tracemf.h) was created by Ron Rechenmacher <ron@fnal.gov> on
+// Apr 18, 2014. "TERMS AND CONDITIONS" governing this file are in the README
+// or COPYING file. If you do not have such a file, one can be obtained by
+// contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
+// $RCSfile: tracemf.hh,v $
+// rev="$Revision: 1733 $$Date: 2026-02-23 11:48:20 -0600 (Mon, 23 Feb 2026) $";
+
 /**
   * \file tracemf.h
   * Defines TRACE macros which send "slow" traces to MessageFacility
   *
   */
-#ifndef TRACEMF_H
-#define TRACEMF_H
+#ifndef TRACE_INCLUDE_TRACE_TRACEMF_H_
+#define TRACE_INCLUDE_TRACE_TRACEMF_H_
 
 // NOLINTBEGIN // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: Suppress clang-tidy warnings for this header file
 #ifdef __cplusplus
@@ -35,8 +35,8 @@
 #	endif
 #	define TSTREAMER_SL_FRC(lvl)                         \
 		((lvl <= static_cast<int>(TRACEMF_SL_FRC_LVL)) || \
-		 ((lvl <= static_cast<int>(TLVL_DEBUG)) && DEBUG_FORCED)) /* in these cases, only mf config/thresh rules */
-#	include "TRACE/trace.h"                                      /* TRACE */
+		 ((lvl <= static_cast<int>(TLVL_DEBUG)) && DEBUG_FORCED))  // in these cases, only mf config/thresh rules
+#	include "TRACE/trace.h"                                       // TRACE
 
 #	include "messagefacility/MessageLogger/MessageLogger.h"  // LOG_DEBUG
 #	include "cetlib_except/exception.h"                      // cet::exception
@@ -62,7 +62,7 @@ vmftrace_user(struct timeval*, int TID, uint8_t lvl, const char* insert, const c
 	char obuf[TRACE_USER_MSGMAX];
 
 	if ((insert && (printed= strlen(insert))) || nargs) {
-		/* check insert 1st to make sure printed is set */
+		// check insert 1st to make sure printed is set
 		// assume insert is smaller than obuf
 		if (printed) {
 			retval= snprintf(obuf, sizeof(obuf), "%s ", insert);
@@ -150,7 +150,7 @@ static void mftrace_user(struct timeval* tvp, int TID, uint8_t lvl, const char* 
 		vtrace_user(tvp, TID, lvl, insert, file, line, function, nargs, &msg[0], ap);  // vtrace_user does not use file, line
 	}
 	va_end(ap);
-} /* trace */
+}  // trace
 #	pragma GCC diagnostic pop
 
 inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)
@@ -159,5 +159,5 @@ inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception r)
 	return x;
 }
 // NOLINTEND // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: End suppression of clang-tidy warnings for this header file
-#endif /* __cplusplus */
-#endif /* TRACEMF_H */
+#endif  // __cplusplus
+#endif  // TRACE_INCLUDE_TRACE_TRACEMF_H_

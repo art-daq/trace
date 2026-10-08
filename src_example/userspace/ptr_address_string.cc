@@ -27,12 +27,14 @@ ron@mu2edaq01 :^) treset; ptr_address_string
 --2019-02-28_16:42:54--
 #endif
 
+#include "TRACE/trace.h"  // TRACE
+
 #include <stdio.h>        // printf
 #include <stdlib.h>       // malloc
 #include <string.h>       // rindex
-#include "TRACE/trace.h"  // TRACE
 #include <memory>         // std::unique_ptr
 #include <vector>         // std::vector
+
 #if __cplusplus >= 201103L
 #	define TRACE_NAME                                    \
 		[](const char *path) {                            \

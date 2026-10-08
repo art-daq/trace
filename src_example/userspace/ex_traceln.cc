@@ -5,7 +5,6 @@
 // $RCSfile: .emacs.gnu,v $
 // rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
-#include <stdio.h>  // printf
 #include "ex_traceln.h"
 #include "TRACE/traceln.h"
 //#define TRACE_NAME &std::string(__FILE__).substr(std::string(__FILE__).rfind('/')+1)[0]
@@ -13,6 +12,8 @@
 #define __FIL__ "ex_traceln.cc"
 //#define TRACE_NAME (strstr(&__FIL__[0], "/srcs/") ? strstr(&__FIL__[0], "/srcs/") + 6 : __FIL__)
 //#define TRACE_NAME &std::string(__FIL__).substr(std::string(__FIL__).rfind('/',std::string(__FIL__).rfind('/')-1)+1)[0]
+
+#include <stdio.h>  // printf
 
 #define Q(X)     #X
 #define QUOTE(X) Q(X)

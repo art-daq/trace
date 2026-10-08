@@ -44,8 +44,8 @@ tests_mask:\n", \
 
 #define DFLT_TEST_COMPARE_ITERS 1000000
 
-static uint64_t gettimeofday_ns() /* 2**64 = 10**19.26592 giving 10 digits for the seconds (since 1970) */
-{                                 /* 10**10 seconds == 317 years */
+static uint64_t gettimeofday_ns()  // 2**64 = 10**19.26592 giving 10 digits for the seconds (since 1970)
+{                                  // 10**10 seconds == 317 years
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
 	return (uint64_t)(ts.tv_sec * 1000000000 + ts.tv_nsec);
@@ -65,16 +65,16 @@ int main(int argc, char *argv[])
 	uint64_t mark;
 	uint32_t delta;
 	unsigned loops= DFLT_TEST_COMPARE_ITERS;
-	unsigned tests_mask= 0xfff; /* all tests */
-	unsigned modes_mask= 0xf;   /* all mode combinations */
+	unsigned tests_mask= 0xfff;  // all tests
+	unsigned modes_mask= 0xf;    // all mode combinations
 	int fd;
-	int opt, args; /* for how I use getopt */
+	int opt, args;  // for how I use getopt
 	int opt_loops= -1;
 	bool opt_normalize= false;
 
 	while ((opt= getopt(argc, argv, "?hl:n")) != -1) {
 		switch (opt) {
-			/* '?' is also what you get w/ "invalid option -- -" */
+			// '?' is also what you get w/ "invalid option -- -"
 		case '?':
 		case 'h':
 			printf(USAGE);
@@ -90,11 +90,11 @@ int main(int argc, char *argv[])
 	args= argc - optind;
 
 	if (opt_loops > -1) loops= opt_loops;
-	opt_loops= loops; /* save */
+	opt_loops= loops;  // save
 
 	fd= open("/dev/null", O_WRONLY);
-	dup2(fd, 1);                    /* redirect stdout to /dev/null */
-	setlocale(LC_NUMERIC, "en_US"); /* make ' printf flag work -- setting LC_NUMERIC in env does not seem to work */
+	dup2(fd, 1);                     // redirect stdout to /dev/null
+	setlocale(LC_NUMERIC, "en_US");  // make ' printf flag work -- setting LC_NUMERIC in env does not seem to work
 
 	setenv("TRACE_MSGMAX", "0", 0);
 	TRACE_CNTL("mode", 3);
@@ -470,7 +470,7 @@ int main(int argc, char *argv[])
 		if (0x400 & tests_mask) {
 			STRT_PRN(" 0x400 - %s%s8 args (7 ints, 1 float) - TLOG_SCOPED(){TLOG_ADD}", "", "");
 			loops= results_a[test].loops;
-			delta= results_a[test++].delta;
+			delta= results_a[test++].delta;  // NOLINT(runtime/increment_decrement)
 			fprintf(stderr, END_FMT);
 			if (opt_normalize)
 				fprintf(stderr, " %13.3f\n", (double)loops * 1000 / delta / ((double)normal.loops * 1000 / normal.delta));

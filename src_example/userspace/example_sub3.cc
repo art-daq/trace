@@ -7,13 +7,13 @@
 
 #include "TRACE/trace.h"
 #include <libgen.h>  // basename
-#define TRACE_NAME basename((char *)__FILE__)
+#define TRACE_NAME basename((char *)__FILE__) // NOLINT
 
 void example_sub4(void);
 
 void example_sub3(void)
 {
-	int mode= (int)TRACE_CNTL("mode");
+	int mode= (int)TRACE_CNTL("mode"); // NOLINT
 	TRACE(2, "hello from example_sub3 mode=%d before calling sub4", mode);
 	example_sub4();
 	TLOG(2, TRACE_NAME) << "hello from example_sub3 after  calling sub4";

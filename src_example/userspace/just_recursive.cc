@@ -23,12 +23,14 @@ ron@mu2edaq01 :^) just_recursive
 02-06 12:17:58.697139   TRACE err Completing greeting main
 --2020-02-06_12:17:58--
 */
+#include "TRACE/trace.h"  // TRACE
+
 #include <string>
-#include "TRACE/trace.h" /* TRACE */
 
 std::string example_sub_(const char *msg, int lvl)
 {
-	if (lvl--) TLOG(TLVL_INFO) << "Completing greeting" << example_sub_("from sub", lvl) << " lvl=" << lvl << " " << msg;
+	if (lvl--) // NOLINT
+	 TLOG(TLVL_INFO) << "Completing greeting" << example_sub_("from sub", lvl) << " lvl=" << lvl << " " << msg;
 	else
 		TLOG(TLVL_INFO) << "Completing greeting " << msg;
 	return " there";
@@ -37,9 +39,9 @@ std::string example_sub_(const char *msg, int lvl)
 int main(int argc, char *argv[])
 {
 	int depth= 1;
-	if (argc == 2) depth= (int)strtoul(argv[1], 0, 0);
+	if (argc == 2) depth= (int)strtoul(argv[1], 0, 0); // NOLINT
 	TLOG(TLVL_INFO) << "hi" << example_sub_("zero", 0);
 	TLOG(TLVL_INFO) << "hi" << example_sub_("one", depth) << example_sub_("two", depth + 1);
 	example_sub_("main", 0);
 	return (0);
-} /* main */
+}  // main

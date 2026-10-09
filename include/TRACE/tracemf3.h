@@ -4,14 +4,14 @@
  // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
  // rev="$Revision: 552 $$Date: 2017-01-27 12:32:23 -0600 (Fri, 27 Jan 2017) $";
  */
-#ifndef TRACEMF3_H
-#define TRACEMF3_H
+#ifndef TRACE_INCLUDE_TRACE_TRACEMF3_H_
+#define TRACE_INCLUDE_TRACE_TRACEMF3_H_
 
 #include "messagefacility/MessageLogger/MessageLogger.h"  // LOG_DEBUG
 // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
 // The TRACE macro will then use the TRACE_MF_LOGGER macro defined below for the "slow"
 // tracing function (if appropriate mask bit is set :)
-#include "TRACE/trace.h" /* TRACE */
+#include "TRACE/trace.h"  // TRACE
 
 #include <string>
 
@@ -49,24 +49,26 @@ Fri Apr 18 11:55:38 -0500 2014: %MSG
 /* Now define a trace macro that uses the "trigger mask" as a "3rd function" mask
  */
 #undef TRACE
+// NOLINTBEGIN
 #define TRACE(lvl, ...)                                                                                                           \
 	do {                                                                                                                          \
 		if TRACE_INIT_CHECK {                                                                                                     \
 			struct timeval lclTime;                                                                                               \
 			lclTime.tv_sec= 0;                                                                                                    \
 			struct traceNamLvls_s *lvlsp= idx2namLvlsPtr(traceTID);                                                               \
-			/* 1st "function" is memory */                                                                                        \
+			/*** 1st "function" is memory   */                                                                                    \
 			if (traceControl_rwp->mode.bits.M && (lvlsp->M & TLVLMSK(lvl))) {                                                     \
 				trace(&lclTime, lvl, TRACE_NARGS(__VA_ARGS__) TRACE_XTRA_PASSED, __VA_ARGS__);                                    \
 			}                                                                                                                     \
-			/* 2nd "function" is console */                                                                                       \
+			/*** 2nd "function" is console   */                                                                                   \
 			if (traceControl_rwp->mode.bits.S && (lvlsp->S & TLVLMSK(lvl))) {                                                     \
 				if (lclTime.tv_sec == 0) gettimeofday(&lclTime, NULL);                                                            \
 				TRACE_LOG_FUNCTION(&lclTime, traceTID, lvl, "", __FILE__, __LINE__, TRACE_NARGS(__VA_ARGS__), __VA_ARGS__);       \
 			}                                                                                                                     \
-			/* 3rnd "function" is network */                                                                                      \
+			/*** 3rnd "function" is network   */                                                                                  \
 			if (traceControl_rwp->mode.words.mode & (1 << 2) && (lvlsp->T & TLVLMSK(lvl))) { TRACE_MF_LOGGER(lvl, __VA_ARGS__); } \
 		}                                                                                                                         \
 	} while (0)
+// NOLINTEND
 
-#endif /* TRACEMF3_H */
+#endif  // TRACE_INCLUDE_TRACE_TRACEMF3_H_

@@ -6,7 +6,7 @@
 */
 char const *rev= "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
-#include <stdarg.h> /* va_list */
+#include <stdarg.h>  // va_list
 #include <string>
 #include <getopt.h>  // getopt_long, {no,required,optional}_argument, extern char *optarg; extern int opt{ind,err,opt}
 #include <sstream>
@@ -17,7 +17,7 @@ char const *rev= "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan
 #include <stdlib.h>
 #include <stdint.h>  // uint16_t
 
-#if 1 /* set to 0 to test trace.h TRACE_LOG_FUNCTION */
+#if 1  // set to 0 to test trace.h TRACE_LOG_FUNCTION
 void my_log(uint16_t nargs, std::string msg, ...);
 void my_log2(timeval *, int, unsigned char, const char *, const char *, int, const char *, short unsigned int nargs,
 			 const char *msg, ...)
@@ -38,7 +38,7 @@ void my_log2(timeval *, int, unsigned char, const char *, const char *, int, con
 #	define TRACE_LOG_FUNCTION my_log2
 #endif
 
-#include "TRACE/trace.h" /* TRACE */
+#include "TRACE/trace.h"  // TRACE
 
 #define USAGE \
 	"\
@@ -54,7 +54,7 @@ options:\n\
 		basename(argv[0]), basename(argv[0]), basename(argv[0])
 #define VUSAGE "\n"
 
-/* GLOBALS */
+// GLOBALS
 static int opt_v= 0;
 static char const *opt_test= "";
 static int opt_loops= 10000;
@@ -236,20 +236,18 @@ int main(int argc, char *argv[])
 		while (opt_loops--) { TLOG_DBG(0, "TRACE") << "this is an int: " << 55; }
 	} else if (strcmp(opt_test, "C") == 0) {
 		while (opt_loops--) { TRACE(0, "this is an int: %d", 55); }
-	}
 #if defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L
-	else if (strcmp(opt_test, "S") == 0) {
+	} else if (strcmp(opt_test, "S") == 0) {
 		while (opt_loops--) {
 			TRACE(0,
 				  "this is an int: " +
 					  std::to_string(
 						  55LL));  // this does same/similar thing as "<<" into stream (but without the stream constructor overhead
 		}
-	}
 #endif
-	else {
+	} else {
 		printf("invalid -t option %s (could be because of compiler version used)\n", opt_test);
 	}
 
 	return (0);
-} /* main */
+}  // main

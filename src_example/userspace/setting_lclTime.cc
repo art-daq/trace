@@ -8,21 +8,23 @@
 // When this program is executed, both "traces" (TRACE and TLOG) with display the same time.
 // and ltrace shows gettimeofday is called just once.
 
-#include <stdio.h>        // printf
 #include <TRACE/trace.h>  // TRACE, TLOG
-#include <sys/time.h>     // gettimeofday, struct timeval
+
+#include <cstdio>      // printf
+#include <sys/time.h>  // gettimeofday, struct timeval
 
 int main(/*int argc, char *argv[]*/)
 {
-	struct timeval programStart, programEnd;
+	struct timeval programStart;
+	struct timeval programEnd;
 
 	// The execution time of these lines of code (especially if just memory tracing) would be within  afew microseconds.
-	gettimeofday(&programStart, NULL);  // this can now be used to get latencies elsewhere in the program.
+	gettimeofday(&programStart, NULL);  // this can now be used to get latencies elsewhere in the program. // NOLINT
 	TRACE(1, "TRACE programStart usecs=%ld", (lclTime= programStart, lclTime.tv_usec));
 
 #if 1
 	// need extra shenanigans (tvp) to avoid: warning: operation on '_trc_.main(int, char**)::_T_::tv' may be undefined [-Wsequence-point]
-	struct timeval *tvp;
+	struct timeval *tvp= nullptr;
 	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp= &_trc_.tv)= programStart, programStart.tv_usec);
 #else
 	TLOG(1) << "TLOG  programStart usecs=" << (_trc_.tv= programStart, programStart.tv_usec);

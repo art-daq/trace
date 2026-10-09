@@ -10,8 +10,8 @@
   * Defines TRACE macros which send "slow" traces to cout with line numbers
   *
   */
-#ifndef TRACELN_H
-#define TRACELN_H
+#ifndef TRACE_INCLUDE_TRACE_TRACELN_H_
+#define TRACE_INCLUDE_TRACE_TRACELN_H_
 
 #ifdef __cplusplus
 
@@ -21,13 +21,15 @@
 #	include <stdint.h>  // uint16_t
 #	include <string>    // std::string
 
+// NOLINTBEGIN
 #	define TRACE_LOG_FUN_PROTO                                                                                                 \
 		static void lntrace_user(struct timeval *, int, uint8_t, const char *, const char *, int, const char *, uint16_t nargs, \
 								 const char *msg, ...);                                                                         \
 		static void lntrace_user(struct timeval *, int, uint8_t, const char *, const char *, int, const char *, uint16_t nargs, \
 								 const std::string &msg, ...)
+// NOLINTEND
 #	define TRACE_LOG_FUNCTION lntrace_user
-#	include "TRACE/trace.h" /* TRACE */
+#	include "TRACE/trace.h"  // TRACE // NOLINT
 
 #	if defined(__has_feature)
 #		if __has_feature(thread_sanitizer)
@@ -50,12 +52,12 @@ vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__)), uint8_t 
 	char *cp;
 	struct tm tm_s;
 	ssize_t quiet_warn= 0;
-	if (traceTimeFmt == NULL) {
-		/* no matter who writes, it should basically be the same thing */
-		if ((cp= getenv("TRACE_TIME_FMT")) != NULL) {
-			traceTimeFmt= cp; /* single write here */
+	if (traceTimeFmt == NULL) {  // NOLINT
+		// no matter who writes, it should basically be the same thing
+		if ((cp= getenv("TRACE_TIME_FMT")) != NULL) {  // NOLINT
+			traceTimeFmt= cp;                          // single write here
 		} else {
-			traceTimeFmt= TRACE_DFLT_TIME_FMT; /* OR single write here */
+			traceTimeFmt= TRACE_DFLT_TIME_FMT;  // OR single write here
 		}
 	}
 	if (tvp->tv_sec == 0) { TRACE_GETTIMEOFDAY(tvp); }
@@ -63,46 +65,48 @@ vlntrace_user(struct timeval *tvp, int TID __attribute__((__unused__)), uint8_t 
 #		pragma GCC diagnostic push
 #		pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
 #	endif
-	localtime_r((time_t *)&tvp->tv_sec, &tm_s);
+	localtime_r((time_t *)&tvp->tv_sec, &tm_s);  // NOLINT
 #	if (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L))
 #		pragma GCC diagnostic pop
 #	endif
 	strftime(tbuf, sizeof(tbuf), traceTimeFmt, &tm_s);
-	printed= snprintf(obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec); /* possibly (probably) add usecs */
+	printed= snprintf(obuf, sizeof(obuf), tbuf, (int)tvp->tv_usec);  // possibly (probably) add usecs // NOLINT
 
 #	define __SHORTFILE__ (strstr(&file[0], "/srcs/") ? strstr(&file[0], "/srcs/") + 6 : file)
 
 	printed+= snprintf(&(obuf[printed]), sizeof(obuf) - printed,
-					   &(" %s %s:%d %s")[printed == 0 ? 1 : 0] /* skip leading " " if nothing was printed (TRACE_TIME_FMT="") */
+					   &(" %s %s:%d %s")[printed == 0 ? 1 : 0]  // skip leading " " if nothing was printed (TRACE_TIME_FMT="")
 					   ,
 					   trace_lvlstrs[0][lvl & TLVLBITSMSK], __SHORTFILE__, line, insert);
 
 	if (nargs) {
-		printed+= vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);
-	} else { /* don't do any parsing for format specifiers in the msg -- tshow will
+		printed+= vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);  // NOLINT
+	} else {
+		/* don't do any parsing for format specifiers in the msg -- tshow will
 		 also know to do this on the memory side of things */
-		printed+= snprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, "%s", msg);
+		printed+= snprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, "%s", msg);  // NOLINT
 	}
 
 	/* why not use writev??? B/c when writing to stdout, only each individual
 	   vector (not the whole array of vectors) is atomic/thread safe */
-	if (printed < (int)sizeof(obuf)) {
-		/* there is room for the \n */
-		/* buf first see if it is needed */
+	if (printed < (int)sizeof(obuf)) {  // NOLINT
+		// there is room for the \n
+		// buf first see if it is needed
 		if (obuf[printed - 1] != '\n') {
-			obuf[printed++]= '\n'; /* overwriting \0 is OK as we will specify the amount to write */
-								   /*printf("added \\n printed=%d\n",printed);*/
+			// NOLINTNEXTLINE(runtime/increment_decrement)
+			obuf[printed++]= '\n';  // overwriting \0 is OK as we will specify the amount to write
+									//printf("added \\n printed=%d\n",printed);
 		}
-		/*else printf("already there printed=%d\n",printed);*/
+		//else printf("already there printed=%d\n",printed);
 		quiet_warn+= write(tracePrintFd[lvl & TLVLBITSMSK], obuf, printed);
 	} else {
-		/* obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n */
+		// obuf[sizeof(obuf)-1] has '\0'. see if we should change it to \n
 		if (obuf[sizeof(obuf) - 2] == '\n') {
 			quiet_warn+= write(tracePrintFd[lvl & TLVLBITSMSK], obuf, sizeof(obuf) - 1);
 		} else {
 			obuf[sizeof(obuf) - 1]= '\n';
 			quiet_warn+= write(tracePrintFd[lvl & TLVLBITSMSK], obuf, sizeof(obuf));
-			/*printf("changed \\0 to \\n printed=%d\n",);*/
+			//printf("changed \\0 to \\n printed=%d\n",);
 		}
 	}
 	if (quiet_warn == -1) { perror("writeTracePrintFd"); }
@@ -130,10 +134,10 @@ static void lntrace_user(struct timeval *tvp, int TID, uint8_t lvl, const char *
 	va_start(ap, msg);
 	vlntrace_user(tvp, TID, lvl, insert, file, line, function, nargs, &msg[0], ap);
 	va_end(ap);
-} /* trace */
+}  // trace
 #	if (__GNUC__ >= 6) || (__cplusplus >= 201103L)
 #		pragma GCC diagnostic pop
 #	endif
 
-#endif /* __cplusplus */
-#endif /* TRACELN_H */
+#endif  // __cplusplus
+#endif  // TRACE_INCLUDE_TRACE_TRACELN_H_

@@ -6,7 +6,7 @@
 // rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
 #define TRACE_NAME strcpy(buffer, "example_sub1")
-static char buffer[15];
+static char buffer[15];  // NOLINT
 #include "TRACE/trace.h"
 
 void example_sub2(void);

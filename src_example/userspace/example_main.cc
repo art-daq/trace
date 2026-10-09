@@ -5,12 +5,12 @@
 // $RCSfile: example_main.cc,v $
 // rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 
-#include <pthread.h>  /* pthread_self */
-#include <sys/time.h> /* gettimeofday */
-#include <libgen.h>   /* basename (Darwin) */
-
 #define TRACE_DEFINE
 #include "TRACE/trace.h"
+
+#include <pthread.h>   // pthread_self
+#include <sys/time.h>  // gettimeofday
+#include <libgen.h>    // basename (Darwin)
 
 #define USAGE \
 	"\
@@ -29,7 +29,7 @@ void *thread_func(void *arg)
 	char tmp[PATH_MAX];
 	long tid;
 	timeval mark;
-	if (trace_thread_option == 1) { /* IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit */
+	if (trace_thread_option == 1) {  // IF -std=c11 is NOT used, a seg fault usually occurs if default file does not exit
 		tid= (long)trace_gettid();
 		snprintf(tmp, sizeof(tmp), "/tmp/trace_buffer_%ld", tid);
 		TRACE_CNTL("file", tmp);
@@ -52,16 +52,16 @@ void *thread_func(void *arg)
 
 int main(int argc, char *argv[])
 {
-	extern char *optarg; /* for getopt */
-	extern int optind;   /* for getopt */
-	int opt;             /* for how I use getopt */
+	extern char *optarg;  // for getopt
+	extern int optind;    // for getopt
+	int opt;              // for how I use getopt
 	unsigned ii;
 	pthread_t *threads;
 	unsigned num_threads= NUMTHREADS;
 	unsigned long loops= 4;
 
 	while ((opt= getopt(argc, argv, "?hn:f:x:")) != -1) {
-		switch (opt) { /* '?' is also what you get w/ "invalid option -- -" */
+		switch (opt) {  // '?' is also what you get w/ "invalid option -- -"
 		case '?':
 		case 'h':
 			printf(USAGE);

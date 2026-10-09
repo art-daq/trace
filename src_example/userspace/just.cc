@@ -6,8 +6,9 @@
 // rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
 */
 
+#include "TRACE/trace.h"  // TRACE
+
 #include <string>
-#include "TRACE/trace.h" /* TRACE */
 
 void example_sub_(void);
 
@@ -26,4 +27,4 @@ int main(/*int argc, char *argv[]*/)
 	TLOG(TLVL_INFO) << "hi from TLOG";
 	example_sub_();
 	return (0);
-} /* main */
+}  // main

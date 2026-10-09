@@ -21,10 +21,10 @@ trace_cntl show;   Linux+3.10-2.17/bin/trace_cntl show
 
 TRACE_SHOW=%f Linux+3.10-2.17/bin/trace_cntl show | while read ln;do echo "$ln" | wc -c;done
  */
-#include <stdio.h>  // printf
 //#define TRACE_STREAMER_DEBUG 1
 #include "TRACE/trace.h"
 
+#include <stdio.h>  // printf
 int main(int argc __attribute__((__unused__)), char *argv[] __attribute__((__unused__)))
 {
 	for (unsigned ii= 0; ii < 2; ++ii)

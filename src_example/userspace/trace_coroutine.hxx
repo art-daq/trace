@@ -87,8 +87,8 @@ public:
 template<typename T>
 Generator<T> EvenNumberProducer<T>::generate()
 {
-	int buffer[10000];  // Example buffer to demonstrate local variables in coroutine
-	for (int i= 0; i < 10000; ++i) { buffer[i]= i; }
+	int buffer[10000];                                // Example buffer to demonstrate local variables in coroutine // NOLINT
+	for (int i= 0; i < 10000; ++i) { buffer[i]= i; }  // NOLINT
 	TLOG() << "Buffer address: " << static_cast<void*>(buffer) << " buffer[0]: " << buffer[0] << " buffer[9999]: " << buffer[9999];
 	TLOG() << "generate() coroutine starting";
 	T current= (m_start % 2 == 0) ? m_start : m_start + 1;

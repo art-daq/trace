@@ -24,8 +24,6 @@
 
 #else
 
-#	include <unistd.h>  // write
-#	include <sstream>   // std::ostringstream
 #	define TRACE_DEBUG_LVL 2
 #	define TRACE_MSG_MAX   0x200
 #	define TARG1(a1, ...)  a1
@@ -42,21 +40,21 @@
 			_xx.once= 1, _xx.ss= _xx.oss.str(), _xx.ss.size() && _xx.ss[_xx.ss.size() - 1] != '\n' && (_xx.ss.append("\n"), 1), \
 			_xx.sts= write(1, &_xx.ss[0], _xx.ss.size()))                                                                       \
 		_xx.oss
-#	define TRACE(lvl, ...)                                                                  \
-		do                                                                                   \
-			if (lvl <= TRACE_DEBUG_LVL) { /*wrap in do...while(0) for certain 'if' syntax */ \
-				char obuf[TRACE_MSG_MAX];                                                    \
-				ssize_t sts __attribute__((__unused__));                                     \
-				int nn= snprintf(obuf, sizeof(obuf), __VA_ARGS__);                           \
-				if (nn >= (int)sizeof(obuf)) { /*truncated(but still terminated)*/           \
-					obuf[sizeof(obuf) - 2]= '\n';                                            \
-					nn= (int)sizeof(obuf) - 1;                                               \
-				} else if (nn > 0 && obuf[nn - 1] != '\n' && nn == (sizeof(obuf) - 1))       \
-					obuf[nn - 1]= '\n';                                                      \
-				else if (nn > 0 && obuf[nn - 1] != '\n')                                     \
-					obuf[nn++]= '\n';                                                        \
-				sts= write(1, obuf, nn);                                                     \
-			}                                                                                \
+#	define TRACE(lvl, ...)                                                                    \
+		do                                                                                     \
+			if (lvl <= TRACE_DEBUG_LVL) { /**wrap in do...while(0) for certain 'if' syntax  */ \
+				char obuf[TRACE_MSG_MAX];                                                      \
+				ssize_t sts __attribute__((__unused__));                                       \
+				int nn= snprintf(obuf, sizeof(obuf), __VA_ARGS__);                             \
+				if (nn >= (int)sizeof(obuf)) { /**truncated(but still terminated) */           \
+					obuf[sizeof(obuf) - 2]= '\n';                                              \
+					nn= (int)sizeof(obuf) - 1;                                                 \
+				} else if (nn > 0 && obuf[nn - 1] != '\n' && nn == (sizeof(obuf) - 1))         \
+					obuf[nn - 1]= '\n';                                                        \
+				else if (nn > 0 && obuf[nn - 1] != '\n')                                       \
+					obuf[nn++]= '\n';                                                          \
+				sts= write(1, obuf, nn);                                                       \
+			}                                                                                  \
 		while (0)
 #	define TRACEN(nam, lvl, ...) TRACE(lvl, __VA_ARGS__)
 #	define TARGS(arg1, ...)      __VA_ARGS__
@@ -91,7 +89,7 @@ int main(int argc, char *argv[])
 		char obuf[20];
 		ssize_t sts __attribute__((__unused__));
 		int nn= snprintf(obuf, sizeof(obuf), "hello argc=%d", argc);
-		if (nn >= (int)sizeof(obuf)) { /*truncated(but still terminated)*/
+		if (nn >= (int)sizeof(obuf)) {  //truncated(but still terminated)
 			obuf[sizeof(obuf) - 2]= '\n';
 			nn= (int)sizeof(obuf) - 1;
 		} else if (obuf[nn - 1] != '\n' && nn == (sizeof(obuf) - 1))

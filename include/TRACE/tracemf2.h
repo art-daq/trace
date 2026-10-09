@@ -10,8 +10,8 @@
   * Defines TRACE macros which send "slow" traces to MessageFacility
   *
   */
-#ifndef TRACEMF2_H
-#define TRACEMF2_H
+#ifndef TRACE_INCLUDE_TRACE_TRACEMF2_H_
+#define TRACE_INCLUDE_TRACE_TRACEMF2_H_
 
 #ifdef __cplusplus
 // Use this define!  -- trace.h won't define it's own version of TRACE_LOG_FUNCTION
@@ -20,10 +20,11 @@
 #	undef TRACE_LOG_FUNCTION
 #	define TRACE_LOG_FUNCTION(tvp, tid, lvl, insert, file, line, nargs, ...) \
 		mftrace_user(tvp, tid, lvl, insert, file, line, nargs, __VA_ARGS__)
-#	include "TRACE/trace.h" /* TRACE */
+#	include "TRACE/trace.h"  // TRACE
 
 // "static int tid_" is thread safe in so far as multiple threads may init,
 // but will init with same value.
+// NOLINTBEGIN
 #	define TRACE_STREAMER(lvl, name, force_s)                             \
 		{                                                                  \
 			if TRACE_INIT_CHECK (TRACE_NAME) {                             \
@@ -31,7 +32,7 @@
 				if (tid_ == -1) tid_= name2TID(std::string(name).c_str()); \
 				static TRACE_THREAD_LOCAL TraceStreamer s;                 \
 			s.init(tid_, lvl, force_s, __FILE__, __LINE__)
-
+// NOLINTEND
 #	define TRACE_ENDL \
 		"";            \
 		s.str();       \
@@ -92,15 +93,18 @@ static void vmftrace_user(struct timeval*, int TID, uint8_t lvl, const char* ins
 		if (max < strlen(insert)) {
 			obuf[printed + max]= '\0';
 			printed+= max;
-		} else
+		} else {
 			printed+= strlen(insert);
+		}
 	}
 	// could/should check for \n at end of msg, but this implementation is not that important
-	if (nargs) vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);
-	else { /* don't do any parsing for format specifiers in the msg -- tshow will
+	if (nargs) {
+		vsnprintf(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - printed : 0, msg, ap);  // NOLINT
+	} else {
+		/* don't do any parsing for format specifiers in the msg -- tshow will
 		 also know to do this on the memory side of things because nargs is
 		 stored in memory trace buffer. */
-		strncpy(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - 1 - printed : 0, msg);
+		strncpy(&(obuf[printed]), (printed < (int)sizeof(obuf)) ? sizeof(obuf) - 1 - printed : 0, msg);  // NOLINT
 		obuf[sizeof(obuf) - 1]= '\0';
 	}
 
@@ -132,14 +136,14 @@ static void mftrace_user(struct timeval* tvp, int TID, uint8_t lvl, const char* 
 	va_start(ap, msg);
 	vmftrace_user(tvp, TID, lvl, insert, file, line, nargs, &msg[0], ap);
 	va_end(ap);
-} /* trace */
+}  // trace
 
 struct TraceStreamer : std::ios {
 	union arg {
 		int i;
 		double d;
-		long unsigned int u;
-		long int l;
+		long unsigned int u;  // NOLINT
+		long int l;           // NOLINT
 		void* p;
 	};
 
@@ -157,11 +161,11 @@ struct TraceStreamer : std::ios {
 	int line_;
 
 public:
-	explicit TraceStreamer() : argCount(0)
+	TraceStreamer() : argCount(0)
 	{
 		msg.reserve(TRACE_STREAMER_MSGMAX);
 #	if TRACE_STREAMER_DEBUG
-		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl;
+		std::cout << "TraceStreamer CONSTRUCTOR" << std::endl;  // NOLINT
 #	endif
 	}
 
@@ -184,7 +188,7 @@ public:
 	inline void str()
 	{
 #	if TRACE_STREAMER_DEBUG
-		std::cout << "Message is " << msg << std::endl;
+		std::cout << "Message is " << msg << std::endl;  // NOLINT
 #	endif
 		//call_trace(args, argCount);
 		struct timeval lclTime;
@@ -213,7 +217,7 @@ public:
 			// Precision
 			msg+= (precisionStr.size() ? "." + precisionStr : "") + length;
 
-			if ((flags & (fixed | scientific)) == (fixed | scientific)) /*AND*/ {
+			if ((flags & (fixed | scientific)) == (fixed | scientific)) /***AND  */ {
 				msg+= flags & uppercase ? "A" : "a";
 			} else if (flags & fixed) {
 				msg+= flags & uppercase ? "F" : "f";
@@ -244,7 +248,7 @@ public:
 			_M_precision= y;
 			precisionStr= std::to_string(y);
 #	if TRACE_STREAMER_DEBUG
-			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;
+			std::cout << "TraceStreamer precisionStr is now " << precisionStr << std::endl;  // NOLINT(runtime/output_format)
 #	endif
 		}
 		return *this;
@@ -256,7 +260,7 @@ public:
 			_M_width= y;
 			widthStr= std::to_string(y);
 #	if TRACE_STREAMER_DEBUG
-			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;
+			std::cout << "TraceStreamer widthStr is now " << widthStr << std::endl;  // NOLINT(runtime/output_format)
 #	endif
 		}
 		return *this;
@@ -297,7 +301,7 @@ public:
 		return *this;
 	}
 
-	inline TraceStreamer& operator<<(const long int& r)
+	inline TraceStreamer& operator<<(const long int& r)  // NOLINT
 	{
 		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) {
 			format(false, false, "l", _M_flags);
@@ -317,7 +321,7 @@ public:
 		return *this;
 	}
 
-	inline TraceStreamer& operator<<(const long unsigned int& r)
+	inline TraceStreamer& operator<<(const long unsigned int& r)  // NOLINT
 	{
 		if (enabled && argCount < TRACE_STREAMER_ARGSMAX) {
 			format(false, true, "l", _M_flags);
@@ -359,7 +363,8 @@ public:
 	{
 		if (enabled) {
 			for (size_t ii= argCount;
-				 ii < (argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX); ++ii) {
+				 ii < (argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX);
+				 ++ii) {  // NOLINT
 				args[ii]= r.args[ii - argCount];
 			}
 			argCount= argCount + r.argCount < TRACE_STREAMER_ARGSMAX ? argCount + r.argCount : TRACE_STREAMER_ARGSMAX;
@@ -402,6 +407,7 @@ public:
 	inline TraceStreamer& operator<<(const T& t)
 	{
 #		if DEBUG_FORCED
+		// NOLINTNEXTLINE(runtime/output_format)
 		std::cerr << "WARNING: " << __PRETTY_FUNCTION__ << " TEMPLATE CALLED: Consider implementing a function with this signature!"
 				  << std::endl;
 #		endif
@@ -420,7 +426,7 @@ inline TraceStreamer& operator<<(TraceStreamer& x, cet::exception y)
 	if (x.enabled) { x.msg+= y.what(); }
 	return x;
 }
-inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<unsigned long> const& a)
+inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<unsigned long> const& a)  // NOLINT
 {
 	if (x.enabled) {
 		x.format(false, true, "l", x.flags());
@@ -429,7 +435,7 @@ inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<unsigned long> co
 	}
 	return x;
 }
-inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<short int> const& a)
+inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<short int> const& a)  // NOLINT
 {
 	if (x.enabled) {
 		x.format(false, false, "h", x.flags());
@@ -440,5 +446,5 @@ inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<short int> const&
 }
 inline TraceStreamer& operator<<(TraceStreamer& x, std::atomic<bool> const& a) { return x << a.load(); }
 
-#endif /* TRACEMF2_H */
-#endif
+#endif  // TRACEMF2_H
+#endif  // TRACE_INCLUDE_TRACE_TRACEMF2_H_

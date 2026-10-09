@@ -9,14 +9,16 @@
   Or an example of prepending something else to the message.
   Now can be used to compare auto prepend (run once with and then again without auto-prepend)
  */
+// NOLINTBEGIN
 #define USAGE \
 	"\
 Usage: %s [-l<loops>] [-m<mask>] [-r<repeat>]\n\
 ",            \
 		basename(argv[0])
+//NOLINTEND
 
-#include <libgen.h> /* basename */
-#include <unistd.h> /* write, getopt */
+#include <libgen.h>  // basename
+#include <unistd.h>  // write, getopt
 
 #include "TRACE/trace.h"
 #define TLOGF(...)  TLOG(__VA_ARGS__) << __FUNCTION__ << ": "
@@ -75,17 +77,17 @@ int main(int argc, char *argv[])
 	int opt_loops= 1;
 	int opt_repeat= 1;
 	int opt_mask= 0xf;
-	int opt; /* for how I use getopt */
+	int opt;  // for how I use getopt
 	while ((opt= getopt(argc, argv, "?l:m:r:")) != -1) {
 		switch (opt) {
-		/* '?' is also what you get w/ "invalid option -- -" */
+		// '?' is also what you get w/ "invalid option -- -"
 		case '?':
 			printf(USAGE);
 			exit(0);
 			break;
-		case 'l': opt_loops= (int)strtoul(optarg, NULL, 0); break;
-		case 'm': opt_mask= (int)strtoul(optarg, NULL, 0); break;
-		case 'r': opt_repeat= (int)strtoul(optarg, NULL, 0); break;
+		case 'l': opt_loops= (int)strtoul(optarg, NULL, 0); break;   // NOLINT C compat
+		case 'm': opt_mask= (int)strtoul(optarg, NULL, 0); break;    // NOLINT C compat
+		case 'r': opt_repeat= (int)strtoul(optarg, NULL, 0); break;  // NOLINT C compat
 		}
 	}
 	TLOG(TLVL_INFO) << "first TLOG does traceInit";

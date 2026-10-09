@@ -3,7 +3,7 @@
 // or COPYING file. If you do not have such a file, one can be obtained by
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: .emacs.gnu,v $
-// rev="$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+// rev="$Revision: 1784 $$Date: 2026-10-09 13:51:46 -0500 (Fri, 09 Oct 2026) $";
 
 // When this program is executed, both "traces" (TRACE and TLOG) with display the same time.
 // and ltrace shows gettimeofday is called just once.

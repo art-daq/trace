@@ -9,7 +9,7 @@
 
 // NOLINTBEGIN // Eric Flumerfelt <eflumerf@github.com> 7-Oct-2026: Suppress clang-tidy warnings for this header file
 #if !defined(__CUDA_ARCH__) && !defined(__ROOTCLING__)  // Allow inclusion into CUDA file (including .cu files) and ROOT parse
-#	define TRACE_REV "$Revision: 1781 $$Date: 2026-09-28 10:31:03 -0500 (Mon, 28 Sep 2026) $"
+#	define TRACE_REV "$Revision: 1784 $$Date: 2026-10-09 13:51:46 -0500 (Fri, 09 Oct 2026) $"
 
 // The C++ streamer style macros...............................................
 /*
@@ -332,7 +332,7 @@ enum tlvle_t { TRACE_LVL_ENUM_0_9, TRACE_LVL_ENUM_10_63 };
 #	endif
 
 // clang-format off
-#define TRACE_REVx $_$Revision: 1781 $_$Date: 2026-09-28 10:31:03 -0500 (Mon, 28 Sep 2026) $
+#define TRACE_REVx $_$Revision: 1784 $_$Date: 2026-10-09 13:51:46 -0500 (Fri, 09 Oct 2026) $
 // Who would ever have an identifier/token that begins with $_$???
 #define $_$Revision  0?0
 #define $_$Date      ,

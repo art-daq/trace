@@ -4,7 +4,7 @@
 // contacting Ron or Fermi Lab in Batavia IL, 60510, phone: 630-840-3000.
 // $RCSfile: just_user.cc,v $
 */
-char const *rev= "$Revision: 1702 $$Date: 2025-01-28 12:48:14 -0600 (Tue, 28 Jan 2025) $";
+char const *rev= "$Revision: 1784 $$Date: 2026-10-09 13:51:46 -0500 (Fri, 09 Oct 2026) $";
 
 #include <stdarg.h>  // va_list
 #include <string>

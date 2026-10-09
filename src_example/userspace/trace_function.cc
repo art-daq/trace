@@ -9,7 +9,7 @@
   Or an example of prepending something else to the message.
   Now can be used to compare auto prepend (run once with and then again without auto-prepend)
  */
-// NOLINTGBEGIN
+// NOLINTBEGIN
 #define USAGE \
 	"\
 Usage: %s [-l<loops>] [-m<mask>] [-r<repeat>]\n\

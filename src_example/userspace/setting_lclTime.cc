@@ -25,9 +25,9 @@ int main(/*int argc, char *argv[]*/)
 #if 1
 	// need extra shenanigans (tvp) to avoid: warning: operation on '_trc_.main(int, char**)::_T_::tv' may be undefined [-Wsequence-point]
 	struct timeval *tvp= nullptr;
-	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp= &_trc_.tv)= programStart, programStart.tv_usec);
+	TLOG(1) << "TLOG  programStart usecs=" << (*(tvp= &_trc_.tv)= programStart, programStart.tv_usec); // NOLINT
 #else
-	TLOG(1) << "TLOG  programStart usecs=" << (_trc_.tv= programStart, programStart.tv_usec);
+	TLOG(1) << "TLOG  programStart usecs=" << (_trc_.tv= programStart, programStart.tv_usec); // NOLINT
 #endif
 
 	// NOTE: you can only get the time for TRACEs _IFF_both_memory_and_slow_path_are_enabled. Can't get time from TLOG

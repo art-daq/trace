@@ -8,6 +8,7 @@
 #include "TRACE/trace.h"
 
 #if __cplusplus < 201703L
+// NOLINTNEXTLINE
 #	define TLOG_ENTEX(...) std::cout << ""
 #	define TRACE_EXIT      if (0)
 #endif
